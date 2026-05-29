@@ -1,4 +1,4 @@
-"""Tests for ``ml-copilot advise`` CLI command."""
+"""Tests for ``mlcompass advise`` CLI command."""
 
 from __future__ import annotations
 
@@ -11,10 +11,10 @@ import pandas as pd
 import pytest
 from click.testing import CliRunner
 
-from ml_copilot import cli as cli_module
-from ml_copilot.agents.advise import AdvisorParseError
-from ml_copilot.cli import cli
-from ml_copilot.context import DEFAULT_PROJECT_DIR, ProjectContext
+from mlcompass import cli as cli_module
+from mlcompass.agents.advise import AdvisorParseError
+from mlcompass.cli import cli
+from mlcompass.context import DEFAULT_PROJECT_DIR, ProjectContext
 
 
 # --------------------------------------------------------------------------- #
@@ -109,13 +109,13 @@ def test_advise_runs_standalone_without_project(
     with_api_key: None,
     tmp_path: Path,
 ) -> None:
-    """advise should work without a .mlcopilot/ project; it just warns."""
+    """advise should work without a .mlcompass/ project; it just warns."""
     runner = CliRunner()
     with runner.isolated_filesystem(temp_dir=tmp_path):
         result = runner.invoke(cli, ["advise", str(sample_csv)])
 
     assert result.exit_code == 0, result.output
-    assert "no .mlcopilot" in result.output.lower() or "standalone" in result.output.lower()
+    assert "no .mlcompass" in result.output.lower() or "standalone" in result.output.lower()
     assert fake_advisor["called"]
     assert "XGBoost" in result.output
 
@@ -159,12 +159,12 @@ def test_advise_persists_to_project_context(
     with_api_key: None,
     tmp_path: Path,
 ) -> None:
-    # Initialise project where the CSV lives so .mlcopilot/ is discoverable
+    # Initialise project where the CSV lives so .mlcompass/ is discoverable
     project_root = sample_csv.parent
     project = ProjectContext.init("test-proj", parent_dir=project_root)
 
     runner = CliRunner()
-    # Use Click's working_dir to mimic invoking ml-copilot from project_root
+    # Use Click's working_dir to mimic invoking mlcompass from project_root
     cwd = os.getcwd()
     os.chdir(project_root)
     try:

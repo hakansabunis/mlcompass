@@ -1,6 +1,6 @@
 # v0.1.0 Launch Checklist
 
-This file is the single source of truth for shipping ml-copilot's first
+This file is the single source of truth for shipping mlcompass's first
 public release. Tick items off as you go; everything you need (post
 drafts, recording script, timing) is below.
 
@@ -14,19 +14,19 @@ drafts, recording script, timing) is below.
 
 - [ ] `git pull --rebase` to make sure local is fresh
 - [ ] `.venv/Scripts/python -X utf8 -m pytest tests/` → 66 passing
-- [ ] `.venv/Scripts/python -X utf8 -m build` → `dist/ml_copilot-0.1.0-py3-none-any.whl` and `.tar.gz`
+- [ ] `.venv/Scripts/python -X utf8 -m build` → `dist/mlcompass-0.1.0-py3-none-any.whl` and `.tar.gz`
 - [ ] `.venv/Scripts/python -X utf8 -m twine check dist/*` → both PASSED
 - [ ] Skim `README.md`, `CHANGELOG.md`, `ARCHITECTURE.md` for typos
-- [ ] Confirm `ml-copilot --version` prints `0.1.0`
-- [ ] Confirm `ml-copilot advise examples/customer_churn.csv --no-llm` produces a clean output
-- [ ] Tag the release: `git tag -a v0.1.0 -m "ml-copilot 0.1.0 — advise mode"`
+- [ ] Confirm `mlcompass --version` prints `0.1.0`
+- [ ] Confirm `mlcompass advise examples/customer_churn.csv --no-llm` produces a clean output
+- [ ] Tag the release: `git tag -a v0.1.0 -m "mlcompass 0.1.0 — advise mode"`
 - [ ] Push the tag: `git push origin v0.1.0`
 
 ---
 
 ## 1. Record the demo (~30 min)
 
-The hero asset for every post is a 30-second GIF of `ml-copilot advise`
+The hero asset for every post is a 30-second GIF of `mlcompass advise`
 running on a real CSV. Use one of:
 
 - **VHS** (recommended, deterministic): https://github.com/charmbracelet/vhs
@@ -42,11 +42,11 @@ Set Height 700
 Set Padding 20
 Set Theme "Catppuccin Mocha"
 
-Type "ml-copilot init churn-demo"
+Type "mlcompass init churn-demo"
 Enter
 Sleep 1s
 
-Type "ml-copilot advise examples/customer_churn.csv --no-llm"
+Type "mlcompass advise examples/customer_churn.csv --no-llm"
 Enter
 Sleep 5s
 
@@ -73,7 +73,7 @@ crop, export at 800px wide. Same end result.
 
 1. Go to https://pypi.org/manage/account/token/
 2. Create an API token, scope = "entire account" (you can scope it down
-   to `ml-copilot` after the first upload)
+   to `mlcompass` after the first upload)
 3. Store the token in `~/.pypirc`:
 
    ```ini
@@ -92,15 +92,15 @@ Or for a dry run, use TestPyPI first:
 
 ```bash
 .venv/Scripts/python.exe -m twine upload --repository testpypi dist/*
-pip install --index-url https://test.pypi.org/simple/ ml-copilot
+pip install --index-url https://test.pypi.org/simple/ mlcompass
 ```
 
 ### Verify
 
 ```bash
-pip install --upgrade ml-copilot
-ml-copilot --version   # → 0.1.0
-ml-copilot init smoke-test
+pip install --upgrade mlcompass
+mlcompass --version   # → 0.1.0
+mlcompass init smoke-test
 ```
 
 ---
@@ -109,10 +109,10 @@ ml-copilot init smoke-test
 
 ```bash
 gh release create v0.1.0 \
-  --title "ml-copilot 0.1.0 — advise mode" \
+  --title "mlcompass 0.1.0 — advise mode" \
   --notes-file CHANGELOG.md \
-  dist/ml_copilot-0.1.0-py3-none-any.whl \
-  dist/ml_copilot-0.1.0.tar.gz
+  dist/mlcompass-0.1.0-py3-none-any.whl \
+  dist/mlcompass-0.1.0.tar.gz
 ```
 
 Or via the GitHub UI: New release → choose tag `v0.1.0` → paste the
@@ -129,8 +129,8 @@ window when HN's front page traffic peaks for west-coast US morning.
 
 ### Submission
 
-- Title: `Show HN: ml-copilot – an LLM agent that recommends models, features, and pitfalls from your dataset`
-- URL: `https://github.com/hakansabunis/ml-copilot`
+- Title: `Show HN: mlcompass – an LLM agent that recommends models, features, and pitfalls from your dataset`
+- URL: `https://github.com/hakansabunis/mlcompass`
 - Text: paste the draft below
 
 ### Show HN text draft
@@ -138,11 +138,11 @@ window when HN's front page traffic peaks for west-coast US morning.
 ```
 Hi HN,
 
-I built ml-copilot, a small CLI agent that sits next to you through the
+I built mlcompass, a small CLI agent that sits next to you through the
 full ML pipeline. v0.1 ships the first stage — `advise`:
 
-  $ ml-copilot init churn-project
-  $ ml-copilot advise data.csv --target churn
+  $ mlcompass init churn-project
+  $ mlcompass advise data.csv --target churn
 
 It analyzes your CSV (schema, missingness, outliers, target detection,
 task inference, class balance), then asks Claude to recommend top model
@@ -161,7 +161,7 @@ Design notes:
   permission system, and the sub-agent factory are first-class.
 - The deterministic dataset analyzer is pure pandas, with the LLM only
   reasoning over its output — keeps `advise` fast and cheap.
-- A persistent `.mlcopilot/` directory (similar in spirit to .git/)
+- A persistent `.mlcompass/` directory (similar in spirit to .git/)
   carries context across commands so the planned `audit`, `watch`,
   `evaluate`, and `deploy` modes know what you already chose and why.
 
@@ -189,7 +189,7 @@ expect to iterate on the most.
 
 ### r/MachineLearning (better for technical reception)
 
-- Title: `[P] ml-copilot — an LLM agent that recommends models + feature engineering from your dataset`
+- Title: `[P] mlcompass — an LLM agent that recommends models + feature engineering from your dataset`
 - Use [P] flair for "Project"
 - Body: a tightened version of the Show HN text above, no marketing
   phrasing. Lead with what it does, follow with one screenshot of the
@@ -203,7 +203,7 @@ expect to iterate on the most.
 
 ### r/Python
 
-- Title: `ml-copilot 0.1 — a CLI agent for tabular ML practitioners`
+- Title: `mlcompass 0.1 — a CLI agent for tabular ML practitioners`
 - Body: shorter, focus on the CLI ergonomics and the demo gif.
 
 ---
@@ -211,27 +211,27 @@ expect to iterate on the most.
 ## 6. LinkedIn (Turkish-language post for local reach)
 
 ```
-🚀 ml-copilot v0.1 yayında.
+🚀 mlcompass v0.1 yayında.
 
 ML projelerinde sürekli aynı hataları yaptığımı fark ettim:
 yanlış metric, eksik seed, kötü split. Mevcut araçlar (W&B,
 TensorBoard) sadece log tutuyor — gerçek öneri vermiyorlar.
 
-Bu yüzden ml-copilot'u yazdım: CSV'yi ver, hangi modelleri
+Bu yüzden mlcompass'u yazdım: CSV'yi ver, hangi modelleri
 denemen gerektiğini, hangi feature engineering'in fayda
 sağlayacağını, hangi pitfall'lardan kaçınman gerektiğini
 yapılandırılmış olarak söylesin.
 
 Komut çok basit:
 
-    pip install ml-copilot
-    ml-copilot init my-project
-    ml-copilot advise data.csv
+    pip install mlcompass
+    mlcompass init my-project
+    mlcompass advise data.csv
 
 Altyapı olarak kendi yazdığım agentlite (Claude için minimal
 agent kütüphanesi) üzerinde çalışıyor. Açık kaynak (MIT):
 
-https://github.com/hakansabunis/ml-copilot
+https://github.com/hakansabunis/mlcompass
 
 Sonraki fazlar: eğitim sırasında canlı izleme + plateau/NaN
 tespiti (v0.2), sonrası için değerlendirme + deployment
@@ -246,8 +246,8 @@ kontrolü.
 
 Two drafts in `docs/blog/`:
 
-- `2026-05-29-ml-copilot-launch-en.md` — English
-- `2026-05-29-ml-copilot-launch-tr.md` — Turkish
+- `2026-05-29-mlcompass-launch-en.md` — English
+- `2026-05-29-mlcompass-launch-tr.md` — Turkish
 
 Publish on dev.to or Hashnode (English) and Medium (Turkish) once Show
 HN cools down.
@@ -270,9 +270,9 @@ When you defend FloodGuard, here's the 3-sentence story:
 
 > "I noticed that across my flood-prediction experiments I kept
 > repeating the same setup mistakes — wrong metric for imbalanced
-> data, missing seed, weird splits — so I built ml-copilot, an LLM
+> data, missing seed, weird splits — so I built mlcompass, an LLM
 > agent that flags these before they cost a training run. It runs
 > on a 2K-line Claude agent library I also wrote (agentlite), and
 > shipped publicly with X stars / Y installs as of today."
 
-This works whether ml-copilot gets 50 stars or 5000.
+This works whether mlcompass gets 50 stars or 5000.

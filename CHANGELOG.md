@@ -1,47 +1,38 @@
 # Changelog
 
-All notable changes to `ml-copilot` are documented here.
+All notable changes to `mlcompass` are documented here.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
 ### Planned for v0.2 (Faz 2)
-- `ml-copilot audit <script>` — static training-script analysis
+- `mlcompass audit <script>` — static training-script analysis
   (random seed, validation split, optimizer config, loss stability)
-- `ml-copilot watch <script>` — live training monitor with plateau,
+- `mlcompass watch <script>` — live training monitor with plateau,
   overfitting, NaN, and divergence detection
-- `ml-copilot compare <run-a> <run-b>` — run-to-run diff with
+- `mlcompass compare <run-a> <run-b>` — run-to-run diff with
   LLM-explained hypotheses
 - TensorBoard / W&B / plain-text log support
 - Permission-gated config edits and training restarts
 
 ### Planned for v0.3 (Faz 3)
-- `ml-copilot evaluate <results>` — post-training analysis
+- `mlcompass evaluate <results>` — post-training analysis
 - Threshold optimization, confusion-matrix interpretation,
   hard-example surfacing
 
 ### Planned for v0.4 (Faz 4)
-- `ml-copilot deploy --target <X>` — deployment readiness check
+- `mlcompass deploy --target <X>` — deployment readiness check
 - Inference latency estimation, dependency consistency check,
   ONNX / TorchScript conversion advice
 
-## [0.1.1] — 2026-05-29
+## [0.1.0] — 2026-05-29
 
-### Fixed
-- Add `pandas>=2.0.0` to runtime dependencies. The 0.1.0 wheel failed to
-  import on a clean install because `tools.dataset` imports pandas at
-  module load time but pandas was only present via the `dev` extras
-  through `tbparse`. Caught by the TestPyPI fresh-venv smoke test
-  before the bug reached production PyPI.
-
-## [0.1.0] — 2026-05-29 (TestPyPI only — yanked)
-
-First public release.
+First public release on PyPI.
 
 ### Added
-- `ml-copilot init <name>` — initialize a project context (`.mlcopilot/`)
+- `mlcompass init <name>` — initialize a project context (`.mlcompass/`)
   with metadata, decision log, dataset registry, run history, and cache
-- `ml-copilot advise <data> [--target col] [--sample-rows N] [--no-llm]
+- `mlcompass advise <data> [--target col] [--sample-rows N] [--no-llm]
   [--model NAME]` — analyse a dataset and produce model + feature
   engineering + pitfall recommendations
 - Project context infrastructure (`ProjectContext`):
@@ -68,7 +59,7 @@ First public release.
 - Rich terminal UI for both analysis and recommendation
 - Three deterministic example datasets (titanic, house prices,
   customer churn) with a documented generator script
-- 66 passing tests across unit + integration layers
+- 62 passing tests across unit + integration layers
 
 ### Architecture
 - Single CLI binary using Click
@@ -82,3 +73,10 @@ First public release.
   use Parquet or specify `parse_dates` if datetime semantics matter
 - Multi-language project support not yet planned
 - No hosted version — local-only at v0.x
+
+### Note on naming
+mlcompass was prototyped under the working name `ml-copilot`. PyPI's
+"too similar to existing project" guard blocked that name on the final
+upload (Microsoft maintains the `mlcopilot` package as a different
+Jupyter-focused tool), so the project was renamed before its first
+release. No `ml-copilot` package was ever published to production PyPI.

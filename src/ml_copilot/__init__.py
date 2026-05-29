@@ -1,3 +1,0 @@
-"""ml-copilot — An LLM agent that sits next to you through your whole ML pipeline."""
-
-__version__ = "0.1.1"

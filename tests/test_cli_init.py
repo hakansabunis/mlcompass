@@ -1,4 +1,4 @@
-"""Tests for ``ml-copilot init`` CLI command."""
+"""Tests for ``mlcompass init`` CLI command."""
 
 from __future__ import annotations
 
@@ -6,8 +6,8 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
-from ml_copilot.cli import cli
-from ml_copilot.context import DEFAULT_PROJECT_DIR
+from mlcompass.cli import cli
+from mlcompass.context import DEFAULT_PROJECT_DIR
 
 
 def test_init_creates_project(tmp_path: Path) -> None:
@@ -67,4 +67,4 @@ def test_version_flag_works() -> None:
     runner = CliRunner()
     result = runner.invoke(cli, ["--version"])
     assert result.exit_code == 0
-    assert "ml-copilot" in result.output
+    assert "mlcompass" in result.output

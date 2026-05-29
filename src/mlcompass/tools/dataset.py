@@ -1,9 +1,9 @@
 """Dataset analysis: schema, distribution, outliers, target detection.
 
 Pure pandas — no LLM calls. The output is a structured dictionary that
-the ModelAdvisor sub-agent consumes during ``ml-copilot advise``.
+the ModelAdvisor sub-agent consumes during ``mlcompass advise``.
 
-The shape and field names of the returned dict are part of ml-copilot's
+The shape and field names of the returned dict are part of mlcompass's
 internal contract; downstream agents key into them, so changes should
 be made deliberately and reflected in ARCHITECTURE.md.
 """

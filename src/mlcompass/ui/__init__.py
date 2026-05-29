@@ -1,4 +1,4 @@
-"""Rich-based terminal rendering for ml-copilot output.
+"""Rich-based terminal rendering for mlcompass output.
 
 Each module here renders the structured output of one agent or tool
 into a human-friendly terminal layout. Keeping rendering separate from

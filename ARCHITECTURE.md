@@ -1,6 +1,6 @@
-# ml-copilot — Architecture
+# mlcompass — Architecture
 
-This document describes the design of ml-copilot, an LLM agent that
+This document describes the design of mlcompass, an LLM agent that
 assists ML practitioners across the full training pipeline.
 
 It is the canonical reference for contributors and for anyone curious
@@ -13,7 +13,7 @@ decisions, conventions, and seams are.
 
 **One tool, one project, every stage.**
 
-You start with a CSV. You end with a deployed model. ml-copilot sits
+You start with a CSV. You end with a deployed model. mlcompass sits
 next to you the entire time, keeping context across commands.
 
 ```
@@ -28,7 +28,7 @@ data.csv          train.py             results.csv         production
    │                  │                     │                  │
    └──────────────────┴────────── shared ───┴──────────────────┘
                           project context
-                         (.mlcopilot/)
+                         (.mlcompass/)
 ```
 
 Every command writes to and reads from a shared project context.
@@ -37,15 +37,15 @@ your model choices, your training history, and your evaluation results.
 
 ---
 
-## 2. Project context (`.mlcopilot/`)
+## 2. Project context (`.mlcompass/`)
 
-Each ml-copilot project lives in a directory containing a `.mlcopilot/`
+Each mlcompass project lives in a directory containing a `.mlcompass/`
 folder, similar in spirit to `.git/`.
 
 ### Directory layout
 
 ```
-.mlcopilot/
+.mlcompass/
 ├── project.yaml          # static metadata
 ├── context.json          # accumulated knowledge across commands
 ├── datasets/             # registered datasets
@@ -65,7 +65,7 @@ folder, similar in spirit to `.git/`.
 ```yaml
 name: customer-churn-model
 created: 2026-05-29T14:30:00Z
-ml_copilot_version: 0.0.1
+mlcompass_version: 0.0.1
 default_model: claude-opus-4-7
 ```
 
@@ -91,7 +91,7 @@ default_model: claude-opus-4-7
 
 ### Why this matters
 
-The persistent context is what makes ml-copilot more than a chat tool:
+The persistent context is what makes mlcompass more than a chat tool:
 
 - `advise` learns the project type and target column from the data.
 - `audit` reads the project type to know whether validation split
@@ -106,7 +106,7 @@ The persistent context is what makes ml-copilot more than a chat tool:
 
 ## 3. Agent hierarchy
 
-ml-copilot uses agentlite for its agent backbone. Each command
+mlcompass uses agentlite for its agent backbone. Each command
 dispatches to a specific agent, and most commands use sub-agents
 to delegate focused subtasks.
 
@@ -158,7 +158,7 @@ Tools are organized by domain, not by command. Many tools are shared.
 
 | Tool                              | Permission   | Description                                  |
 | --------------------------------- | ------------ | -------------------------------------------- |
-| `read_project_context()`          | none         | Read `.mlcopilot/context.json`               |
+| `read_project_context()`          | none         | Read `.mlcompass/context.json`               |
 | `write_project_context(updates)`  | none         | Append to context (project-internal)         |
 | `list_datasets()`                 | none         | List registered datasets                     |
 | `list_runs()`                     | none         | List training run history                    |
@@ -222,7 +222,7 @@ Tools are organized by domain, not by command. Many tools are shared.
 
 ## 5. Permission strategy
 
-ml-copilot follows three trust levels, mapped to agentlite's
+mlcompass follows three trust levels, mapped to agentlite's
 permission system.
 
 ### Level 0 — read-only (no permission)
@@ -234,8 +234,8 @@ Examples: `analyze_dataset`, `read_tensorboard_log`, `check_seed_setting`.
 
 ### Level 1 — project-internal writes (silent)
 
-Tools that write only inside `.mlcopilot/`. Since this directory
-belongs to ml-copilot, writes here don't disturb user code.
+Tools that write only inside `.mlcompass/`. Since this directory
+belongs to mlcompass, writes here don't disturb user code.
 
 Examples: `write_project_context`, `register_dataset`, `save_run_metrics`.
 
@@ -253,7 +253,7 @@ Permission prompts use agentlite's `confirm_fn` plugged into a rich
 terminal prompt:
 
 ```
-⚠  ml-copilot wants to edit train.py:
+⚠  mlcompass wants to edit train.py:
 
    Add: torch.manual_seed(42)
    Line: 12 (top of training function)
@@ -271,7 +271,7 @@ Most agentic ML tools either:
 - (a) act autonomously and break things (low trust), or
 - (b) only suggest and never act (low value).
 
-ml-copilot uses agentlite's first-class permission model to land in
+mlcompass uses agentlite's first-class permission model to land in
 between: **the agent proposes, the human approves, the agent executes.**
 
 ---
@@ -279,7 +279,7 @@ between: **the agent proposes, the human approves, the agent executes.**
 ## 6. Module organization
 
 ```
-src/ml_copilot/
+src/mlcompass/
 ├── __init__.py              # __version__
 ├── cli.py                   # Click-based command dispatcher
 ├── context.py               # ProjectContext class
@@ -333,7 +333,7 @@ src/ml_copilot/
 ## 7. CLI structure
 
 ```
-ml-copilot <command> [args] [options]
+mlcompass <command> [args] [options]
 
 Commands:
   init      <name>          Initialize a new project
@@ -346,7 +346,7 @@ Commands:
   status                    Show current project context
 
 Common options:
-  --project DIR             .mlcopilot path (default: ./.mlcopilot)
+  --project DIR             .mlcompass path (default: ./.mlcompass)
   --model NAME              LLM model override
   --no-color                Disable rich UI
   --verbose, -v             Show agent reasoning step-by-step
@@ -358,28 +358,28 @@ Common options:
 
 ```bash
 # Day 1 — new project, exploring data
-$ ml-copilot init churn-model
-✓ Created .mlcopilot/
+$ mlcompass init churn-model
+✓ Created .mlcompass/
 
-$ ml-copilot advise data/customers.csv
+$ mlcompass advise data/customers.csv
 [shows dataset analysis + model recommendations]
 
 # Day 2 — running first training
-$ ml-copilot audit train.py
+$ mlcompass audit train.py
 [shows static issues found]
 
-$ ml-copilot watch train.py
+$ mlcompass watch train.py
 [live monitoring begins]
 
 # Day 5 — checking results
-$ ml-copilot evaluate runs/run-42/predictions.csv
+$ mlcompass evaluate runs/run-42/predictions.csv
 [shows post-training analysis]
 
-$ ml-copilot compare run-3 run-42
+$ mlcompass compare run-3 run-42
 [shows hypothesis-driven diff]
 
 # Day 7 — going to production
-$ ml-copilot deploy --target sagemaker
+$ mlcompass deploy --target sagemaker
 [deployment checklist]
 ```
 
@@ -472,30 +472,30 @@ extended:
 | Multi-language project support (R, Julia)?            | Python-first; revisit at v1.0           |
 | Hosted version (SaaS) or local-only?                  | Local-only at v0.x; SaaS at v1.0+       |
 | How does it handle very large datasets (>10GB CSV)?   | Sample first 100K rows for advise       |
-| Should we ship a default `.mlcopilot/.gitignore`?     | Yes — include `cache/` and `runs/`      |
+| Should we ship a default `.mlcompass/.gitignore`?     | Yes — include `cache/` and `runs/`      |
 
 ---
 
 ## 11. Non-goals
 
-To stay focused, ml-copilot will **not** try to be:
+To stay focused, mlcompass will **not** try to be:
 
 - **An AutoML system.** We advise; we don't auto-train hundreds of
   models. Use AutoSklearn, AutoGluon, etc. for that.
 - **A model registry or experiment tracker.** Use MLflow or W&B.
-  ml-copilot's `runs/` is for context, not auditing.
+  mlcompass's `runs/` is for context, not auditing.
 - **A general code assistant.** Use Cursor, Copilot, or aider.
 - **A data labeling tool.** Use Label Studio, Snorkel, etc.
 - **A monitoring dashboard.** Use Grafana, Streamlit, etc.
 
-ml-copilot is the **advisor that sits next to all of these tools**,
+mlcompass is the **advisor that sits next to all of these tools**,
 not a replacement for any of them.
 
 ---
 
 ## 12. Glossary
 
-- **Project context** — the persistent state stored in `.mlcopilot/`
+- **Project context** — the persistent state stored in `.mlcompass/`
 - **Run** — a single training execution with associated metrics
 - **Recommendation** — an advisor sub-agent's structured suggestion
 - **Permission gate** — agentlite's `requires_confirmation=True` hook

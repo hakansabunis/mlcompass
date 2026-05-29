@@ -1,10 +1,10 @@
-"""Command-line interface for ``ml-copilot``.
+"""Command-line interface for ``mlcompass``.
 
 Subcommands are added incrementally as the project advances through
 its phases. See ARCHITECTURE.md §7 for the full CLI design.
 
 Currently implemented:
-    init    — create a new ``.mlcopilot/`` project (Faz 1)
+    init    — create a new ``.mlcompass/`` project (Faz 1)
     advise  — analyze dataset + recommend models / features / pitfalls (Faz 1)
 
 Planned:
@@ -54,15 +54,15 @@ console = Console()
 
 
 @click.group(
-    help="ml-copilot — your AI ML engineer at every pipeline stage.",
+    help="mlcompass — your AI ML engineer at every pipeline stage.",
     context_settings={"help_option_names": ["-h", "--help"]},
 )
-@click.version_option(__version__, prog_name="ml-copilot")
+@click.version_option(__version__, prog_name="mlcompass")
 def cli() -> None:
     """Root command group."""
 
 
-@cli.command(help="Initialize a new ml-copilot project.")
+@cli.command(help="Initialize a new mlcompass project.")
 @click.argument("name")
 @click.option(
     "--path",
@@ -70,7 +70,7 @@ def cli() -> None:
     type=click.Path(file_okay=False, dir_okay=True, path_type=Path),
     default=Path("."),
     show_default=True,
-    help="Directory in which .mlcopilot/ will be created.",
+    help="Directory in which .mlcompass/ will be created.",
 )
 @click.option(
     "--default-model",
@@ -79,7 +79,7 @@ def cli() -> None:
     help="Default LLM model for this project.",
 )
 def init(name: str, parent_dir: Path, default_model: str) -> None:
-    """Create a new ml-copilot project under ``parent_dir/.mlcopilot/``."""
+    """Create a new mlcompass project under ``parent_dir/.mlcompass/``."""
     try:
         ctx = ProjectContext.init(
             name=name,
@@ -95,8 +95,8 @@ def init(name: str, parent_dir: Path, default_model: str) -> None:
             f"[green]✓[/green] Project [bold]{name}[/bold] initialized.\n\n"
             f"Directory:  [cyan]{ctx.path}[/cyan]\n"
             f"Model:      {default_model}\n\n"
-            f"Next: [yellow]ml-copilot advise <data.csv>[/yellow]",
-            title="ml-copilot init",
+            f"Next: [yellow]mlcompass advise <data.csv>[/yellow]",
+            title="mlcompass init",
             border_style="green",
         )
     )
@@ -186,7 +186,7 @@ def _try_load_project() -> ProjectContext | None:
         return ProjectContext.load()
     except ProjectNotFoundError:
         console.print(
-            "[dim](no .mlcopilot/ project found in current path — "
+            "[dim](no .mlcompass/ project found in current path — "
             "running standalone; results will not be persisted)[/dim]\n"
         )
         return None
@@ -266,7 +266,7 @@ def _append_advice_log(
     analysis: dict[str, Any],
     recommendation: dict[str, Any] | None,
 ) -> None:
-    """Append a single advice entry to ``.mlcopilot/advice.log``."""
+    """Append a single advice entry to ``.mlcompass/advice.log``."""
     entry = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "dataset": str(dataset_path),
@@ -285,7 +285,7 @@ def _append_advice_log(
 
 
 def main() -> None:
-    """Entry point for the ``ml-copilot`` console script."""
+    """Entry point for the ``mlcompass`` console script."""
     cli()
 
 

@@ -1,4 +1,4 @@
-# ml-copilot v0.1: ML eğitiminin yanındaki AI mühendisi
+# mlcompass v0.1: ML eğitiminin yanındaki AI mühendisi
 
 *2026-05-29 — Hakan Sabunis*
 
@@ -12,17 +12,17 @@ ne olduğunu kaydediyor. AutoML araçları diğer uçta: tamamen otonom
 çalışıp size bir model fırlatıyorlar, neden o seçimleri yaptıklarını
 öğrenemiyorsunuz.
 
-Aradaki boşluğa **ml-copilot**'u yazdım. Bugün **v0.1** yayında.
+Aradaki boşluğa **mlcompass**'u yazdım. Bugün **v0.1** yayında.
 
 ```bash
-pip install ml-copilot
-ml-copilot init my-project
-ml-copilot advise data.csv
+pip install mlcompass
+mlcompass init my-project
+mlcompass advise data.csv
 ```
 
 ## Ne yapıyor?
 
-Veri CSV'nizi verirsiniz; ml-copilot şunları söyler:
+Veri CSV'nizi verirsiniz; mlcompass şunları söyler:
 
 1. **Hangi 3 modeli denemelisiniz** (gerçekçi metric aralıklarıyla)
 2. **Hangi feature engineering'i yapmalısınız** (kolona göre özelleşmiş)
@@ -77,11 +77,11 @@ kütüphanesi. Şu üç özelliği veriyor:
 ## v0.1 yapısı
 
 ```
-ml-copilot init <name>          Yeni proje başlat (.mlcopilot/)
-ml-copilot advise <data> ...    Veri analizi + model + FE önerisi
+mlcompass init <name>          Yeni proje başlat (.mlcompass/)
+mlcompass advise <data> ...    Veri analizi + model + FE önerisi
 ```
 
-Proje boyunca süren bir `.mlcopilot/` klasörü tutulur — git'in `.git/`'i
+Proje boyunca süren bir `.mlcompass/` klasörü tutulur — git'in `.git/`'i
 gibi. İçinde hangi veri seçildi, hangi model önerildi, kullanıcı ne
 karar verdi hepsi saklı. Sonraki komutlar (`audit`, `watch`, `evaluate`,
 `deploy`) bu bağlamı okuyup üzerine inşa edecek.
@@ -90,24 +90,24 @@ karar verdi hepsi saklı. Sonraki komutlar (`audit`, `watch`, `evaluate`,
 
 v0.2'de eğitim sırasında **canlı izleme** geliyor:
 
-- `ml-copilot audit <script>` — train.py'nin statik analizi (seed
+- `mlcompass audit <script>` — train.py'nin statik analizi (seed
   eksik mi, val split makul mu, loss fonksiyonu stabil mi)
-- `ml-copilot watch <script>` — eğitim sürerken plateau / overfit /
+- `mlcompass watch <script>` — eğitim sürerken plateau / overfit /
   NaN tespit et, **izinli** olarak müdahale önerisi sun
-- `ml-copilot compare run-a run-b` — iki eğitim arasında AI yorumu
+- `mlcompass compare run-a run-b` — iki eğitim arasında AI yorumu
 
 v0.3'te `evaluate`, v0.4'te `deploy` kontrolleri ekleniyor.
 
-Yol haritası tamamen [CHANGELOG.md](https://github.com/hakansabunis/ml-copilot/blob/main/CHANGELOG.md)'de,
-tasarım kararları [ARCHITECTURE.md](https://github.com/hakansabunis/ml-copilot/blob/main/ARCHITECTURE.md)'de
+Yol haritası tamamen [CHANGELOG.md](https://github.com/hakansabunis/mlcompass/blob/main/CHANGELOG.md)'de,
+tasarım kararları [ARCHITECTURE.md](https://github.com/hakansabunis/mlcompass/blob/main/ARCHITECTURE.md)'de
 yazılı.
 
 ## Dene
 
 ```bash
-pip install ml-copilot
-ml-copilot init demo
-ml-copilot advise <senin-csv'n>
+pip install mlcompass
+mlcompass init demo
+mlcompass advise <senin-csv'n>
 ```
 
 `ANTHROPIC_API_KEY` yoksa `--no-llm` flag'iyle sadece deterministik
@@ -119,13 +119,13 @@ churn (ağır dengesizlik).
 
 ## Geri bildirim
 
-ml-copilot alfa aşamasında. En çok iterate edeceğim şey advisor'ın
+mlcompass alfa aşamasında. En çok iterate edeceğim şey advisor'ın
 prompt'u — denersen ve öneri tutmazsa, lütfen issue aç ve hangi veriyi
 verdiğinde neyi beklediğini yaz.
 
-GitHub: <https://github.com/hakansabunis/ml-copilot>
+GitHub: <https://github.com/hakansabunis/mlcompass>
 
-> *Kapsam içerisinde dipnot: ml-copilot'u TÜBİTAK 1001 başvurusu ya da
+> *Kapsam içerisinde dipnot: mlcompass'u TÜBİTAK 1001 başvurusu ya da
 > şirkete ücretli SaaS olarak sunmak gibi bir niyetim şu an yok. Açık
 > kaynak, MIT lisanslı, kendi ihtiyacımdan doğmuş bir alet. Sen de
 > kullanışlı bulursan ne mutlu.*

@@ -1,6 +1,6 @@
-# Contributing to ml-copilot
+# Contributing to mlcompass
 
-Thanks for thinking about contributing! ml-copilot is alpha-stage and
+Thanks for thinking about contributing! mlcompass is alpha-stage and
 moves quickly, so a short heads-up before you sink time into a change:
 
 - **Open an issue first** for anything larger than a small fix. The
@@ -12,8 +12,8 @@ moves quickly, so a short heads-up before you sink time into a change:
 ## Development setup
 
 ```bash
-git clone https://github.com/hakansabunis/ml-copilot
-cd ml-copilot
+git clone https://github.com/hakansabunis/mlcompass
+cd mlcompass
 
 python -m venv .venv
 .venv/Scripts/activate          # Windows
@@ -22,7 +22,7 @@ python -m venv .venv
 pip install -e ".[dev]"
 ```
 
-That installs ml-copilot in editable mode plus pytest, ruff, mypy,
+That installs mlcompass in editable mode plus pytest, ruff, mypy,
 and tbparse.
 
 ## Running the test suite
@@ -50,14 +50,14 @@ and `tests/test_cli_advise.py` — they don't need an `ANTHROPIC_API_KEY`.
 
 The structure for adding a new command (say `audit`) is:
 
-1. **Tool layer** (`src/ml_copilot/tools/script.py`): pure-Python
+1. **Tool layer** (`src/mlcompass/tools/script.py`): pure-Python
    helpers that don't need an LLM (AST parsing, static checks, etc.).
-2. **Agent** (`src/ml_copilot/agents/audit.py`): an agentlite Agent
+2. **Agent** (`src/mlcompass/agents/audit.py`): an agentlite Agent
    factory and a `get_<thing>(...)` entry point that takes the tool
    output and returns a parsed recommendation.
-3. **UI** (`src/ml_copilot/ui/audit.py`): rich rendering for the
+3. **UI** (`src/mlcompass/ui/audit.py`): rich rendering for the
    agent output.
-4. **CLI** (`src/ml_copilot/cli.py`): a new `@cli.command()` that
+4. **CLI** (`src/mlcompass/cli.py`): a new `@cli.command()` that
    wires the three layers together.
 5. **Tests** (`tests/test_<thing>.py`): unit tests for the tool layer,
    MockClient tests for the agent, CliRunner tests for the command.
@@ -76,7 +76,7 @@ actions, even with a `--yes` flag, without a clear opt-in.
 
 Useful bug reports include:
 
-- ml-copilot version (`ml-copilot --version`)
+- mlcompass version (`mlcompass --version`)
 - Python version (`python --version`)
 - OS + terminal
 - Minimal reproduction steps

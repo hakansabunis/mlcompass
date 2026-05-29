@@ -1,9 +1,9 @@
-# ml-copilot
+# mlcompass
 
 > An LLM agent that sits next to you through your whole ML pipeline —
 > from data, through training, all the way to deployment.
 
-[![PyPI](https://img.shields.io/pypi/v/ml-copilot.svg)](https://pypi.org/project/ml-copilot/)
+[![PyPI](https://img.shields.io/pypi/v/mlcompass.svg)](https://pypi.org/project/mlcompass/)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
@@ -11,7 +11,7 @@
 
 ## What it does
 
-ml-copilot is a single CLI that follows your ML project from start
+mlcompass is a single CLI that follows your ML project from start
 to finish, keeping context across every step.
 
 ```
@@ -23,7 +23,7 @@ data.csv          train.py             results.csv         production
 ```
 
 Each command writes to and reads from a shared project context
-(`.mlcopilot/`), so by the time you reach `deploy`, the tool already
+(`.mlcompass/`), so by the time you reach `deploy`, the tool already
 knows your dataset, your model choice, your training history, and
 your evaluation results.
 
@@ -31,7 +31,7 @@ your evaluation results.
 
 | Command    | When you run it                          | What you get                                          |
 | ---------- | ---------------------------------------- | ----------------------------------------------------- |
-| `init`     | Starting a new project                   | A `.mlcopilot/` folder that tracks decisions          |
+| `init`     | Starting a new project                   | A `.mlcompass/` folder that tracks decisions          |
 | `advise`   | You have a CSV, what now?                | Models to try, features to derive, pitfalls to avoid  |
 | `audit`    | Before you press train                   | Static analysis of training script (seed, val, etc.)  |
 | `watch`    | While training runs                      | Live plateau / overfit / NaN detection                |
@@ -42,8 +42,8 @@ your evaluation results.
 ## Quick example — `advise` mode
 
 ```bash
-ml-copilot init churn-project
-ml-copilot advise data/customers.csv --target churn
+mlcompass init churn-project
+mlcompass advise data/customers.csv --target churn
 ```
 
 Output:
@@ -78,7 +78,7 @@ Generate a baseline notebook? [y/N]
 ## Quick example — `watch` mode (Faz 2)
 
 ```bash
-ml-copilot watch train.py
+mlcompass watch train.py
 ```
 
 After 8 epochs:
@@ -93,12 +93,12 @@ After 8 epochs:
    Apply and restart training? [y/N]
 ```
 
-## Why ml-copilot
+## Why mlcompass
 
 The ML ecosystem already has great tools — but each owns one slice
 of the pipeline, and none of them advise:
 
-|                                 | pandas-profiling | W&B / TensorBoard | Cursor / Devin | **ml-copilot** |
+|                                 | pandas-profiling | W&B / TensorBoard | Cursor / Devin | **mlcompass** |
 | ------------------------------- | :--------------: | :---------------: | :------------: | :------------: |
 | Analyzes raw data               |        ✅        |         ❌        |       ❌       |       ✅       |
 | Recommends models + features    |        ❌        |         ❌        |     partial    |       ✅       |
@@ -110,13 +110,13 @@ of the pipeline, and none of them advise:
 | Persistent project memory       |        ❌        |    per-run        |       ❌       |       ✅       |
 | Permission-gated actions        |        ❌        |         ❌        |     partial    |   first-class  |
 
-ml-copilot is the **advisor that sits next to all of these tools** —
+mlcompass is the **advisor that sits next to all of these tools** —
 not a replacement for any.
 
 ## Install
 
 ```bash
-pip install ml-copilot
+pip install mlcompass
 export ANTHROPIC_API_KEY="sk-ant-..."
 ```
 
@@ -124,27 +124,27 @@ export ANTHROPIC_API_KEY="sk-ant-..."
 
 ```bash
 # Start a project
-ml-copilot init my-project
+mlcompass init my-project
 
 # Pre-training
-ml-copilot advise data.csv --target label
+mlcompass advise data.csv --target label
 
 # Training-time          (Faz 2)
-ml-copilot audit train.py
-ml-copilot watch train.py
-ml-copilot compare run-3 run-7
+mlcompass audit train.py
+mlcompass watch train.py
+mlcompass compare run-3 run-7
 
 # Post-training          (Faz 3)
-ml-copilot evaluate results.csv
+mlcompass evaluate results.csv
 
 # Deployment             (Faz 4)
-ml-copilot deploy --target sagemaker
+mlcompass deploy --target sagemaker
 ```
 
 ## How it works
 
 Built on [agentlite](https://github.com/hakansabunis/agentlite) — a
-small Claude agent library — ml-copilot uses one orchestrator agent
+small Claude agent library — mlcompass uses one orchestrator agent
 per command, plus focused sub-agents for sub-tasks:
 
 ```
@@ -168,18 +168,18 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the full design.
 
 ## Project context
 
-Each ml-copilot project keeps a small folder, similar in spirit to
+Each mlcompass project keeps a small folder, similar in spirit to
 `.git/`:
 
 ```
-.mlcopilot/
+.mlcompass/
 ├── project.yaml        # metadata
 ├── context.json        # decisions, recommendations, active state
 ├── datasets/           # registered datasets
 └── runs/               # training run history
 ```
 
-This is what makes ml-copilot more than a chat tool: by the time you
+This is what makes mlcompass more than a chat tool: by the time you
 run `deploy`, every earlier decision is still in memory.
 
 ## Roadmap
@@ -196,14 +196,14 @@ See [CHANGELOG.md](CHANGELOG.md) for detailed plans and
 
 ## Non-goals
 
-To stay focused, ml-copilot will **not** try to be:
+To stay focused, mlcompass will **not** try to be:
 
 - **AutoML** (use AutoGluon, AutoSklearn)
 - **Experiment tracker** (use MLflow, W&B)
 - **Code assistant** (use Cursor, Copilot, aider)
 - **Monitoring dashboard** (use Grafana, Streamlit)
 
-ml-copilot **advises**; you decide.
+mlcompass **advises**; you decide.
 
 ## Contributing
 

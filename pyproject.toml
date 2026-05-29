@@ -1,6 +1,6 @@
 [project]
-name = "ml-copilot"
-version = "0.1.1"
+name = "mlcompass"
+version = "0.1.0"
 description = "An LLM agent that sits next to you through your whole ML pipeline"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -57,13 +57,13 @@ dev = [
 ]
 
 [project.scripts]
-ml-copilot = "ml_copilot.cli:main"
+mlcompass = "mlcompass.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/hakansabunis/ml-copilot"
-Repository = "https://github.com/hakansabunis/ml-copilot"
-Issues = "https://github.com/hakansabunis/ml-copilot/issues"
-Changelog = "https://github.com/hakansabunis/ml-copilot/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/hakansabunis/mlcompass"
+Repository = "https://github.com/hakansabunis/mlcompass"
+Issues = "https://github.com/hakansabunis/mlcompass/issues"
+Changelog = "https://github.com/hakansabunis/mlcompass/blob/main/CHANGELOG.md"
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]

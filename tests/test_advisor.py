@@ -7,7 +7,7 @@ import json
 import pytest
 from agentlite.testing import MockClient, text_response
 
-from ml_copilot.agents.advise import (
+from mlcompass.agents.advise import (
     AdvisorParseError,
     _parse_advisor_response,
     build_advisor_agent,

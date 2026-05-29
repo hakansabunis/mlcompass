@@ -1,4 +1,4 @@
-"""Project context: persistent state stored in ``.mlcopilot/``.
+"""Project context: persistent state stored in ``.mlcompass/``.
 
 The directory layout is described in ``ARCHITECTURE.md §2``.
 """
@@ -16,24 +16,24 @@ import yaml
 
 from . import __version__
 
-DEFAULT_PROJECT_DIR = ".mlcopilot"
+DEFAULT_PROJECT_DIR = ".mlcompass"
 
 
 class ProjectExistsError(FileExistsError):
-    """Raised when init is called but ``.mlcopilot/`` already exists."""
+    """Raised when init is called but ``.mlcompass/`` already exists."""
 
 
 class ProjectNotFoundError(FileNotFoundError):
-    """Raised when load is called but no ``.mlcopilot/`` is found."""
+    """Raised when load is called but no ``.mlcompass/`` is found."""
 
 
 @dataclass
 class ProjectContext:
-    """Wraps a single ``.mlcopilot/`` project directory.
+    """Wraps a single ``.mlcompass/`` project directory.
 
     Layout::
 
-        .mlcopilot/
+        .mlcompass/
         ├── project.yaml      # static metadata
         ├── context.json      # dynamic state (decisions, recommendations)
         ├── datasets/         # registered datasets
@@ -42,7 +42,7 @@ class ProjectContext:
         └── cache/            # tool result + LLM prompt cache
     """
 
-    path: Path  # the ``.mlcopilot/`` directory itself
+    path: Path  # the ``.mlcompass/`` directory itself
 
     # ---------------------- Construction ----------------------
 
@@ -54,11 +54,11 @@ class ProjectContext:
         *,
         default_model: str = "claude-opus-4-7",
     ) -> "ProjectContext":
-        """Create a new ``.mlcopilot/`` directory under ``parent_dir``.
+        """Create a new ``.mlcompass/`` directory under ``parent_dir``.
 
         Args:
             name: Human-readable project name (e.g., ``"churn-model"``).
-            parent_dir: Directory in which ``.mlcopilot/`` will be created.
+            parent_dir: Directory in which ``.mlcompass/`` will be created.
             default_model: Default LLM model name for the project.
 
         Returns:
@@ -83,7 +83,7 @@ class ProjectContext:
         project_meta = {
             "name": name,
             "created": datetime.now(timezone.utc).isoformat(),
-            "ml_copilot_version": __version__,
+            "mlcompass_version": __version__,
             "default_model": default_model,
         }
         (target / "project.yaml").write_text(
@@ -123,7 +123,7 @@ class ProjectContext:
         Mirrors the behaviour of ``git`` when discovering a repository.
 
         Raises:
-            ProjectNotFoundError: If no ``.mlcopilot/`` is found between
+            ProjectNotFoundError: If no ``.mlcompass/`` is found between
                 ``search_from`` and the filesystem root.
         """
         current = Path(search_from).resolve()
@@ -133,7 +133,7 @@ class ProjectContext:
                 return cls(path=target)
         raise ProjectNotFoundError(
             f"No {DEFAULT_PROJECT_DIR}/ found at or above {current}. "
-            "Run `ml-copilot init <name>` to create one."
+            "Run `mlcompass init <name>` to create one."
         )
 
     # ---------------------- Read / write ----------------------

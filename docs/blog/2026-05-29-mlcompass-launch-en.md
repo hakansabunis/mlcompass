@@ -1,15 +1,15 @@
-# Launching ml-copilot: an LLM agent for the full ML pipeline
+# Launching mlcompass: an LLM agent for the full ML pipeline
 
 *2026-05-29 — Hakan Sabunis*
 
-I just shipped the first public version of **ml-copilot**, a small CLI
+I just shipped the first public version of **mlcompass**, a small CLI
 agent that sits next to you through your whole ML pipeline. It's MIT,
 written in Python, and runs on top of Claude.
 
 ```bash
-pip install ml-copilot
-ml-copilot init churn-project
-ml-copilot advise data.csv --target churn
+pip install mlcompass
+mlcompass init churn-project
+mlcompass advise data.csv --target churn
 ```
 
 This post is the story of why I built it, what's in v0.1, and where it's
@@ -89,19 +89,19 @@ the actual recommendation, given the structured analysis as input.
                 ┌───────────┼───────────┐
                 ▼           ▼           ▼
         analyze_dataset  ModelAdvisor  ProjectContext
-        (pure pandas)    (Claude Opus) (.mlcopilot/)
+        (pure pandas)    (Claude Opus) (.mlcompass/)
                             │
                             ▼
                        Rich UI
                        (terminal)
 ```
 
-A persistent `.mlcopilot/` directory carries context across commands:
+A persistent `.mlcompass/` directory carries context across commands:
 which dataset is active, which task type, which decisions you've made
 and why. This is what will let the planned later commands —
 `audit`, `watch`, `evaluate`, `deploy` — know what you already chose.
 
-ml-copilot is built on **[agentlite](https://github.com/hakansabunis/agentlite)**,
+mlcompass is built on **[agentlite](https://github.com/hakansabunis/agentlite)**,
 a ~2K-line Claude agent library I wrote for the same Capstone project.
 That gives us:
 
@@ -118,23 +118,23 @@ That gives us:
 v0.2 ships the part that originally motivated the project: live
 training watching.
 
-- `ml-copilot audit <script>` — static analysis of your training script
-- `ml-copilot watch <script>` — live monitor that detects plateau,
+- `mlcompass audit <script>` — static analysis of your training script
+- `mlcompass watch <script>` — live monitor that detects plateau,
   overfit, and NaN and asks permission before suggesting a config edit
-- `ml-copilot compare run-a run-b` — LLM-explained run diff
+- `mlcompass compare run-a run-b` — LLM-explained run diff
 
 After that, v0.3 adds `evaluate` (post-training analysis), and v0.4
 adds `deploy` (deployment readiness check).
 
-The full roadmap is in [CHANGELOG.md](https://github.com/hakansabunis/ml-copilot/blob/main/CHANGELOG.md).
-The design rationale is in [ARCHITECTURE.md](https://github.com/hakansabunis/ml-copilot/blob/main/ARCHITECTURE.md).
+The full roadmap is in [CHANGELOG.md](https://github.com/hakansabunis/mlcompass/blob/main/CHANGELOG.md).
+The design rationale is in [ARCHITECTURE.md](https://github.com/hakansabunis/mlcompass/blob/main/ARCHITECTURE.md).
 
 ## Try it
 
 ```bash
-pip install ml-copilot
-ml-copilot init demo
-ml-copilot advise <your.csv>
+pip install mlcompass
+mlcompass init demo
+mlcompass advise <your.csv>
 ```
 
 There's no real LLM call unless `ANTHROPIC_API_KEY` is set, so you can
@@ -144,9 +144,9 @@ Three example datasets live in `examples/` if you don't have one handy.
 
 ## Feedback welcome
 
-ml-copilot is alpha. The advisor prompt is the thing I expect to iterate
+mlcompass is alpha. The advisor prompt is the thing I expect to iterate
 on the most — if you try it and the recommendation is off, please open
 an issue with the dataset (or a minimal anonymised version) and what
 you'd have hoped to see.
 
-GitHub: <https://github.com/hakansabunis/ml-copilot>
+GitHub: <https://github.com/hakansabunis/mlcompass>

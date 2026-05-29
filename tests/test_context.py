@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from ml_copilot.context import (
+from mlcompass.context import (
     DEFAULT_PROJECT_DIR,
     ProjectContext,
     ProjectExistsError,
@@ -36,7 +36,7 @@ def test_init_writes_project_meta(tmp_path: Path) -> None:
     assert meta["name"] == "test-proj"
     assert meta["default_model"] == "claude-opus-4-7"
     assert "created" in meta
-    assert "ml_copilot_version" in meta
+    assert "mlcompass_version" in meta
 
 
 def test_init_writes_empty_context(tmp_path: Path) -> None:

@@ -7,7 +7,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from ml_copilot.tools.dataset import analyze_dataset, load_dataset
+from mlcompass.tools.dataset import analyze_dataset, load_dataset
 
 
 def _csv(tmp_path: Path, df: pd.DataFrame, name: str = "data.csv") -> Path:

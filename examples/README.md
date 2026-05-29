@@ -1,7 +1,7 @@
-# ml-copilot example datasets
+# mlcompass example datasets
 
 Three small synthetic datasets covering the most common tabular ML
-scenarios. Each one is designed so `ml-copilot advise` produces a
+scenarios. Each one is designed so `mlcompass advise` produces a
 distinctive, useful recommendation.
 
 | File                        | Task                          | What it shows off                              |
@@ -17,10 +17,10 @@ want to regenerate them; the contents are identical.
 ## Quick start
 
 ```bash
-ml-copilot init demo
-ml-copilot advise examples/titanic_small.csv
-ml-copilot advise examples/house_prices.csv --target price
-ml-copilot advise examples/customer_churn.csv
+mlcompass init demo
+mlcompass advise examples/titanic_small.csv
+mlcompass advise examples/house_prices.csv --target price
+mlcompass advise examples/customer_churn.csv
 ```
 
 ## Expected advisor highlights
