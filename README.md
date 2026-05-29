@@ -1,6 +1,7 @@
 # ml-copilot
 
-> An LLM agent that watches your ML training and tells you what's wrong.
+> An LLM agent that sits next to you through your whole ML pipeline —
+> from data, through training, all the way to deployment.
 
 [![PyPI](https://img.shields.io/pypi/v/ml-copilot.svg)](https://pypi.org/project/ml-copilot/)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org)
@@ -10,22 +11,77 @@
 
 ## What it does
 
-You run `train.py`. ml-copilot watches in your terminal:
+ml-copilot is a single CLI that follows your ML project from start
+to finish, keeping context across every step.
 
-- Reads your TensorBoard / W&B / plain-text logs in real time
-- Detects plateaus, overfitting, NaN, divergence
-- Reads your training script and diagnoses the likely cause
-- Asks permission before changing anything
+```
+data.csv          train.py             results.csv         production
+   │                  │                     │                  │
+   ▼                  ▼                     ▼                  ▼
+ advise   ────►   audit + watch  ────►  evaluate  ────►  deploy
+                      compare
+```
 
-Think of it as a senior ML engineer sitting next to you.
+Each command writes to and reads from a shared project context
+(`.mlcopilot/`), so by the time you reach `deploy`, the tool already
+knows your dataset, your model choice, your training history, and
+your evaluation results.
 
-## Quick example
+## Six commands, one tool
+
+| Command    | When you run it                          | What you get                                          |
+| ---------- | ---------------------------------------- | ----------------------------------------------------- |
+| `init`     | Starting a new project                   | A `.mlcopilot/` folder that tracks decisions          |
+| `advise`   | You have a CSV, what now?                | Models to try, features to derive, pitfalls to avoid  |
+| `audit`    | Before you press train                   | Static analysis of training script (seed, val, etc.)  |
+| `watch`    | While training runs                      | Live plateau / overfit / NaN detection                |
+| `compare`  | After several runs                       | Hypothesis-driven diff between two runs               |
+| `evaluate` | Training done                            | Threshold tuning, confusion matrix, hard examples     |
+| `deploy`   | Going to production                      | Latency estimate, dependency check, ONNX advice       |
+
+## Quick example — `advise` mode
+
+```bash
+ml-copilot init churn-project
+ml-copilot advise data/customers.csv --target churn
+```
+
+Output:
+
+```
+📊 Dataset analysis (data/customers.csv)
+   • 10,000 rows × 23 columns
+   • Target: churn (binary, 12% positive)
+   • 4 categorical, 18 numerical, 1 datetime
+   • 3 columns with >50% missing values (consider dropping)
+
+💡 Recommended models
+   1. XGBoost / LightGBM   → tabular binary baseline
+                             expected AUC: 0.82 – 0.87
+   2. Logistic Regression  → interpretable baseline
+                             expected AUC: 0.76 – 0.80
+   3. FT-Transformer       → if GPU budget allows
+                             expected AUC: 0.83 – 0.86
+
+🔧 Suggested feature engineering
+   • signup_date → derive days_since_signup, month, dayofweek
+   • income (3 outliers >3σ) → winsorize at 99th percentile
+   • country (47 categories) → target encoding or top-N
+
+⚠️  Class imbalance (12% positive)
+   • Don't optimize accuracy — use AUC, F1, or recall@k
+   • Consider class_weight='balanced' or focal loss
+
+Generate a baseline notebook? [y/N]
+```
+
+## Quick example — `watch` mode (Faz 2)
 
 ```bash
 ml-copilot watch train.py
 ```
 
-Output after 8 epochs:
+After 8 epochs:
 
 ```
 ⚠️  Epoch 8 — overfitting detected
@@ -39,15 +95,23 @@ Output after 8 epochs:
 
 ## Why ml-copilot
 
-Existing tools **log**; ml-copilot **advises**:
+The ML ecosystem already has great tools — but each owns one slice
+of the pipeline, and none of them advise:
 
-|                                | W&B / TensorBoard | Cursor / Devin | **ml-copilot** |
-| ------------------------------ | :---------------: | :------------: | :------------: |
-| Logs metrics                   |        ✅         |       ❌       |       ✅       |
-| Watches training in real time  |        ❌         |       ❌       |       ✅       |
-| Diagnoses problems proactively |        ❌         |    reactive    |       ✅       |
-| Suggests training-aware fixes  |        ❌         |   code-level   |       ✅       |
-| Permission-gated actions       |        ❌         |    partial     |   first-class  |
+|                                 | pandas-profiling | W&B / TensorBoard | Cursor / Devin | **ml-copilot** |
+| ------------------------------- | :--------------: | :---------------: | :------------: | :------------: |
+| Analyzes raw data               |        ✅        |         ❌        |       ❌       |       ✅       |
+| Recommends models + features    |        ❌        |         ❌        |     partial    |       ✅       |
+| Audits training scripts         |        ❌        |         ❌        |     reactive   |       ✅       |
+| Watches training in real time   |        ❌        |    dashboard      |       ❌       |       ✅       |
+| Diagnoses problems proactively  |        ❌        |         ❌        |     reactive   |       ✅       |
+| Post-training evaluation advice |        ❌        |       basic       |       ❌       |       ✅       |
+| Deployment readiness check      |        ❌        |         ❌        |       ❌       |       ✅       |
+| Persistent project memory       |        ❌        |    per-run        |       ❌       |       ✅       |
+| Permission-gated actions        |        ❌        |         ❌        |     partial    |   first-class  |
+
+ml-copilot is the **advisor that sits next to all of these tools** —
+not a replacement for any.
 
 ## Install
 
@@ -58,54 +122,88 @@ export ANTHROPIC_API_KEY="sk-ant-..."
 
 ## Usage
 
-### Watch a live training run
-
 ```bash
-ml-copilot watch train.py
-```
+# Start a project
+ml-copilot init my-project
 
-### Audit a script (one-shot static analysis)
+# Pre-training
+ml-copilot advise data.csv --target label
 
-```bash
+# Training-time          (Faz 2)
 ml-copilot audit train.py
-```
+ml-copilot watch train.py
+ml-copilot compare run-3 run-7
 
-### Compare two runs
+# Post-training          (Faz 3)
+ml-copilot evaluate results.csv
 
-```bash
-ml-copilot compare runs/run-3 runs/run-7
+# Deployment             (Faz 4)
+ml-copilot deploy --target sagemaker
 ```
 
 ## How it works
 
-Built on [agentlite](https://github.com/hakansabunis/agentlite). Architecture:
+Built on [agentlite](https://github.com/hakansabunis/agentlite) — a
+small Claude agent library — ml-copilot uses one orchestrator agent
+per command, plus focused sub-agents for sub-tasks:
 
 ```
-You (terminal)
-    │
-    ▼
-ml-copilot (orchestrator agent, Opus)
-    ├── Watcher sub-agent       (Haiku, runs continuously)
-    ├── Diagnostician sub-agent (Opus, called on anomaly)
-    └── Code Inspector sub-agent (Haiku, reads train.py)
-    │
-    ▼ permission-gated actions
-[edit_config | restart_training | apply_code_patch]
+       cli.py
+         │
+   ┌─────┴─────┐
+   ▼           ▼
+ advise      watch                ... deploy
+ agent       agent
+   │           │
+   ▼           ▼
+ ModelAdvisor  MetricsWatcher (Haiku, polls)
+  (Opus)       Diagnostician  (Opus, called on anomaly)
 ```
 
-Every action that would change your code, config, or process **asks permission first.**
+Every action that would modify your code, config, or run a training
+process **asks permission first** — agentlite's permission system is
+first-class, not an afterthought.
 
-## Status
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the full design.
 
-| Feature                                   |   Status        |
-| ----------------------------------------- | :-------------: |
-| `audit` mode (static script analysis)     | 🚧 In progress  |
-| `watch` mode (live monitoring)            | 🚧 In progress  |
-| Plateau / overfitting / NaN detection     | 🚧 In progress  |
-| `compare` mode (run diff)                 | 📅 Planned      |
-| Auto-restart with config edit             | 📅 Planned      |
-| Jupyter magic (`%mlc watch`)              | 📅 Planned      |
-| W&B API integration                       | 📅 Planned      |
+## Project context
+
+Each ml-copilot project keeps a small folder, similar in spirit to
+`.git/`:
+
+```
+.mlcopilot/
+├── project.yaml        # metadata
+├── context.json        # decisions, recommendations, active state
+├── datasets/           # registered datasets
+└── runs/               # training run history
+```
+
+This is what makes ml-copilot more than a chat tool: by the time you
+run `deploy`, every earlier decision is still in memory.
+
+## Roadmap
+
+| Phase           | Commands                              |  Status       |
+| --------------- | ------------------------------------- | :-----------: |
+| **Faz 1 (v0.1)**| `init`, `advise`                      | 🚧 In progress |
+| **Faz 2 (v0.2)**| `audit`, `watch`, `compare`           | 📅 Planned    |
+| **Faz 3 (v0.3)**| `evaluate`                            | 📅 Planned    |
+| **Faz 4 (v0.4)**| `deploy`                              | 📅 Planned    |
+
+See [CHANGELOG.md](CHANGELOG.md) for detailed plans and
+[ARCHITECTURE.md](ARCHITECTURE.md) for the design.
+
+## Non-goals
+
+To stay focused, ml-copilot will **not** try to be:
+
+- **AutoML** (use AutoGluon, AutoSklearn)
+- **Experiment tracker** (use MLflow, W&B)
+- **Code assistant** (use Cursor, Copilot, aider)
+- **Monitoring dashboard** (use Grafana, Streamlit)
+
+ml-copilot **advises**; you decide.
 
 ## Contributing
 
