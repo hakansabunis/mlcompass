@@ -1,3 +1,3 @@
-"""ml-copilot — An LLM agent that watches your ML training and tells you what's wrong."""
+"""ml-copilot — An LLM agent that sits next to you through your whole ML pipeline."""
 
-__version__ = "0.0.1"
+__version__ = "0.1.0"
