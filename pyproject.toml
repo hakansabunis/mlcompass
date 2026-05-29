@@ -1,0 +1,91 @@
+[project]
+name = "ml-copilot"
+version = "0.0.1"
+description = "An LLM agent that watches your ML training and tells you what's wrong"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+    { name = "Hakan Sabunis", email = "hakansabunis@gmail.com" },
+]
+keywords = [
+    "machine-learning",
+    "llm",
+    "agent",
+    "training",
+    "monitoring",
+    "claude",
+    "pytorch",
+    "tensorboard",
+    "wandb",
+    "mlops",
+]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Monitoring",
+]
+
+dependencies = [
+    "agentlite-py>=0.2.0",
+    "watchdog>=4.0.0",
+    "rich>=13.0.0",
+    "click>=8.0.0",
+]
+
+[project.optional-dependencies]
+tensorboard = ["tbparse>=0.0.7"]
+wandb = ["wandb>=0.16.0"]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0",
+    "tbparse>=0.0.7",
+]
+
+[project.scripts]
+ml-copilot = "ml_copilot.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/hakansabunis/ml-copilot"
+Repository = "https://github.com/hakansabunis/ml-copilot"
+Issues = "https://github.com/hakansabunis/ml-copilot/issues"
+Changelog = "https://github.com/hakansabunis/ml-copilot/blob/main/CHANGELOG.md"
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
