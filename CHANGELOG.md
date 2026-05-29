@@ -25,7 +25,16 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Inference latency estimation, dependency consistency check,
   ONNX / TorchScript conversion advice
 
-## [0.1.0] — 2026-05-29
+## [0.1.1] — 2026-05-29
+
+### Fixed
+- Add `pandas>=2.0.0` to runtime dependencies. The 0.1.0 wheel failed to
+  import on a clean install because `tools.dataset` imports pandas at
+  module load time but pandas was only present via the `dev` extras
+  through `tbparse`. Caught by the TestPyPI fresh-venv smoke test
+  before the bug reached production PyPI.
+
+## [0.1.0] — 2026-05-29 (TestPyPI only — yanked)
 
 First public release.
 
