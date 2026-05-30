@@ -154,9 +154,7 @@ def _parse_advisor_response(text: str) -> dict[str, Any]:
         parsed = json.loads(stripped)
     except json.JSONDecodeError as exc:
         snippet = text[:200].replace("\n", " ")
-        raise AdvisorParseError(
-            f"Advisor response was not valid JSON: {snippet!r}"
-        ) from exc
+        raise AdvisorParseError(f"Advisor response was not valid JSON: {snippet!r}") from exc
 
     if not isinstance(parsed, dict):
         raise AdvisorParseError(

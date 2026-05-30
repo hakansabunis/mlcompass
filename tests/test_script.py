@@ -4,10 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 from mlcompass.tools.script import ALL_RULE_IDS, audit_script
-
 
 # --------------------------------------------------------------------------- #
 # Helpers                                                                     #
@@ -52,7 +49,9 @@ def test_no_ml_frameworks_skips_seed_check(tmp_path: Path) -> None:
 
 
 def test_frameworks_are_detected(tmp_path: Path) -> None:
-    code = "import torch\nimport numpy as np\nfrom sklearn.model_selection import train_test_split\n"
+    code = (
+        "import torch\nimport numpy as np\nfrom sklearn.model_selection import train_test_split\n"
+    )
     result = audit_script(_write(tmp_path, code))
     assert "torch" in result["frameworks"]
     assert "numpy" in result["frameworks"]

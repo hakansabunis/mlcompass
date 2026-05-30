@@ -68,8 +68,7 @@ def load_dataset(path: Path | str) -> pd.DataFrame:
         return pd.read_json(path)
 
     raise ValueError(
-        f"Unsupported dataset format: {suffix!r}. "
-        f"Supported: {', '.join(sorted(SUPPORTED_FORMATS))}"
+        f"Unsupported dataset format: {suffix!r}. Supported: {', '.join(sorted(SUPPORTED_FORMATS))}"
     )
 
 
@@ -250,9 +249,7 @@ def _summarize_categorical(s: pd.Series) -> dict[str, Any]:
     top = s_clean.value_counts().head(5)
     return {
         "cardinality": int(s_clean.nunique()),
-        "top_values": [
-            {"value": str(v), "count": int(c)} for v, c in top.items()
-        ],
+        "top_values": [{"value": str(v), "count": int(c)} for v, c in top.items()],
     }
 
 
@@ -327,8 +324,7 @@ def _detect_target_column(df: pd.DataFrame) -> dict[str, Any]:
         return {
             "column": last_col,
             "reason": (
-                f"Last column '{last_col}' has low cardinality ({nunique}), "
-                "often the target"
+                f"Last column '{last_col}' has low cardinality ({nunique}), often the target"
             ),
             "confidence": "low",
         }
@@ -364,17 +360,11 @@ def _infer_task_type(df: pd.DataFrame, target_hint: dict[str, Any]) -> dict[str,
         }
 
     if nunique == 2:
-        balance = {
-            str(k): float(v)
-            for k, v in s.value_counts(normalize=True).items()
-        }
+        balance = {str(k): float(v) for k, v in s.value_counts(normalize=True).items()}
         return {"type": "binary_classification", "class_balance": balance}
 
     if 2 < nunique <= 20:
-        distribution = {
-            str(k): float(v)
-            for k, v in s.value_counts(normalize=True).items()
-        }
+        distribution = {str(k): float(v) for k, v in s.value_counts(normalize=True).items()}
         return {
             "type": "multiclass_classification",
             "n_classes": int(nunique),
@@ -409,20 +399,14 @@ def _generate_warnings(
             f"({names}{suffix}); consider dropping or careful imputation."
         )
 
-    medium_missing = [
-        c for c in columns if 0.1 < c["missing_pct"] <= 0.5
-    ]
+    medium_missing = [c for c in columns if 0.1 < c["missing_pct"] <= 0.5]
     if medium_missing:
         warnings.append(
             f"{len(medium_missing)} column(s) have 10-50% missing values; "
             "decide on an imputation strategy."
         )
 
-    high_card = [
-        c
-        for c in columns
-        if c["type"] == "categorical" and c.get("cardinality", 0) > 50
-    ]
+    high_card = [c for c in columns if c["type"] == "categorical" and c.get("cardinality", 0) > 50]
     if high_card:
         warnings.append(
             f"{len(high_card)} categorical column(s) have cardinality >50; "
@@ -430,9 +414,7 @@ def _generate_warnings(
         )
 
     if target_hint.get("confidence") == "none":
-        warnings.append(
-            "No target column auto-detected. Specify with --target <name>."
-        )
+        warnings.append("No target column auto-detected. Specify with --target <name>.")
 
     if task_hint.get("type") == "binary_classification":
         balance = task_hint.get("class_balance", {})

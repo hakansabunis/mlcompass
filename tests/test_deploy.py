@@ -7,13 +7,12 @@ from pathlib import Path
 import pytest
 
 from mlcompass.tools.deploy import (
-    DeployAnalysisError,
     SUPPORTED_TARGETS,
+    DeployAnalysisError,
     analyze_dependencies,
     analyze_model_file,
     assess_deployment,
 )
-
 
 # --------------------------------------------------------------------------- #
 # Magic-byte fixtures                                                         #
@@ -42,9 +41,7 @@ def _joblib_file(tmp_path: Path) -> Path:
 
 def _h5_file(tmp_path: Path) -> Path:
     # HDF5 signature.
-    return _write_bytes(
-        tmp_path, "model.h5", b"\x89HDF\r\n\x1a\n" + b"\x00" * 56
-    )
+    return _write_bytes(tmp_path, "model.h5", b"\x89HDF\r\n\x1a\n" + b"\x00" * 56)
 
 
 def _onnx_file(tmp_path: Path) -> Path:
@@ -53,9 +50,7 @@ def _onnx_file(tmp_path: Path) -> Path:
 
 
 def _safetensors_file(tmp_path: Path) -> Path:
-    return _write_bytes(
-        tmp_path, "model.safetensors", b"\x10\x00\x00\x00" + b"\x00" * 60
-    )
+    return _write_bytes(tmp_path, "model.safetensors", b"\x10\x00\x00\x00" + b"\x00" * 60)
 
 
 # --------------------------------------------------------------------------- #
@@ -143,13 +138,13 @@ def test_analyze_dependencies_pins_and_unpinned(tmp_path: Path) -> None:
 def test_analyze_dependencies_pyproject(tmp_path: Path) -> None:
     p = tmp_path / "pyproject.toml"
     p.write_text(
-        '[project]\n'
+        "[project]\n"
         'name = "demo"\n'
         'version = "0.1.0"\n'
-        'dependencies = [\n'
+        "dependencies = [\n"
         '    "torch>=2.0,<3.0",\n'
         '    "pandas>=2.0",\n'
-        ']\n',
+        "]\n",
         encoding="utf-8",
     )
     info = analyze_dependencies(p)
@@ -161,12 +156,7 @@ def test_analyze_dependencies_pyproject(tmp_path: Path) -> None:
 def test_analyze_dependencies_environment_yml(tmp_path: Path) -> None:
     p = tmp_path / "environment.yml"
     p.write_text(
-        "name: demo\n"
-        "dependencies:\n"
-        "  - python=3.11\n"
-        "  - pip\n"
-        "  - pip:\n"
-        "      - torch==2.1.0\n",
+        "name: demo\ndependencies:\n  - python=3.11\n  - pip\n  - pip:\n      - torch==2.1.0\n",
         encoding="utf-8",
     )
     info = analyze_dependencies(p)

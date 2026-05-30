@@ -59,9 +59,7 @@ def render_evaluation_interpretation(
     assessment = interpretation.get("assessment")
     if assessment:
         console.print()
-        console.print(
-            Panel.fit(assessment, title="🧠 Assessment", border_style="green")
-        )
+        console.print(Panel.fit(assessment, title="🧠 Assessment", border_style="green"))
 
     strengths = interpretation.get("strengths") or []
     if strengths:
@@ -232,9 +230,7 @@ def _render_regression_extras(console: Console, result: dict[str, Any]) -> None:
             f"Count:  {residuals.get('count', 0):,}"
         )
         console.print()
-        console.print(
-            Panel.fit(body, title="Residuals", border_style="magenta")
-        )
+        console.print(Panel.fit(body, title="Residuals", border_style="magenta"))
 
 
 def _hard_examples_table(

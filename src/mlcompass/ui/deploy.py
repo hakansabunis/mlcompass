@@ -59,9 +59,7 @@ def render_deployment_advice(console: Console, advice: dict[str, Any]) -> None:
     verdict = advice.get("verdict")
     if verdict:
         console.print()
-        console.print(
-            Panel.fit(verdict, title="🧠 Production verdict", border_style="green")
-        )
+        console.print(Panel.fit(verdict, title="🧠 Production verdict", border_style="green"))
 
     blockers = advice.get("blockers") or []
     if blockers:

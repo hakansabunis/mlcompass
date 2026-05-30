@@ -10,7 +10,6 @@ import pandas as pd
 import pytest
 
 from mlcompass.tools.logs import (
-    MetricSnapshot,
     detect_source,
     load_snapshots,
 )
@@ -18,7 +17,6 @@ from mlcompass.tools.tensorboard import (
     TensorBoardImportError,
     parse_tb_events,
 )
-
 
 # --------------------------------------------------------------------------- #
 # Helpers                                                                     #
@@ -104,9 +102,7 @@ def test_parse_tb_events_returns_snapshots_per_step(tmp_path: Path) -> None:
 
 def test_parse_tb_events_picks_up_epoch_column(tmp_path: Path) -> None:
     event = _make_fake_event_file(tmp_path)
-    df = pd.DataFrame(
-        {"step": [10], "epoch": [3], "train_loss": [0.4]}
-    )
+    df = pd.DataFrame({"step": [10], "epoch": [3], "train_loss": [0.4]})
     with mock.patch("tbparse.SummaryReader", return_value=_patched_reader(df)):
         snapshots = parse_tb_events(event)
 

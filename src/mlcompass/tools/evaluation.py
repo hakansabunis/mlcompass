@@ -68,8 +68,7 @@ def load_results(path: Path | str) -> pd.DataFrame:
     if suffix == ".json":
         return pd.read_json(path)
     raise EvaluationError(
-        f"Unsupported results format {suffix!r}. "
-        f"Supported: {', '.join(SUPPORTED_FORMATS)}"
+        f"Unsupported results format {suffix!r}. Supported: {', '.join(SUPPORTED_FORMATS)}"
     )
 
 
@@ -124,18 +123,17 @@ def evaluate(
 
     if inferred == "binary_classification":
         result = _evaluate_binary(
-            df, y_true_col, y_pred_col, y_prob_col,
+            df,
+            y_true_col,
+            y_pred_col,
+            y_prob_col,
             hard_examples_k=hard_examples_k,
             threshold_grid=threshold_grid,
         )
     elif inferred == "multiclass_classification":
-        result = _evaluate_multiclass(
-            df, y_true_col, y_pred_col, hard_examples_k=hard_examples_k
-        )
+        result = _evaluate_multiclass(df, y_true_col, y_pred_col, hard_examples_k=hard_examples_k)
     elif inferred == "regression":
-        result = _evaluate_regression(
-            df, y_true_col, y_pred_col, hard_examples_k=hard_examples_k
-        )
+        result = _evaluate_regression(df, y_true_col, y_pred_col, hard_examples_k=hard_examples_k)
     else:
         raise EvaluationError(f"Unknown task type: {inferred}")
 
@@ -159,7 +157,7 @@ def _detect_column(df: pd.DataFrame, candidates: tuple[str, ...]) -> str | None:
     lower_map = {col.lower(): col for col in df.columns}
     for hint in candidates:
         if hint in lower_map:
-            return lower_map[hint]
+            return str(lower_map[hint])
     return None
 
 
@@ -263,9 +261,7 @@ def _binary_positive_label(series: pd.Series) -> Any:
     """
     counts = series.value_counts()
     if len(counts) != 2:
-        raise EvaluationError(
-            f"Binary task expected 2 distinct labels, got {len(counts)}."
-        )
+        raise EvaluationError(f"Binary task expected 2 distinct labels, got {len(counts)}.")
     unique = set(counts.index)
     if unique <= {0, 1}:
         return 1
@@ -284,11 +280,7 @@ def _binary_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> dict[str, float]:
     acc = (tp + tn) / total if total else 0.0
     precision = tp / (tp + fp) if (tp + fp) else 0.0
     recall = tp / (tp + fn) if (tp + fn) else 0.0
-    f1 = (
-        2 * precision * recall / (precision + recall)
-        if (precision + recall)
-        else 0.0
-    )
+    f1 = 2 * precision * recall / (precision + recall) if (precision + recall) else 0.0
     return {
         "accuracy": round(acc, 4),
         "precision": round(precision, 4),
@@ -364,7 +356,8 @@ def _binary_warnings(metrics: dict[str, float], y_true: np.ndarray) -> list[str]
 
 
 def _too_good_to_be_true_binary(
-    metrics: dict[str, float], n_rows: int,
+    metrics: dict[str, float],
+    n_rows: int,
 ) -> str | None:
     """Flag near-perfect metrics as a leakage / split-contamination smell."""
     if n_rows < 50:
@@ -416,12 +409,8 @@ def _binary_hard_examples(
             {
                 "row_index": int(df.index[int(idx)]),
                 "true_label": _serialize_label(_invert_binary(y_true[idx], positive_label)),
-                "predicted_label": _serialize_label(
-                    _invert_binary(y_pred[idx], positive_label)
-                ),
-                "probability": (
-                    float(y_prob[idx]) if y_prob is not None else None
-                ),
+                "predicted_label": _serialize_label(_invert_binary(y_pred[idx], positive_label)),
+                "probability": (float(y_prob[idx]) if y_prob is not None else None),
                 "row": _serialize_row(row_record),
             }
         )
@@ -453,9 +442,7 @@ def _evaluate_multiclass(
     hard_examples_k: int,
 ) -> dict[str, Any]:
     if y_pred_col is None:
-        raise EvaluationError(
-            "Multiclass evaluation requires a y_pred column."
-        )
+        raise EvaluationError("Multiclass evaluation requires a y_pred column.")
     rows = df[[y_true_col, y_pred_col]].dropna()
     if len(rows) == 0:
         raise EvaluationError("All prediction rows were null after dropna.")
@@ -476,11 +463,7 @@ def _evaluate_multiclass(
         support = int((y_true == label).sum())
         precision = tp / (tp + fp) if (tp + fp) else 0.0
         recall = tp / (tp + fn) if (tp + fn) else 0.0
-        f1 = (
-            2 * precision * recall / (precision + recall)
-            if (precision + recall)
-            else 0.0
-        )
+        f1 = 2 * precision * recall / (precision + recall) if (precision + recall) else 0.0
         per_class.append(
             {
                 "label": _serialize_label(label),
@@ -523,7 +506,7 @@ def _confusion_matrix_dense(
 ) -> list[list[int]]:
     index = {label: i for i, label in enumerate(labels)}
     matrix = np.zeros((len(labels), len(labels)), dtype=int)
-    for actual, predicted in zip(y_true, y_pred):
+    for actual, predicted in zip(y_true, y_pred, strict=True):
         matrix[index[actual], index[predicted]] += 1
     return matrix.tolist()
 
@@ -627,8 +610,8 @@ def _evaluate_regression(
         raise EvaluationError("No numeric prediction rows after coercion.")
 
     mae = float(np.mean(np.abs(residuals)))
-    rmse = float(math.sqrt(np.mean(residuals ** 2)))
-    ss_res = float(np.sum(residuals ** 2))
+    rmse = float(math.sqrt(np.mean(residuals**2)))
+    ss_res = float(np.sum(residuals**2))
     ss_tot = float(np.sum((y_true - y_true.mean()) ** 2))
     r2 = 1 - ss_res / ss_tot if ss_tot else 0.0
 

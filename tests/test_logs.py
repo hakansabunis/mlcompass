@@ -5,8 +5,6 @@ from __future__ import annotations
 import math
 from pathlib import Path
 
-import pytest
-
 from mlcompass.tools.logs import (
     MetricSnapshot,
     has_invalid_loss,
@@ -15,7 +13,6 @@ from mlcompass.tools.logs import (
     parse_log_line,
     parse_log_text,
 )
-
 
 # --------------------------------------------------------------------------- #
 # parse_log_line                                                              #
@@ -127,8 +124,7 @@ Epoch 3 train_loss=0.5 val_loss=0.65
 def test_parse_log_file_reads_disk(tmp_path: Path) -> None:
     log_path = tmp_path / "train.log"
     log_path.write_text(
-        "Epoch 1 train_loss=0.8 val_loss=0.9\n"
-        "Epoch 2 train_loss=0.6 val_loss=0.8\n",
+        "Epoch 1 train_loss=0.8 val_loss=0.9\nEpoch 2 train_loss=0.6 val_loss=0.8\n",
         encoding="utf-8",
     )
     snapshots = parse_log_file(log_path)

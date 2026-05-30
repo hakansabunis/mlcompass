@@ -20,9 +20,7 @@ def render_audit(console: Console, audit: dict[str, Any]) -> None:
     findings = audit.get("findings", [])
     if not findings:
         console.print()
-        console.print(
-            "[green]✓ No issues detected by the static checks.[/green]"
-        )
+        console.print("[green]✓ No issues detected by the static checks.[/green]")
         return
 
     console.print()

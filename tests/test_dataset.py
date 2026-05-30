@@ -104,9 +104,7 @@ def test_categorical_column_has_cardinality_and_top_values(tmp_path: Path) -> No
 
 def test_datetime_column_has_range(tmp_path: Path) -> None:
     pytest.importorskip("pyarrow")
-    df = pd.DataFrame(
-        {"event_date": pd.to_datetime(["2024-01-01", "2024-06-15", "2024-12-31"])}
-    )
+    df = pd.DataFrame({"event_date": pd.to_datetime(["2024-01-01", "2024-06-15", "2024-12-31"])})
     p = tmp_path / "data.parquet"  # CSV would lose dtype info
     df.to_parquet(p)
 
@@ -117,9 +115,7 @@ def test_datetime_column_has_range(tmp_path: Path) -> None:
 
 
 def test_text_column_has_avg_length(tmp_path: Path) -> None:
-    df = pd.DataFrame(
-        {"review": [f"This is review number {i}" * 3 for i in range(200)]}
-    )
+    df = pd.DataFrame({"review": [f"This is review number {i}" * 3 for i in range(200)]})
     col = analyze_dataset(_csv(tmp_path, df))["columns"][0]
     assert col["type"] == "text"
     assert col["avg_length"] > 0
@@ -201,9 +197,7 @@ def test_binary_classification_inferred(tmp_path: Path) -> None:
 
 
 def test_regression_inferred(tmp_path: Path) -> None:
-    df = pd.DataFrame(
-        {"feature": list(range(50)), "target": [i * 1.5 + 0.3 for i in range(50)]}
-    )
+    df = pd.DataFrame({"feature": list(range(50)), "target": [i * 1.5 + 0.3 for i in range(50)]})
     result = analyze_dataset(_csv(tmp_path, df), target_column="target")
 
     assert result["task_hint"]["type"] == "regression"
@@ -229,9 +223,7 @@ def test_multiclass_inferred(tmp_path: Path) -> None:
 
 
 def test_class_imbalance_warning(tmp_path: Path) -> None:
-    df = pd.DataFrame(
-        {"feature": list(range(100)), "churn": [0] * 95 + [1] * 5}
-    )
+    df = pd.DataFrame({"feature": list(range(100)), "churn": [0] * 95 + [1] * 5})
     result = analyze_dataset(_csv(tmp_path, df))
     assert any("imbalance" in w.lower() for w in result["warnings"])
 

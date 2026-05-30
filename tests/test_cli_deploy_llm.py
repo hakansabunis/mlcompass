@@ -15,7 +15,6 @@ from mlcompass.agents.deploy import DeployAgentError
 from mlcompass.cli import cli
 from mlcompass.context import ProjectContext
 
-
 # --------------------------------------------------------------------------- #
 # Fixtures                                                                    #
 # --------------------------------------------------------------------------- #

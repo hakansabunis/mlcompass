@@ -17,7 +17,7 @@ def render_watch_report(
     console: Console,
     *,
     log_path: str,
-    snapshots: list[Any],          # list[MetricSnapshot] — duck-typed to avoid import cycle
+    snapshots: list[Any],  # list[MetricSnapshot] — duck-typed to avoid import cycle
     findings: list[dict[str, Any]],
 ) -> None:
     """One-shot watch report — overview panel + recent metrics + findings."""
@@ -53,9 +53,7 @@ def render_watch_diagnosis(console: Console, diagnosis: dict[str, Any]) -> None:
         table.add_column("Conf.")
         for entry in entries:
             conf = entry.get("confidence", "—")
-            conf_color = {"high": "green", "medium": "yellow", "low": "red"}.get(
-                conf, "white"
-            )
+            conf_color = {"high": "green", "medium": "yellow", "low": "red"}.get(conf, "white")
             table.add_row(
                 entry.get("finding_rule_id", "—"),
                 entry.get("hypothesis", "—"),

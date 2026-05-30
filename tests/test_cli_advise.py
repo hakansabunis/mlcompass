@@ -14,8 +14,7 @@ from click.testing import CliRunner
 from mlcompass import cli as cli_module
 from mlcompass.agents.advise import AdvisorParseError
 from mlcompass.cli import cli
-from mlcompass.context import DEFAULT_PROJECT_DIR, ProjectContext
-
+from mlcompass.context import ProjectContext
 
 # --------------------------------------------------------------------------- #
 # Fixtures                                                                    #

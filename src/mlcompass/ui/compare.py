@@ -23,9 +23,7 @@ def render_compare(console: Console, comparison: dict[str, Any]) -> None:
         console.print(_metrics_table(metric_rows))
     else:
         console.print()
-        console.print(
-            "[dim]No common metrics with a known direction to compare.[/dim]"
-        )
+        console.print("[dim]No common metrics with a known direction to compare.[/dim]")
 
     config_rows = comparison.get("config_diff") or []
     if config_rows:
@@ -119,9 +117,7 @@ def render_compare_hypothesis(console: Console, hypothesis: dict[str, Any]) -> N
     text = hypothesis.get("hypothesis")
     if text:
         console.print()
-        console.print(
-            Panel.fit(text, title="🧠 LLM hypothesis", border_style="green")
-        )
+        console.print(Panel.fit(text, title="🧠 LLM hypothesis", border_style="green"))
 
     factors = hypothesis.get("key_factors") or []
     if factors:
@@ -189,11 +185,7 @@ def _format_number(value: float, *, signed: bool = False) -> str:
     magnitude = abs(value)
     if magnitude >= 100:
         s = f"{value:,.2f}"
-    elif magnitude >= 1:
-        s = f"{value:.4f}".rstrip("0").rstrip(".")
-        if not s:
-            s = "0"
-    elif magnitude >= 0.0001:
+    elif magnitude >= 1 or magnitude >= 0.0001:
         s = f"{value:.4f}".rstrip("0").rstrip(".")
         if not s:
             s = "0"

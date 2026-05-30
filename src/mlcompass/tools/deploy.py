@@ -12,8 +12,6 @@ LLM advisor and the rich renderer key into the same fields.
 
 from __future__ import annotations
 
-import json
-import math
 import re
 from pathlib import Path
 from typing import Any
@@ -86,16 +84,11 @@ def assess_deployment(
         ``checklist``, ``warnings``.
     """
     model_info = analyze_model_file(model_path)
-    deps_info = (
-        analyze_dependencies(requirements_path)
-        if requirements_path is not None
-        else None
-    )
+    deps_info = analyze_dependencies(requirements_path) if requirements_path is not None else None
 
     if target not in SUPPORTED_TARGETS:
         raise DeployAnalysisError(
-            f"Unknown deploy target {target!r}. "
-            f"Supported: {', '.join(SUPPORTED_TARGETS)}"
+            f"Unknown deploy target {target!r}. Supported: {', '.join(SUPPORTED_TARGETS)}"
         )
 
     target_findings = _target_specific_checks(model_info, deps_info, target=target)
@@ -214,12 +207,12 @@ def _size_class(size: int) -> str:
 def _pretty_size(size: int) -> str:
     if size < 1024:
         return f"{size} B"
+    value: float = float(size)
     for unit in ("KB", "MB", "GB", "TB"):
-        size_unit = size / 1024
-        if size_unit < 1024:
-            return f"{size_unit:.1f} {unit}"
-        size = size_unit
-    return f"{size_unit:.1f} PB"  # pragma: no cover - bigger than we'll ever see
+        value = value / 1024
+        if value < 1024:
+            return f"{value:.1f} {unit}"
+    return f"{value:.1f} PB"  # pragma: no cover - bigger than we'll ever see
 
 
 def _detect_format(header: bytes, suffix: str) -> str:
@@ -240,10 +233,12 @@ def _detect_format(header: bytes, suffix: str) -> str:
         if suffix == ".joblib":
             return "joblib"
         return "pickle"
-    # safetensors stores a JSON length header.
-    if header[:4].isdigit() or _looks_like_safetensors_header(header):
-        if suffix == ".safetensors":
-            return "safetensors"
+    # safetensors stores a JSON length header; rely on the extension here
+    # because the raw bytes are ambiguous.
+    if suffix == ".safetensors" and (
+        header[:4].isdigit() or _looks_like_safetensors_header(header)
+    ):
+        return "safetensors"
 
     # Fallback by extension.
     by_ext = {
@@ -352,14 +347,12 @@ def _parse_requirements_txt(text: str) -> list[str]:
 
 def _parse_pyproject_toml(text: str) -> list[str]:
     try:
-        import tomllib  # type: ignore[attr-defined]
+        import tomllib  # type: ignore[import-not-found,unused-ignore]
     except ImportError:  # pragma: no cover - py<3.11
         try:
-            import tomli as tomllib  # type: ignore[no-redef]
+            import tomli as tomllib  # type: ignore[import-not-found,no-redef,unused-ignore]
         except ImportError:
-            tomllib = None
-    if tomllib is None:  # pragma: no cover - exotic env
-        return []
+            return []
     data = tomllib.loads(text)
     deps = data.get("project", {}).get("dependencies", [])
     return [str(d) for d in deps]
@@ -425,20 +418,22 @@ def _target_specific_checks(
                 "consider keeping a warm container or moving to ONNX."
             )
 
-    if target == "sagemaker":
-        if model_info.get("format") == "unknown":
-            warnings.append(
-                "SageMaker built-in containers expect specific formats. "
-                "Confirm yours matches the chosen container image."
-            )
+    if target == "sagemaker" and model_info.get("format") == "unknown":
+        warnings.append(
+            "SageMaker built-in containers expect specific formats. "
+            "Confirm yours matches the chosen container image."
+        )
 
-    if target == "vertex":
-        if model_info.get("format") not in {"onnx", "tensorflow_h5", "pytorch"}:
-            warnings.append(
-                "Vertex AI prediction containers handle TensorFlow, PyTorch, "
-                "and ONNX cleanly out of the box. Other formats need a custom "
-                "container."
-            )
+    if target == "vertex" and model_info.get("format") not in {
+        "onnx",
+        "tensorflow_h5",
+        "pytorch",
+    }:
+        warnings.append(
+            "Vertex AI prediction containers handle TensorFlow, PyTorch, "
+            "and ONNX cleanly out of the box. Other formats need a custom "
+            "container."
+        )
 
     if target == "kubernetes" and deps_info is not None and deps_info.get("unpinned"):
         warnings.append(

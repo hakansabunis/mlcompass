@@ -32,9 +32,10 @@ A run record on disk follows the layout described in
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 import yaml
 
@@ -127,9 +128,9 @@ def _looks_like_run_dir(path: Path) -> bool:
 
 
 def _load_run_from_dir(path: Path, identifier: str) -> RunRecord:
-    config_data: dict[str, Any] = yaml.safe_load(
-        (path / "config.yaml").read_text(encoding="utf-8")
-    ) or {}
+    config_data: dict[str, Any] = (
+        yaml.safe_load((path / "config.yaml").read_text(encoding="utf-8")) or {}
+    )
 
     metrics_path = path / "metrics.json"
     metrics: list[dict[str, Any]] = []

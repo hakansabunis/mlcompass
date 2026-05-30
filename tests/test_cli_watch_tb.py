@@ -6,7 +6,6 @@ from pathlib import Path
 from unittest import mock
 
 import pandas as pd
-import pytest
 from click.testing import CliRunner
 
 from mlcompass.cli import cli
@@ -36,9 +35,11 @@ def test_watch_consumes_tensorboard_directory(tmp_path: Path) -> None:
     )
 
     runner = CliRunner()
-    with mock.patch("tbparse.SummaryReader", return_value=_patched_reader(df)):
-        with runner.isolated_filesystem(temp_dir=tmp_path):
-            result = runner.invoke(cli, ["watch", str(tmp_path)])
+    with (
+        mock.patch("tbparse.SummaryReader", return_value=_patched_reader(df)),
+        runner.isolated_filesystem(temp_dir=tmp_path),
+    ):
+        result = runner.invoke(cli, ["watch", str(tmp_path)])
 
     assert result.exit_code == 0, result.output
     assert "tensorboard" in result.output.lower()
@@ -51,9 +52,11 @@ def test_watch_follow_warns_for_tensorboard_source(tmp_path: Path) -> None:
     df = pd.DataFrame({"step": [0], "train_loss": [0.5]})
 
     runner = CliRunner()
-    with mock.patch("tbparse.SummaryReader", return_value=_patched_reader(df)):
-        with runner.isolated_filesystem(temp_dir=tmp_path):
-            result = runner.invoke(cli, ["watch", str(tmp_path), "--follow"])
+    with (
+        mock.patch("tbparse.SummaryReader", return_value=_patched_reader(df)),
+        runner.isolated_filesystem(temp_dir=tmp_path),
+    ):
+        result = runner.invoke(cli, ["watch", str(tmp_path), "--follow"])
 
     assert result.exit_code == 0
     # The follow loop should refuse but not crash.

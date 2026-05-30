@@ -12,7 +12,6 @@ from click.testing import CliRunner
 from mlcompass.cli import cli
 from mlcompass.context import ProjectContext
 
-
 # --------------------------------------------------------------------------- #
 # Fixtures                                                                    #
 # --------------------------------------------------------------------------- #
@@ -47,9 +46,7 @@ def requirements(tmp_path: Path) -> Path:
 # --------------------------------------------------------------------------- #
 
 
-def test_deploy_pytorch_local_succeeds(
-    pytorch_model: Path, tmp_path: Path
-) -> None:
+def test_deploy_pytorch_local_succeeds(pytorch_model: Path, tmp_path: Path) -> None:
     runner = CliRunner()
     with runner.isolated_filesystem(temp_dir=tmp_path):
         result = runner.invoke(cli, ["deploy", str(pytorch_model)])
@@ -59,9 +56,7 @@ def test_deploy_pytorch_local_succeeds(
     assert "pytorch" in text
 
 
-def test_deploy_pickle_warns_about_security(
-    pickle_model: Path, tmp_path: Path
-) -> None:
+def test_deploy_pickle_warns_about_security(pickle_model: Path, tmp_path: Path) -> None:
     runner = CliRunner()
     with runner.isolated_filesystem(temp_dir=tmp_path):
         result = runner.invoke(cli, ["deploy", str(pickle_model)])
@@ -103,17 +98,13 @@ def test_deploy_lambda_target_surfaces_target_specific_warnings(
 ) -> None:
     runner = CliRunner()
     with runner.isolated_filesystem(temp_dir=tmp_path):
-        result = runner.invoke(
-            cli, ["deploy", str(pickle_model), "--target", "lambda"]
-        )
+        result = runner.invoke(cli, ["deploy", str(pickle_model), "--target", "lambda"])
     assert result.exit_code == 0
     text = result.output.lower()
     assert "lambda" in text or "cold start" in text
 
 
-def test_deploy_checklist_visible(
-    pytorch_model: Path, tmp_path: Path
-) -> None:
+def test_deploy_checklist_visible(pytorch_model: Path, tmp_path: Path) -> None:
     runner = CliRunner()
     with runner.isolated_filesystem(temp_dir=tmp_path):
         result = runner.invoke(cli, ["deploy", str(pytorch_model)])
@@ -134,14 +125,10 @@ def test_deploy_missing_model_exits_nonzero(tmp_path: Path) -> None:
     assert result.exit_code != 0
 
 
-def test_deploy_invalid_target_exits_nonzero(
-    pytorch_model: Path, tmp_path: Path
-) -> None:
+def test_deploy_invalid_target_exits_nonzero(pytorch_model: Path, tmp_path: Path) -> None:
     runner = CliRunner()
     with runner.isolated_filesystem(temp_dir=tmp_path):
-        result = runner.invoke(
-            cli, ["deploy", str(pytorch_model), "--target", "mars"]
-        )
+        result = runner.invoke(cli, ["deploy", str(pytorch_model), "--target", "mars"])
     assert result.exit_code != 0
 
 
@@ -170,9 +157,7 @@ def test_deploy_help_lists_options() -> None:
 # --------------------------------------------------------------------------- #
 
 
-def test_deploy_persists_to_project_context(
-    pytorch_model: Path, tmp_path: Path
-) -> None:
+def test_deploy_persists_to_project_context(pytorch_model: Path, tmp_path: Path) -> None:
     project = ProjectContext.init("test-proj", parent_dir=tmp_path)
 
     runner = CliRunner()

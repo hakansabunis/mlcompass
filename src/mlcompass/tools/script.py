@@ -11,9 +11,10 @@ v0.2.1) the optional LLM auditor agent.
 from __future__ import annotations
 
 import ast
+from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 # --------------------------------------------------------------------------- #
 # Public types                                                                #
@@ -267,9 +268,7 @@ def _check_val_split(tree: ast.AST, frameworks: set[str]) -> list[Finding]:
                                 f"Validation split is very small ({value!r}); "
                                 "metrics may be too noisy to compare runs."
                             ),
-                            suggestion=(
-                                "Use `test_size` of 0.1–0.2 or k-fold CV instead."
-                            ),
+                            suggestion=("Use `test_size` of 0.1–0.2 or k-fold CV instead."),
                             line=node.lineno,
                         )
                     )
@@ -331,10 +330,7 @@ def _check_optimizer(tree: ast.AST, frameworks: set[str]) -> list[Finding]:
                 Finding(
                     rule_id="optimizer",
                     severity="info",
-                    message=(
-                        "SGD without `momentum=` rarely converges well on "
-                        "modern deep nets."
-                    ),
+                    message=("SGD without `momentum=` rarely converges well on modern deep nets."),
                     suggestion="Try `momentum=0.9` or switch to AdamW.",
                     line=node.lineno,
                 )
@@ -403,9 +399,7 @@ def _check_loss_stability(tree: ast.AST, frameworks: set[str]) -> list[Finding]:
                     "Direct `log(x)` call without epsilon clipping; "
                     "if `x` can be 0 you will get `-inf` then NaN."
                 ),
-                suggestion=(
-                    "Wrap as `log(x.clamp(min=1e-7))` or add a small epsilon."
-                ),
+                suggestion=("Wrap as `log(x.clamp(min=1e-7))` or add a small epsilon."),
                 line=node.lineno,
             )
         )
@@ -560,12 +554,10 @@ def _check_batch_size(tree: ast.AST, frameworks: set[str]) -> list[Finding]:
                     rule_id="batch_size",
                     severity="info",
                     message=(
-                        f"batch_size={value} is very small; gradient estimates "
-                        "will be noisy."
+                        f"batch_size={value} is very small; gradient estimates will be noisy."
                     ),
                     suggestion=(
-                        "Consider batch_size between 16 and 256 unless memory "
-                        "is the constraint."
+                        "Consider batch_size between 16 and 256 unless memory is the constraint."
                     ),
                     line=node.lineno,
                 )

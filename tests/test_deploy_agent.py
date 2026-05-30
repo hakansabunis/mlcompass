@@ -13,7 +13,6 @@ from mlcompass.agents.deploy import (
     build_deploy_agent,
 )
 
-
 SAMPLE_REPORT: dict = {
     "model": {"format": "pytorch", "size_class": "small", "size_pretty": "195 KB"},
     "dependencies": {

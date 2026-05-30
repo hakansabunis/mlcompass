@@ -9,10 +9,10 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from ..tools.config_edit import ApplyResult, ConfigEdit
+from ..tools.config_edit import ApplyResult, ConfigEdit, ConfirmFn
 
 
-def make_console_confirm(console: Console, *, auto_yes: bool = False):
+def make_console_confirm(console: Console, *, auto_yes: bool = False) -> ConfirmFn:
     """Build a confirm callback bound to ``console``.
 
     Args:
@@ -43,9 +43,7 @@ def render_apply_summary(console: Console, result: ApplyResult) -> None:
     console.print()
 
     if result.backup_path is not None:
-        console.print(
-            f"[dim]Backup written to {result.backup_path}[/dim]"
-        )
+        console.print(f"[dim]Backup written to {result.backup_path}[/dim]")
 
     table = Table(
         title="Edit summary",

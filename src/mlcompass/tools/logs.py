@@ -17,9 +17,9 @@ from __future__ import annotations
 
 import math
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterable
 
 # --------------------------------------------------------------------------- #
 # Public types                                                                #
@@ -157,11 +157,7 @@ def merge_consecutive_same_epoch(
     """
     merged: list[MetricSnapshot] = []
     for snap in snapshots:
-        if (
-            merged
-            and snap.epoch is not None
-            and merged[-1].epoch == snap.epoch
-        ):
+        if merged and snap.epoch is not None and merged[-1].epoch == snap.epoch:
             merged[-1].metrics.update(snap.metrics)
             if snap.step is not None and merged[-1].step is None:
                 merged[-1].step = snap.step

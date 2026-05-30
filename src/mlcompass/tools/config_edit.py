@@ -15,10 +15,11 @@ from __future__ import annotations
 
 import json
 import shutil
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import yaml
 
@@ -37,7 +38,7 @@ class ConfigEdit:
     rationale: str = ""
 
     @classmethod
-    def from_dict(cls, payload: dict[str, Any]) -> "ConfigEdit":
+    def from_dict(cls, payload: dict[str, Any]) -> ConfigEdit:
         return cls(
             key=str(payload["key"]),
             current_value=payload.get("current_value"),
@@ -88,10 +89,7 @@ def load_config(path: Path | str) -> dict[str, Any]:
     suffix = path.suffix.lower()
 
     try:
-        if suffix == ".json":
-            data = json.loads(raw)
-        else:
-            data = yaml.safe_load(raw)
+        data = json.loads(raw) if suffix == ".json" else yaml.safe_load(raw)
     except (json.JSONDecodeError, yaml.YAMLError) as exc:
         raise ConfigEditError(f"Could not parse config: {exc}") from exc
 
@@ -170,9 +168,7 @@ def apply_edits(
     backup_written = False
 
     for raw in edits:
-        edit = (
-            raw if isinstance(raw, ConfigEdit) else ConfigEdit.from_dict(raw)
-        )
+        edit = raw if isinstance(raw, ConfigEdit) else ConfigEdit.from_dict(raw)
 
         found, live_value = _get_dotted(data, edit.key)
         if not found:

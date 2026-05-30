@@ -14,7 +14,6 @@ from click.testing import CliRunner
 from mlcompass.cli import cli
 from mlcompass.context import ProjectContext
 
-
 # --------------------------------------------------------------------------- #
 # Fixtures                                                                    #
 # --------------------------------------------------------------------------- #
@@ -77,9 +76,7 @@ def test_evaluate_binary_csv_succeeds(binary_csv: Path, tmp_path: Path) -> None:
     assert "binary" in text or "auc" in text
 
 
-def test_evaluate_regression_csv_succeeds(
-    regression_csv: Path, tmp_path: Path
-) -> None:
+def test_evaluate_regression_csv_succeeds(regression_csv: Path, tmp_path: Path) -> None:
     runner = CliRunner()
     with runner.isolated_filesystem(temp_dir=tmp_path):
         result = runner.invoke(cli, ["evaluate", str(regression_csv)])
@@ -89,9 +86,7 @@ def test_evaluate_regression_csv_succeeds(
     assert "rmse" in text
 
 
-def test_evaluate_multiclass_csv_succeeds(
-    multiclass_csv: Path, tmp_path: Path
-) -> None:
+def test_evaluate_multiclass_csv_succeeds(multiclass_csv: Path, tmp_path: Path) -> None:
     runner = CliRunner()
     with runner.isolated_filesystem(temp_dir=tmp_path):
         result = runner.invoke(cli, ["evaluate", str(multiclass_csv)])
@@ -101,9 +96,7 @@ def test_evaluate_multiclass_csv_succeeds(
     assert "per-class" in text or "per class" in text
 
 
-def test_evaluate_shows_threshold_sweep_for_binary(
-    binary_csv: Path, tmp_path: Path
-) -> None:
+def test_evaluate_shows_threshold_sweep_for_binary(binary_csv: Path, tmp_path: Path) -> None:
     runner = CliRunner()
     with runner.isolated_filesystem(temp_dir=tmp_path):
         result = runner.invoke(cli, ["evaluate", str(binary_csv)])
@@ -158,14 +151,10 @@ def test_evaluate_task_override(regression_csv: Path, tmp_path: Path) -> None:
     assert result.exit_code == 0
 
 
-def test_evaluate_hard_examples_count_flag(
-    binary_csv: Path, tmp_path: Path
-) -> None:
+def test_evaluate_hard_examples_count_flag(binary_csv: Path, tmp_path: Path) -> None:
     runner = CliRunner()
     with runner.isolated_filesystem(temp_dir=tmp_path):
-        result = runner.invoke(
-            cli, ["evaluate", str(binary_csv), "--hard-examples", "2"]
-        )
+        result = runner.invoke(cli, ["evaluate", str(binary_csv), "--hard-examples", "2"])
     assert result.exit_code == 0
 
 
@@ -216,9 +205,7 @@ def test_evaluate_help_lists_options() -> None:
 # --------------------------------------------------------------------------- #
 
 
-def test_evaluate_persists_to_project_context(
-    binary_csv: Path, tmp_path: Path
-) -> None:
+def test_evaluate_persists_to_project_context(binary_csv: Path, tmp_path: Path) -> None:
     project = ProjectContext.init("test-proj", parent_dir=tmp_path)
 
     runner = CliRunner()

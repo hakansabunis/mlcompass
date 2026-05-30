@@ -13,7 +13,6 @@ from mlcompass.agents.evaluate import (
     interpret_evaluation,
 )
 
-
 SAMPLE_EVALUATION: dict = {
     "task": "binary_classification",
     "rows": 200,

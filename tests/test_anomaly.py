@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import math
-
 from mlcompass.tools.anomaly import (
     detect_divergence,
     detect_nan,

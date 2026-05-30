@@ -2,21 +2,18 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import pytest
 import yaml
 
 from mlcompass.tools.config_edit import (
-    ApplyResult,
     ConfigEdit,
     ConfigEditError,
     apply_edits,
     load_config,
     write_config,
 )
-
 
 # --------------------------------------------------------------------------- #
 # Helpers                                                                     #
@@ -118,9 +115,7 @@ def test_apply_edits_accepts_dict_inputs(tmp_path: Path) -> None:
     p = tmp_path / "train.yaml"
     p.write_text("dropout: 0.1\n", encoding="utf-8")
 
-    edits = [
-        {"key": "dropout", "current_value": 0.1, "proposed_value": 0.3, "rationale": "x"}
-    ]
+    edits = [{"key": "dropout", "current_value": 0.1, "proposed_value": 0.3, "rationale": "x"}]
     result = apply_edits(p, edits, confirm_fn=_yes)
     assert len(result.applied) == 1
 

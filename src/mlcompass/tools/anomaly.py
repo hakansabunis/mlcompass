@@ -17,8 +17,9 @@ The four v0.2 detectors:
 from __future__ import annotations
 
 import math
+from collections.abc import Callable, Iterable
 from dataclasses import asdict, dataclass
-from typing import Any, Iterable
+from typing import Any
 
 from .logs import MetricSnapshot, has_invalid_loss
 
@@ -65,7 +66,10 @@ def _val_loss(snap: MetricSnapshot) -> float | None:
     return _first_present(snap, _VAL_LOSS_KEYS)
 
 
-def _series(metrics: list[MetricSnapshot], key_getter) -> list[tuple[int, float]]:
+def _series(
+    metrics: list[MetricSnapshot],
+    key_getter: Callable[[MetricSnapshot], float | None],
+) -> list[tuple[int, float]]:
     """Pull out an (epoch_index, value) series for snapshots that have the value."""
     out: list[tuple[int, float]] = []
     for idx, snap in enumerate(metrics):

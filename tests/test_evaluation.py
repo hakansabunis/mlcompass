@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import math
 from pathlib import Path
 
 import numpy as np
@@ -15,7 +14,6 @@ from mlcompass.tools.evaluation import (
     evaluate,
     load_results,
 )
-
 
 # --------------------------------------------------------------------------- #
 # Helpers                                                                     #
@@ -33,9 +31,7 @@ def _binary_df(n: int = 200, seed: int = 0) -> pd.DataFrame:
         rng.uniform(0.01, 0.45, size=n),
     )
     y_pred = (y_prob >= 0.5).astype(int)
-    return pd.DataFrame(
-        {"y_true": y_true, "y_pred": y_pred, "y_prob": y_prob}
-    )
+    return pd.DataFrame({"y_true": y_true, "y_pred": y_pred, "y_prob": y_prob})
 
 
 def _regression_df(n: int = 100, seed: int = 0) -> pd.DataFrame:
@@ -313,9 +309,7 @@ def test_binary_suspicious_warning_quiet_on_tiny_test_set() -> None:
     n = 20  # below the threshold (50) — must NOT fire
     rng = np.random.default_rng(3)
     y_true = rng.integers(0, 2, size=n)
-    df = pd.DataFrame(
-        {"y_true": y_true, "y_pred": y_true, "y_prob": y_true.astype(float)}
-    )
+    df = pd.DataFrame({"y_true": y_true, "y_pred": y_true, "y_prob": y_true.astype(float)})
     result = evaluate(df)
     assert not any("leakage" in w.lower() for w in result["warnings"])
 
@@ -341,9 +335,7 @@ def test_regression_perfect_fit_warns() -> None:
 
 def test_task_override_forces_regression() -> None:
     # 1/0 ints, but user calls regression — should respect override
-    df = pd.DataFrame(
-        {"y_true": [0, 1, 0, 1, 0] * 5, "y_pred": [0.1, 0.9, 0.2, 0.8, 0.1] * 5}
-    )
+    df = pd.DataFrame({"y_true": [0, 1, 0, 1, 0] * 5, "y_pred": [0.1, 0.9, 0.2, 0.8, 0.1] * 5})
     result = evaluate(df, task="regression")
     assert result["task"] == "regression"
     assert "mae" in result["metrics"]

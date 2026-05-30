@@ -158,7 +158,7 @@ def _format_task(task_hint: dict[str, Any]) -> str:
         if "min" in stats and "max" in stats:
             return f"regression (range {stats['min']:.2f} → {stats['max']:.2f})"
         return "regression"
-    return kind
+    return str(kind)
 
 
 def _format_missing(pct: float) -> str:

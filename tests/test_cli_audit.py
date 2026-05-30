@@ -102,9 +102,7 @@ def test_audit_skip_flag_filters_rules(
     runner = CliRunner()
     with runner.isolated_filesystem(temp_dir=tmp_path):
         full = runner.invoke(cli, ["audit", str(buggy_script)])
-        skipped = runner.invoke(
-            cli, ["audit", str(buggy_script), "--skip", "seed"]
-        )
+        skipped = runner.invoke(cli, ["audit", str(buggy_script), "--skip", "seed"])
 
     assert full.exit_code == 0
     assert skipped.exit_code == 0

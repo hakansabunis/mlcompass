@@ -13,7 +13,6 @@ from click.testing import CliRunner
 from mlcompass.cli import cli
 from mlcompass.context import ProjectContext
 
-
 # --------------------------------------------------------------------------- #
 # Fixtures                                                                    #
 # --------------------------------------------------------------------------- #
@@ -36,9 +35,7 @@ def _make_run(
     meta["created"] = "2026-05-29T15:00:00Z"
     meta["config"] = config
     (run_dir / "config.yaml").write_text(yaml.safe_dump(meta), encoding="utf-8")
-    (run_dir / "metrics.json").write_text(
-        json.dumps({"metrics": metrics}), encoding="utf-8"
-    )
+    (run_dir / "metrics.json").write_text(json.dumps({"metrics": metrics}), encoding="utf-8")
     return run_dir
 
 
@@ -66,9 +63,7 @@ def two_runs_by_path(tmp_path: Path) -> tuple[Path, Path]:
 # --------------------------------------------------------------------------- #
 
 
-def test_compare_by_paths_succeeds(
-    two_runs_by_path: tuple[Path, Path], tmp_path: Path
-) -> None:
+def test_compare_by_paths_succeeds(two_runs_by_path: tuple[Path, Path], tmp_path: Path) -> None:
     a, b = two_runs_by_path
     runner = CliRunner()
     with runner.isolated_filesystem(temp_dir=tmp_path):
@@ -95,9 +90,7 @@ def test_compare_reports_winner_in_output(
     assert "run b wins" in text
 
 
-def test_compare_shows_config_diff(
-    two_runs_by_path: tuple[Path, Path], tmp_path: Path
-) -> None:
+def test_compare_shows_config_diff(two_runs_by_path: tuple[Path, Path], tmp_path: Path) -> None:
     a, b = two_runs_by_path
     runner = CliRunner()
     with runner.isolated_filesystem(temp_dir=tmp_path):

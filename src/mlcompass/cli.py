@@ -18,12 +18,14 @@ Planned:
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import sys
+from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import click
 from rich.console import Console
@@ -38,29 +40,29 @@ from .agents.evaluate import EvaluateAgentError, interpret_evaluation
 from .agents.watch import WatchAgentError, diagnose_findings
 from .context import ProjectContext, ProjectExistsError, ProjectNotFoundError
 from .tools.anomaly import run_all_detectors
+from .tools.config_edit import (
+    ApplyResult,
+    ConfigEditError,
+    apply_edits,
+)
 from .tools.dataset import analyze_dataset
 from .tools.deploy import (
-    DeployAnalysisError,
     SUPPORTED_TARGETS as DEPLOY_TARGETS,
+)
+from .tools.deploy import (
+    DeployAnalysisError,
     assess_deployment,
 )
 from .tools.evaluation import (
     EvaluationError,
-    evaluate as run_evaluation,
     load_results,
 )
+from .tools.evaluation import (
+    evaluate as run_evaluation,
+)
 from .tools.logs import (
-    MetricSnapshot,
-    detect_source,
     load_snapshots,
     merge_consecutive_same_epoch,
-    parse_log_file,
-)
-from .tools.config_edit import (
-    ApplyResult,
-    ConfigEdit,
-    ConfigEditError,
-    apply_edits,
 )
 from .tools.runs import RunNotFoundError, compare_runs, load_run
 from .tools.script import audit_script
@@ -85,10 +87,8 @@ def _force_utf8_stdio() -> None:
         reconfigure = getattr(stream, "reconfigure", None)
         if reconfigure is None:
             continue
-        try:
+        with contextlib.suppress(AttributeError, ValueError):
             reconfigure(encoding="utf-8", errors="replace")
-        except (AttributeError, ValueError):
-            pass
 
 
 _force_utf8_stdio()
@@ -144,9 +144,7 @@ def init(name: str, parent_dir: Path, default_model: str) -> None:
     )
 
 
-@cli.command(
-    help="Analyze a dataset and recommend models, features, and pitfalls."
-)
+@cli.command(help="Analyze a dataset and recommend models, features, and pitfalls.")
 @click.argument(
     "dataset_path",
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
@@ -300,8 +298,7 @@ def _persist_advise_result(
         command="advise",
         summary=f"Top model recommendation: {top_model}",
         reasoning=(
-            f"Dataset: {dataset_path}, "
-            f"task: {analysis['task_hint'].get('type', 'unknown')}"
+            f"Dataset: {dataset_path}, task: {analysis['task_hint'].get('type', 'unknown')}"
         ),
     )
 
@@ -334,9 +331,7 @@ def _append_advice_log(
 # --------------------------------------------------------------------------- #
 
 
-@cli.command(
-    help="Statically analyze a training script for common ML mistakes."
-)
+@cli.command(help="Statically analyze a training script for common ML mistakes.")
 @click.argument(
     "script_path",
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
@@ -401,13 +396,9 @@ def audit(
         )
 
 
-def _maybe_prioritize(
-    result: dict[str, Any], *, model: str
-) -> dict[str, Any] | None:
+def _maybe_prioritize(result: dict[str, Any], *, model: str) -> dict[str, Any] | None:
     if not result.get("findings"):
-        console.print(
-            "\n[dim](--llm: nothing to prioritize, no findings)[/dim]"
-        )
+        console.print("\n[dim](--llm: nothing to prioritize, no findings)[/dim]")
         return None
     if not _has_api_key():
         console.print(
@@ -416,9 +407,7 @@ def _maybe_prioritize(
         )
         return None
     try:
-        with console.status(
-            "[cyan]Asking the prioritizer...[/cyan]", spinner="dots"
-        ):
+        with console.status("[cyan]Asking the prioritizer...[/cyan]", spinner="dots"):
             return _audit_prioritizer_callable(result, model=model)
     except AuditAgentError as exc:
         console.print(f"\n[red]✗ Prioritizer returned bad response:[/red] {exc}")
@@ -545,9 +534,7 @@ def watch(
     snapshots = merge_consecutive_same_epoch(raw_snapshots)
     findings = [f.to_dict() for f in run_all_detectors(snapshots)]
     if source == "tensorboard":
-        console.print(
-            f"[dim]Source: TensorBoard event file(s) at {log_path}[/dim]\n"
-        )
+        console.print(f"[dim]Source: TensorBoard event file(s) at {log_path}[/dim]\n")
     elif source == "wandb":
         console.print(f"[dim]Source: W&B run cache at {log_path}[/dim]\n")
 
@@ -607,9 +594,7 @@ def _maybe_diagnose(
     model: str,
 ) -> dict[str, Any] | None:
     if not findings:
-        console.print(
-            "\n[dim](--llm: nothing to diagnose, no anomalies)[/dim]"
-        )
+        console.print("\n[dim](--llm: nothing to diagnose, no anomalies)[/dim]")
         return None
     if not _has_api_key():
         console.print(
@@ -626,12 +611,8 @@ def _maybe_diagnose(
         for s in snapshots
     ]
     try:
-        with console.status(
-            "[cyan]Asking the diagnostician...[/cyan]", spinner="dots"
-        ):
-            return _watch_diagnostician_callable(
-                snap_payload, findings, model=model
-            )
+        with console.status("[cyan]Asking the diagnostician...[/cyan]", spinner="dots"):
+            return _watch_diagnostician_callable(snap_payload, findings, model=model)
     except WatchAgentError as exc:
         console.print(f"\n[red]✗ Diagnostician returned bad response:[/red] {exc}")
         return None
@@ -651,16 +632,13 @@ def _maybe_apply_edits(
         )
         return None
     if config_path is None:
-        console.print(
-            "\n[yellow]⚠ --apply requires --config <file>; skipping.[/yellow]"
-        )
+        console.print("\n[yellow]⚠ --apply requires --config <file>; skipping.[/yellow]")
         return None
 
     raw_edits = diagnosis.get("suggested_edits") or []
     if not raw_edits:
         console.print(
-            "\n[dim]--apply: diagnostician didn't produce any suggested_edits, "
-            "nothing to do.[/dim]"
+            "\n[dim]--apply: diagnostician didn't produce any suggested_edits, nothing to do.[/dim]"
         )
         return None
 
@@ -704,9 +682,7 @@ def _follow_loop(
             new_text = f.read()
         last_size = size
 
-        new_snapshots = merge_consecutive_same_epoch(
-            snapshots + _parse_text_snapshots(new_text)
-        )
+        new_snapshots = merge_consecutive_same_epoch(snapshots + _parse_text_snapshots(new_text))
         snapshots[:] = new_snapshots
 
         new_findings = [
@@ -781,8 +757,8 @@ def _persist_watch_result(
         ]
         if apply_result.backup_path is not None:
             log_entry["backup"] = str(apply_result.backup_path)
-    with (project.path / "advice.log").open("a", encoding="utf-8") as f:
-        f.write(json.dumps(log_entry) + "\n")
+    with (project.path / "advice.log").open("a", encoding="utf-8") as out:
+        out.write(json.dumps(log_entry) + "\n")
 
 
 # --------------------------------------------------------------------------- #
@@ -838,9 +814,7 @@ def compare(run_a: str, run_b: str, use_llm: bool, llm_model: str) -> None:
         )
 
 
-def _maybe_hypothesize(
-    comparison: dict[str, Any], *, model: str
-) -> dict[str, Any] | None:
+def _maybe_hypothesize(comparison: dict[str, Any], *, model: str) -> dict[str, Any] | None:
     if not _has_api_key():
         console.print(
             "\n[yellow]⚠ --llm requested but ANTHROPIC_API_KEY is unset; "
@@ -848,9 +822,7 @@ def _maybe_hypothesize(
         )
         return None
     try:
-        with console.status(
-            "[cyan]Asking the hypothesizer...[/cyan]", spinner="dots"
-        ):
+        with console.status("[cyan]Asking the hypothesizer...[/cyan]", spinner="dots"):
             return _compare_hypothesizer_callable(comparison, model=model)
     except CompareAgentError as exc:
         console.print(f"\n[red]✗ Hypothesizer returned bad response:[/red] {exc}")
@@ -981,9 +953,7 @@ def evaluate(
         )
 
 
-def _maybe_interpret_evaluation(
-    result: dict[str, Any], *, model: str
-) -> dict[str, Any] | None:
+def _maybe_interpret_evaluation(result: dict[str, Any], *, model: str) -> dict[str, Any] | None:
     if not _has_api_key():
         console.print(
             "\n[yellow]⚠ --llm requested but ANTHROPIC_API_KEY is unset; "
@@ -991,9 +961,7 @@ def _maybe_interpret_evaluation(
         )
         return None
     try:
-        with console.status(
-            "[cyan]Asking the interpreter...[/cyan]", spinner="dots"
-        ):
+        with console.status("[cyan]Asking the interpreter...[/cyan]", spinner="dots"):
             return _evaluate_interpreter_callable(result, model=model)
     except EvaluateAgentError as exc:
         console.print(f"\n[red]✗ Interpreter returned bad response:[/red] {exc}")
@@ -1010,9 +978,9 @@ def _persist_evaluate_result(
     """Record an evaluate invocation in the project context + advice log."""
     task = result.get("task", "unknown")
     metrics = result.get("metrics") or {}
-    headline = ", ".join(
-        f"{name}={value}" for name, value in list(metrics.items())[:3]
-    ) or "no metrics"
+    headline = (
+        ", ".join(f"{name}={value}" for name, value in list(metrics.items())[:3]) or "no metrics"
+    )
     summary = f"Evaluate ({task}): {headline}"
 
     project.append_decision(
@@ -1114,19 +1082,14 @@ def deploy(
         )
 
 
-def _maybe_advise_deployment(
-    report: dict[str, Any], *, model: str
-) -> dict[str, Any] | None:
+def _maybe_advise_deployment(report: dict[str, Any], *, model: str) -> dict[str, Any] | None:
     if not _has_api_key():
         console.print(
-            "\n[yellow]⚠ --llm requested but ANTHROPIC_API_KEY is unset; "
-            "skipping advisor.[/yellow]"
+            "\n[yellow]⚠ --llm requested but ANTHROPIC_API_KEY is unset; skipping advisor.[/yellow]"
         )
         return None
     try:
-        with console.status(
-            "[cyan]Asking the advisor...[/cyan]", spinner="dots"
-        ):
+        with console.status("[cyan]Asking the advisor...[/cyan]", spinner="dots"):
             return _deploy_advisor_callable(report, model=model)
     except DeployAgentError as exc:
         console.print(f"\n[red]✗ Advisor returned bad response:[/red] {exc}")
@@ -1147,8 +1110,7 @@ def _persist_deploy_result(
     n_warn = len(report.get("warnings") or [])
     summary = (
         f"Deploy ({target}, {model.get('format', '?')}, "
-        f"{model.get('size_pretty', '?')}): "
-        + (f"{n_warn} warning(s)" if n_warn else "clean")
+        f"{model.get('size_pretty', '?')}): " + (f"{n_warn} warning(s)" if n_warn else "clean")
     )
 
     project.append_decision(

@@ -62,9 +62,7 @@ def nan_log(tmp_path: Path) -> Path:
 # --------------------------------------------------------------------------- #
 
 
-def test_watch_clean_log_reports_no_anomalies(
-    clean_log: Path, tmp_path: Path
-) -> None:
+def test_watch_clean_log_reports_no_anomalies(clean_log: Path, tmp_path: Path) -> None:
     runner = CliRunner()
     with runner.isolated_filesystem(temp_dir=tmp_path):
         result = runner.invoke(cli, ["watch", str(clean_log)])
@@ -72,9 +70,7 @@ def test_watch_clean_log_reports_no_anomalies(
     assert "no anomalies" in result.output.lower()
 
 
-def test_watch_overfitting_log_surfaces_overfitting(
-    overfitting_log: Path, tmp_path: Path
-) -> None:
+def test_watch_overfitting_log_surfaces_overfitting(overfitting_log: Path, tmp_path: Path) -> None:
     runner = CliRunner()
     with runner.isolated_filesystem(temp_dir=tmp_path):
         result = runner.invoke(cli, ["watch", str(overfitting_log)])
@@ -90,9 +86,7 @@ def test_watch_nan_log_surfaces_nan(nan_log: Path, tmp_path: Path) -> None:
     assert "nan" in result.output.lower()
 
 
-def test_watch_shows_recent_metrics_table(
-    clean_log: Path, tmp_path: Path
-) -> None:
+def test_watch_shows_recent_metrics_table(clean_log: Path, tmp_path: Path) -> None:
     runner = CliRunner()
     with runner.isolated_filesystem(temp_dir=tmp_path):
         result = runner.invoke(cli, ["watch", str(clean_log)])
@@ -103,9 +97,7 @@ def test_watch_shows_recent_metrics_table(
     assert "val_loss" in result.output
 
 
-def test_watch_shows_overview_panel(
-    clean_log: Path, tmp_path: Path
-) -> None:
+def test_watch_shows_overview_panel(clean_log: Path, tmp_path: Path) -> None:
     runner = CliRunner()
     with runner.isolated_filesystem(temp_dir=tmp_path):
         result = runner.invoke(cli, ["watch", str(clean_log)])
@@ -143,9 +135,7 @@ def test_watch_help_lists_follow_flag() -> None:
 # --------------------------------------------------------------------------- #
 
 
-def test_watch_persists_to_project_context(
-    overfitting_log: Path, tmp_path: Path
-) -> None:
+def test_watch_persists_to_project_context(overfitting_log: Path, tmp_path: Path) -> None:
     project_root = overfitting_log.parent
     project = ProjectContext.init("test-proj", parent_dir=project_root)
 
@@ -167,8 +157,7 @@ def test_watch_persists_to_project_context(
 
     log_path = project.path / "advice.log"
     entries = [
-        json.loads(line)
-        for line in log_path.read_text(encoding="utf-8").strip().splitlines()
+        json.loads(line) for line in log_path.read_text(encoding="utf-8").strip().splitlines()
     ]
     assert len(entries) == 1
     entry = entries[0]

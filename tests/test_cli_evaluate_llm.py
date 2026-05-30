@@ -17,7 +17,6 @@ from mlcompass.agents.evaluate import EvaluateAgentError
 from mlcompass.cli import cli
 from mlcompass.context import ProjectContext
 
-
 # --------------------------------------------------------------------------- #
 # Fixtures                                                                    #
 # --------------------------------------------------------------------------- #
@@ -63,9 +62,7 @@ def test_evaluate_llm_calls_interpreter(
 ) -> None:
     captured: dict[str, Any] = {"called": False, "task": None}
 
-    def fake(
-        evaluation: dict[str, Any], *, model: str = "claude-opus-4-7"
-    ) -> dict[str, Any]:
+    def fake(evaluation: dict[str, Any], *, model: str = "claude-opus-4-7") -> dict[str, Any]:
         captured["called"] = True
         captured["task"] = evaluation.get("task")
         return {
@@ -127,9 +124,7 @@ def test_evaluate_llm_persists_interpretation_to_project(
 ) -> None:
     project = ProjectContext.init("test-proj", parent_dir=tmp_path)
 
-    def fake(
-        evaluation: dict[str, Any], *, model: str = "claude-opus-4-7"
-    ) -> dict[str, Any]:
+    def fake(evaluation: dict[str, Any], *, model: str = "claude-opus-4-7") -> dict[str, Any]:
         return {
             "assessment": "Strong.",
             "strengths": ["s1"],

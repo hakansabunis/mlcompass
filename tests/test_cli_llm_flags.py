@@ -18,7 +18,6 @@ from mlcompass.agents.watch import WatchAgentError
 from mlcompass.cli import cli
 from mlcompass.context import ProjectContext
 
-
 # --------------------------------------------------------------------------- #
 # Fixtures                                                                    #
 # --------------------------------------------------------------------------- #
@@ -66,9 +65,7 @@ def two_runs(tmp_path: Path) -> tuple[Path, Path]:
             yaml.safe_dump({"name": run_id, "config": cfg}),
             encoding="utf-8",
         )
-        (run_dir / "metrics.json").write_text(
-            json.dumps({"metrics": metrics}), encoding="utf-8"
-        )
+        (run_dir / "metrics.json").write_text(json.dumps({"metrics": metrics}), encoding="utf-8")
         return run_dir
 
     a = _make("run-3", {"lr": 1e-3}, [{"epoch": 0, "val_loss": 0.5}])
@@ -226,7 +223,9 @@ def test_watch_llm_calls_diagnostician(
 ) -> None:
     captured: dict[str, Any] = {"snapshots": None, "findings": None}
 
-    def fake(snapshots: list[dict], findings: list[dict], *, model: str = "claude-opus-4-7") -> dict:
+    def fake(
+        snapshots: list[dict], findings: list[dict], *, model: str = "claude-opus-4-7"
+    ) -> dict:
         captured["snapshots"] = snapshots
         captured["findings"] = findings
         return {
@@ -259,7 +258,7 @@ def test_watch_llm_skips_when_no_findings(
 ) -> None:
     log = tmp_path / "clean.log"
     log.write_text(
-        "\n".join(f"Epoch {i} train_loss={0.8 - i*0.08:.3f}" for i in range(8)),
+        "\n".join(f"Epoch {i} train_loss={0.8 - i * 0.08:.3f}" for i in range(8)),
         encoding="utf-8",
     )
     called = {"flag": False}
@@ -326,9 +325,7 @@ def test_compare_llm_calls_hypothesizer(
         captured["called"] = True
         return {
             "hypothesis": "B's lower lr won.",
-            "key_factors": [
-                {"config_key": "lr", "impact": "high", "reason": "Only change."}
-            ],
+            "key_factors": [{"config_key": "lr", "impact": "high", "reason": "Only change."}],
             "next_experiment": "Try lr=1e-4 on Run B's setup.",
         }
 

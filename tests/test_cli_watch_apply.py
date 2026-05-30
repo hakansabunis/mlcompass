@@ -14,8 +14,6 @@ from click.testing import CliRunner
 from mlcompass import cli as cli_module
 from mlcompass.cli import cli
 from mlcompass.context import ProjectContext
-from mlcompass.tools.config_edit import ApplyResult, ConfigEdit
-
 
 # --------------------------------------------------------------------------- #
 # Fixtures                                                                    #
@@ -181,9 +179,7 @@ def test_watch_apply_without_config_warns(
 
     runner = CliRunner()
     with runner.isolated_filesystem(temp_dir=tmp_path):
-        result = runner.invoke(
-            cli, ["watch", str(overfitting_log), "--llm", "--apply"]
-        )
+        result = runner.invoke(cli, ["watch", str(overfitting_log), "--llm", "--apply"])
     assert result.exit_code == 0
     assert "--config" in result.output
 

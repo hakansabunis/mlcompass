@@ -53,7 +53,7 @@ class ProjectContext:
         parent_dir: Path | str = ".",
         *,
         default_model: str = "claude-opus-4-7",
-    ) -> "ProjectContext":
+    ) -> ProjectContext:
         """Create a new ``.mlcompass/`` directory under ``parent_dir``.
 
         Args:
@@ -117,7 +117,7 @@ class ProjectContext:
         return cls(path=target)
 
     @classmethod
-    def load(cls, search_from: Path | str = ".") -> "ProjectContext":
+    def load(cls, search_from: Path | str = ".") -> ProjectContext:
         """Find and load an existing project by walking up from ``search_from``.
 
         Mirrors the behaviour of ``git`` when discovering a repository.
@@ -141,15 +141,17 @@ class ProjectContext:
     @property
     def project_meta(self) -> dict[str, Any]:
         """Static metadata loaded from ``project.yaml``."""
-        return yaml.safe_load(
+        data: dict[str, Any] = yaml.safe_load(
             (self.path / "project.yaml").read_text(encoding="utf-8")
         )
+        return data
 
     def read_context(self) -> dict[str, Any]:
         """Read the dynamic context (``context.json``)."""
-        return json.loads(
+        data: dict[str, Any] = json.loads(
             (self.path / "context.json").read_text(encoding="utf-8")
         )
+        return data
 
     def write_context(self, updates: dict[str, Any]) -> None:
         """Merge ``updates`` into ``context.json``.
@@ -218,5 +220,5 @@ class ProjectContext:
     @staticmethod
     def _fingerprint(p: Path) -> str:
         """Stable per-file fingerprint based on path + mtime."""
-        marker = f"{p.resolve()}::{p.stat().st_mtime_ns}".encode("utf-8")
+        marker = f"{p.resolve()}::{p.stat().st_mtime_ns}".encode()
         return hashlib.sha256(marker).hexdigest()[:16]

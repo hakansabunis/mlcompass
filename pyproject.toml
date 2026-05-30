@@ -83,11 +83,28 @@ line-length = 100
 [tool.ruff.lint]
 select = ["E", "F", "I", "W", "UP", "B", "SIM"]
 
+[tool.ruff.lint.per-file-ignores]
+# Long LLM system prompts live as triple-quoted strings in agents/*.py;
+# breaking the prose mid-sentence hurts readability for prompt review.
+"src/mlcompass/agents/*.py" = ["E501"]
+
 [tool.mypy]
 python_version = "3.10"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
+
+# Third-party packages without bundled type stubs. We don't add
+# pandas-stubs / types-PyYAML to the dev set because they balloon the
+# install and aren't needed for the runtime checks our tests care about.
+[[tool.mypy.overrides]]
+module = [
+    "agentlite",
+    "pandas",
+    "tbparse",
+    "yaml",
+]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

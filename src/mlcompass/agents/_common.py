@@ -60,9 +60,7 @@ def parse_json_response(
         parsed = json.loads(stripped)
     except json.JSONDecodeError as exc:
         snippet = text[:snippet_len].replace("\n", " ")
-        raise error_class(
-            f"Agent response was not valid JSON: {snippet!r}"
-        ) from exc
+        raise error_class(f"Agent response was not valid JSON: {snippet!r}") from exc
 
     if not isinstance(parsed, dict):
         raise error_class(
@@ -72,8 +70,7 @@ def parse_json_response(
     for required in required_keys:
         if required not in parsed:
             raise error_class(
-                f"Agent response missing required key '{required}'. "
-                f"Got: {sorted(parsed.keys())}"
+                f"Agent response missing required key '{required}'. Got: {sorted(parsed.keys())}"
             )
 
     return parsed

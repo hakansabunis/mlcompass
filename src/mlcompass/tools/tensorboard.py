@@ -40,7 +40,7 @@ def parse_tb_events(path: Path | str) -> list[MetricSnapshot]:
             ``tensorboard``) is not installed.
     """
     try:
-        from tbparse import SummaryReader  # type: ignore[import-not-found]
+        from tbparse import SummaryReader
     except ImportError as exc:  # pragma: no cover - exercised only without dep
         raise TensorBoardImportError(
             "TensorBoard support requires the `tbparse` package. "
