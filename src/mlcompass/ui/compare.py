@@ -114,6 +114,52 @@ def _config_table(rows: list[dict[str, Any]]) -> Table:
     return table
 
 
+def render_compare_hypothesis(console: Console, hypothesis: dict[str, Any]) -> None:
+    """Render the compare hypothesizer (LLM layer) output."""
+    text = hypothesis.get("hypothesis")
+    if text:
+        console.print()
+        console.print(
+            Panel.fit(text, title="🧠 LLM hypothesis", border_style="green")
+        )
+
+    factors = hypothesis.get("key_factors") or []
+    if factors:
+        table = Table(
+            title="Key factors",
+            show_header=True,
+            header_style="bold green",
+            title_justify="left",
+        )
+        table.add_column("Config key", style="bold")
+        table.add_column("Impact")
+        table.add_column("Reason")
+        for factor in factors:
+            impact = factor.get("impact", "—")
+            impact_color = {
+                "high": "green",
+                "medium": "yellow",
+                "low": "red",
+            }.get(impact, "white")
+            table.add_row(
+                factor.get("config_key", "—"),
+                f"[{impact_color}]{impact}[/{impact_color}]",
+                factor.get("reason", "—"),
+            )
+        console.print()
+        console.print(table)
+
+    next_exp = hypothesis.get("next_experiment")
+    if next_exp:
+        console.print()
+        console.print(
+            Panel.fit(
+                f"[cyan]Next experiment[/cyan]: {next_exp}",
+                border_style="cyan",
+            )
+        )
+
+
 def _verdict_panel(comparison: dict[str, Any]) -> Panel:
     verdict = comparison.get("verdict", "inconclusive")
     text = comparison.get("verdict_explanation", "")

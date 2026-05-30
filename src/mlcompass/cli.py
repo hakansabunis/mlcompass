@@ -29,16 +29,19 @@ from rich.panel import Panel
 
 from . import __version__
 from .agents.advise import AdvisorParseError, get_recommendation
+from .agents.audit import AuditAgentError, prioritize_findings
+from .agents.compare import CompareAgentError, hypothesize_comparison
+from .agents.watch import WatchAgentError, diagnose_findings
 from .context import ProjectContext, ProjectExistsError, ProjectNotFoundError
 from .tools.anomaly import run_all_detectors
 from .tools.dataset import analyze_dataset
-from .tools.logs import merge_consecutive_same_epoch, parse_log_file
+from .tools.logs import MetricSnapshot, merge_consecutive_same_epoch, parse_log_file
 from .tools.runs import RunNotFoundError, compare_runs, load_run
 from .tools.script import audit_script
 from .ui.advise import render_analysis, render_recommendation
-from .ui.audit import render_audit
-from .ui.compare import render_compare
-from .ui.watch import render_new_findings, render_watch_report
+from .ui.audit import render_audit, render_audit_priorities
+from .ui.compare import render_compare, render_compare_hypothesis
+from .ui.watch import render_new_findings, render_watch_diagnosis, render_watch_report
 
 
 def _force_utf8_stdio() -> None:
@@ -207,9 +210,12 @@ def _has_api_key() -> bool:
     return bool(os.environ.get("ANTHROPIC_API_KEY"))
 
 
-# Indirection point: tests monkeypatch ``cli._advisor_callable`` to inject a
-# fake instead of calling the real ``get_recommendation``.
+# Indirection points: tests monkeypatch these to inject fakes instead of
+# calling the real agents.
 _advisor_callable: Callable[..., dict[str, Any]] = get_recommendation
+_audit_prioritizer_callable: Callable[..., dict[str, Any]] = prioritize_findings
+_watch_diagnostician_callable: Callable[..., dict[str, Any]] = diagnose_findings
+_compare_hypothesizer_callable: Callable[..., dict[str, Any]] = hypothesize_comparison
 
 
 def _run_advisor(
@@ -319,7 +325,25 @@ def _append_advice_log(
     ),
     help="Rule IDs to skip (may be repeated).",
 )
-def audit(script_path: Path, skip_rules: tuple[str, ...]) -> None:
+@click.option(
+    "--llm",
+    "use_llm",
+    is_flag=True,
+    help="After the static analysis, ask Claude to prioritize the findings.",
+)
+@click.option(
+    "--model",
+    "llm_model",
+    default="claude-opus-4-7",
+    show_default=True,
+    help="Claude model used by the prioritizer when --llm is set.",
+)
+def audit(
+    script_path: Path,
+    skip_rules: tuple[str, ...],
+    use_llm: bool,
+    llm_model: str,
+) -> None:
     """Run the static auditor on ``script_path``."""
     project = _try_load_project()
 
@@ -328,8 +352,43 @@ def audit(script_path: Path, skip_rules: tuple[str, ...]) -> None:
 
     render_audit(console, result)
 
+    priorities: dict[str, Any] | None = None
+    if use_llm:
+        priorities = _maybe_prioritize(result, model=llm_model)
+        if priorities is not None:
+            render_audit_priorities(console, priorities)
+
     if project is not None:
-        _persist_audit_result(project=project, script_path=script_path, result=result)
+        _persist_audit_result(
+            project=project,
+            script_path=script_path,
+            result=result,
+            priorities=priorities,
+        )
+
+
+def _maybe_prioritize(
+    result: dict[str, Any], *, model: str
+) -> dict[str, Any] | None:
+    if not result.get("findings"):
+        console.print(
+            "\n[dim](--llm: nothing to prioritize, no findings)[/dim]"
+        )
+        return None
+    if not _has_api_key():
+        console.print(
+            "\n[yellow]⚠ --llm requested but ANTHROPIC_API_KEY is unset; "
+            "skipping prioritizer.[/yellow]"
+        )
+        return None
+    try:
+        with console.status(
+            "[cyan]Asking the prioritizer...[/cyan]", spinner="dots"
+        ):
+            return _audit_prioritizer_callable(result, model=model)
+    except AuditAgentError as exc:
+        console.print(f"\n[red]✗ Prioritizer returned bad response:[/red] {exc}")
+        return None
 
 
 def _persist_audit_result(
@@ -337,6 +396,7 @@ def _persist_audit_result(
     project: ProjectContext,
     script_path: Path,
     result: dict[str, Any],
+    priorities: dict[str, Any] | None = None,
 ) -> None:
     """Record an audit run in the project context and advice log."""
     counts: dict[str, int] = {}
@@ -355,13 +415,15 @@ def _persist_audit_result(
     )
 
     log_path = project.path / "advice.log"
-    entry = {
+    entry: dict[str, Any] = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "command": "audit",
         "script": str(script_path),
         "frameworks": result.get("frameworks"),
         "findings": result.get("findings"),
     }
+    if priorities is not None:
+        entry["priorities"] = priorities
     with log_path.open("a", encoding="utf-8") as f:
         f.write(json.dumps(entry) + "\n")
 
@@ -393,7 +455,26 @@ def _persist_audit_result(
     show_default=True,
     help="Seconds between polls when --follow is active.",
 )
-def watch(log_path: Path, follow: bool, poll_interval: float) -> None:
+@click.option(
+    "--llm",
+    "use_llm",
+    is_flag=True,
+    help="After the deterministic anomalies, ask Claude to diagnose them.",
+)
+@click.option(
+    "--model",
+    "llm_model",
+    default="claude-opus-4-7",
+    show_default=True,
+    help="Claude model used by the diagnostician when --llm is set.",
+)
+def watch(
+    log_path: Path,
+    follow: bool,
+    poll_interval: float,
+    use_llm: bool,
+    llm_model: str,
+) -> None:
     """Run the watch rules over ``log_path``."""
     project = _try_load_project()
 
@@ -407,12 +488,19 @@ def watch(log_path: Path, follow: bool, poll_interval: float) -> None:
         findings=findings,
     )
 
+    diagnosis: dict[str, Any] | None = None
+    if use_llm:
+        diagnosis = _maybe_diagnose(snapshots, findings, model=llm_model)
+        if diagnosis is not None:
+            render_watch_diagnosis(console, diagnosis)
+
     if project is not None:
         _persist_watch_result(
             project=project,
             log_path=log_path,
             snapshots=snapshots,
             findings=findings,
+            diagnosis=diagnosis,
         )
 
     if follow:
@@ -425,6 +513,43 @@ def watch(log_path: Path, follow: bool, poll_interval: float) -> None:
             )
         except KeyboardInterrupt:
             console.print("\n[dim]Stopped watching.[/dim]")
+
+
+def _maybe_diagnose(
+    snapshots: list[Any],
+    findings: list[dict[str, Any]],
+    *,
+    model: str,
+) -> dict[str, Any] | None:
+    if not findings:
+        console.print(
+            "\n[dim](--llm: nothing to diagnose, no anomalies)[/dim]"
+        )
+        return None
+    if not _has_api_key():
+        console.print(
+            "\n[yellow]⚠ --llm requested but ANTHROPIC_API_KEY is unset; "
+            "skipping diagnostician.[/yellow]"
+        )
+        return None
+    snap_payload = [
+        {
+            "epoch": s.epoch,
+            "step": s.step,
+            "metrics": s.metrics,
+        }
+        for s in snapshots
+    ]
+    try:
+        with console.status(
+            "[cyan]Asking the diagnostician...[/cyan]", spinner="dots"
+        ):
+            return _watch_diagnostician_callable(
+                snap_payload, findings, model=model
+            )
+    except WatchAgentError as exc:
+        console.print(f"\n[red]✗ Diagnostician returned bad response:[/red] {exc}")
+        return None
 
 
 def _follow_loop(
@@ -486,6 +611,7 @@ def _persist_watch_result(
     log_path: Path,
     snapshots: list[Any],
     findings: list[dict[str, Any]],
+    diagnosis: dict[str, Any] | None = None,
 ) -> None:
     """Record a watch invocation in the project context + advice log."""
     counts: dict[str, int] = {}
@@ -500,13 +626,15 @@ def _persist_watch_result(
         reasoning=f"Parsed {len(snapshots)} snapshots from {log_path}",
     )
 
-    log_entry = {
+    log_entry: dict[str, Any] = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "command": "watch",
         "log": str(log_path),
         "snapshots": len(snapshots),
         "findings": findings,
     }
+    if diagnosis is not None:
+        log_entry["diagnosis"] = diagnosis
     with (project.path / "advice.log").open("a", encoding="utf-8") as f:
         f.write(json.dumps(log_entry) + "\n")
 
@@ -521,7 +649,20 @@ def _persist_watch_result(
 )
 @click.argument("run_a")
 @click.argument("run_b")
-def compare(run_a: str, run_b: str) -> None:
+@click.option(
+    "--llm",
+    "use_llm",
+    is_flag=True,
+    help="After the deterministic diff, ask Claude to explain why the winner won.",
+)
+@click.option(
+    "--model",
+    "llm_model",
+    default="claude-opus-4-7",
+    show_default=True,
+    help="Claude model used by the hypothesizer when --llm is set.",
+)
+def compare(run_a: str, run_b: str, use_llm: bool, llm_model: str) -> None:
     """Compare two runs by identifier or directory path."""
     project = _try_load_project()
 
@@ -535,13 +676,39 @@ def compare(run_a: str, run_b: str) -> None:
     comparison = compare_runs(record_a, record_b)
     render_compare(console, comparison)
 
+    hypothesis: dict[str, Any] | None = None
+    if use_llm:
+        hypothesis = _maybe_hypothesize(comparison, model=llm_model)
+        if hypothesis is not None:
+            render_compare_hypothesis(console, hypothesis)
+
     if project is not None:
         _persist_compare_result(
             project=project,
             run_a=record_a.id,
             run_b=record_b.id,
             comparison=comparison,
+            hypothesis=hypothesis,
         )
+
+
+def _maybe_hypothesize(
+    comparison: dict[str, Any], *, model: str
+) -> dict[str, Any] | None:
+    if not _has_api_key():
+        console.print(
+            "\n[yellow]⚠ --llm requested but ANTHROPIC_API_KEY is unset; "
+            "skipping hypothesizer.[/yellow]"
+        )
+        return None
+    try:
+        with console.status(
+            "[cyan]Asking the hypothesizer...[/cyan]", spinner="dots"
+        ):
+            return _compare_hypothesizer_callable(comparison, model=model)
+    except CompareAgentError as exc:
+        console.print(f"\n[red]✗ Hypothesizer returned bad response:[/red] {exc}")
+        return None
 
 
 def _persist_compare_result(
@@ -550,6 +717,7 @@ def _persist_compare_result(
     run_a: str,
     run_b: str,
     comparison: dict[str, Any],
+    hypothesis: dict[str, Any] | None = None,
 ) -> None:
     """Record a compare invocation in the project's decision log."""
     verdict = comparison.get("verdict", "inconclusive")
@@ -561,7 +729,7 @@ def _persist_compare_result(
     )
 
     log_path = project.path / "advice.log"
-    entry = {
+    entry: dict[str, Any] = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "command": "compare",
         "run_a": run_a,
@@ -571,6 +739,8 @@ def _persist_compare_result(
         "config_diff": comparison.get("config_diff"),
         "metric_comparison": comparison.get("metric_comparison"),
     }
+    if hypothesis is not None:
+        entry["hypothesis"] = hypothesis
     with log_path.open("a", encoding="utf-8") as f:
         f.write(json.dumps(entry) + "\n")
 

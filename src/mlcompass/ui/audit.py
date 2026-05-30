@@ -91,6 +91,34 @@ def _findings_table(findings: list[dict[str, Any]]) -> Table:
     return table
 
 
+def render_audit_priorities(console: Console, priorities: dict[str, Any]) -> None:
+    """Render the audit prioritizer (LLM layer) output."""
+    items = priorities.get("priorities") or []
+    if items:
+        table = Table(
+            title="🎯 LLM-prioritized findings",
+            show_header=True,
+            header_style="bold green",
+            title_justify="left",
+        )
+        table.add_column("Rank", justify="right", style="bold")
+        table.add_column("Rule")
+        table.add_column("Blast radius")
+        for item in sorted(items, key=lambda p: p.get("priority_rank", 99)):
+            table.add_row(
+                str(item.get("priority_rank", "—")),
+                item.get("rule_id", "—"),
+                item.get("blast_radius", "—"),
+            )
+        console.print()
+        console.print(table)
+
+    synthesis = priorities.get("synthesis")
+    if synthesis:
+        console.print()
+        console.print(Panel.fit(synthesis, title="Synthesis", border_style="green"))
+
+
 def _print_counts(console: Console, findings: list[dict[str, Any]]) -> None:
     counts: dict[str, int] = {}
     for f in findings:

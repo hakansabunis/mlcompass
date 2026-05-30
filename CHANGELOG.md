@@ -79,12 +79,36 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - 48 new tests (20 log parser + 19 anomaly detector + 9 CLI integration).
   Full suite now at 175 passing.
 
+### Added (Faz 2.1 — optional LLM layers)
+- `--llm` opt-in flag on `audit`, `watch`, and `compare`. When set
+  (and `ANTHROPIC_API_KEY` is present) Claude runs on top of the
+  deterministic output and adds interpretation.
+- `agents/audit.py` — **prioritizer**: ranks findings by blast radius
+  and writes a one-paragraph synthesis.
+- `agents/watch.py` — **diagnostician**: for each anomaly, hypothesises
+  the root cause and proposes a concrete next action with a confidence
+  tag ("high" / "medium" / "low").
+- `agents/compare.py` — **hypothesizer**: explains *why* the winning
+  run won, identifies the key config factors driving the outcome, and
+  proposes the next experiment.
+- `agents/_common.py` — shared lenient JSON parser that handles
+  optional markdown fences, validates the response is a dict, and
+  enforces required top-level keys.
+- UI extensions (`render_audit_priorities`, `render_watch_diagnosis`,
+  `render_compare_hypothesis`) render each LLM output as a rich
+  table + panel.
+- Each LLM result is written into `.mlcompass/advice.log` alongside
+  the deterministic output, so the project history captures both.
+- Graceful degradation: missing API key, empty input (e.g. no
+  findings for audit / watch to prioritize), and malformed agent
+  responses all print a clear, non-fatal message rather than
+  exiting non-zero.
+- 33 new tests (21 unit + 12 CLI integration). Full suite now at
+  208 passing.
+
 ### Planned for the rest of v0.2
 - TensorBoard event-file parser (lazy `tbparse` import)
 - W&B local cache reader
-- Optional LLM diagnostician layer for `watch` ("why is this happening?")
-- Optional LLM auditor layer for `audit` ("which of these matters most?")
-- Optional LLM compare layer ("Run B is better because…" hypothesis)
 - Permission-gated config edits and training restarts
 
 ### Planned for v0.3 (Faz 3)

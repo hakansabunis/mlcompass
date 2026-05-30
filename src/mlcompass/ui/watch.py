@@ -37,6 +37,40 @@ def render_watch_report(
         console.print("[green]✓ No anomalies detected by the watch rules.[/green]")
 
 
+def render_watch_diagnosis(console: Console, diagnosis: dict[str, Any]) -> None:
+    """Render the watch diagnostician (LLM layer) output."""
+    entries = diagnosis.get("diagnosis") or []
+    if entries:
+        table = Table(
+            title="🧠 LLM diagnosis",
+            show_header=True,
+            header_style="bold green",
+            title_justify="left",
+        )
+        table.add_column("Rule", style="bold")
+        table.add_column("Hypothesis")
+        table.add_column("Recommended action")
+        table.add_column("Conf.")
+        for entry in entries:
+            conf = entry.get("confidence", "—")
+            conf_color = {"high": "green", "medium": "yellow", "low": "red"}.get(
+                conf, "white"
+            )
+            table.add_row(
+                entry.get("finding_rule_id", "—"),
+                entry.get("hypothesis", "—"),
+                entry.get("recommended_action", "—"),
+                f"[{conf_color}]{conf}[/{conf_color}]",
+            )
+        console.print()
+        console.print(table)
+
+    summary = diagnosis.get("summary")
+    if summary:
+        console.print()
+        console.print(Panel.fit(summary, title="Summary", border_style="green"))
+
+
 def render_new_findings(console: Console, findings: list[dict[str, Any]]) -> None:
     """Print only the freshly-detected findings during ``--follow`` mode."""
     if not findings:
