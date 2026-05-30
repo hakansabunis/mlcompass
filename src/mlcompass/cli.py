@@ -7,10 +7,11 @@ Currently implemented:
     init     — create a new ``.mlcompass/`` project (Faz 1)
     advise   — analyze dataset + recommend models / features / pitfalls (Faz 1)
     audit    — static analysis of a training script (Faz 2a)
+    watch    — monitor a training log for anomalies (Faz 2b)
     compare  — diff two training runs side-by-side (Faz 2c)
 
 Planned:
-    watch, evaluate, deploy, status
+    evaluate, deploy, status
 """
 
 from __future__ import annotations
@@ -29,12 +30,15 @@ from rich.panel import Panel
 from . import __version__
 from .agents.advise import AdvisorParseError, get_recommendation
 from .context import ProjectContext, ProjectExistsError, ProjectNotFoundError
+from .tools.anomaly import run_all_detectors
 from .tools.dataset import analyze_dataset
+from .tools.logs import merge_consecutive_same_epoch, parse_log_file
 from .tools.runs import RunNotFoundError, compare_runs, load_run
 from .tools.script import audit_script
 from .ui.advise import render_analysis, render_recommendation
 from .ui.audit import render_audit
 from .ui.compare import render_compare
+from .ui.watch import render_new_findings, render_watch_report
 
 
 def _force_utf8_stdio() -> None:
@@ -362,6 +366,149 @@ def _persist_audit_result(
         f.write(json.dumps(entry) + "\n")
 
     console.print(f"\n[green]✓[/green] Saved to {project.path}")
+
+
+# --------------------------------------------------------------------------- #
+# watch command                                                               #
+# --------------------------------------------------------------------------- #
+
+
+@cli.command(
+    help="Monitor a training log file for plateau / overfit / NaN / divergence."
+)
+@click.argument(
+    "log_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option(
+    "-f",
+    "--follow",
+    is_flag=True,
+    help="Tail the file and report new findings as they appear (Ctrl+C to stop).",
+)
+@click.option(
+    "--poll-interval",
+    type=float,
+    default=1.0,
+    show_default=True,
+    help="Seconds between polls when --follow is active.",
+)
+def watch(log_path: Path, follow: bool, poll_interval: float) -> None:
+    """Run the watch rules over ``log_path``."""
+    project = _try_load_project()
+
+    snapshots = merge_consecutive_same_epoch(parse_log_file(log_path))
+    findings = [f.to_dict() for f in run_all_detectors(snapshots)]
+
+    render_watch_report(
+        console,
+        log_path=str(log_path),
+        snapshots=snapshots,
+        findings=findings,
+    )
+
+    if project is not None:
+        _persist_watch_result(
+            project=project,
+            log_path=log_path,
+            snapshots=snapshots,
+            findings=findings,
+        )
+
+    if follow:
+        try:
+            _follow_loop(
+                log_path=log_path,
+                seen_signatures={_finding_signature(f) for f in findings},
+                snapshots=snapshots,
+                poll_interval=poll_interval,
+            )
+        except KeyboardInterrupt:
+            console.print("\n[dim]Stopped watching.[/dim]")
+
+
+def _follow_loop(
+    *,
+    log_path: Path,
+    seen_signatures: set[str],
+    snapshots: list[Any],
+    poll_interval: float,
+) -> None:
+    """Continuously poll ``log_path`` and surface new findings."""
+    import time
+
+    last_size = log_path.stat().st_size
+    console.print(f"\n[dim]Watching {log_path}... (Ctrl+C to stop)[/dim]")
+
+    while True:
+        time.sleep(poll_interval)
+
+        size = log_path.stat().st_size
+        if size <= last_size:
+            continue
+
+        with log_path.open("r", encoding="utf-8", errors="replace") as f:
+            f.seek(last_size)
+            new_text = f.read()
+        last_size = size
+
+        new_snapshots = merge_consecutive_same_epoch(
+            snapshots + _parse_text_snapshots(new_text)
+        )
+        snapshots[:] = new_snapshots
+
+        new_findings = [
+            f.to_dict()
+            for f in run_all_detectors(snapshots)
+            if _finding_signature(f.to_dict()) not in seen_signatures
+        ]
+        for finding in new_findings:
+            seen_signatures.add(_finding_signature(finding))
+
+        if new_findings:
+            render_new_findings(console, new_findings)
+
+
+def _parse_text_snapshots(text: str) -> list[Any]:
+    from .tools.logs import parse_log_text
+
+    return parse_log_text(text)
+
+
+def _finding_signature(finding: dict[str, Any]) -> str:
+    """Stable identifier so we don't re-report the same finding."""
+    return f"{finding['rule_id']}::{finding.get('epoch')}::{finding['message']}"
+
+
+def _persist_watch_result(
+    *,
+    project: ProjectContext,
+    log_path: Path,
+    snapshots: list[Any],
+    findings: list[dict[str, Any]],
+) -> None:
+    """Record a watch invocation in the project context + advice log."""
+    counts: dict[str, int] = {}
+    for f in findings:
+        counts[f["severity"]] = counts.get(f["severity"], 0) + 1
+    summary_parts = [f"{n} {sev}" for sev, n in counts.items()] or ["no issues"]
+    summary = f"Watch ({log_path.name}): " + ", ".join(summary_parts)
+
+    project.append_decision(
+        command="watch",
+        summary=summary,
+        reasoning=f"Parsed {len(snapshots)} snapshots from {log_path}",
+    )
+
+    log_entry = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "command": "watch",
+        "log": str(log_path),
+        "snapshots": len(snapshots),
+        "findings": findings,
+    }
+    with (project.path / "advice.log").open("a", encoding="utf-8") as f:
+        f.write(json.dumps(log_entry) + "\n")
 
 
 # --------------------------------------------------------------------------- #

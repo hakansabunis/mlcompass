@@ -50,13 +50,42 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   plus a JSON line in `advice.log`
 - 25 new tests (17 unit + 8 CLI integration). Full suite at 127 passing.
 
-### Planned for v0.2 (remaining Faz 2)
-- `mlcompass watch <script>` — live training monitor with plateau,
-  overfitting, NaN, and divergence detection
-- TensorBoard / W&B / plain-text log support
-- Permission-gated config edits and training restarts
-- Optional LLM auditor layer that explains and prioritizes findings
+### Added (Faz 2b — watch mode)
+- `mlcompass watch <log_file>` — monitor a plain-text training log for
+  the four most common training-time pathologies.
+- Lenient log parser (`tools/logs.py`) accepts `key=value`, `key: value`,
+  and `key  value` pairs across the dominant print-style and Keras-style
+  formats. Handles scientific notation, negative numbers, NaN, and Inf.
+  Multi-line "Epoch N" entries are merged into a single snapshot.
+- Four pure-function detectors in `tools/anomaly.py`:
+  - `nan` — error if any loss-like metric in the latest snapshot is
+    NaN or ±Inf
+  - `divergence` — error when train loss jumps ≥10× between
+    consecutive snapshots
+  - `plateau` — warning when the primary loss (val_loss preferred,
+    train_loss fallback) is flat across the last 5 snapshots
+  - `overfitting` — warning when train loss is falling, val loss is
+    rising, and the absolute train/val gap exceeds 0.05
+- `--follow / -f` flag tails the log file and surfaces only newly-detected
+  findings as fresh epochs arrive; `--poll-interval` is configurable
+- Rich rendering (`ui/watch.py`):
+  - Overview panel (log path, snapshot count, last epoch, per-severity
+    finding counts)
+  - Recent-metrics table that adapts its columns to whichever metrics
+    the last snapshots actually carried
+  - Findings table with severity colouring and top-3 suggested-fix footer
+- Watch runs are persisted to the active `.mlcompass/` project as a
+  decision entry plus a JSON line in `advice.log`
+- 48 new tests (20 log parser + 19 anomaly detector + 9 CLI integration).
+  Full suite now at 175 passing.
+
+### Planned for the rest of v0.2
+- TensorBoard event-file parser (lazy `tbparse` import)
+- W&B local cache reader
+- Optional LLM diagnostician layer for `watch` ("why is this happening?")
+- Optional LLM auditor layer for `audit` ("which of these matters most?")
 - Optional LLM compare layer ("Run B is better because…" hypothesis)
+- Permission-gated config edits and training restarts
 
 ### Planned for v0.3 (Faz 3)
 - `mlcompass evaluate <results>` — post-training analysis
