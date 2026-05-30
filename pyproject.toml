@@ -1,6 +1,6 @@
 [project]
 name = "mlcompass"
-version = "0.4.0"
+version = "0.5.0"
 description = "An LLM agent that sits next to you through your whole ML pipeline"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -12,6 +12,8 @@ keywords = [
     "machine-learning",
     "llm",
     "agent",
+    "agentic",
+    "claude-agent-sdk",
     "training",
     "monitoring",
     "claude",
@@ -51,6 +53,8 @@ dependencies = [
 tensorboard = ["tbparse>=0.0.7", "tensorboard>=2.10.0"]
 wandb = ["wandb>=0.16.0"]
 mcp = ["mcp>=1.2.0"]
+agent = ["anthropic>=0.50.0"]
+agent-claude-code = ["claude-agent-sdk>=0.2.0"]
 dev = [
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
@@ -60,6 +64,8 @@ dev = [
     "tbparse>=0.0.7",
     "tensorboard>=2.10.0",
     "mcp>=1.2.0",
+    "anthropic>=0.50.0",
+    "claude-agent-sdk>=0.2.0",
 ]
 
 [project.scripts]
@@ -106,6 +112,8 @@ warn_unused_configs = true
 [[tool.mypy.overrides]]
 module = [
     "agentlite",
+    "claude_agent_sdk",
+    "claude_agent_sdk.*",
     "mcp",
     "mcp.*",
     "pandas",

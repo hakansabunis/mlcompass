@@ -7,7 +7,7 @@
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-🚧 **Alpha (v0.4.0)** — under active development. APIs may change before v1.0.
+🚧 **Alpha (v0.5.0)** — under active development. APIs may change before v1.0.
 
 ## What it does
 
@@ -27,10 +27,10 @@ Each command writes to and reads from a shared project context
 knows your dataset, your model choice, your training history, and your
 evaluation results.
 
-## What's in v0.3
+## What's in v0.5
 
-Eight commands — every stage of the ML pipeline plus a status
-inspector.
+Nine commands — every stage of the ML pipeline, a status inspector,
+plus a self-driving agent that can pick the right tool for you.
 
 | Command    | When you run it                          | What you get                                                  | Status |
 | ---------- | ---------------------------------------- | ------------------------------------------------------------- | :----: |
@@ -42,10 +42,12 @@ inspector.
 | `evaluate` | Training done                            | Metrics, threshold sweep, confusion matrix, leakage-smell     | ✅ v0.3 |
 | `deploy`   | Going to production                      | Model + deps + target-specific checks + production checklist  | ✅ v0.3 |
 | `status`   | Any time                                 | Project metadata, active state, command activity, decisions   | ✅ v0.3 |
+| `agent`    | "Just do it for me"                      | LLM-driven router across the other eight tools                | ✅ v0.5 |
 
-Every command except `init` and `status` keeps a fully deterministic
-default path and offers an opt-in `--llm` flag that adds a
-Claude-driven interpretation step on top.
+Every command except `init`, `status`, and `agent` keeps a fully
+deterministic default path and offers an opt-in `--llm` flag that adds
+a Claude-driven interpretation step on top. The `agent` command is
+the inverse: LLM-first by design, with the eight tools as its hands.
 
 ## Install
 
@@ -57,8 +59,10 @@ export ANTHROPIC_API_KEY="sk-ant-..."   # only needed for --llm modes
 Optional extras:
 
 ```bash
-pip install "mlcompass[tensorboard]"    # adds tbparse for TB event files
-pip install "mlcompass[mcp]"            # adds the Claude / Cursor MCP server
+pip install "mlcompass[tensorboard]"          # adds tbparse for TB event files
+pip install "mlcompass[mcp]"                  # adds the Claude / Cursor MCP server
+pip install "mlcompass[agent]"                # adds the self-driving agent (anthropic API)
+pip install "mlcompass[agent-claude-code]"    # alt agent backend via Claude Code CLI
 ```
 
 ## Use from Claude Desktop / Cursor (MCP)
@@ -116,6 +120,52 @@ output and does its own interpretation, with full access to your
 conversation's context. The CLI stays available for scripted use and
 for the `--llm` reasoning modes.
 
+## Use as a self-driving agent (CLI)
+
+When you're not in Claude Desktop — CI runs, cron jobs, an ssh session
+on a GPU box — you can let an agent drive the same eight tools from
+the terminal:
+
+```bash
+pip install "mlcompass[agent]"
+export ANTHROPIC_API_KEY="sk-ant-..."
+
+mlcompass agent "I have data.csv, take me from raw data to a model recommendation"
+```
+
+The agent picks tools (`mlcompass_advise`, then `mlcompass_status`,
+then …), streams every reasoning step + tool call + tool result to the
+terminal, and writes a transcript under
+`.mlcompass/agent_runs/<id>/transcript.jsonl` plus a human-readable
+`summary.md` next to it.
+
+### Two backends
+
+| Backend            | Dependency              | Best for                                    |
+| ------------------ | ----------------------- | ------------------------------------------- |
+| `api` *(default)*  | `mlcompass[agent]`      | Universal: API key + nothing else.          |
+| `claude-code`      | `mlcompass[agent-claude-code]` + the `claude` CLI on PATH | Power users already on Claude Code; routes through Anthropic's official Agent SDK. |
+
+```bash
+# Default — talks straight to the Anthropic API.
+mlcompass agent "Compare run-3 and run-7" --project-path .
+
+# Alt — routes through your local Claude Code CLI.
+pip install "mlcompass[agent-claude-code]"
+mlcompass agent "Audit train.py and tell me what to fix" --backend claude-code
+
+# Headless / CI — skip the y/N permission prompt for mutating tools.
+mlcompass agent "Init a new churn project here" --auto-approve
+
+# Cap the safety budget if you're worried about runaway loops.
+mlcompass agent "Diagnose this run" --max-turns 10 --model claude-sonnet-4-5
+```
+
+The agent will **ask before mutating** by default — the only mutating
+tool is `mlcompass_init`. Read/compute tools (`advise`, `audit`,
+`watch`, `compare`, `evaluate`, `deploy`, `status`) auto-allow. Add
+`--auto-approve` to skip the prompt for headless runs.
+
 ## Five-minute tour
 
 ```bash
@@ -151,6 +201,11 @@ mlcompass deploy model.pt --llm              # + production verdict
 # Any time — what's the project look like right now?
 mlcompass status
 mlcompass status --recent 10                 # last 10 decisions
+
+# Let the agent drive the whole pipeline
+mlcompass agent "I have data.csv, take me to a deployed model"
+mlcompass agent "Compare run-3 and run-7" --backend claude-code
+mlcompass agent "Init a new project here" --auto-approve
 ```
 
 ## Example — `advise`
@@ -344,6 +399,7 @@ run `deploy`, every earlier decision is still in memory.
 | **Faz 4 (v0.3)**     | `deploy`                              | ✅ Shipped      |
 | **Faz 5 (v0.3)**     | `status`                              | ✅ Shipped      |
 | **Faz 6 (v0.4)**     | MCP server — `mlcompass-mcp`          | ✅ Shipped      |
+| **Faz 7 (v0.5)**     | `agent` — self-driving (api + claude-code backends) | ✅ Shipped |
 
 See [CHANGELOG.md](CHANGELOG.md) for the detailed log and
 [ARCHITECTURE.md](ARCHITECTURE.md) for the design.

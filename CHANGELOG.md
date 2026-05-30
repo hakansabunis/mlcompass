@@ -5,6 +5,88 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-05-30
+
+mlcompass becomes self-driving. The new `mlcompass agent "<task>"`
+command hands the eight pipeline tools to a Claude agent that picks
+the right call sequence, streams each step to the terminal, and
+writes a transcript you can audit later. Two backends ship together:
+`api` (default — universal, only needs `ANTHROPIC_API_KEY`) and
+`claude-code` (routes through your local Claude Code CLI via
+Anthropic's official Agent SDK). The CLI and MCP surfaces from
+v0.3.x / v0.4.0 stay byte-identical; everything new is additive.
+
+### Added — Faz 7 (agent layer)
+- New `src/mlcompass/agent/` package:
+  - `tools.py` — single registry mapping each of the eight
+    `mlcompass_*` tools to a JSON Schema + dispatcher. Both backends
+    read from this registry, so fixing a tool once propagates
+    everywhere (CLI's `--llm` modes, MCP server, agent backends).
+  - `backends/_common.py` — `AgentBackend` protocol, `AgentStep`,
+    `AgentResult`, and the `PermissionCallback` / `StepCallback`
+    types every backend consumes.
+  - `backends/anthropic_api.py` — universal backend: hand-rolled
+    tool-use loop on `anthropic.Anthropic().messages.create`, with
+    streaming + permission gating + max-turns safety cap.
+  - `backends/claude_code.py` — opt-in backend: wraps each tool with
+    `claude_agent_sdk.tool`, bundles them via `create_sdk_mcp_server`,
+    and iterates `claude_agent_sdk.query` (async). Requires the
+    `claude` CLI on PATH.
+  - `orchestrator.py` — `run_agent(task, backend=..., ...)` entry
+    point that picks a backend, wires the streaming UI + transcript
+    writer, and returns an `AgentRunSummary`.
+  - `transcript.py` — per-run journal under
+    `.mlcompass/agent_runs/<id>/transcript.jsonl` + a
+    human-readable `summary.md`. Giant tool results are truncated on
+    disk so the journal stays grep-friendly.
+  - `ui.py` — rich streaming renderer + a `Confirm.ask`-backed
+    permission callback for the CLI.
+  - `_system_prompt.py` — shared system prompt; six operating rules
+    (plan briefly, one tool at a time, read results carefully, don't
+    invent paths, respect existing project context, stop when done).
+- New `mlcompass agent "<task>"` CLI subcommand with `--backend`,
+  `--project-path`, `--model`, `--max-turns`, `--auto-approve` flags.
+  Exits 0 on convergence, 1 on failure (max-turns or backend error).
+- New optional dependency groups: `mlcompass[agent]` pulls
+  `anthropic>=0.50.0`; `mlcompass[agent-claude-code]` pulls
+  `claude-agent-sdk>=0.2.0`. Both are guarded with clean ImportError
+  messages pointing at the install instructions.
+
+### Design constraints
+- The agent surface has **no `--llm` knob** — it's LLM-first by
+  design. The CLI's per-tool `--llm` reasoning modes (audit / watch /
+  compare / evaluate / deploy) stay where they are for non-agentic
+  scripted use.
+- The default model is `claude-sonnet-4-5` (cheaper for routing).
+  Override via `--model` or the `MLCOMPASS_AGENT_MODEL` env var.
+- The only mutating tool is `mlcompass_init`; the agent's permission
+  gate fires only on that unless `--auto-approve` is passed. Six
+  read/compute tools auto-allow.
+- The orchestrator falls back to `<project_path>/.mlcompass-agent/`
+  when no `.mlcompass/` exists, so the audit trail is preserved
+  without silently creating a half-initialised project.
+- Both backends share one tool registry → a fix lands in both at
+  once, plus the MCP server stays in sync via its own re-use.
+
+### Tests
+- 28 new tests:
+  - 8 for the shared tool registry (eight tools, mutation flag,
+    schema invariants, dispatcher round-trip, error envelopes).
+  - 4 for the transcript writer (unique run-id, JSONL append, giant
+    payload truncation, summary metadata).
+  - 5 for the Anthropic API backend (fake-client text path, tool
+    round-trip, permission denial, max-turns, API error).
+  - 4 for the claude-code backend (mocked SDK text path, tool-use
+    round-trip via the namespaced `mcp__mlcompass__*` names, missing
+    dependency error message, SDK exception → typed failure).
+  - 7 for the CLI subcommand (default backend, alt backend,
+    `--auto-approve`, `--max-turns`, non-zero exit on failure,
+    `--help` discovery for the agent subcommand and root).
+- Full suite: 412 passing, 2 skipped (was 384 + 28 new).
+- `ruff check src tests` → 0 errors.
+- `mypy --strict src/mlcompass` → 0 errors across **42** source files
+  (was 32).
+
 ## [0.4.0] — 2026-05-30
 
 mlcompass goes beyond a CLI: every command is now reachable from

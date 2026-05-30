@@ -12,6 +12,7 @@ Currently implemented:
     evaluate  — post-training analysis on a predictions table (Faz 3a)
     deploy    — deployment readiness check (Faz 4a)
     status    — summarise the active project context (Faz 5)
+    agent     — self-driving agent over the eight mlcompass tools (Faz 7)
 """
 
 from __future__ import annotations
@@ -1163,6 +1164,122 @@ def status(recent_decisions: int) -> None:
         raise SystemExit(1) from exc
 
     render_status(console, project, recent_decisions=recent_decisions)
+
+
+# --------------------------------------------------------------------------- #
+# agent — self-driving over the eight tools (Faz 7)                           #
+# --------------------------------------------------------------------------- #
+
+
+@cli.command(help="Run a self-driving agent over the eight mlcompass tools.")
+@click.argument("task")
+@click.option(
+    "--project-path",
+    type=click.Path(file_okay=False, dir_okay=True, path_type=Path),
+    default=Path("."),
+    show_default=True,
+    help=(
+        "Path inside or above an mlcompass project. The transcript is "
+        "written under .mlcompass/agent_runs/<id>/."
+    ),
+)
+@click.option(
+    "--backend",
+    type=click.Choice(["api", "claude-code"]),
+    default="api",
+    show_default=True,
+    help=(
+        "Which driver to use. 'api' calls Anthropic directly (needs "
+        "ANTHROPIC_API_KEY). 'claude-code' routes through your local "
+        "Claude Code CLI via the claude-agent-sdk."
+    ),
+)
+@click.option(
+    "--model",
+    default=None,
+    help=(
+        "Model name. Defaults to claude-sonnet-4-5 (override via MLCOMPASS_AGENT_MODEL env var)."
+    ),
+)
+@click.option(
+    "--max-turns",
+    type=int,
+    default=None,
+    help="Hard cap on conversation turns (default: 20).",
+)
+@click.option(
+    "--auto-approve",
+    is_flag=True,
+    help=(
+        "Skip the y/N permission prompt before mutating tools. Use for "
+        "CI / headless runs where no human is present."
+    ),
+)
+def agent(
+    task: str,
+    project_path: Path,
+    backend: str,
+    model: str | None,
+    max_turns: int | None,
+    auto_approve: bool,
+) -> None:
+    """Drive the chosen backend until it answers or hits max-turns."""
+    # Lazy-import the orchestrator's defaults so users without
+    # `anthropic` / `claude-agent-sdk` installed can still run the
+    # rest of the CLI. The real driver call goes through `_agent_runner`
+    # (a tiny indirection so tests can swap it without spinning up the
+    # SDK), not through this import.
+    try:
+        from .agent.orchestrator import (
+            DEFAULT_MAX_TURNS,
+            DEFAULT_MODEL,
+        )
+    except ImportError as exc:  # pragma: no cover
+        console.print(
+            "[red]✗[/red] The agent command needs an extra. "
+            "Install with: pip install 'mlcompass[agent]' "
+            "(or pip install 'mlcompass[agent-claude-code]' for the "
+            "claude-code backend)."
+        )
+        raise SystemExit(2) from exc
+
+    summary = _agent_runner(
+        task=task,
+        project_path=str(project_path),
+        backend=backend,
+        model=model or DEFAULT_MODEL,
+        max_turns=max_turns or DEFAULT_MAX_TURNS,
+        auto_approve_mutations=auto_approve,
+    )
+
+    console.print()
+    console.print(
+        Panel.fit(
+            (
+                f"Transcript: [cyan]{summary.transcript_path}[/cyan]\n"
+                f"Summary:    [cyan]{summary.summary_path}[/cyan]\n"
+                f"Backend:    [bold]{backend}[/bold]   "
+                f"Turns: [bold]{summary.result.turns}[/bold]   "
+                f"Stop: [bold]{summary.result.stop_reason}[/bold]"
+            ),
+            title="📋 Agent run",
+            border_style="cyan",
+        )
+    )
+
+    if not summary.result.ok:
+        raise SystemExit(1)
+
+
+# Indirection so tests can monkeypatch the orchestrator without
+# bringing the real Anthropic / claude-agent-sdk SDKs online.
+def _default_agent_runner(**kwargs: Any) -> Any:
+    from .agent.orchestrator import run_agent
+
+    return run_agent(**kwargs)
+
+
+_agent_runner: Callable[..., Any] = _default_agent_runner
 
 
 # --------------------------------------------------------------------------- #
