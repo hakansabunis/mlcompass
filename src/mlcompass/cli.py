@@ -10,9 +10,10 @@ Currently implemented:
     watch     — monitor a training log for anomalies (Faz 2b)
     compare   — diff two training runs side-by-side (Faz 2c)
     evaluate  — post-training analysis on a predictions table (Faz 3a)
+    deploy    — deployment readiness check (Faz 4a)
 
 Planned:
-    deploy, status
+    status
 """
 
 from __future__ import annotations
@@ -32,11 +33,17 @@ from . import __version__
 from .agents.advise import AdvisorParseError, get_recommendation
 from .agents.audit import AuditAgentError, prioritize_findings
 from .agents.compare import CompareAgentError, hypothesize_comparison
+from .agents.deploy import DeployAgentError, advise_deployment
 from .agents.evaluate import EvaluateAgentError, interpret_evaluation
 from .agents.watch import WatchAgentError, diagnose_findings
 from .context import ProjectContext, ProjectExistsError, ProjectNotFoundError
 from .tools.anomaly import run_all_detectors
 from .tools.dataset import analyze_dataset
+from .tools.deploy import (
+    DeployAnalysisError,
+    SUPPORTED_TARGETS as DEPLOY_TARGETS,
+    assess_deployment,
+)
 from .tools.evaluation import (
     EvaluationError,
     evaluate as run_evaluation,
@@ -61,6 +68,7 @@ from .ui.advise import render_analysis, render_recommendation
 from .ui.audit import render_audit, render_audit_priorities
 from .ui.compare import render_compare, render_compare_hypothesis
 from .ui.config_edit import make_console_confirm, render_apply_summary
+from .ui.deploy import render_deployment, render_deployment_advice
 from .ui.evaluate import render_evaluation, render_evaluation_interpretation
 from .ui.watch import render_new_findings, render_watch_diagnosis, render_watch_report
 
@@ -241,6 +249,7 @@ _compare_hypothesizer_callable: Callable[..., dict[str, Any]] = hypothesize_comp
 # Tests can also replace the apply-edits driver to bypass real disk writes.
 _apply_edits_callable: Callable[..., ApplyResult] = apply_edits
 _evaluate_interpreter_callable: Callable[..., dict[str, Any]] = interpret_evaluation
+_deploy_advisor_callable: Callable[..., dict[str, Any]] = advise_deployment
 
 
 def _run_advisor(
@@ -1022,6 +1031,145 @@ def _persist_evaluate_result(
     }
     if interpretation is not None:
         log_entry["interpretation"] = interpretation
+    with (project.path / "advice.log").open("a", encoding="utf-8") as f:
+        f.write(json.dumps(log_entry) + "\n")
+
+
+# --------------------------------------------------------------------------- #
+# deploy command                                                              #
+# --------------------------------------------------------------------------- #
+
+
+@cli.command(
+    help="Run a deployment-readiness check on a saved model file.",
+)
+@click.argument(
+    "model_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option(
+    "--requirements",
+    "requirements_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    default=None,
+    help="Path to a requirements.txt / pyproject.toml / environment.yml.",
+)
+@click.option(
+    "--target",
+    type=click.Choice(list(DEPLOY_TARGETS)),
+    default="local",
+    show_default=True,
+    help="Deployment target name.",
+)
+@click.option(
+    "--llm",
+    "use_llm",
+    is_flag=True,
+    help="After the deterministic checks, ask Claude for a production verdict.",
+)
+@click.option(
+    "--model",
+    "llm_model",
+    default="claude-opus-4-7",
+    show_default=True,
+    help="Claude model used by the advisor when --llm is set.",
+)
+def deploy(
+    model_path: Path,
+    requirements_path: Path | None,
+    target: str,
+    use_llm: bool,
+    llm_model: str,
+) -> None:
+    """Inspect a model file and produce a deployment-readiness report."""
+    project = _try_load_project()
+
+    try:
+        with console.status("[cyan]Inspecting model...[/cyan]", spinner="dots"):
+            report = assess_deployment(
+                model_path,
+                requirements_path=requirements_path,
+                target=target,
+            )
+    except DeployAnalysisError as exc:
+        console.print(f"[red]✗ Deploy check failed:[/red] {exc}")
+        raise SystemExit(2) from exc
+
+    render_deployment(console, report)
+
+    advice: dict[str, Any] | None = None
+    if use_llm:
+        advice = _maybe_advise_deployment(report, model=llm_model)
+        if advice is not None:
+            render_deployment_advice(console, advice)
+
+    if project is not None:
+        _persist_deploy_result(
+            project=project,
+            model_path=model_path,
+            requirements_path=requirements_path,
+            target=target,
+            report=report,
+            advice=advice,
+        )
+
+
+def _maybe_advise_deployment(
+    report: dict[str, Any], *, model: str
+) -> dict[str, Any] | None:
+    if not _has_api_key():
+        console.print(
+            "\n[yellow]⚠ --llm requested but ANTHROPIC_API_KEY is unset; "
+            "skipping advisor.[/yellow]"
+        )
+        return None
+    try:
+        with console.status(
+            "[cyan]Asking the advisor...[/cyan]", spinner="dots"
+        ):
+            return _deploy_advisor_callable(report, model=model)
+    except DeployAgentError as exc:
+        console.print(f"\n[red]✗ Advisor returned bad response:[/red] {exc}")
+        return None
+
+
+def _persist_deploy_result(
+    *,
+    project: ProjectContext,
+    model_path: Path,
+    requirements_path: Path | None,
+    target: str,
+    report: dict[str, Any],
+    advice: dict[str, Any] | None = None,
+) -> None:
+    """Record a deploy invocation in the project context + advice log."""
+    model = report.get("model") or {}
+    n_warn = len(report.get("warnings") or [])
+    summary = (
+        f"Deploy ({target}, {model.get('format', '?')}, "
+        f"{model.get('size_pretty', '?')}): "
+        + (f"{n_warn} warning(s)" if n_warn else "clean")
+    )
+
+    project.append_decision(
+        command="deploy",
+        summary=summary,
+        reasoning=f"Model: {model_path}; target: {target}",
+    )
+
+    log_entry: dict[str, Any] = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "command": "deploy",
+        "model": str(model_path),
+        "requirements": str(requirements_path) if requirements_path else None,
+        "target": target,
+        "format": model.get("format"),
+        "size_bytes": model.get("size_bytes"),
+        "warnings": report.get("warnings", []),
+        "checklist": report.get("checklist", []),
+    }
+    if advice is not None:
+        log_entry["advice"] = advice
     with (project.path / "advice.log").open("a", encoding="utf-8") as f:
         f.write(json.dumps(log_entry) + "\n")
 

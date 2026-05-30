@@ -51,6 +51,47 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   integration + 5 LLM agent unit + 4 CLI `--llm` integration). Full
   suite now at 312 passing.
 
+### Added (Faz 4 — deploy command)
+- `mlcompass deploy <model_file>` runs a deployment-readiness check
+  on a saved model file. Inspects metadata only — never loads the
+  model (pickle exec, GPU init, and allocator surprises are footguns
+  for an advisor).
+- Format detection from magic bytes with extension fallback covers
+  pytorch (`PK\\x03\\x04` Zip), pickle / joblib (`\\x80\\x04`),
+  TensorFlow H5 (HDF5 signature), ONNX (protobuf), safetensors,
+  GGUF, TFLite, and Core ML packages.
+- **Pickle security warning** fires for raw `.pkl` / `.pickle`
+  files, with a suggested switch to joblib / ONNX / safetensors.
+- Size-class bucketing (small / medium / large / huge) with a
+  pretty-printed file size.
+- `--requirements <file>` reads `requirements.txt`,
+  `pyproject.toml`, or `environment.yml` and reports pin status,
+  unpinned dependency count, and which ML/DL packages are present.
+  Unpinned-dep warning fires whenever any line lacks a version
+  specifier.
+- `--target {local, sagemaker, lambda, kubernetes, vertex}` (default
+  `local`) layers in target-specific checks: Lambda flags models
+  over its ~250 MB unzipped ceiling and warns about pickle cold
+  starts; SageMaker / Vertex flag unknown formats; Kubernetes warns
+  about unpinned deps as a "500-only-on-Friday" risk.
+- Universal production checklist always renders monitoring nudges
+  (inference latency, data drift, model drift, rollback path,
+  logging / alerting) marked as `info` so they read as manual
+  follow-ups, not as auto-passes.
+- `--llm` opt-in advisor produces `{verdict, blockers[], next_steps[],
+  rollout_strategy}` rendered as a green panel + bullet lists +
+  cyan rollout panel. Same opt-in pattern as the other LLM layers.
+- deploy runs are persisted to `.mlcompass/advice.log` with the
+  format, size, target, warnings, full checklist, and (when --llm
+  is set) the advisor's output.
+- 42 new tests across four files (22 deploy unit + 11 CLI
+  integration + 5 LLM agent unit + 4 CLI `--llm` integration). Full
+  suite now at 354 passing.
+
+With Faz 4 in place, every command on the original roadmap is
+shipped: `init`, `advise`, `audit`, `watch`, `compare`, `evaluate`,
+`deploy`.
+
 ## [0.2.1] — 2026-05-29
 
 Quality-of-life follow-up to 0.2.0. The Faz 2.2 tasks land as one
