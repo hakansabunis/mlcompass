@@ -32,6 +32,7 @@ from . import __version__
 from .agents.advise import AdvisorParseError, get_recommendation
 from .agents.audit import AuditAgentError, prioritize_findings
 from .agents.compare import CompareAgentError, hypothesize_comparison
+from .agents.evaluate import EvaluateAgentError, interpret_evaluation
 from .agents.watch import WatchAgentError, diagnose_findings
 from .context import ProjectContext, ProjectExistsError, ProjectNotFoundError
 from .tools.anomaly import run_all_detectors
@@ -60,7 +61,7 @@ from .ui.advise import render_analysis, render_recommendation
 from .ui.audit import render_audit, render_audit_priorities
 from .ui.compare import render_compare, render_compare_hypothesis
 from .ui.config_edit import make_console_confirm, render_apply_summary
-from .ui.evaluate import render_evaluation
+from .ui.evaluate import render_evaluation, render_evaluation_interpretation
 from .ui.watch import render_new_findings, render_watch_diagnosis, render_watch_report
 
 
@@ -239,6 +240,7 @@ _compare_hypothesizer_callable: Callable[..., dict[str, Any]] = hypothesize_comp
 
 # Tests can also replace the apply-edits driver to bypass real disk writes.
 _apply_edits_callable: Callable[..., ApplyResult] = apply_edits
+_evaluate_interpreter_callable: Callable[..., dict[str, Any]] = interpret_evaluation
 
 
 def _run_advisor(
@@ -911,6 +913,19 @@ def _persist_compare_result(
     show_default=True,
     help="How many worst-error rows to surface.",
 )
+@click.option(
+    "--llm",
+    "use_llm",
+    is_flag=True,
+    help="After the deterministic report, ask Claude to interpret the results.",
+)
+@click.option(
+    "--model",
+    "llm_model",
+    default="claude-opus-4-7",
+    show_default=True,
+    help="Claude model used by the interpreter when --llm is set.",
+)
 def evaluate(
     results_path: Path,
     y_true_col: str | None,
@@ -918,6 +933,8 @@ def evaluate(
     y_prob_col: str | None,
     task: str | None,
     hard_examples_k: int,
+    use_llm: bool,
+    llm_model: str,
 ) -> None:
     """Evaluate predictions in ``results_path``."""
     project = _try_load_project()
@@ -940,12 +957,38 @@ def evaluate(
 
     render_evaluation(console, result)
 
+    interpretation: dict[str, Any] | None = None
+    if use_llm:
+        interpretation = _maybe_interpret_evaluation(result, model=llm_model)
+        if interpretation is not None:
+            render_evaluation_interpretation(console, interpretation)
+
     if project is not None:
         _persist_evaluate_result(
             project=project,
             results_path=results_path,
             result=result,
+            interpretation=interpretation,
         )
+
+
+def _maybe_interpret_evaluation(
+    result: dict[str, Any], *, model: str
+) -> dict[str, Any] | None:
+    if not _has_api_key():
+        console.print(
+            "\n[yellow]⚠ --llm requested but ANTHROPIC_API_KEY is unset; "
+            "skipping interpreter.[/yellow]"
+        )
+        return None
+    try:
+        with console.status(
+            "[cyan]Asking the interpreter...[/cyan]", spinner="dots"
+        ):
+            return _evaluate_interpreter_callable(result, model=model)
+    except EvaluateAgentError as exc:
+        console.print(f"\n[red]✗ Interpreter returned bad response:[/red] {exc}")
+        return None
 
 
 def _persist_evaluate_result(
@@ -953,6 +996,7 @@ def _persist_evaluate_result(
     project: ProjectContext,
     results_path: Path,
     result: dict[str, Any],
+    interpretation: dict[str, Any] | None = None,
 ) -> None:
     """Record an evaluate invocation in the project context + advice log."""
     task = result.get("task", "unknown")
@@ -968,7 +1012,7 @@ def _persist_evaluate_result(
         reasoning=f"Results: {results_path}; rows: {result.get('rows', 0)}",
     )
 
-    log_entry = {
+    log_entry: dict[str, Any] = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "command": "evaluate",
         "results": str(results_path),
@@ -976,6 +1020,8 @@ def _persist_evaluate_result(
         "metrics": metrics,
         "warnings": result.get("warnings", []),
     }
+    if interpretation is not None:
+        log_entry["interpretation"] = interpretation
     with (project.path / "advice.log").open("a", encoding="utf-8") as f:
         f.write(json.dumps(log_entry) + "\n")
 

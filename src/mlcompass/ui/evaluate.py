@@ -51,6 +51,40 @@ def render_evaluation(console: Console, result: dict[str, Any]) -> None:
 # --------------------------------------------------------------------------- #
 
 
+def render_evaluation_interpretation(
+    console: Console,
+    interpretation: dict[str, Any],
+) -> None:
+    """Render the evaluate interpreter (LLM layer) output."""
+    assessment = interpretation.get("assessment")
+    if assessment:
+        console.print()
+        console.print(
+            Panel.fit(assessment, title="🧠 Assessment", border_style="green")
+        )
+
+    strengths = interpretation.get("strengths") or []
+    if strengths:
+        console.print()
+        console.print("[green]✓ Strengths[/green]")
+        for item in strengths:
+            console.print(f"  • {item}")
+
+    weaknesses = interpretation.get("weaknesses") or []
+    if weaknesses:
+        console.print()
+        console.print("[red]✗ Weaknesses[/red]")
+        for item in weaknesses:
+            console.print(f"  • {item}")
+
+    next_steps = interpretation.get("next_steps") or []
+    if next_steps:
+        console.print()
+        console.print("[cyan]🚀 Next steps[/cyan]")
+        for item in next_steps:
+            console.print(f"  • {item}")
+
+
 def _summary_panel(result: dict[str, Any]) -> Panel:
     cols = result.get("columns") or {}
     body = (

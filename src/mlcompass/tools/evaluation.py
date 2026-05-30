@@ -337,6 +337,8 @@ def _binary_warnings(metrics: dict[str, float], y_true: np.ndarray) -> list[str]
     warnings: list[str] = []
 
     positive_rate = float(y_true.mean()) if len(y_true) else 0.0
+    n_rows = int(len(y_true))
+
     if positive_rate < 0.1 and metrics["accuracy"] > 0.9 and metrics["recall"] < 0.5:
         warnings.append(
             f"Class imbalance ({positive_rate * 100:.1f}% positive) inflates "
@@ -354,7 +356,40 @@ def _binary_warnings(metrics: dict[str, float], y_true: np.ndarray) -> list[str]
             "threshold. Try lowering it."
         )
 
+    too_good = _too_good_to_be_true_binary(metrics, n_rows)
+    if too_good:
+        warnings.append(too_good)
+
     return warnings
+
+
+def _too_good_to_be_true_binary(
+    metrics: dict[str, float], n_rows: int,
+) -> str | None:
+    """Flag near-perfect metrics as a leakage / split-contamination smell."""
+    if n_rows < 50:
+        return None  # tiny test sets often look perfect by chance
+
+    issues: list[str] = []
+    auc = metrics.get("auc")
+    if auc is not None and auc > 0.995:
+        issues.append(f"AUC {auc:.4f}")
+    if metrics["accuracy"] > 0.99:
+        issues.append(f"accuracy {metrics['accuracy']:.4f}")
+    if metrics["precision"] >= 0.99 and metrics["recall"] >= 0.99:
+        issues.append("precision and recall both ≥ 0.99")
+    if not issues:
+        return None
+
+    return (
+        f"Suspiciously perfect metrics ({', '.join(issues)}). On real-world "
+        "data this is almost always a sign of one of: (1) data leakage — the "
+        "target value or a near-perfect proxy is in the features, (2) train/"
+        "test contamination — the same rows appear in both splits, (3) the "
+        "wrong column is being used as y_true / y_pred / y_prob, or (4) the "
+        "predictions table was generated on the training set instead of the "
+        "held-out set. Sanity-check before believing the score."
+    )
 
 
 def _binary_hard_examples(
@@ -466,17 +501,18 @@ def _evaluate_multiclass(
     confusion = _confusion_matrix_dense(y_true, y_pred, labels)
     hard = _multiclass_hard_examples(df.loc[rows.index], y_true, y_pred, hard_examples_k)
 
+    overall_metrics = {
+        "accuracy": round(accuracy, 4),
+        "macro_f1": round(macro_f1, 4),
+        "weighted_f1": round(weighted_f1, 4),
+    }
     return {
-        "metrics": {
-            "accuracy": round(accuracy, 4),
-            "macro_f1": round(macro_f1, 4),
-            "weighted_f1": round(weighted_f1, 4),
-        },
+        "metrics": overall_metrics,
         "per_class": per_class,
         "confusion_matrix": confusion,
         "labels": [_serialize_label(label) for label in labels],
         "hard_examples": hard,
-        "warnings": _multiclass_warnings(per_class),
+        "warnings": _multiclass_warnings(per_class, overall_metrics, total),
     }
 
 
@@ -492,7 +528,11 @@ def _confusion_matrix_dense(
     return matrix.tolist()
 
 
-def _multiclass_warnings(per_class: list[dict[str, Any]]) -> list[str]:
+def _multiclass_warnings(
+    per_class: list[dict[str, Any]],
+    overall_metrics: dict[str, float],
+    n_rows: int,
+) -> list[str]:
     warnings: list[str] = []
     very_weak = [c for c in per_class if c["f1"] < 0.3 and c["support"] >= 5]
     if very_weak:
@@ -501,7 +541,36 @@ def _multiclass_warnings(per_class: list[dict[str, Any]]) -> list[str]:
             f"{len(very_weak)} class(es) have F1 < 0.3 despite having "
             f"≥5 examples ({labels}…). Look at confusion matrix rows."
         )
+
+    too_good = _too_good_to_be_true_multiclass(per_class, overall_metrics, n_rows)
+    if too_good:
+        warnings.append(too_good)
     return warnings
+
+
+def _too_good_to_be_true_multiclass(
+    per_class: list[dict[str, Any]],
+    overall_metrics: dict[str, float],
+    n_rows: int,
+) -> str | None:
+    if n_rows < 50:
+        return None
+
+    issues: list[str] = []
+    if overall_metrics.get("accuracy", 0) > 0.99:
+        issues.append(f"accuracy {overall_metrics['accuracy']:.4f}")
+    strong_classes = [c for c in per_class if c["support"] >= 5 and c["f1"] > 0.99]
+    if per_class and len(strong_classes) == len(per_class):
+        issues.append("every class F1 ≥ 0.99")
+    if not issues:
+        return None
+
+    return (
+        f"Suspiciously perfect metrics ({', '.join(issues)}). On real-world "
+        "data this is almost always a sign of data leakage, train/test "
+        "contamination, or the predictions table being generated on the "
+        "training set. Sanity-check before believing the score."
+    )
 
 
 def _multiclass_hard_examples(
@@ -584,7 +653,7 @@ def _evaluate_regression(
         "rmse": round(rmse, 4),
         "r2": round(r2, 4),
     }
-    warnings = _regression_warnings(residuals, y_true)
+    warnings = _regression_warnings(residuals, y_true, r2)
 
     return {
         "metrics": metrics,
@@ -600,7 +669,11 @@ def _evaluate_regression(
     }
 
 
-def _regression_warnings(residuals: np.ndarray, y_true: np.ndarray) -> list[str]:
+def _regression_warnings(
+    residuals: np.ndarray,
+    y_true: np.ndarray,
+    r2: float,
+) -> list[str]:
     warnings: list[str] = []
     bias = float(np.mean(residuals))
     spread = float(np.std(residuals)) or 1.0
@@ -615,7 +688,22 @@ def _regression_warnings(residuals: np.ndarray, y_true: np.ndarray) -> list[str]
             "Residual spread is large relative to the target range; the model "
             "may not be capturing the signal yet."
         )
+
+    too_good = _too_good_to_be_true_regression(r2, len(residuals))
+    if too_good:
+        warnings.append(too_good)
     return warnings
+
+
+def _too_good_to_be_true_regression(r2: float, n: int) -> str | None:
+    if n < 50 or r2 <= 0.999:
+        return None
+    return (
+        f"Suspiciously high R² ({r2:.4f}). On real-world data this almost "
+        "always means data leakage (target value present in features), train/"
+        "test contamination, or that the predictions table was scored on the "
+        "training set. Sanity-check before believing the fit."
+    )
 
 
 # --------------------------------------------------------------------------- #

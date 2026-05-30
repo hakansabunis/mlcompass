@@ -292,6 +292,53 @@ def test_regression_hard_examples_have_residuals() -> None:
 # --------------------------------------------------------------------------- #
 
 
+# --------------------------------------------------------------------------- #
+# Suspicious-metrics ("too good to be true") warnings                         #
+# --------------------------------------------------------------------------- #
+
+
+def test_binary_perfect_metrics_warn_about_leakage() -> None:
+    n = 200
+    rng = np.random.default_rng(7)
+    y_true = rng.integers(0, 2, size=n)
+    # Probability == label → perfect AUC, perfect threshold split.
+    y_prob = y_true.astype(float)
+    y_pred = y_true
+    df = pd.DataFrame({"y_true": y_true, "y_pred": y_pred, "y_prob": y_prob})
+    result = evaluate(df)
+    assert any("leakage" in w.lower() for w in result["warnings"])
+
+
+def test_binary_suspicious_warning_quiet_on_tiny_test_set() -> None:
+    n = 20  # below the threshold (50) — must NOT fire
+    rng = np.random.default_rng(3)
+    y_true = rng.integers(0, 2, size=n)
+    df = pd.DataFrame(
+        {"y_true": y_true, "y_pred": y_true, "y_prob": y_true.astype(float)}
+    )
+    result = evaluate(df)
+    assert not any("leakage" in w.lower() for w in result["warnings"])
+
+
+def test_multiclass_perfect_classifier_warns() -> None:
+    df = pd.DataFrame(
+        {
+            "y_true": ["a"] * 20 + ["b"] * 20 + ["c"] * 20,
+            "y_pred": ["a"] * 20 + ["b"] * 20 + ["c"] * 20,
+        }
+    )
+    result = evaluate(df)
+    assert any("leakage" in w.lower() for w in result["warnings"])
+
+
+def test_regression_perfect_fit_warns() -> None:
+    # 100 rows, prediction == truth → R² == 1.0
+    x = np.linspace(0, 10, 100)
+    df = pd.DataFrame({"y_true": x, "y_pred": x})
+    result = evaluate(df)
+    assert any("leakage" in w.lower() for w in result["warnings"])
+
+
 def test_task_override_forces_regression() -> None:
     # 1/0 ints, but user calls regression — should respect override
     df = pd.DataFrame(

@@ -5,12 +5,51 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-### Planned for v0.3 (Faz 3)
-- `mlcompass evaluate <results>` — post-training analysis
-- Threshold optimisation
-- Confusion matrix interpretation
-- Hard example surfacing
-- Optional fairness checks
+### Added (Faz 3 — evaluate command)
+- `mlcompass evaluate <results>` runs deterministic post-training
+  analysis on a predictions table (CSV / Parquet / Excel / JSONL /
+  JSON). Auto-detects `y_true`, `y_pred`, and `y_prob` columns from a
+  small name-hint list (`label`, `target`, `pred`, `prob`, …) with
+  explicit `--y-true / --y-pred / --y-prob` overrides.
+- Task type is inferred from the data and the user can force it with
+  `--task binary_classification | multiclass_classification | regression`.
+- **Binary classification** outputs: accuracy / precision / recall / F1
+  at threshold 0.5, AUC via the rank-based Wilcoxon–Mann–Whitney
+  formula, 11-point threshold sweep with the best-F1 row starred,
+  confusion matrix, hard examples ranked by `|y_true − y_prob|`, and
+  imbalance / precision-recall lopsidedness warnings.
+- **Multiclass** outputs: macro & weighted F1, per-class
+  precision / recall / F1 / support, dense confusion matrix (rendered
+  only for ≤ 8 labels), worst misclassified examples, and a "weak
+  class" warning for classes with F1 < 0.3 and support ≥ 5.
+- **Regression** outputs: MAE / RMSE / R², residual mean / std / min /
+  max, top-k largest-residual rows, residual-bias warning when the
+  mean residual is more than half the residual std.
+- `--llm` opt-in interpreter (Faz 3c) runs Claude over the structured
+  evaluation and returns `{assessment, strengths, weaknesses, next_steps}`
+  rendered as a green panel + bullet lists. Pure reasoner (no tools);
+  the deterministic analyzer already produced the numbers.
+- `--hard-examples N` flag controls the top-k worst rows surfaced
+  (default 5).
+- `EvaluationError` and `EvaluateAgentError` map to clean red errors;
+  evaluation failures exit 2, agent failures are non-fatal and print
+  a single line.
+- Pure pandas + numpy implementation; no scikit-learn dependency
+  added.
+- evaluate runs are persisted to `.mlcompass/advice.log` with the
+  task, metrics, warnings, and (when `--llm` is set) the LLM
+  interpretation.
+- **Leakage-smell warning**: for any task, when the metrics look
+  suspiciously perfect on ≥ 50 rows (binary AUC > 0.995 or accuracy
+  > 0.99 or precision and recall both ≥ 0.99; multiclass accuracy
+  > 0.99 or every class F1 ≥ 0.99; regression R² > 0.999) evaluate
+  surfaces a clear warning naming the four usual causes — data
+  leakage, train/test contamination, wrong column used as
+  y_true / y_pred / y_prob, or scoring on the training set — so the
+  user sanity-checks before believing the score.
+- 51 new tests across four files (30 evaluation unit + 12 CLI
+  integration + 5 LLM agent unit + 4 CLI `--llm` integration). Full
+  suite now at 312 passing.
 
 ## [0.2.1] — 2026-05-29
 
