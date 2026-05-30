@@ -7,7 +7,7 @@
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-🚧 **Alpha (v0.3.0)** — under active development. APIs may change before v1.0.
+🚧 **Alpha (v0.3.1)** — under active development. APIs may change before v1.0.
 
 ## What it does
 
@@ -29,7 +29,8 @@ evaluation results.
 
 ## What's in v0.3
 
-Seven commands — every stage of the ML pipeline is covered.
+Eight commands — every stage of the ML pipeline plus a status
+inspector.
 
 | Command    | When you run it                          | What you get                                                  | Status |
 | ---------- | ---------------------------------------- | ------------------------------------------------------------- | :----: |
@@ -40,10 +41,11 @@ Seven commands — every stage of the ML pipeline is covered.
 | `compare`  | After several runs                       | Side-by-side config + final-metric diff with verdict          | ✅ v0.2 |
 | `evaluate` | Training done                            | Metrics, threshold sweep, confusion matrix, leakage-smell     | ✅ v0.3 |
 | `deploy`   | Going to production                      | Model + deps + target-specific checks + production checklist  | ✅ v0.3 |
+| `status`   | Any time                                 | Project metadata, active state, command activity, decisions   | ✅ v0.3 |
 
-Every command except `init` keeps a fully deterministic default path
-and offers an opt-in `--llm` flag that adds a Claude-driven
-interpretation step on top.
+Every command except `init` and `status` keeps a fully deterministic
+default path and offers an opt-in `--llm` flag that adds a
+Claude-driven interpretation step on top.
 
 ## Install
 
@@ -89,6 +91,10 @@ mlcompass evaluate results.csv --llm         # + assessment + next steps
 mlcompass deploy model.pt                    # model + checklist
 mlcompass deploy model.pt --requirements reqs.txt --target lambda
 mlcompass deploy model.pt --llm              # + production verdict
+
+# Any time — what's the project look like right now?
+mlcompass status
+mlcompass status --recent 10                 # last 10 decisions
 ```
 
 ## Example — `advise`
@@ -280,7 +286,7 @@ run `deploy`, every earlier decision is still in memory.
 | **Faz 2.2 (v0.3)**   | TensorBoard / W&B sources, `--apply`  | ✅ Shipped      |
 | **Faz 3 (v0.3)**     | `evaluate` + leakage-smell warning    | ✅ Shipped      |
 | **Faz 4 (v0.3)**     | `deploy`                              | ✅ Shipped      |
-| **v0.4 (planned)**   | `status` summary of project context   | 📅 Planned     |
+| **Faz 5 (v0.3)**     | `status`                              | ✅ Shipped      |
 
 See [CHANGELOG.md](CHANGELOG.md) for the detailed log and
 [ARCHITECTURE.md](ARCHITECTURE.md) for the design.

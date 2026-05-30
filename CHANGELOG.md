@@ -5,6 +5,18 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.3.1] — 2026-05-30
+
+End-to-end pipeline release. Wraps Faz 2.2, Faz 3, Faz 4, Faz 5, and
+the polish pass into a single tagged version. Every command on the
+original roadmap is now in: ``init``, ``advise``, ``audit``,
+``watch``, ``compare``, ``evaluate``, ``deploy``, ``status``. No
+breaking changes from 0.2.0; users of the existing commands keep
+their behaviour and gain four new commands plus optional LLM layers
+across the board.
+
+(0.3.0 was prepared but never published; this release supersedes it.)
+
 ### Added (Faz 5 — status command)
 - `mlcompass status` — prints a structured snapshot of the active
   `.mlcompass/` project: name, created timestamp, default model;
@@ -18,20 +30,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   command is instant.
 - 7 new tests covering fresh / populated project, command-activity
   tally, --recent cap, missing-project error, root --help discovery,
-  and status --help option visibility.
+  and status --help option visibility. Full suite now at 361 passing.
 
 This is the last command on the original roadmap. Every CLI surface
 listed in v0.1's ARCHITECTURE.md §7 is now implemented.
-
-## [0.3.0] — 2026-05-29
-
-End-to-end pipeline release. Wraps Faz 2.2, Faz 3, Faz 4, and the
-polish pass into a single tagged version. Every command on the
-original roadmap is now in: ``init``, ``advise``, ``audit``,
-``watch``, ``compare``, ``evaluate``, ``deploy``. No breaking
-changes from 0.2.0; users of the existing commands keep their
-behaviour and gain three new commands plus optional LLM layers
-across the board.
 
 ### Added (Faz 3 — evaluate command)
 - `mlcompass evaluate <results>` runs deterministic post-training
