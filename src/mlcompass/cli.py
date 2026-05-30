@@ -42,11 +42,18 @@ from .tools.logs import (
     merge_consecutive_same_epoch,
     parse_log_file,
 )
+from .tools.config_edit import (
+    ApplyResult,
+    ConfigEdit,
+    ConfigEditError,
+    apply_edits,
+)
 from .tools.runs import RunNotFoundError, compare_runs, load_run
 from .tools.script import audit_script
 from .ui.advise import render_analysis, render_recommendation
 from .ui.audit import render_audit, render_audit_priorities
 from .ui.compare import render_compare, render_compare_hypothesis
+from .ui.config_edit import make_console_confirm, render_apply_summary
 from .ui.watch import render_new_findings, render_watch_diagnosis, render_watch_report
 
 
@@ -222,6 +229,9 @@ _advisor_callable: Callable[..., dict[str, Any]] = get_recommendation
 _audit_prioritizer_callable: Callable[..., dict[str, Any]] = prioritize_findings
 _watch_diagnostician_callable: Callable[..., dict[str, Any]] = diagnose_findings
 _compare_hypothesizer_callable: Callable[..., dict[str, Any]] = hypothesize_comparison
+
+# Tests can also replace the apply-edits driver to bypass real disk writes.
+_apply_edits_callable: Callable[..., ApplyResult] = apply_edits
 
 
 def _run_advisor(
@@ -477,12 +487,38 @@ def _persist_audit_result(
     show_default=True,
     help="Claude model used by the diagnostician when --llm is set.",
 )
+@click.option(
+    "--apply",
+    "apply_flag",
+    is_flag=True,
+    help=(
+        "After --llm, walk the diagnostician's suggested_edits and apply "
+        "each one the user confirms to the config file given by --config."
+    ),
+)
+@click.option(
+    "--config",
+    "config_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    default=None,
+    help="YAML or JSON config file --apply will edit (required with --apply).",
+)
+@click.option(
+    "-y",
+    "--yes",
+    "auto_yes",
+    is_flag=True,
+    help="Apply every proposed edit without prompting (use with care).",
+)
 def watch(
     log_path: Path,
     follow: bool,
     poll_interval: float,
     use_llm: bool,
     llm_model: str,
+    apply_flag: bool,
+    config_path: Path | None,
+    auto_yes: bool,
 ) -> None:
     """Run the watch rules over ``log_path``."""
     project = _try_load_project()
@@ -505,10 +541,18 @@ def watch(
     )
 
     diagnosis: dict[str, Any] | None = None
+    apply_result: ApplyResult | None = None
     if use_llm:
         diagnosis = _maybe_diagnose(snapshots, findings, model=llm_model)
         if diagnosis is not None:
             render_watch_diagnosis(console, diagnosis)
+
+    if apply_flag:
+        apply_result = _maybe_apply_edits(
+            diagnosis=diagnosis,
+            config_path=config_path,
+            auto_yes=auto_yes,
+        )
 
     if project is not None:
         _persist_watch_result(
@@ -517,6 +561,7 @@ def watch(
             snapshots=snapshots,
             findings=findings,
             diagnosis=diagnosis,
+            apply_result=apply_result,
         )
 
     if follow:
@@ -572,6 +617,48 @@ def _maybe_diagnose(
     except WatchAgentError as exc:
         console.print(f"\n[red]✗ Diagnostician returned bad response:[/red] {exc}")
         return None
+
+
+def _maybe_apply_edits(
+    *,
+    diagnosis: dict[str, Any] | None,
+    config_path: Path | None,
+    auto_yes: bool,
+) -> ApplyResult | None:
+    """Drive the permission-gated edit session when ``--apply`` is set."""
+    if diagnosis is None:
+        console.print(
+            "\n[yellow]⚠ --apply needs --llm (and a diagnosis) to know what to "
+            "edit; skipping.[/yellow]"
+        )
+        return None
+    if config_path is None:
+        console.print(
+            "\n[yellow]⚠ --apply requires --config <file>; skipping.[/yellow]"
+        )
+        return None
+
+    raw_edits = diagnosis.get("suggested_edits") or []
+    if not raw_edits:
+        console.print(
+            "\n[dim]--apply: diagnostician didn't produce any suggested_edits, "
+            "nothing to do.[/dim]"
+        )
+        return None
+
+    confirm_fn = make_console_confirm(console, auto_yes=auto_yes)
+    try:
+        result = _apply_edits_callable(
+            config_path,
+            raw_edits,
+            confirm_fn=confirm_fn,
+        )
+    except ConfigEditError as exc:
+        console.print(f"\n[red]✗ Config edit failed:[/red] {exc}")
+        return None
+
+    render_apply_summary(console, result)
+    return result
 
 
 def _follow_loop(
@@ -634,6 +721,7 @@ def _persist_watch_result(
     snapshots: list[Any],
     findings: list[dict[str, Any]],
     diagnosis: dict[str, Any] | None = None,
+    apply_result: ApplyResult | None = None,
 ) -> None:
     """Record a watch invocation in the project context + advice log."""
     counts: dict[str, int] = {}
@@ -641,6 +729,8 @@ def _persist_watch_result(
         counts[f["severity"]] = counts.get(f["severity"], 0) + 1
     summary_parts = [f"{n} {sev}" for sev, n in counts.items()] or ["no issues"]
     summary = f"Watch ({log_path.name}): " + ", ".join(summary_parts)
+    if apply_result is not None and apply_result.applied:
+        summary += f"; applied {len(apply_result.applied)} edit(s)"
 
     project.append_decision(
         command="watch",
@@ -657,6 +747,22 @@ def _persist_watch_result(
     }
     if diagnosis is not None:
         log_entry["diagnosis"] = diagnosis
+    if apply_result is not None:
+        log_entry["applied_edits"] = [
+            {
+                "key": e.key,
+                "from": e.current_value,
+                "to": e.proposed_value,
+                "rationale": e.rationale,
+            }
+            for e in apply_result.applied
+        ]
+        log_entry["rejected_edits"] = [
+            {"key": e.key, "from": e.current_value, "to": e.proposed_value}
+            for e in apply_result.rejected
+        ]
+        if apply_result.backup_path is not None:
+            log_entry["backup"] = str(apply_result.backup_path)
     with (project.path / "advice.log").open("a", encoding="utf-8") as f:
         f.write(json.dumps(log_entry) + "\n")
 

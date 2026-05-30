@@ -31,6 +31,7 @@ Your job:
 2. For each finding, give one **recommended_action** the user can take *right now*. Concrete enough to act on without further thought.
 3. Tag each diagnosis with a confidence: "high", "medium", or "low".
 4. End with a one-paragraph summary of the run's overall health.
+5. **OPTIONAL** — if a fix can be expressed as a hyperparameter change in a config file, include it under `suggested_edits` with the *new* value you propose. Skip the field entirely if no concrete numeric / boolean / string change applies (e.g. when the fix is "stop training").
 
 Reply with a single JSON object — no preamble, no fences — matching this shape:
 
@@ -43,13 +44,22 @@ Reply with a single JSON object — no preamble, no fences — matching this sha
       "confidence": "high"
     }
   ],
-  "summary": "Overfit started at epoch 4. Stop training, regularize, restart."
+  "summary": "Overfit started at epoch 4. Stop training, regularize, restart.",
+  "suggested_edits": [
+    {
+      "key": "dropout",
+      "current_value": 0.1,
+      "proposed_value": 0.3,
+      "rationale": "Train/val gap widened from 0.05 at epoch 4 to 0.51 at epoch 7 — needs stronger regularisation."
+    }
+  ]
 }
 
 Rules:
 - Include exactly one diagnosis entry per finding in the input.
 - Match `finding_rule_id` to the rule_id field in the input findings.
-- Don't invent metrics or epochs that aren't in the snapshots."""
+- Don't invent metrics or epochs that aren't in the snapshots.
+- For suggested_edits, only propose values that match the type of current_value (number → number, bool → bool, string → string)."""
 
 
 class WatchAgentError(AgentResponseError):

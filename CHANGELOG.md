@@ -37,8 +37,34 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - 15 new tests (12 unit + 1 dispatcher + 2 CLI integration). Full
   suite at 239 passing.
 
-### Planned for the rest of v0.2
-- Permission-gated config edits and training restarts
+### Added (Faz 2.2c — permission-gated config edits)
+- `mlcompass watch --llm --apply --config <file>` walks the
+  diagnostician's `suggested_edits`, prompts the user once per edit,
+  and rewrites the user's YAML or JSON config file in place.
+- `-y / --yes` flag bypasses the prompt and applies every proposed
+  edit (use with care).
+- Watch diagnostician prompt now mentions an optional
+  `suggested_edits` array in its JSON schema; each entry carries
+  `key`, `current_value`, `proposed_value`, `rationale`. The required
+  keys for the response (`diagnosis`, `summary`) are unchanged so
+  older agent outputs keep parsing.
+- `tools/config_edit.py`:
+  - `ConfigEdit` dataclass plus `ApplyResult` (applied / rejected /
+    skipped buckets and an optional backup path)
+  - `load_config` / `write_config` accept both YAML and JSON
+  - `apply_edits(path, edits, confirm_fn=...)` resolves dotted keys,
+    skips edits whose key is missing or already matches, surfaces
+    the live current value to the confirm callback (so drift is
+    visible), and writes exactly one timestamped `.bak` file per
+    apply session — only when at least one edit is accepted.
+- `ui/config_edit.py` provides `make_console_confirm()` and
+  `render_apply_summary()` for the terminal-side rendering.
+- watch persists `applied_edits`, `rejected_edits`, and the backup
+  path into the active `.mlcompass/advice.log` entry alongside the
+  existing findings + diagnosis fields.
+- 22 new tests (16 unit + 6 CLI integration). Full suite now at
+  261 passing.
+
 
 ## [0.2.0] — 2026-05-29
 
