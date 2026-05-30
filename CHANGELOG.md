@@ -5,6 +5,21 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Planned for v0.3 (Faz 3)
+- `mlcompass evaluate <results>` — post-training analysis
+- Threshold optimisation
+- Confusion matrix interpretation
+- Hard example surfacing
+- Optional fairness checks
+
+## [0.2.1] — 2026-05-29
+
+Quality-of-life follow-up to 0.2.0. The Faz 2.2 tasks land as one
+patch: `watch` now reads TensorBoard event files and W&B local-run
+directories alongside plain-text logs, and a new permission-gated
+`--apply` flow can rewrite a config file from the diagnostician's
+suggestions. No breaking changes.
+
 ### Added (Faz 2.2a — TensorBoard source)
 - `mlcompass watch <path>` now accepts a TensorBoard event file
   (`events.out.tfevents.*`) or a directory that contains one, alongside

@@ -7,7 +7,7 @@
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-🚧 **Alpha (v0.2.0)** — under active development. APIs may change before v1.0.
+🚧 **Alpha (v0.2.1)** — under active development. APIs may change before v1.0.
 
 ## What it does
 
@@ -52,6 +52,12 @@ pip install mlcompass
 export ANTHROPIC_API_KEY="sk-ant-..."   # only needed for --llm modes
 ```
 
+Optional extras:
+
+```bash
+pip install "mlcompass[tensorboard]"    # adds tbparse for TB event files
+```
+
 ## Five-minute tour
 
 ```bash
@@ -63,9 +69,13 @@ mlcompass advise data.csv --target churn
 # Training-time
 mlcompass audit train.py                     # static checks
 mlcompass audit train.py --llm               # + prioritized synthesis
-mlcompass watch train.log                    # one-shot anomaly scan
-mlcompass watch train.log --follow           # live tail mode
+mlcompass watch train.log                    # one-shot plain-text scan
+mlcompass watch runs/tb_run/                 # TensorBoard event files
+mlcompass watch wandb/run-001/               # W&B local run directory
+mlcompass watch train.log --follow           # live tail (plain-text only)
 mlcompass watch train.log --llm              # + diagnostician
+mlcompass watch train.log --llm \            # + permission-gated edits
+  --apply --config train.yaml                #   (prompted per change)
 
 # Comparing runs
 mlcompass compare run-3 run-7                # deterministic diff
@@ -258,9 +268,8 @@ run `deploy`, every earlier decision is still in memory.
 | -------------------- | ------------------------------------- | :------------: |
 | **Faz 1 (v0.1)**     | `init`, `advise`                      | ✅ Shipped      |
 | **Faz 2 (v0.2)**     | `audit`, `watch`, `compare` + `--llm` | ✅ Shipped      |
-| **Faz 2.x (planned)**| TensorBoard / W&B log support,        | 🚧 In progress |
-|                      | permission-gated config edits         |                |
-| **Faz 3 (v0.3)**     | `evaluate`                            | 📅 Planned     |
+| **Faz 2.2 (v0.2.1)** | TensorBoard / W&B sources, `--apply`  | ✅ Shipped      |
+| **Faz 3 (v0.3)**     | `evaluate`                            | 🚧 In progress |
 | **Faz 4 (v0.4)**     | `deploy`                              | 📅 Planned     |
 
 See [CHANGELOG.md](CHANGELOG.md) for the detailed log and
