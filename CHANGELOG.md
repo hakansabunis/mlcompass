@@ -5,6 +5,19 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Planned
+- `mlcompass status` — summarise the active project context
+
+## [0.3.0] — 2026-05-29
+
+End-to-end pipeline release. Wraps Faz 2.2, Faz 3, Faz 4, and the
+polish pass into a single tagged version. Every command on the
+original roadmap is now in: ``init``, ``advise``, ``audit``,
+``watch``, ``compare``, ``evaluate``, ``deploy``. No breaking
+changes from 0.2.0; users of the existing commands keep their
+behaviour and gain three new commands plus optional LLM layers
+across the board.
+
 ### Added (Faz 3 — evaluate command)
 - `mlcompass evaluate <results>` runs deterministic post-training
   analysis on a predictions table (CSV / Parquet / Excel / JSONL /

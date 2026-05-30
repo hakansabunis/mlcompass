@@ -7,7 +7,7 @@
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-🚧 **Alpha (v0.2.1)** — under active development. APIs may change before v1.0.
+🚧 **Alpha (v0.3.0)** — under active development. APIs may change before v1.0.
 
 ## What it does
 
@@ -27,23 +27,23 @@ Each command writes to and reads from a shared project context
 knows your dataset, your model choice, your training history, and your
 evaluation results.
 
-## What's in v0.2
+## What's in v0.3
 
-Five commands are implemented; two are planned.
+Seven commands — every stage of the ML pipeline is covered.
 
 | Command    | When you run it                          | What you get                                                  | Status |
 | ---------- | ---------------------------------------- | ------------------------------------------------------------- | :----: |
 | `init`     | Starting a new project                   | A `.mlcompass/` folder that tracks decisions                  | ✅ v0.1 |
 | `advise`   | You have a CSV, what now?                | Models to try, features to derive, pitfalls to avoid          | ✅ v0.1 |
 | `audit`    | Before you press train                   | Static analysis of training script (seed, val, optimizer, …)  | ✅ v0.2 |
-| `watch`    | While training runs                      | Plateau / overfit / NaN / divergence detection                | ✅ v0.2 |
+| `watch`    | While training runs                      | Plateau / overfit / NaN / divergence (plain log / TB / W&B)   | ✅ v0.2 |
 | `compare`  | After several runs                       | Side-by-side config + final-metric diff with verdict          | ✅ v0.2 |
-| `evaluate` | Training done                            | Threshold tuning, confusion matrix, hard examples             | 📅 v0.3 |
-| `deploy`   | Going to production                      | Latency estimate, dependency check, ONNX advice               | 📅 v0.4 |
+| `evaluate` | Training done                            | Metrics, threshold sweep, confusion matrix, leakage-smell     | ✅ v0.3 |
+| `deploy`   | Going to production                      | Model + deps + target-specific checks + production checklist  | ✅ v0.3 |
 
-Every Faz 2 command (`audit`, `watch`, `compare`) keeps a fully
-deterministic default path and gains an opt-in `--llm` flag that adds
-a Claude-driven interpretation step on top.
+Every command except `init` keeps a fully deterministic default path
+and offers an opt-in `--llm` flag that adds a Claude-driven
+interpretation step on top.
 
 ## Install
 
@@ -80,6 +80,15 @@ mlcompass watch train.log --llm \            # + permission-gated edits
 # Comparing runs
 mlcompass compare run-3 run-7                # deterministic diff
 mlcompass compare run-3 run-7 --llm          # + hypothesis + next experiment
+
+# Post-training
+mlcompass evaluate results.csv               # metrics + threshold sweep
+mlcompass evaluate results.csv --llm         # + assessment + next steps
+
+# Deployment
+mlcompass deploy model.pt                    # model + checklist
+mlcompass deploy model.pt --requirements reqs.txt --target lambda
+mlcompass deploy model.pt --llm              # + production verdict
 ```
 
 ## Example — `advise`
@@ -268,9 +277,10 @@ run `deploy`, every earlier decision is still in memory.
 | -------------------- | ------------------------------------- | :------------: |
 | **Faz 1 (v0.1)**     | `init`, `advise`                      | ✅ Shipped      |
 | **Faz 2 (v0.2)**     | `audit`, `watch`, `compare` + `--llm` | ✅ Shipped      |
-| **Faz 2.2 (v0.2.1)** | TensorBoard / W&B sources, `--apply`  | ✅ Shipped      |
-| **Faz 3 (v0.3)**     | `evaluate`                            | 🚧 In progress |
-| **Faz 4 (v0.4)**     | `deploy`                              | 📅 Planned     |
+| **Faz 2.2 (v0.3)**   | TensorBoard / W&B sources, `--apply`  | ✅ Shipped      |
+| **Faz 3 (v0.3)**     | `evaluate` + leakage-smell warning    | ✅ Shipped      |
+| **Faz 4 (v0.3)**     | `deploy`                              | ✅ Shipped      |
+| **v0.4 (planned)**   | `status` summary of project context   | 📅 Planned     |
 
 See [CHANGELOG.md](CHANGELOG.md) for the detailed log and
 [ARCHITECTURE.md](ARCHITECTURE.md) for the design.
