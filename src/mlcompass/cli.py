@@ -4,14 +4,15 @@ Subcommands are added incrementally as the project advances through
 its phases. See ARCHITECTURE.md §7 for the full CLI design.
 
 Currently implemented:
-    init     — create a new ``.mlcompass/`` project (Faz 1)
-    advise   — analyze dataset + recommend models / features / pitfalls (Faz 1)
-    audit    — static analysis of a training script (Faz 2a)
-    watch    — monitor a training log for anomalies (Faz 2b)
-    compare  — diff two training runs side-by-side (Faz 2c)
+    init      — create a new ``.mlcompass/`` project (Faz 1)
+    advise    — analyze dataset + recommend models / features / pitfalls (Faz 1)
+    audit     — static analysis of a training script (Faz 2a)
+    watch     — monitor a training log for anomalies (Faz 2b)
+    compare   — diff two training runs side-by-side (Faz 2c)
+    evaluate  — post-training analysis on a predictions table (Faz 3a)
 
 Planned:
-    evaluate, deploy, status
+    deploy, status
 """
 
 from __future__ import annotations
@@ -35,6 +36,11 @@ from .agents.watch import WatchAgentError, diagnose_findings
 from .context import ProjectContext, ProjectExistsError, ProjectNotFoundError
 from .tools.anomaly import run_all_detectors
 from .tools.dataset import analyze_dataset
+from .tools.evaluation import (
+    EvaluationError,
+    evaluate as run_evaluation,
+    load_results,
+)
 from .tools.logs import (
     MetricSnapshot,
     detect_source,
@@ -54,6 +60,7 @@ from .ui.advise import render_analysis, render_recommendation
 from .ui.audit import render_audit, render_audit_priorities
 from .ui.compare import render_compare, render_compare_hypothesis
 from .ui.config_edit import make_console_confirm, render_apply_summary
+from .ui.evaluate import render_evaluation
 from .ui.watch import render_new_findings, render_watch_diagnosis, render_watch_report
 
 
@@ -871,6 +878,106 @@ def _persist_compare_result(
         entry["hypothesis"] = hypothesis
     with log_path.open("a", encoding="utf-8") as f:
         f.write(json.dumps(entry) + "\n")
+
+
+# --------------------------------------------------------------------------- #
+# evaluate command                                                            #
+# --------------------------------------------------------------------------- #
+
+
+@cli.command(
+    help="Run post-training analysis on a predictions table.",
+)
+@click.argument(
+    "results_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option("--y-true", "y_true_col", default=None, help="Ground-truth column.")
+@click.option("--y-pred", "y_pred_col", default=None, help="Predicted-label column.")
+@click.option("--y-prob", "y_prob_col", default=None, help="Predicted-probability column (binary).")
+@click.option(
+    "--task",
+    type=click.Choice(
+        ["binary_classification", "multiclass_classification", "regression"],
+    ),
+    default=None,
+    help="Force a task type (otherwise inferred from the data).",
+)
+@click.option(
+    "--hard-examples",
+    "hard_examples_k",
+    type=int,
+    default=5,
+    show_default=True,
+    help="How many worst-error rows to surface.",
+)
+def evaluate(
+    results_path: Path,
+    y_true_col: str | None,
+    y_pred_col: str | None,
+    y_prob_col: str | None,
+    task: str | None,
+    hard_examples_k: int,
+) -> None:
+    """Evaluate predictions in ``results_path``."""
+    project = _try_load_project()
+
+    try:
+        with console.status("[cyan]Loading predictions...[/cyan]", spinner="dots"):
+            df = load_results(results_path)
+        with console.status("[cyan]Running evaluation...[/cyan]", spinner="dots"):
+            result = run_evaluation(
+                df,
+                y_true_col=y_true_col,
+                y_pred_col=y_pred_col,
+                y_prob_col=y_prob_col,
+                task=task,
+                hard_examples_k=hard_examples_k,
+            )
+    except EvaluationError as exc:
+        console.print(f"[red]✗ Evaluation failed:[/red] {exc}")
+        raise SystemExit(2) from exc
+
+    render_evaluation(console, result)
+
+    if project is not None:
+        _persist_evaluate_result(
+            project=project,
+            results_path=results_path,
+            result=result,
+        )
+
+
+def _persist_evaluate_result(
+    *,
+    project: ProjectContext,
+    results_path: Path,
+    result: dict[str, Any],
+) -> None:
+    """Record an evaluate invocation in the project context + advice log."""
+    task = result.get("task", "unknown")
+    metrics = result.get("metrics") or {}
+    headline = ", ".join(
+        f"{name}={value}" for name, value in list(metrics.items())[:3]
+    ) or "no metrics"
+    summary = f"Evaluate ({task}): {headline}"
+
+    project.append_decision(
+        command="evaluate",
+        summary=summary,
+        reasoning=f"Results: {results_path}; rows: {result.get('rows', 0)}",
+    )
+
+    log_entry = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "command": "evaluate",
+        "results": str(results_path),
+        "task": task,
+        "metrics": metrics,
+        "warnings": result.get("warnings", []),
+    }
+    with (project.path / "advice.log").open("a", encoding="utf-8") as f:
+        f.write(json.dumps(log_entry) + "\n")
 
 
 # --------------------------------------------------------------------------- #
