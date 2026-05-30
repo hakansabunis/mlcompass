@@ -21,8 +21,23 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   directory prints a clear yellow warning rather than crashing.
 - 16 new tests (14 unit + 2 CLI integration). Full suite at 224 passing.
 
+### Added (Faz 2.2b — W&B local source)
+- `mlcompass watch <path>` now accepts a Weights & Biases local run
+  directory, its `files/` subdirectory, or a `wandb-history.jsonl`
+  file directly.
+- `tools/wandb_local.py` reads the JSONL history, promotes `_step`
+  to the snapshot's `step` field, surfaces `epoch` when present, and
+  drops every other underscore-prefixed W&B internal (`_runtime`,
+  `_timestamp`, `_wandb`, …) along with any non-numeric values.
+- `detect_source()` recognises both layouts (run-dir + run-dir/files)
+  and a direct `wandb-history.jsonl` / `wandb-summary.json` path.
+- Defensive parser skips empty / malformed JSONL lines so a
+  partially-written history file is still usable.
+- No new dependency: the JSONL file is plain text.
+- 15 new tests (12 unit + 1 dispatcher + 2 CLI integration). Full
+  suite at 239 passing.
+
 ### Planned for the rest of v0.2
-- W&B local cache reader
 - Permission-gated config edits and training restarts
 
 ## [0.2.0] — 2026-05-29

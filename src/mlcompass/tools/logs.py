@@ -190,11 +190,21 @@ def detect_source(path: Path | str) -> str:
     if p.is_dir():
         if any(p.glob("events.out.tfevents.*")):
             return "tensorboard"
-        if (p / "wandb-summary.json").exists() or (p / "wandb-history.jsonl").exists():
+        # Both the W&B run dir and its files/ subdir count as W&B sources.
+        wandb_markers = (
+            p / "wandb-summary.json",
+            p / "wandb-history.jsonl",
+            p / "files" / "wandb-summary.json",
+            p / "files" / "wandb-history.jsonl",
+        )
+        if any(m.exists() for m in wandb_markers):
             return "wandb"
         return "plain_text"
-    if p.is_file() and p.name.startswith("events.out.tfevents"):
-        return "tensorboard"
+    if p.is_file():
+        if p.name.startswith("events.out.tfevents"):
+            return "tensorboard"
+        if p.name in ("wandb-history.jsonl", "wandb-summary.json"):
+            return "wandb"
     return "plain_text"
 
 
@@ -209,8 +219,8 @@ def load_snapshots(path: Path | str) -> tuple[str, list[MetricSnapshot]]:
         from .tensorboard import parse_tb_events
 
         return source, parse_tb_events(path)
-    if source == "wandb":  # pragma: no cover - implemented in Faz 2.2b
-        from .wandb_local import parse_wandb_run  # type: ignore[import-not-found]
+    if source == "wandb":
+        from .wandb_local import parse_wandb_run
 
         return source, parse_wandb_run(path)
     return source, parse_log_file(path)
