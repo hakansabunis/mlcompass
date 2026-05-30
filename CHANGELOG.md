@@ -5,8 +5,23 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-### Planned
-- `mlcompass status` — summarise the active project context
+### Added (Faz 5 — status command)
+- `mlcompass status` — prints a structured snapshot of the active
+  `.mlcompass/` project: name, created timestamp, default model;
+  active dataset, project type, target column, current run, preferred
+  models; a "command activity" tally aggregated from `advice.log`; and
+  the most recent N decisions (default 5, configurable via `--recent`).
+- Fresh project gracefully shows "no decisions recorded yet" + "nothing
+  logged yet" placeholders; missing project exits non-zero with a
+  pointer to `mlcompass init`.
+- ui/status.py is a pure renderer — no LLM, no network — so the
+  command is instant.
+- 7 new tests covering fresh / populated project, command-activity
+  tally, --recent cap, missing-project error, root --help discovery,
+  and status --help option visibility.
+
+This is the last command on the original roadmap. Every CLI surface
+listed in v0.1's ARCHITECTURE.md §7 is now implemented.
 
 ## [0.3.0] — 2026-05-29
 

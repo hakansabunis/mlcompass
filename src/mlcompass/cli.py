@@ -11,9 +11,7 @@ Currently implemented:
     compare   — diff two training runs side-by-side (Faz 2c)
     evaluate  — post-training analysis on a predictions table (Faz 3a)
     deploy    — deployment readiness check (Faz 4a)
-
-Planned:
-    status
+    status    — summarise the active project context (Faz 5)
 """
 
 from __future__ import annotations
@@ -72,6 +70,7 @@ from .ui.compare import render_compare, render_compare_hypothesis
 from .ui.config_edit import make_console_confirm, render_apply_summary
 from .ui.deploy import render_deployment, render_deployment_advice
 from .ui.evaluate import render_evaluation, render_evaluation_interpretation
+from .ui.status import render_status
 from .ui.watch import render_new_findings, render_watch_diagnosis, render_watch_report
 
 
@@ -1134,6 +1133,36 @@ def _persist_deploy_result(
         log_entry["advice"] = advice
     with (project.path / "advice.log").open("a", encoding="utf-8") as f:
         f.write(json.dumps(log_entry) + "\n")
+
+
+# --------------------------------------------------------------------------- #
+# status command                                                              #
+# --------------------------------------------------------------------------- #
+
+
+@cli.command(
+    help="Print a summary of the active mlcompass project context.",
+)
+@click.option(
+    "--recent",
+    "recent_decisions",
+    type=int,
+    default=5,
+    show_default=True,
+    help="How many of the latest decisions to surface.",
+)
+def status(recent_decisions: int) -> None:
+    """Show a structured snapshot of the active project."""
+    try:
+        project = ProjectContext.load()
+    except ProjectNotFoundError as exc:
+        console.print(
+            "[red]✗[/red] No .mlcompass/ project found at or above the "
+            "current directory. Run `mlcompass init <name>` to create one."
+        )
+        raise SystemExit(1) from exc
+
+    render_status(console, project, recent_decisions=recent_decisions)
 
 
 # --------------------------------------------------------------------------- #
