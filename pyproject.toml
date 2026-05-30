@@ -1,6 +1,6 @@
 [project]
 name = "mlcompass"
-version = "0.3.1"
+version = "0.4.0"
 description = "An LLM agent that sits next to you through your whole ML pipeline"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -19,6 +19,8 @@ keywords = [
     "tensorboard",
     "wandb",
     "mlops",
+    "mcp",
+    "model-context-protocol",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -48,17 +50,21 @@ dependencies = [
 [project.optional-dependencies]
 tensorboard = ["tbparse>=0.0.7", "tensorboard>=2.10.0"]
 wandb = ["wandb>=0.16.0"]
+mcp = ["mcp>=1.2.0"]
 dev = [
     "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
     "pytest-cov>=4.0.0",
     "ruff>=0.1.0",
     "mypy>=1.0.0",
     "tbparse>=0.0.7",
     "tensorboard>=2.10.0",
+    "mcp>=1.2.0",
 ]
 
 [project.scripts]
 mlcompass = "mlcompass.cli:main"
+mlcompass-mcp = "mlcompass.mcp_server:main"
 
 [project.urls]
 Homepage = "https://github.com/hakansabunis/mlcompass"
@@ -100,6 +106,8 @@ warn_unused_configs = true
 [[tool.mypy.overrides]]
 module = [
     "agentlite",
+    "mcp",
+    "mcp.*",
     "pandas",
     "tbparse",
     "yaml",
@@ -109,3 +117,4 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
+asyncio_mode = "auto"

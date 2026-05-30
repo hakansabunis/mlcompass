@@ -148,9 +148,7 @@ class ProjectContext:
 
     def read_context(self) -> dict[str, Any]:
         """Read the dynamic context (``context.json``)."""
-        data: dict[str, Any] = json.loads(
-            (self.path / "context.json").read_text(encoding="utf-8")
-        )
+        data: dict[str, Any] = json.loads((self.path / "context.json").read_text(encoding="utf-8"))
         return data
 
     def write_context(self, updates: dict[str, Any]) -> None:

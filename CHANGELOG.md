@@ -5,6 +5,49 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-05-30
+
+mlcompass goes beyond a CLI: every command is now reachable from
+**Claude Desktop, Claude Code, Cursor, and any other MCP-capable
+client** via the new `mlcompass-mcp` server. Same eight tools, same
+deterministic outputs, but now the assistant can pick the right one
+mid-conversation instead of you typing them yourself. The CLI surface
+and on-disk project layout are unchanged; existing 0.3.1 users upgrade
+in place.
+
+### Added — Faz 6 (MCP server)
+- New module `mlcompass.mcp_server` registering eight tools with a
+  FastMCP server: `mlcompass_init`, `mlcompass_status`,
+  `mlcompass_advise`, `mlcompass_audit`, `mlcompass_watch`,
+  `mlcompass_compare`, `mlcompass_evaluate`, `mlcompass_deploy`. Tool
+  names are prefixed so they don't collide with other MCP servers in
+  the same client.
+- New optional dependency group `mlcompass[mcp]` pulling `mcp>=1.2.0`.
+  Pure CLI installs are unaffected; the import is guarded so the base
+  package still works without the MCP SDK.
+- New console script `mlcompass-mcp` (entry point
+  `mlcompass.mcp_server:main`) for stdio JSON-RPC against Claude
+  Desktop / Cursor / Claude Code.
+- README gains a "Use from Claude Desktop / Cursor (MCP)" section with
+  copy-pasteable `claude_desktop_config.json` and `.cursor/mcp.json`
+  snippets and a tool-purpose table.
+
+### Design notes
+- MCP tools are **deterministic only** — the calling LLM is the
+  interpreter, so there is no `--llm` knob on the MCP surface. The
+  CLI's `--llm` reasoning modes stay where they are.
+- `watch --apply` (config mutation) is intentionally **not exposed**
+  via MCP. MCP doesn't standardise a confirm channel; mutating
+  operations stay on the CLI behind the existing permission prompt.
+- NaN / ±Inf metric values are normalised to `null` in tool outputs
+  for JSON safety. The `nan` detector still surfaces them as findings.
+- 23 new tests covering tool registry, every tool's success and error
+  envelopes, the leakage-smell warning over MCP, and a NaN-survival
+  test. Full suite now at 384 passing.
+- `pytest-asyncio` added to the dev dependency group (`asyncio_mode =
+  "auto"`); ruff stays at 0 errors and mypy `--strict` stays clean
+  across 32 source files.
+
 ## [0.3.1] — 2026-05-30
 
 End-to-end pipeline release. Wraps Faz 2.2, Faz 3, Faz 4, Faz 5, and

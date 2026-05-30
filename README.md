@@ -7,7 +7,7 @@
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-🚧 **Alpha (v0.3.1)** — under active development. APIs may change before v1.0.
+🚧 **Alpha (v0.4.0)** — under active development. APIs may change before v1.0.
 
 ## What it does
 
@@ -58,7 +58,63 @@ Optional extras:
 
 ```bash
 pip install "mlcompass[tensorboard]"    # adds tbparse for TB event files
+pip install "mlcompass[mcp]"            # adds the Claude / Cursor MCP server
 ```
+
+## Use from Claude Desktop / Cursor (MCP)
+
+mlcompass ships a **Model Context Protocol** server, so any MCP-capable
+client (Claude Desktop, Claude Code, Cursor, Continue, …) can call its
+eight tools directly — you describe the situation in natural language,
+the assistant picks the right `mlcompass_*` tool and feeds the result
+back into the conversation.
+
+```bash
+pip install "mlcompass[mcp]"
+```
+
+**Claude Desktop** (`~/Library/Application Support/Claude/claude_desktop_config.json`
+on macOS, `%APPDATA%\Claude\claude_desktop_config.json` on Windows):
+
+```json
+{
+  "mcpServers": {
+    "mlcompass": {
+      "command": "mlcompass-mcp"
+    }
+  }
+}
+```
+
+**Cursor** (`.cursor/mcp.json` in your project, or `~/.cursor/mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "mlcompass": {
+      "command": "mlcompass-mcp"
+    }
+  }
+}
+```
+
+Restart the client and the eight tools appear:
+
+| Tool                  | Use it when…                                            |
+| --------------------- | ------------------------------------------------------- |
+| `mlcompass_init`      | Starting a new project                                  |
+| `mlcompass_advise`    | Asking the assistant to look at a dataset               |
+| `mlcompass_audit`     | Asking the assistant to review a training script        |
+| `mlcompass_watch`     | Pointing the assistant at a training log / TB / W&B run |
+| `mlcompass_compare`   | "Which of these two runs is better, and why?"           |
+| `mlcompass_evaluate`  | "Read these predictions and tell me what they mean"     |
+| `mlcompass_deploy`    | "Is this model ready to ship to Lambda?"                |
+| `mlcompass_status`    | "What does this project look like right now?"           |
+
+All tools are **deterministic** — the assistant reads their structured
+output and does its own interpretation, with full access to your
+conversation's context. The CLI stays available for scripted use and
+for the `--llm` reasoning modes.
 
 ## Five-minute tour
 
@@ -287,6 +343,7 @@ run `deploy`, every earlier decision is still in memory.
 | **Faz 3 (v0.3)**     | `evaluate` + leakage-smell warning    | ✅ Shipped      |
 | **Faz 4 (v0.3)**     | `deploy`                              | ✅ Shipped      |
 | **Faz 5 (v0.3)**     | `status`                              | ✅ Shipped      |
+| **Faz 6 (v0.4)**     | MCP server — `mlcompass-mcp`          | ✅ Shipped      |
 
 See [CHANGELOG.md](CHANGELOG.md) for the detailed log and
 [ARCHITECTURE.md](ARCHITECTURE.md) for the design.
