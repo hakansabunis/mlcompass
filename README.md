@@ -7,7 +7,7 @@
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-🚧 **Alpha (v0.5.0)** — under active development. APIs may change before v1.0.
+🚧 **Alpha (v0.6.0)** — under active development. APIs may change before v1.0.
 
 ## What it does
 
@@ -27,10 +27,11 @@ Each command writes to and reads from a shared project context
 knows your dataset, your model choice, your training history, and your
 evaluation results.
 
-## What's in v0.5
+## What's in v0.6
 
-Nine commands — every stage of the ML pipeline, a status inspector,
-plus a self-driving agent that can pick the right tool for you.
+Eleven commands — every stage of the ML pipeline, post-deploy drift
+detection, hyperparameter optimization, a status inspector, and a
+self-driving agent with cross-session memory.
 
 | Command    | When you run it                          | What you get                                                  | Status |
 | ---------- | ---------------------------------------- | ------------------------------------------------------------- | :----: |
@@ -42,12 +43,15 @@ plus a self-driving agent that can pick the right tool for you.
 | `evaluate` | Training done                            | Metrics, threshold sweep, confusion matrix, leakage-smell     | ✅ v0.3 |
 | `deploy`   | Going to production                      | Model + deps + target-specific checks + production checklist  | ✅ v0.3 |
 | `status`   | Any time                                 | Project metadata, active state, command activity, decisions   | ✅ v0.3 |
-| `agent`    | "Just do it for me"                      | LLM-driven router across the other eight tools                | ✅ v0.5 |
+| `agent`    | "Just do it for me"                      | LLM-driven router across the other tools, with memory         | ✅ v0.5 |
+| `monitor`  | Model deployed; new data flowing         | PSI + KS + chi² drift across features, retrain verdict        | ✅ v0.6 |
+| `optimize` | You have a few runs; what's next?        | HPO sub-agent: leaderboard, sensitivity, N suggested configs  | ✅ v0.6 |
 
 Every command except `init`, `status`, and `agent` keeps a fully
 deterministic default path and offers an opt-in `--llm` flag that adds
 a Claude-driven interpretation step on top. The `agent` command is
-the inverse: LLM-first by design, with the eight tools as its hands.
+the inverse: LLM-first by design, with the other tools as its hands —
+and now remembers across runs via per-project memory.
 
 ## Install
 
@@ -206,6 +210,17 @@ mlcompass status --recent 10                 # last 10 decisions
 mlcompass agent "I have data.csv, take me to a deployed model"
 mlcompass agent "Compare run-3 and run-7" --backend claude-code
 mlcompass agent "Init a new project here" --auto-approve
+mlcompass agent "Continue what we started" --resume 20260530-150000
+
+# Post-deploy drift check
+mlcompass monitor reference.csv current.csv             # PSI/KS/chi² per feature
+mlcompass monitor reference.csv current.csv --llm       # + LLM interpretation
+
+# What hyperparameters to try next?
+mlcompass optimize --metric val_acc                     # reads .mlcompass/runs/
+mlcompass optimize --metric val_acc --llm               # + strategist plan
+mlcompass optimize --metric val_acc \
+  --constraints "lr:0.0001-0.1,batch_size:16-256"       # bound the search
 ```
 
 ## Example — `advise`
@@ -400,6 +415,7 @@ run `deploy`, every earlier decision is still in memory.
 | **Faz 5 (v0.3)**     | `status`                              | ✅ Shipped      |
 | **Faz 6 (v0.4)**     | MCP server — `mlcompass-mcp`          | ✅ Shipped      |
 | **Faz 7 (v0.5)**     | `agent` — self-driving (api + claude-code backends) | ✅ Shipped |
+| **Faz 8 (v0.6)**     | `monitor` + `optimize` + agent memory   | ✅ Shipped      |
 
 See [CHANGELOG.md](CHANGELOG.md) for the detailed log and
 [ARCHITECTURE.md](ARCHITECTURE.md) for the design.

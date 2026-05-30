@@ -5,6 +5,104 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-05-31
+
+Three new capabilities ship together: **post-deploy drift detection
+(`monitor`)**, **hyperparameter optimization (`optimize`)**, and
+**cross-session agent memory** so the self-driving agent from v0.5
+now remembers prior decisions and prior runs across invocations. The
+CLI grows from nine to eleven commands; v0.5 users upgrade in place
+with no breaking changes.
+
+### Added — Faz 8a (`monitor`)
+- New `src/mlcompass/tools/drift.py` — pure-numpy drift detector. PSI
+  (Population Stability Index) as the primary score, with KS test for
+  numeric features and chi-square for categoricals as corroborating
+  signals. Quantile-based binning with epsilon guards for constant
+  reference distributions; asymptotic Kolmogorov and incomplete-gamma
+  survival functions implemented inline so we don't pull in scipy.
+- Industry-standard PSI thresholds: `< 0.1` stable, `0.1–0.2`
+  moderate, `≥ 0.2` major. Aggregate verdict (`stable` /
+  `moderate_drift` / `major_drift`) with a `retrain_recommended` flag.
+- pandas 2.x `StringDtype` is now classified as categorical (caught
+  during smoke testing — the legacy `is_object_dtype` check missed
+  it). Also forward-proofed for pandas 4: `is_categorical_dtype`
+  replaced with `isinstance(dtype, pd.CategoricalDtype)`.
+- New `mlcompass monitor <reference> <current>` CLI: 9th-listed
+  subcommand. Exits **1** on major drift so CI / cron pipelines can
+  gate on it. Flags: `--features`, `--bins`, `--top`, `--llm`,
+  `--model`.
+- Optional `--llm` interpreter (`agents/monitor.py`): hands the
+  structured drift report to an `agentlite`-backed Claude prompt that
+  returns `{headline, likely_cause, next_steps}`.
+- 12 tests for the drift tool layer + 9 CLI tests, including the
+  StringDtype regression test, constant-reference no-crash test, and
+  the leakage-style "small sample size" warning path.
+
+### Added — Faz 8b (`optimize`)
+- New `src/mlcompass/tools/optimize.py` — HPO sub-agent that reads a
+  run history (`<project>/runs/<id>/` directories) and produces a
+  leaderboard, per-hyperparameter rank-correlation sensitivity, and
+  a portfolio of suggested next configs. Pure numpy.
+- **Multiplicative perturbation** for strictly-positive hyper-
+  parameters: a leader with `lr=0.0001` now steps to `3.16e-5` /
+  `3.16e-4` (half-decade moves) instead of subtracting an absolute
+  delta and producing nonsensical negative learning rates. User-
+  supplied `--constraints` switch back to additive bounds-clamping.
+- Spearman-style rank correlation with average ties, implemented in
+  pure numpy. Integer-typed hyperparameters stay integer after
+  perturbation.
+- New `mlcompass optimize --metric <name>` CLI: 10th-listed
+  subcommand. Flags: `--runs-dir`, `--direction max|min`, `--top`,
+  `--suggestions`, `--constraints lr:lo-hi,batch_size:lo-hi`,
+  `--llm`, `--model`. Defaults `--runs-dir` to `<project>/runs/`
+  when an mlcompass project is active.
+- Optional `--llm` strategist (`agents/optimize.py`): returns
+  `{headline, pattern, next_plan}` synthesising the run history.
+- 18 tests for the optimize tool layer + 9 CLI tests, including a
+  monotone-history fixture, min-direction sanity, constraint parsing,
+  the "positive lr stays positive" regression test.
+
+### Added — Faz 8c (agent memory)
+- New `src/mlcompass/agent/memory.py` — two complementary memory
+  sources stitched into a single `MemoryBlock` the orchestrator
+  prepends to every new agent run:
+  - **Project decisions** from `.mlcompass/context.json` (latest
+    10 by default, configurable).
+  - **Prior agent runs** from `.mlcompass/agent_runs/<id>/transcript
+    .jsonl`. Transcripts are compressed by an `agentlite`-driven
+    summariser sub-agent (100-200 word narrative covering the task,
+    tools called, key findings, final answer, follow-ups) — the
+    user's own agentlite-py library finally gets a meaningful role
+    inside mlcompass.
+- New `--resume <run-id>` flag on `mlcompass agent` — resumes from
+  a prior run by id (full or timestamp prefix). The orchestrator
+  loads the transcript, summarises it, and seeds the new run with
+  that context plus the decisions log.
+- New `--no-memory` flag — "fresh slate" mode that bypasses the
+  default cross-session injection. Useful when you want the agent
+  to ignore prior history (e.g. a completely new project direction).
+- `MemoryBlock.as_prompt_prefix()` renders to a structured XML-like
+  block (`<memory_headline>`, `<recent_decisions>`, `<prior_agent_run
+  id='...'>`) so the model can parse the memory cleanly from the
+  user task.
+- The memory block is written as the FIRST transcript step of the
+  new run, so the audit trail records what context the agent saw.
+- All memory paths are best-effort: missing context.json, missing
+  transcript, unparseable JSON, or missing agentlite-py each fall
+  through to graceful "no memory" without crashing.
+- 20 new tests covering decisions reader, transcript I/O,
+  truncation, run-dir discovery (by full id and timestamp prefix),
+  high-level memory builders, and the agentlite-missing fallback.
+
+### Validation
+- `pytest tests/`                   → **481 passing**, 2 skipped
+                                        (was 412 + 69 new).
+- `ruff check src tests`            → 0 errors.
+- `ruff format --check src tests`   → 89 files clean.
+- `mypy --strict src/mlcompass`     → 0 errors across **49** source
+                                        files (was 42).
+
 ## [0.5.0] — 2026-05-30
 
 mlcompass becomes self-driving. The new `mlcompass agent "<task>"`

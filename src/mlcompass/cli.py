@@ -36,6 +36,8 @@ from .agents.audit import AuditAgentError, prioritize_findings
 from .agents.compare import CompareAgentError, hypothesize_comparison
 from .agents.deploy import DeployAgentError, advise_deployment
 from .agents.evaluate import EvaluateAgentError, interpret_evaluation
+from .agents.monitor import MonitorAgentError, interpret_drift
+from .agents.optimize import OptimizeAgentError, strategize_optimize
 from .agents.watch import WatchAgentError, diagnose_findings
 from .context import ProjectContext, ProjectExistsError, ProjectNotFoundError
 from .tools.anomaly import run_all_detectors
@@ -52,6 +54,8 @@ from .tools.deploy import (
     DeployAnalysisError,
     assess_deployment,
 )
+from .tools.drift import DriftAnalysisError, detect_drift
+from .tools.drift import load_table as load_drift_table
 from .tools.evaluation import (
     EvaluationError,
     load_results,
@@ -63,6 +67,12 @@ from .tools.logs import (
     load_snapshots,
     merge_consecutive_same_epoch,
 )
+from .tools.optimize import (
+    OptimizeAnalysisError,
+    load_runs_from_dir,
+    optimize_history,
+    parse_constraints,
+)
 from .tools.runs import RunNotFoundError, compare_runs, load_run
 from .tools.script import audit_script
 from .ui.advise import render_analysis, render_recommendation
@@ -71,6 +81,8 @@ from .ui.compare import render_compare, render_compare_hypothesis
 from .ui.config_edit import make_console_confirm, render_apply_summary
 from .ui.deploy import render_deployment, render_deployment_advice
 from .ui.evaluate import render_evaluation, render_evaluation_interpretation
+from .ui.monitor import render_drift, render_drift_interpretation
+from .ui.optimize import render_optimize, render_optimize_strategy
 from .ui.status import render_status
 from .ui.watch import render_new_findings, render_watch_diagnosis, render_watch_report
 
@@ -1167,6 +1179,361 @@ def status(recent_decisions: int) -> None:
 
 
 # --------------------------------------------------------------------------- #
+# monitor — post-deploy drift detection (Faz 8a)                              #
+# --------------------------------------------------------------------------- #
+
+
+@cli.command(
+    help="Compare a reference dataset to a current one and surface drift.",
+)
+@click.argument(
+    "reference_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.argument(
+    "current_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option(
+    "--features",
+    default=None,
+    help=("Comma-separated list of columns to inspect. Default: all overlapping columns."),
+)
+@click.option(
+    "--bins",
+    type=int,
+    default=10,
+    show_default=True,
+    help="Number of bins for PSI / chi-square on numeric columns.",
+)
+@click.option(
+    "--top",
+    "top_n",
+    type=int,
+    default=5,
+    show_default=True,
+    help="How many most-drifted features to highlight.",
+)
+@click.option(
+    "--llm",
+    "use_llm",
+    is_flag=True,
+    help="After the deterministic report, ask Claude to interpret the drift.",
+)
+@click.option(
+    "--model",
+    "llm_model",
+    default="claude-opus-4-7",
+    show_default=True,
+    help="Claude model used by the interpreter when --llm is set.",
+)
+def monitor(
+    reference_path: Path,
+    current_path: Path,
+    features: str | None,
+    bins: int,
+    top_n: int,
+    use_llm: bool,
+    llm_model: str,
+) -> None:
+    """Run drift detection between two datasets."""
+    project = _try_load_project()
+
+    feature_list = [f.strip() for f in features.split(",") if f.strip()] if features else None
+
+    try:
+        with console.status("[cyan]Loading reference + current...[/cyan]", spinner="dots"):
+            ref_df = load_drift_table(reference_path)
+            cur_df = load_drift_table(current_path)
+        with console.status("[cyan]Running drift checks...[/cyan]", spinner="dots"):
+            result = detect_drift(
+                ref_df,
+                cur_df,
+                features=feature_list,
+                bins=bins,
+                top_n=top_n,
+            )
+    except DriftAnalysisError as exc:
+        console.print(f"[red]✗ Drift check failed:[/red] {exc}")
+        raise SystemExit(2) from exc
+
+    render_drift(console, result)
+
+    interpretation: dict[str, Any] | None = None
+    if use_llm:
+        interpretation = _maybe_interpret_drift(result, model=llm_model)
+        if interpretation is not None:
+            render_drift_interpretation(console, interpretation)
+
+    if project is not None:
+        _persist_monitor_result(
+            project=project,
+            reference_path=reference_path,
+            current_path=current_path,
+            result=result,
+            interpretation=interpretation,
+        )
+
+    # Exit non-zero when drift is major so CI / cron pipelines can gate on it.
+    if result["verdict"]["status"] == "major_drift":
+        raise SystemExit(1)
+
+
+def _maybe_interpret_drift(result: dict[str, Any], *, model: str) -> dict[str, Any] | None:
+    if not _has_api_key():
+        console.print(
+            "\n[yellow]⚠ --llm requested but ANTHROPIC_API_KEY is unset; "
+            "skipping interpreter.[/yellow]"
+        )
+        return None
+    try:
+        with console.status("[cyan]Asking the drift interpreter...[/cyan]", spinner="dots"):
+            return _monitor_interpreter_callable(result, model=model)
+    except MonitorAgentError as exc:
+        console.print(f"\n[red]✗ Interpreter returned bad response:[/red] {exc}")
+        return None
+
+
+# Indirection so tests can monkeypatch without standing up the LLM.
+def _default_monitor_interpreter(result: dict[str, Any], *, model: str) -> dict[str, Any]:
+    return interpret_drift(result, model=model)
+
+
+_monitor_interpreter_callable: Callable[..., dict[str, Any]] = _default_monitor_interpreter
+
+
+def _persist_monitor_result(
+    *,
+    project: ProjectContext,
+    reference_path: Path,
+    current_path: Path,
+    result: dict[str, Any],
+    interpretation: dict[str, Any] | None = None,
+) -> None:
+    """Record a monitor invocation in the project context + advice log."""
+    verdict = result["verdict"]
+    agg = result["aggregate"]
+    mean_psi = agg.get("mean_psi")
+    max_psi = agg.get("max_psi")
+    summary = (
+        f"Monitor ({verdict['status']}): mean PSI {mean_psi:.3f}, max {max_psi:.3f}"
+        if mean_psi is not None and max_psi is not None
+        else f"Monitor ({verdict['status']})"
+    )
+    project.append_decision(
+        command="monitor",
+        summary=summary,
+        reasoning=f"Reference {reference_path.name} vs current {current_path.name}",
+    )
+
+    log_entry: dict[str, Any] = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "command": "monitor",
+        "reference": str(reference_path),
+        "current": str(current_path),
+        "verdict": verdict,
+        "aggregate": agg,
+        "top_drifted": result.get("top_drifted", []),
+    }
+    if interpretation is not None:
+        log_entry["interpretation"] = interpretation
+    with (project.path / "advice.log").open("a", encoding="utf-8") as out:
+        out.write(json.dumps(log_entry) + "\n")
+
+
+# --------------------------------------------------------------------------- #
+# optimize — HPO sub-agent over the run history (Faz 8b)                      #
+# --------------------------------------------------------------------------- #
+
+
+@cli.command(
+    help="Analyse a run history and suggest next hyperparameter configs.",
+)
+@click.option(
+    "--runs-dir",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    default=None,
+    help=(
+        "Directory holding run subfolders. Defaults to "
+        "<project>/runs/ if an mlcompass project is active."
+    ),
+)
+@click.option(
+    "--metric",
+    required=True,
+    help="Metric to optimize (case-insensitive, e.g. val_acc).",
+)
+@click.option(
+    "--direction",
+    type=click.Choice(["max", "min"]),
+    default="max",
+    show_default=True,
+    help="Whether to maximise or minimise the metric.",
+)
+@click.option(
+    "--top",
+    "top_k",
+    type=int,
+    default=5,
+    show_default=True,
+    help="Leaderboard size.",
+)
+@click.option(
+    "--suggestions",
+    "n_suggestions",
+    type=int,
+    default=3,
+    show_default=True,
+    help="How many next-config recommendations to emit.",
+)
+@click.option(
+    "--constraints",
+    default=None,
+    help=("Bounds on numeric hyperparameters, comma-separated: 'lr:0.0001-0.1,batch_size:16-256'."),
+)
+@click.option(
+    "--llm",
+    "use_llm",
+    is_flag=True,
+    help="After the deterministic report, ask Claude for a strategist plan.",
+)
+@click.option(
+    "--model",
+    "llm_model",
+    default="claude-opus-4-7",
+    show_default=True,
+    help="Claude model used by the strategist when --llm is set.",
+)
+def optimize(
+    runs_dir: Path | None,
+    metric: str,
+    direction: str,
+    top_k: int,
+    n_suggestions: int,
+    constraints: str | None,
+    use_llm: bool,
+    llm_model: str,
+) -> None:
+    """Recommend the next hyperparameter configurations."""
+    project = _try_load_project()
+    if runs_dir is None:
+        if project is None:
+            console.print(
+                "[red]✗[/red] No --runs-dir supplied and no mlcompass "
+                "project found. Run `mlcompass init <name>` or pass "
+                "--runs-dir explicitly."
+            )
+            raise SystemExit(2)
+        runs_dir = project.path / "runs"
+    if not runs_dir.is_dir():
+        console.print(f"[red]✗[/red] Runs directory {runs_dir} does not exist.")
+        raise SystemExit(2)
+
+    try:
+        constraint_map = parse_constraints(constraints or "")
+    except OptimizeAnalysisError as exc:
+        console.print(f"[red]✗ Bad --constraints:[/red] {exc}")
+        raise SystemExit(2) from exc
+
+    with console.status(f"[cyan]Loading runs from {runs_dir}...[/cyan]", spinner="dots"):
+        runs = load_runs_from_dir(runs_dir)
+
+    if not runs:
+        console.print(f"[red]✗[/red] No valid run directories found under {runs_dir}.")
+        raise SystemExit(2)
+
+    try:
+        with console.status("[cyan]Optimizing...[/cyan]", spinner="dots"):
+            result = optimize_history(
+                runs,
+                metric=metric,
+                direction=direction,
+                top_k=top_k,
+                n_suggestions=n_suggestions,
+                constraints=constraint_map,
+            )
+    except OptimizeAnalysisError as exc:
+        console.print(f"[red]✗ Optimize failed:[/red] {exc}")
+        raise SystemExit(2) from exc
+
+    render_optimize(console, result)
+
+    strategy: dict[str, Any] | None = None
+    if use_llm:
+        strategy = _maybe_strategize_optimize(result, model=llm_model)
+        if strategy is not None:
+            render_optimize_strategy(console, strategy)
+
+    if project is not None:
+        _persist_optimize_result(
+            project=project,
+            runs_dir=runs_dir,
+            result=result,
+            strategy=strategy,
+        )
+
+
+def _maybe_strategize_optimize(result: dict[str, Any], *, model: str) -> dict[str, Any] | None:
+    if not _has_api_key():
+        console.print(
+            "\n[yellow]⚠ --llm requested but ANTHROPIC_API_KEY is unset; "
+            "skipping strategist.[/yellow]"
+        )
+        return None
+    try:
+        with console.status("[cyan]Asking the HPO strategist...[/cyan]", spinner="dots"):
+            return _optimize_strategist_callable(result, model=model)
+    except OptimizeAgentError as exc:
+        console.print(f"\n[red]✗ Strategist returned bad response:[/red] {exc}")
+        return None
+
+
+# Indirection for tests.
+def _default_optimize_strategist(result: dict[str, Any], *, model: str) -> dict[str, Any]:
+    return strategize_optimize(result, model=model)
+
+
+_optimize_strategist_callable: Callable[..., dict[str, Any]] = _default_optimize_strategist
+
+
+def _persist_optimize_result(
+    *,
+    project: ProjectContext,
+    runs_dir: Path,
+    result: dict[str, Any],
+    strategy: dict[str, Any] | None = None,
+) -> None:
+    """Record an optimize invocation in the project context + advice log."""
+    best = result["best"]
+    summary = (
+        f"Optimize ({result['metric']} {result['direction']}): best "
+        f"{best['id']} @ {best['score']:.4g}"
+    )
+    project.append_decision(
+        command="optimize",
+        summary=summary,
+        reasoning=(
+            f"Runs analysed: {result['n_scored']}/{result['n_runs']}; "
+            f"{len(result.get('suggestions', []))} suggestions."
+        ),
+    )
+    log_entry: dict[str, Any] = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "command": "optimize",
+        "runs_dir": str(runs_dir),
+        "metric": result["metric"],
+        "direction": result["direction"],
+        "best": best,
+        "sensitivity": result["sensitivity"],
+        "suggestions": result["suggestions"],
+    }
+    if strategy is not None:
+        log_entry["strategy"] = strategy
+    with (project.path / "advice.log").open("a", encoding="utf-8") as out:
+        out.write(json.dumps(log_entry) + "\n")
+
+
+# --------------------------------------------------------------------------- #
 # agent — self-driving over the eight tools (Faz 7)                           #
 # --------------------------------------------------------------------------- #
 
@@ -1215,6 +1582,25 @@ def status(recent_decisions: int) -> None:
         "CI / headless runs where no human is present."
     ),
 )
+@click.option(
+    "--resume",
+    "resume_from",
+    default=None,
+    help=(
+        "Resume from a prior agent run ID (subdirectory under "
+        ".mlcompass/agent_runs/). The orchestrator summarises the "
+        "prior transcript and prepends it to the new task."
+    ),
+)
+@click.option(
+    "--no-memory",
+    "no_memory",
+    is_flag=True,
+    help=(
+        "Skip cross-session memory injection. The agent starts cold, "
+        "without seeing prior decisions or the last agent run."
+    ),
+)
 def agent(
     task: str,
     project_path: Path,
@@ -1222,6 +1608,8 @@ def agent(
     model: str | None,
     max_turns: int | None,
     auto_approve: bool,
+    resume_from: str | None,
+    no_memory: bool,
 ) -> None:
     """Drive the chosen backend until it answers or hits max-turns."""
     # Lazy-import the orchestrator's defaults so users without
@@ -1250,6 +1638,8 @@ def agent(
         model=model or DEFAULT_MODEL,
         max_turns=max_turns or DEFAULT_MAX_TURNS,
         auto_approve_mutations=auto_approve,
+        resume_from=resume_from,
+        use_memory=not no_memory,
     )
 
     console.print()
