@@ -5,6 +5,17 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Planned for the rest of v0.2
+- TensorBoard event-file parser (lazy `tbparse` import)
+- W&B local cache reader
+- Permission-gated config edits and training restarts
+
+## [0.2.0] — 2026-05-29
+
+Training-time tooling: three new modes (`audit`, `watch`, `compare`)
+plus an opt-in LLM interpretation layer for each. Full pipeline is now
+`init → advise → audit / watch / compare → (evaluate / deploy planned)`.
+
 ### Added (Faz 2a — audit mode)
 - `mlcompass audit <script.py>` — pure-AST static analyzer for Python
   training scripts. No code is executed.
@@ -105,11 +116,6 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   exiting non-zero.
 - 33 new tests (21 unit + 12 CLI integration). Full suite now at
   208 passing.
-
-### Planned for the rest of v0.2
-- TensorBoard event-file parser (lazy `tbparse` import)
-- W&B local cache reader
-- Permission-gated config edits and training restarts
 
 ### Planned for v0.3 (Faz 3)
 - `mlcompass evaluate <results>` — post-training analysis
