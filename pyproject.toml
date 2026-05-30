@@ -46,7 +46,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-tensorboard = ["tbparse>=0.0.7"]
+tensorboard = ["tbparse>=0.0.7", "tensorboard>=2.10.0"]
 wandb = ["wandb>=0.16.0"]
 dev = [
     "pytest>=7.0.0",
@@ -54,6 +54,7 @@ dev = [
     "ruff>=0.1.0",
     "mypy>=1.0.0",
     "tbparse>=0.0.7",
+    "tensorboard>=2.10.0",
 ]
 
 [project.scripts]

@@ -35,7 +35,13 @@ from .agents.watch import WatchAgentError, diagnose_findings
 from .context import ProjectContext, ProjectExistsError, ProjectNotFoundError
 from .tools.anomaly import run_all_detectors
 from .tools.dataset import analyze_dataset
-from .tools.logs import MetricSnapshot, merge_consecutive_same_epoch, parse_log_file
+from .tools.logs import (
+    MetricSnapshot,
+    detect_source,
+    load_snapshots,
+    merge_consecutive_same_epoch,
+    parse_log_file,
+)
 from .tools.runs import RunNotFoundError, compare_runs, load_run
 from .tools.script import audit_script
 from .ui.advise import render_analysis, render_recommendation
@@ -436,11 +442,14 @@ def _persist_audit_result(
 
 
 @cli.command(
-    help="Monitor a training log file for plateau / overfit / NaN / divergence."
+    help=(
+        "Monitor a training log for plateau / overfit / NaN / divergence. "
+        "Accepts plain-text logs or TensorBoard event files/directories."
+    )
 )
 @click.argument(
     "log_path",
-    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    type=click.Path(exists=True, dir_okay=True, file_okay=True, path_type=Path),
 )
 @click.option(
     "-f",
@@ -478,8 +487,15 @@ def watch(
     """Run the watch rules over ``log_path``."""
     project = _try_load_project()
 
-    snapshots = merge_consecutive_same_epoch(parse_log_file(log_path))
+    source, raw_snapshots = load_snapshots(log_path)
+    snapshots = merge_consecutive_same_epoch(raw_snapshots)
     findings = [f.to_dict() for f in run_all_detectors(snapshots)]
+    if source == "tensorboard":
+        console.print(
+            f"[dim]Source: TensorBoard event file(s) at {log_path}[/dim]\n"
+        )
+    elif source == "wandb":
+        console.print(f"[dim]Source: W&B run cache at {log_path}[/dim]\n")
 
     render_watch_report(
         console,
@@ -504,6 +520,12 @@ def watch(
         )
 
     if follow:
+        if source != "plain_text":
+            console.print(
+                f"\n[yellow]⚠ --follow is only supported for plain-text "
+                f"logs in v0.2 (got source: {source}).[/yellow]"
+            )
+            return
         try:
             _follow_loop(
                 log_path=log_path,

@@ -171,6 +171,51 @@ def merge_consecutive_same_epoch(
     return merged
 
 
+# --------------------------------------------------------------------------- #
+# Source auto-detection                                                       #
+# --------------------------------------------------------------------------- #
+
+
+def detect_source(path: Path | str) -> str:
+    """Identify what kind of metric source ``path`` points to.
+
+    Returns one of:
+    - ``"tensorboard"`` — an ``events.out.tfevents.*`` file, or a directory
+      containing at least one
+    - ``"wandb"`` — a wandb run directory (presence of ``wandb-summary.json``
+      or ``wandb-history.jsonl``)
+    - ``"plain_text"`` — anything else (the default)
+    """
+    p = Path(path)
+    if p.is_dir():
+        if any(p.glob("events.out.tfevents.*")):
+            return "tensorboard"
+        if (p / "wandb-summary.json").exists() or (p / "wandb-history.jsonl").exists():
+            return "wandb"
+        return "plain_text"
+    if p.is_file() and p.name.startswith("events.out.tfevents"):
+        return "tensorboard"
+    return "plain_text"
+
+
+def load_snapshots(path: Path | str) -> tuple[str, list[MetricSnapshot]]:
+    """Auto-detect a source type and return ``(source, snapshots)``.
+
+    Plain text falls back to :func:`parse_log_file`. TensorBoard / W&B
+    sources delegate to their respective modules with lazy imports.
+    """
+    source = detect_source(path)
+    if source == "tensorboard":
+        from .tensorboard import parse_tb_events
+
+        return source, parse_tb_events(path)
+    if source == "wandb":  # pragma: no cover - implemented in Faz 2.2b
+        from .wandb_local import parse_wandb_run  # type: ignore[import-not-found]
+
+        return source, parse_wandb_run(path)
+    return source, parse_log_file(path)
+
+
 def has_invalid_loss(snapshot: MetricSnapshot) -> bool:
     """True if any *loss-like* metric in the snapshot is NaN or ±Inf."""
     for key, value in snapshot.metrics.items():

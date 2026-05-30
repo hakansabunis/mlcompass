@@ -5,8 +5,23 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added (Faz 2.2a — TensorBoard source)
+- `mlcompass watch <path>` now accepts a TensorBoard event file
+  (`events.out.tfevents.*`) or a directory that contains one, alongside
+  the existing plain-text log support.
+- `tools/tensorboard.py` — lazy `tbparse` import, raises
+  `TensorBoardImportError` with a clear `pip install mlcompass[tensorboard]`
+  hint when the optional dependency is missing.
+- `tools/logs.py` gains `detect_source()` and `load_snapshots()` dispatcher
+  helpers; `watch` uses them to route plain-text vs TensorBoard vs (planned)
+  W&B without the detection rules needing to care which source produced
+  the snapshots.
+- `[tensorboard]` extras group: `pip install mlcompass[tensorboard]`.
+- `--follow` is plain-text-only in v0.2; using it against a TensorBoard
+  directory prints a clear yellow warning rather than crashing.
+- 16 new tests (14 unit + 2 CLI integration). Full suite at 224 passing.
+
 ### Planned for the rest of v0.2
-- TensorBoard event-file parser (lazy `tbparse` import)
 - W&B local cache reader
 - Permission-gated config edits and training restarts
 
