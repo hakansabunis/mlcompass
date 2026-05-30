@@ -31,14 +31,32 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   decision entry plus a JSON line in `advice.log`
 - 40 new tests (31 unit + 9 CLI integration) — full suite at 102 passing
 
+### Added (Faz 2c — compare mode)
+- `mlcompass compare <run-a> <run-b>` — diff two training runs.
+  Accepts run IDs (resolved against the active `.mlcompass/runs/`) or
+  direct directory paths.
+- Run record format defined in `tools/runs.py`:
+  - `config.yaml` with `name`, `created`, and a `config` mapping
+  - `metrics.json` (`{"metrics": [...]}` or a bare list)
+  - Optional `notes.md`
+- Deterministic comparison surfaces:
+  - Side-by-side header panel with each run's name, ID, and epoch count
+  - Final-epoch metric table with deltas and per-metric winner column
+  - Config-diff table with the keys that changed (including keys only
+    present on one side)
+  - Overall verdict (`a_better` / `b_better` / `mixed` / `inconclusive`)
+    using lower-is-better / higher-is-better heuristics over metric names
+- Compare runs are persisted to the active project as a decision entry
+  plus a JSON line in `advice.log`
+- 25 new tests (17 unit + 8 CLI integration). Full suite at 127 passing.
+
 ### Planned for v0.2 (remaining Faz 2)
 - `mlcompass watch <script>` — live training monitor with plateau,
   overfitting, NaN, and divergence detection
-- `mlcompass compare <run-a> <run-b>` — run-to-run diff with
-  LLM-explained hypotheses
 - TensorBoard / W&B / plain-text log support
 - Permission-gated config edits and training restarts
 - Optional LLM auditor layer that explains and prioritizes findings
+- Optional LLM compare layer ("Run B is better because…" hypothesis)
 
 ### Planned for v0.3 (Faz 3)
 - `mlcompass evaluate <results>` — post-training analysis

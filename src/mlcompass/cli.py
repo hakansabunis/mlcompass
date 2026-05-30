@@ -4,12 +4,13 @@ Subcommands are added incrementally as the project advances through
 its phases. See ARCHITECTURE.md §7 for the full CLI design.
 
 Currently implemented:
-    init    — create a new ``.mlcompass/`` project (Faz 1)
-    advise  — analyze dataset + recommend models / features / pitfalls (Faz 1)
-    audit   — static analysis of a training script (Faz 2a)
+    init     — create a new ``.mlcompass/`` project (Faz 1)
+    advise   — analyze dataset + recommend models / features / pitfalls (Faz 1)
+    audit    — static analysis of a training script (Faz 2a)
+    compare  — diff two training runs side-by-side (Faz 2c)
 
 Planned:
-    watch, compare, evaluate, deploy, status
+    watch, evaluate, deploy, status
 """
 
 from __future__ import annotations
@@ -29,9 +30,11 @@ from . import __version__
 from .agents.advise import AdvisorParseError, get_recommendation
 from .context import ProjectContext, ProjectExistsError, ProjectNotFoundError
 from .tools.dataset import analyze_dataset
+from .tools.runs import RunNotFoundError, compare_runs, load_run
 from .tools.script import audit_script
 from .ui.advise import render_analysis, render_recommendation
 from .ui.audit import render_audit
+from .ui.compare import render_compare
 
 
 def _force_utf8_stdio() -> None:
@@ -359,6 +362,70 @@ def _persist_audit_result(
         f.write(json.dumps(entry) + "\n")
 
     console.print(f"\n[green]✓[/green] Saved to {project.path}")
+
+
+# --------------------------------------------------------------------------- #
+# compare command                                                             #
+# --------------------------------------------------------------------------- #
+
+
+@cli.command(
+    help="Compare two training runs side-by-side (config + final metrics).",
+)
+@click.argument("run_a")
+@click.argument("run_b")
+def compare(run_a: str, run_b: str) -> None:
+    """Compare two runs by identifier or directory path."""
+    project = _try_load_project()
+
+    try:
+        record_a = load_run(run_a, project=project)
+        record_b = load_run(run_b, project=project)
+    except RunNotFoundError as exc:
+        console.print(f"[red]✗[/red] {exc}")
+        raise SystemExit(1) from exc
+
+    comparison = compare_runs(record_a, record_b)
+    render_compare(console, comparison)
+
+    if project is not None:
+        _persist_compare_result(
+            project=project,
+            run_a=record_a.id,
+            run_b=record_b.id,
+            comparison=comparison,
+        )
+
+
+def _persist_compare_result(
+    *,
+    project: ProjectContext,
+    run_a: str,
+    run_b: str,
+    comparison: dict[str, Any],
+) -> None:
+    """Record a compare invocation in the project's decision log."""
+    verdict = comparison.get("verdict", "inconclusive")
+    summary = f"Compare {run_a} vs {run_b}: {verdict}"
+    project.append_decision(
+        command="compare",
+        summary=summary,
+        reasoning=comparison.get("verdict_explanation", ""),
+    )
+
+    log_path = project.path / "advice.log"
+    entry = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "command": "compare",
+        "run_a": run_a,
+        "run_b": run_b,
+        "verdict": verdict,
+        "verdict_explanation": comparison.get("verdict_explanation"),
+        "config_diff": comparison.get("config_diff"),
+        "metric_comparison": comparison.get("metric_comparison"),
+    }
+    with log_path.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(entry) + "\n")
 
 
 # --------------------------------------------------------------------------- #
