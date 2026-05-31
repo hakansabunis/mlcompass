@@ -1,3 +1,3 @@
 """mlcompass — An LLM agent that sits next to you through your whole ML pipeline."""
 
-__version__ = "0.7.0"
+__version__ = "0.7.1"

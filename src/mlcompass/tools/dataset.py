@@ -19,23 +19,43 @@ SUPPORTED_FORMATS = {".csv", ".parquet", ".xlsx", ".xls", ".jsonl", ".json"}
 
 # Column-name heuristics for target detection. Lower-case match.
 #
-# The lists were classification-only through v0.6.1 — the field-test
-# on Ames House Prices surfaced that the canonical regression target
-# names (``saleprice``, ``price``, …) were missing, so the analyzer
-# couldn't auto-detect even an obvious regression target. v0.7
-# extends both lists with the common regression-target conventions.
+# History of the lists:
+# - v0.1: classification-only basics (``target``, ``label``, ``y``,
+#   ``churn``, ``fraud``, …).
+# - v0.7: regression Kaggle conventions added (``saleprice``,
+#   ``price``, ``amount``, …) after Field Test #2 on Ames House Prices
+#   found the analyzer couldn't auto-detect an obvious regression target.
+# - v0.7.1: classic Kaggle binary classification names added (``survived``,
+#   ``purchased``, ``clicked``, …) after Field Test #3 on the Titanic
+#   dataset found the analyzer was falling back to the last column for a
+#   target name that ought to be unmistakable.
 TARGET_NAME_HINTS: dict[str, list[str]] = {
     "high_confidence": [
         # Generic
         "target",
         "label",
         "y",
-        # Classification
+        # Classification — flagship binary names every Kaggle starter
+        # dataset uses. ``survived`` (Titanic), ``churn`` (telco),
+        # ``fraud`` (cards), and the ``is_*`` variants of each are the
+        # ones we see most consistently on real datasets.
         "churn",
         "fraud",
         "default",
         "is_fraud",
         "is_churn",
+        "survived",
+        "is_survived",
+        "purchased",
+        "is_purchase",
+        "is_purchased",
+        "clicked",
+        "is_clicked",
+        "converted",
+        "is_converted",
+        "accepted",
+        "approved",
+        "winner",
         # Regression — common Kaggle / public-dataset spellings
         "saleprice",
         "sale_price",
@@ -44,12 +64,15 @@ TARGET_NAME_HINTS: dict[str, list[str]] = {
         "sale_amount",
     ],
     "medium_confidence": [
-        # Classification
+        # Classification — softer signals
         "outcome",
         "result",
         "class",
         "category",
         "response",
+        "engagement",
+        "subscribed",
+        "active",
         # Regression — softer signals
         "amount",
         "value",

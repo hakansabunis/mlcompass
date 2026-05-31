@@ -5,6 +5,58 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.7.1] — 2026-05-31
+
+**Field-test patch release.** A live test run from Claude Code's MCP
+integration on the Kaggle Titanic dataset surfaced that the v0.7
+target-name heuristics — beefed up with regression names during the
+Ames House Prices field test — was still missing the *flagship*
+binary classification targets every Kaggle starter dataset uses.
+The analyzer was falling back to the last-column rule and picking
+``Embarked`` as the target on Titanic when ``Survived`` was right
+there. This release closes that gap.
+
+### Improved — `advise` target detection (Field Test #3)
+- **Survived (Titanic)** and 11 more canonical binary names join
+  ``TARGET_NAME_HINTS["high_confidence"]``: ``survived``,
+  ``is_survived``, ``purchased``, ``is_purchase``, ``is_purchased``,
+  ``clicked``, ``is_clicked``, ``converted``, ``is_converted``,
+  ``accepted``, ``approved``, ``winner``. Picked specifically because
+  they show up across the most-used Kaggle competitions
+  (Titanic, Customer Churn, Click-Through Rate, Marketing
+  Conversions, Loan Approval, …).
+- Three softer signals land in ``medium_confidence``: ``engagement``,
+  ``subscribed``, ``active``.
+
+### Why this happened
+The original v0.1 target-name list was tiny (``target``, ``label``,
+``y``, ``churn``, ``fraud``, ``default``). v0.7 fixed the regression
+gap (FT#2 / Ames). v0.7.1 fixes the classification gap (FT#3 /
+Titanic) — same kind of fix, different task type. Going forward,
+new field tests will keep extending the lists, because the cost of
+a false-negative target detection is high: the user gets a worse
+analysis than they would from `--target <name>` and has no way to
+tell that's why.
+
+### Tests
+- 6 new regression tests:
+  - `Survived` auto-detected with high confidence.
+  - `purchased`, `clicked` flagship binary names.
+  - `is_converted` (the `is_*` prefix variant).
+  - `engagement` lands in medium confidence (softer signal).
+  - Regression guard: existing `churn`, `fraud`, `saleprice`,
+    `is_fraud` still detected high-confidence after the list grew.
+- Full suite: **520 passing**, 2 skipped (was 514 + 6 new).
+- `ruff check` / `ruff format --check` clean.
+- `mypy --strict` clean across 51 source files.
+
+### Verification on live Titanic CSV
+After this patch, the Claude Code MCP demo path (download titanic.csv
+→ `mlcompass_advise(dataset_path="titanic.csv")`) now reports:
+- Target: `Survived` (high confidence)
+- Task: binary classification, ~38% positive
+…instead of the misleading "Embarked / low" fallback.
+
 ## [0.7.0] — 2026-05-31
 
 The headline of v0.7 is **automatic leakage investigation**. When

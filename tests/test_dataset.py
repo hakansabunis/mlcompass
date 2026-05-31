@@ -493,3 +493,101 @@ def test_field_ft2_non_sparse_numeric_keeps_outliers(tmp_path: Path) -> None:
     assert sqft.get("sparse") is False
     assert sqft["outliers"] is not None
     assert "iqr_count" in sqft["outliers"]
+
+
+# --------------------------------------------------------------------------- #
+# Field-test regressions #3 (v0.7.1 — Titanic binary target names)            #
+# --------------------------------------------------------------------------- #
+
+
+def test_field_ft3_survived_target_detected_high_confidence(tmp_path: Path) -> None:
+    """Titanic ``Survived`` target must be auto-detected with high confidence.
+
+    Pre-v0.7.1 the Titanic dataset would fall through to the last-column
+    fallback and pick ``Embarked`` — the canonical demonstration that
+    the classification-name list was missing flagship Kaggle names.
+    """
+    df = pd.DataFrame(
+        {
+            "Pclass": [1, 2, 3] * 30,
+            "Sex": ["male", "female"] * 45,
+            "Age": list(range(20, 65)) + list(range(20, 65)),
+            "Survived": [0, 1] * 45,
+            "Embarked": ["S", "C", "Q"] * 30,
+        }
+    )
+    result = analyze_dataset(_csv(tmp_path, df))
+    assert result["target_hint"]["column"] == "Survived"
+    assert result["target_hint"]["confidence"] == "high"
+
+
+def test_field_ft3_purchased_target_detected_high_confidence(tmp_path: Path) -> None:
+    """E-commerce ``purchased`` binary target hits the high-confidence list."""
+    df = pd.DataFrame(
+        {
+            "user_id": list(range(100)),
+            "session_minutes": list(range(100)),
+            "purchased": [0, 1] * 50,
+        }
+    )
+    result = analyze_dataset(_csv(tmp_path, df))
+    assert result["target_hint"]["column"] == "purchased"
+    assert result["target_hint"]["confidence"] == "high"
+
+
+def test_field_ft3_clicked_target_detected_high_confidence(tmp_path: Path) -> None:
+    """Ad-tech ``clicked`` binary target hits the high-confidence list."""
+    df = pd.DataFrame(
+        {
+            "impression_id": list(range(50)),
+            "ctr_history": [i / 100 for i in range(50)],
+            "clicked": [0, 1] * 25,
+        }
+    )
+    result = analyze_dataset(_csv(tmp_path, df))
+    assert result["target_hint"]["column"] == "clicked"
+    assert result["target_hint"]["confidence"] == "high"
+
+
+def test_field_ft3_is_converted_variant_detected(tmp_path: Path) -> None:
+    """``is_converted`` (the ``is_*`` prefix variant) is also high-confidence."""
+    df = pd.DataFrame(
+        {
+            "user_id": list(range(40)),
+            "sessions": list(range(40)),
+            "is_converted": [0, 1] * 20,
+        }
+    )
+    result = analyze_dataset(_csv(tmp_path, df))
+    assert result["target_hint"]["column"] == "is_converted"
+    assert result["target_hint"]["confidence"] == "high"
+
+
+def test_field_ft3_engagement_medium_confidence(tmp_path: Path) -> None:
+    """``engagement`` is a softer signal — lands in the medium bucket."""
+    df = pd.DataFrame(
+        {
+            "user_id": list(range(40)),
+            "session_count": list(range(40)),
+            "engagement": [0.1 * i for i in range(40)],
+        }
+    )
+    result = analyze_dataset(_csv(tmp_path, df))
+    assert result["target_hint"]["column"] == "engagement"
+    assert result["target_hint"]["confidence"] == "medium"
+
+
+def test_field_ft3_existing_high_confidence_targets_still_work(tmp_path: Path) -> None:
+    """Regression guard: the original ``churn`` / ``fraud`` / ``saleprice``
+    targets must STILL auto-detect after the v0.7.1 list extension."""
+    for target in ("churn", "fraud", "saleprice", "is_fraud"):
+        df = pd.DataFrame(
+            {
+                "feature_a": list(range(50)),
+                "feature_b": list(range(50, 100)),
+                target: [0, 1] * 25,
+            }
+        )
+        result = analyze_dataset(_csv(tmp_path, df))
+        assert result["target_hint"]["column"] == target, target
+        assert result["target_hint"]["confidence"] == "high", target
