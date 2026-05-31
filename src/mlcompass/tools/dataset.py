@@ -151,6 +151,14 @@ def _classify_column(series: pd.Series) -> str:
     if pd.api.types.is_datetime64_any_dtype(series):
         return "datetime"
     if pd.api.types.is_numeric_dtype(series):
+        # Field-test UX #2: numeric columns that take only two distinct
+        # values are almost always categorical flags (SeniorCitizen
+        # pattern). Treat them as categorical so the summariser doesn't
+        # report the nonsense "1142 IQR outliers" you get when you run
+        # a quantile-based outlier detector on a 0/1 vector.
+        non_null = series.dropna()
+        if len(non_null) > 0 and non_null.nunique() == 2:
+            return "categorical"
         return "numeric"
 
     # Object dtype: distinguish text from categorical by cardinality.
@@ -174,6 +182,32 @@ def _classify_column(series: pd.Series) -> str:
     if nunique / len(non_null) > 0.5:
         return "text"
     return "categorical"
+
+
+def _looks_numeric_with_dirty_strings(series: pd.Series) -> bool:
+    """True if a text column's values are mostly numbers in disguise.
+
+    Detects the classic Telco-style ``TotalCharges`` pattern: a column
+    that should be numeric but ends up as ``object`` dtype because a
+    handful of rows have empty strings or stray whitespace. We
+    consider the column numeric-in-disguise when **≥ 95%** of
+    non-empty values parse as floats.
+
+    Lives separately from ``_classify_column`` so we can flag the
+    column without changing how the analyzer summarises it: it still
+    needs the text summariser to surface the cardinality / length, but
+    the warning tells the user it should be cleaned.
+    """
+    non_null = series.dropna()
+    if len(non_null) == 0:
+        return False
+    coerced = pd.to_numeric(non_null, errors="coerce")
+    parsed = coerced.notna().sum()
+    # Skip columns that have nothing numeric-looking at all — they're
+    # just normal text. We need a strong majority to call this out.
+    if parsed == 0:
+        return False
+    return float(parsed) / float(len(non_null)) >= 0.95
 
 
 def _analyze_column(df: pd.DataFrame, col: str) -> dict[str, Any]:
@@ -275,13 +309,29 @@ def _summarize_boolean(s: pd.Series) -> dict[str, Any]:
 
 
 def _summarize_text(s: pd.Series) -> dict[str, Any]:
-    """Free-text column: average length + cardinality."""
+    """Free-text column: average length + cardinality.
+
+    Also stamps two booleans the warning layer reads:
+
+    - ``looks_numeric``: the column is object-dtype but ≥95% of
+      values parse as floats (Telco ``TotalCharges`` pattern).
+    - ``looks_like_id``: cardinality equals row count, suggesting a
+      unique-per-row identifier (``customerID`` pattern).
+    """
     s_clean = s.dropna().astype(str)
     if len(s_clean) == 0:
-        return {"avg_length": 0.0, "cardinality": 0}
+        return {
+            "avg_length": 0.0,
+            "cardinality": 0,
+            "looks_numeric": False,
+            "looks_like_id": False,
+        }
+    cardinality = int(s_clean.nunique())
     return {
         "avg_length": float(s_clean.str.len().mean()),
-        "cardinality": int(s_clean.nunique()),
+        "cardinality": cardinality,
+        "looks_numeric": _looks_numeric_with_dirty_strings(s),
+        "looks_like_id": cardinality == len(s_clean),
     }
 
 
@@ -411,6 +461,31 @@ def _generate_warnings(
         warnings.append(
             f"{len(high_card)} categorical column(s) have cardinality >50; "
             "consider target encoding or top-N grouping."
+        )
+
+    # Field-test UX #1: text columns whose values are mostly numbers
+    # ("TotalCharges" pattern). Almost always a data-cleaning miss.
+    dirty_numeric = [c for c in columns if c["type"] == "text" and c.get("looks_numeric")]
+    if dirty_numeric:
+        names = ", ".join(c["name"] for c in dirty_numeric[:5])
+        suffix = "..." if len(dirty_numeric) > 5 else ""
+        warnings.append(
+            f"{len(dirty_numeric)} column(s) look numeric but contain "
+            f"non-numeric values ({names}{suffix}); clean before "
+            "training — likely empty strings or stray whitespace."
+        )
+
+    # Field-test UX #3: unique-per-row text columns ("customerID"
+    # pattern). Strong signal of an ID; using it as a feature
+    # memorises the training set.
+    id_like = [c for c in columns if c["type"] == "text" and c.get("looks_like_id")]
+    if id_like:
+        names = ", ".join(c["name"] for c in id_like[:5])
+        suffix = "..." if len(id_like) > 5 else ""
+        warnings.append(
+            f"{len(id_like)} column(s) look like unique-per-row "
+            f"identifiers ({names}{suffix}); drop before training so "
+            "the model doesn't memorise row IDs."
         )
 
     if target_hint.get("confidence") == "none":

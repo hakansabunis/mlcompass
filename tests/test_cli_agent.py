@@ -45,6 +45,13 @@ def _summary_factory(
 
 @pytest.fixture
 def stub_runner(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> list[dict[str, Any]]:
+    # The `api` backend short-circuits on missing ANTHROPIC_API_KEY
+    # (field-test bug #6 / v0.6.1). Most CLI tests use the default
+    # backend, so set a fake key for the duration of the test —
+    # tests that specifically exercise the missing-key path can clear
+    # it themselves.
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "fake-key-for-cli-tests")
+
     calls: list[dict[str, Any]] = []
 
     def _stub(**kwargs: Any) -> AgentRunSummary:
@@ -126,6 +133,8 @@ def test_agent_max_turns_passes_through(stub_runner: list[dict[str, Any]], tmp_p
 def test_agent_nonzero_exit_when_backend_fails(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "fake-key-for-cli-tests")
+
     def _stub(**_: Any) -> AgentRunSummary:
         return _summary_factory(ok=False, stop_reason="max_turns", project_path=tmp_path)
 
@@ -136,6 +145,64 @@ def test_agent_nonzero_exit_when_backend_fails(
     # Exit code 1 on failure, but the summary panel should still print.
     assert result.exit_code == 1
     assert "max_turns" in result.output
+
+
+def test_agent_api_backend_without_key_exits_2(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Field-test bug #6: missing ANTHROPIC_API_KEY must short-circuit cleanly.
+
+    Pre-v0.6.1 the CLI handed control to the orchestrator which then
+    crashed several turns in with a verbose 'Could not resolve
+    authentication method' error. The new behaviour: detect the
+    missing key up front, print a usage hint, exit 2.
+    """
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+    runner = CliRunner()
+    result = runner.invoke(cli, ["agent", "do something", "--project-path", str(tmp_path)])
+    assert result.exit_code == 2
+    assert "ANTHROPIC_API_KEY" in result.output
+    assert "claude-code" in result.output  # mentions the alternative backend
+
+
+def test_agent_claude_code_backend_runs_without_anthropic_key(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """claude-code backend has its own auth via the Claude Code CLI;
+    the orchestrator must NOT short-circuit on missing API key."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+    calls: list[dict[str, Any]] = []
+
+    def _stub(**kwargs: Any) -> AgentRunSummary:
+        calls.append(kwargs)
+        run_dir = tmp_path / ".mlcompass" / "agent_runs" / "demo"
+        run_dir.mkdir(parents=True, exist_ok=True)
+        return AgentRunSummary(
+            result=AgentResult(ok=True, turns=1, final_text="ok", stop_reason="end_turn"),
+            run_dir=run_dir,
+            transcript_path=run_dir / "transcript.jsonl",
+            summary_path=run_dir / "summary.md",
+        )
+
+    monkeypatch.setattr(cli_module, "_agent_runner", _stub)
+
+    runner = CliRunner()
+    result = runner.invoke(
+        cli,
+        [
+            "agent",
+            "do something",
+            "--backend",
+            "claude-code",
+            "--project-path",
+            str(tmp_path),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert len(calls) == 1
+    assert calls[0]["backend"] == "claude-code"
 
 
 def test_root_help_lists_agent() -> None:

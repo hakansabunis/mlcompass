@@ -111,6 +111,75 @@ def test_perturb_integer_stays_integer() -> None:
     assert isinstance(new, int)
 
 
+def test_perturb_dropout_soft_capped_at_0_8() -> None:
+    """Field-test UX #5: explore step on a dropout sweep where lower
+    is better must NOT propose dropout > 0.8 in the no-constraint
+    default mode.
+    """
+    # Negative corr with metric on max direction ⇒ exploit goes down,
+    # explore (negative step_frac) goes UP — without soft caps this
+    # used to spit out 0.95 on the Telco run.
+    new = _perturb(
+        name="dropout",
+        current=0.3,
+        corr=-0.7,
+        direction="max",
+        step_frac=-0.5,  # explore the opposite direction
+        obs_min=0.1,
+        obs_max=0.6,
+        bounds=None,
+    )
+    assert 0.0 <= new <= 0.8
+
+
+def test_perturb_lr_soft_capped_in_default_range() -> None:
+    """Learning-rate suggestions must stay inside [1e-7, 10] absent constraints."""
+    new = _perturb(
+        name="learning_rate",
+        current=0.001,
+        corr=0.9,
+        direction="max",
+        step_frac=2.0,  # extreme jump
+        obs_min=0.0001,
+        obs_max=0.01,
+        bounds=None,
+    )
+    assert new <= 10.0
+    assert new >= 1e-7
+
+
+def test_perturb_user_bounds_override_soft_caps() -> None:
+    """When the user supplies --constraints, the domain caps step aside."""
+    new = _perturb(
+        name="dropout",
+        current=0.3,
+        corr=-0.7,
+        direction="max",
+        step_frac=-0.5,
+        obs_min=0.1,
+        obs_max=0.6,
+        bounds=(0.0, 0.99),  # explicit user override above the 0.8 soft cap
+    )
+    assert 0.0 <= new <= 0.99
+
+
+def test_perturb_unknown_hyperparam_unrestricted() -> None:
+    """No soft cap for an unfamiliar name ⇒ behaviour matches the legacy code."""
+    new = _perturb(
+        name="my_custom_knob",
+        current=0.5,
+        corr=1.0,
+        direction="max",
+        step_frac=0.5,
+        obs_min=0.1,
+        obs_max=0.9,
+        bounds=None,
+    )
+    # Multiplicative path: 0.5 * 10^0.5 ≈ 1.58, well above any
+    # domain-aware cap that doesn't apply here.
+    assert new > 0.9
+
+
 # --------------------------------------------------------------------------- #
 # Loading                                                                     #
 # --------------------------------------------------------------------------- #

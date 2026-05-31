@@ -1631,6 +1631,26 @@ def agent(
         )
         raise SystemExit(2) from exc
 
+    # The "api" backend talks directly to the Anthropic API and needs
+    # ANTHROPIC_API_KEY. Without it the SDK throws a long auth error
+    # several turns into the conversation (field-test bug #6). Catch
+    # the missing-key case up front so the user sees a clean message
+    # and exits with a stable code instead of an opaque api_error.
+    # The "claude-code" backend has its own auth flow inside the
+    # Claude Code CLI and does NOT require ANTHROPIC_API_KEY.
+    if backend == "api" and not _has_api_key():
+        console.print(
+            "[red]✗[/red] The 'api' backend requires ANTHROPIC_API_KEY "
+            "to be set in your environment.\n"
+            "Either:\n"
+            "  • [bold]set the key[/bold]: "
+            "`export ANTHROPIC_API_KEY=sk-ant-...` "
+            '(or `$env:ANTHROPIC_API_KEY = "..."` in PowerShell), or\n'
+            "  • [bold]switch backends[/bold]: pass `--backend claude-code` "
+            "to route through your local Claude Code CLI."
+        )
+        raise SystemExit(2)
+
     summary = _agent_runner(
         task=task,
         project_path=str(project_path),

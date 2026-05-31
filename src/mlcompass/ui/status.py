@@ -48,10 +48,19 @@ def render_status(
 
 def _project_panel(project: ProjectContext) -> Panel:
     meta = project.project_meta
+    # Look up the version under the current key (mlcompass_version)
+    # first, then fall back through the two legacy spellings so older
+    # projects that pre-date the v0.4 rename still render correctly.
+    version = (
+        meta.get("mlcompass_version")
+        or meta.get("ml_compass_version")
+        or meta.get("ml_copilot_version")
+        or "—"
+    )
     body = (
         f"Name:           [bold]{meta.get('name', '—')}[/bold]\n"
         f"Created:        {meta.get('created', '—')}\n"
-        f"mlcompass ver:  {meta.get('ml_compass_version', meta.get('ml_copilot_version', '—'))}\n"
+        f"mlcompass ver:  {version}\n"
         f"Default model:  {meta.get('default_model', '—')}"
     )
     return Panel.fit(body, title="📁 Project", border_style="cyan")

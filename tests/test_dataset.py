@@ -250,5 +250,121 @@ def test_no_warnings_for_clean_dataset(tmp_path: Path) -> None:
         }
     )
     result = analyze_dataset(_csv(tmp_path, df))
-    # No missing, no imbalance, no high cardinality, target detected
+    # No missing, no imbalance, no high cardinality, target detected.
+    # `churn` is detected with cardinality 2, classified categorical
+    # (field-test UX #2), so the binary task hint still fires
+    # without any warning — perfect balance keeps the imbalance check
+    # quiet, and there's nothing to flag.
     assert result["warnings"] == []
+
+
+# --------------------------------------------------------------------------- #
+# Field-test regressions (v0.6.1)                                             #
+# --------------------------------------------------------------------------- #
+
+
+def test_field_ux1_numeric_with_dirty_strings_flagged(tmp_path: Path) -> None:
+    """Telco ``TotalCharges`` pattern: numeric column with a few empty strings.
+
+    pandas drops the column to object dtype; we should still flag it
+    as "looks numeric — clean before training" and the column-level
+    summary should carry ``looks_numeric=True``.
+    """
+    values = [f"{i * 5.5:.2f}" for i in range(96)] + [" ", " ", " ", " "]
+    df = pd.DataFrame(
+        {
+            "total_charges": values,
+            "target": [0, 1] * 50,
+        }
+    )
+    result = analyze_dataset(_csv(tmp_path, df))
+
+    tc = next(c for c in result["columns"] if c["name"] == "total_charges")
+    assert tc["type"] == "text"
+    assert tc.get("looks_numeric") is True
+    assert any(
+        "look numeric" in w.lower() and "non-numeric" in w.lower() for w in result["warnings"]
+    )
+
+
+def test_field_ux1_genuine_text_not_flagged_as_numeric(tmp_path: Path) -> None:
+    """Real free-text columns must NOT trip the dirty-numeric heuristic."""
+    df = pd.DataFrame(
+        {
+            "comment": [f"customer feedback {i}" for i in range(100)],
+            "target": [0, 1] * 50,
+        }
+    )
+    result = analyze_dataset(_csv(tmp_path, df))
+    comment = next(c for c in result["columns"] if c["name"] == "comment")
+    assert comment.get("looks_numeric") is False
+    assert not any("look numeric" in w.lower() for w in result["warnings"])
+
+
+def test_field_ux2_binary_numeric_classified_as_categorical(tmp_path: Path) -> None:
+    """SeniorCitizen pattern: integer 0/1 binary classified as categorical.
+
+    Pre-v0.6.1 this was treated as numeric and the IQR outlier counter
+    would report nonsense numbers (e.g. "1142 IQR outliers" on a
+    vector of 0s and 1s).
+    """
+    df = pd.DataFrame(
+        {
+            "senior_citizen": [0, 1] * 500,
+            "amount": [i * 1.5 for i in range(1000)],
+            "target": [0, 1] * 500,
+        }
+    )
+    result = analyze_dataset(_csv(tmp_path, df))
+
+    sc = next(c for c in result["columns"] if c["name"] == "senior_citizen")
+    assert sc["type"] == "categorical"
+    assert "outliers" not in sc
+    assert sc.get("cardinality") == 2
+
+
+def test_field_ux2_three_value_numeric_stays_numeric(tmp_path: Path) -> None:
+    """Three-valued numeric should NOT be force-categorical."""
+    df = pd.DataFrame(
+        {
+            "rating": [1, 2, 3] * 100,
+            "target": [0, 1] * 150,
+        }
+    )
+    result = analyze_dataset(_csv(tmp_path, df))
+    rating = next(c for c in result["columns"] if c["name"] == "rating")
+    # cardinality == 3 ⇒ stays numeric (not the 2-value binary heuristic).
+    assert rating["type"] == "numeric"
+
+
+def test_field_ux3_unique_per_row_id_column_flagged(tmp_path: Path) -> None:
+    """customerID pattern: text column with cardinality == row count."""
+    df = pd.DataFrame(
+        {
+            "customer_id": [f"C{i:05d}" for i in range(1000)],
+            "amount": [i * 1.5 for i in range(1000)],
+            "target": [0, 1] * 500,
+        }
+    )
+    result = analyze_dataset(_csv(tmp_path, df))
+    cid = next(c for c in result["columns"] if c["name"] == "customer_id")
+    assert cid["type"] == "text"
+    assert cid.get("looks_like_id") is True
+    assert any("unique-per-row" in w.lower() and "drop" in w.lower() for w in result["warnings"])
+
+
+def test_field_ux3_high_card_but_not_unique_not_flagged_as_id(tmp_path: Path) -> None:
+    """A column with high but non-unique cardinality is NOT an ID column.
+
+    The 200/1000 ratio puts this column in the categorical bucket
+    (not text), so ``looks_like_id`` doesn't apply — what we really
+    care about is that the ID-column warning does NOT fire on it.
+    """
+    df = pd.DataFrame(
+        {
+            "city": [f"city_{i % 200}" for i in range(1000)],
+            "target": [0, 1] * 500,
+        }
+    )
+    result = analyze_dataset(_csv(tmp_path, df))
+    assert not any("unique-per-row" in w.lower() for w in result["warnings"])

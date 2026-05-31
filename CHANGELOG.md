@@ -5,6 +5,73 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.6.1] — 2026-05-31
+
+**Field-test patch release.** A dry run against the Kaggle Telco
+Customer Churn dataset surfaced two real bugs and four UX rough
+edges; this release closes all six. No CLI surface or on-disk
+project layout changes, no breaking changes — 0.6.0 users upgrade in
+place.
+
+### Fixed
+- **Status panel "mlcompass ver: —"** (field-test bug #7). `init`
+  writes `mlcompass_version: <ver>` into `project.yaml` but
+  `ui/status.py` was looking it up under the legacy
+  `ml_compass_version` (with the underscore) — a leftover key from
+  the v0.4 ml-copilot → mlcompass rename. The panel now reads the
+  current key first and falls back through both legacy spellings.
+- **Agent CLI no-API-key crash** (field-test bug #6). The `api`
+  backend used to hand control to `anthropic` and crash one turn in
+  with a noisy `Could not resolve authentication method` error.
+  The CLI now detects the missing `ANTHROPIC_API_KEY` up front,
+  prints a clean usage hint (with both the env-var instructions and
+  the `--backend claude-code` alternative), and exits 2. The
+  `claude-code` backend skips this check — it has its own auth flow
+  inside the Claude Code CLI.
+
+### Improved — `advise` dataset heuristics
+- **Numeric-with-dirty-strings columns** (field-test UX #1). Telco's
+  `TotalCharges` column should be numeric but a few rows contain
+  empty strings, so pandas drops it to `object`. The analyzer now
+  detects this pattern (≥95% of values parse as float) and adds a
+  "looks numeric but contain non-numeric values; clean before
+  training" warning that names the offending columns.
+- **Binary 0/1 numeric columns force-categorical** (field-test UX
+  #2). Pre-v0.6.1, `SeniorCitizen`-style 0/1 columns were
+  classified as numeric and the IQR outlier counter would report
+  nonsense numbers (e.g. "1142 IQR outliers" on a vector of 0s and
+  1s). Columns with exactly two distinct numeric values are now
+  classified as categorical with a cardinality of 2.
+- **Unique-per-row identifier columns flagged** (field-test UX #3).
+  A text column whose cardinality equals the row count is almost
+  always an ID; using it as a feature lets the model memorise rows.
+  The analyzer now adds a "look like unique-per-row identifiers
+  (`customerID`, …); drop before training" warning.
+
+### Improved — `optimize` suggestions
+- **Domain-aware soft caps for well-known hyperparameters** (field-
+  test UX #5). The Telco run surfaced an explore-step suggestion of
+  `dropout=0.95` — beyond what's actually trainable. The suggester
+  now consults a small table of soft caps when the user hasn't
+  supplied `--constraints`: dropout ≤ 0.8, weight_decay ≤ 1.0,
+  momentum ≤ 0.99, lr ∈ [1e-7, 10]. Substring-matched, so
+  `learning_rate`, `decoder_dropout` etc. all hit the right cap.
+  Explicit `--constraints` always override the soft caps.
+
+### Tests
+- 14 new tests:
+  - 2 status version-key regressions (current key + legacy fallback).
+  - 2 agent-CLI missing-key tests (api backend exits 2,
+    claude-code backend runs unaffected).
+  - 6 dataset analyzer tests (numeric-with-dirty-strings positive +
+    negative, binary-numeric, three-value-numeric stays numeric,
+    unique-per-row ID positive + negative).
+  - 4 optimize perturbation soft-cap tests (dropout cap, lr cap,
+    user-bounds override, unknown name unrestricted).
+- Full suite: 495 passing, 2 skipped (was 481 + 14 new).
+- `ruff check` / `ruff format --check` clean; `mypy --strict` clean
+  across 49 source files.
+
 ## [0.6.0] — 2026-05-31
 
 Three new capabilities ship together: **post-deploy drift detection

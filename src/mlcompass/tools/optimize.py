@@ -34,6 +34,26 @@ import numpy as np
 from ..context import ProjectContext
 from .runs import RunRecord, load_run
 
+# Domain-aware soft caps for well-known hyperparameter names. Applied
+# in :func:`_perturb` when the user hasn't supplied an explicit
+# ``--constraints`` bound for the hyperparameter. Caught during field
+# testing on the Telco churn dataset, where the explore step was
+# producing nonsense (e.g. ``dropout=0.95``) — these caps reflect
+# what's actually trainable, not the maximum representable value.
+#
+# Keys are matched against the hyperparameter name lower-cased and
+# substring-checked, so ``learning_rate`` matches the ``"lr"`` entry
+# and ``decoder_dropout`` matches the ``"dropout"`` entry.
+_HYPER_SOFT_CAPS: tuple[tuple[str, float, float], ...] = (
+    # (name_pattern, soft_lo, soft_hi)
+    ("dropout", 0.0, 0.8),  # 0.8+ destroys signal in most architectures
+    ("weight_decay", 0.0, 1.0),  # 1+ is essentially L2 with infinite weight
+    ("momentum", 0.0, 0.99),  # >0.99 leaves no per-step contribution
+    ("learning_rate", 1e-7, 10.0),
+    ("lr", 1e-7, 10.0),
+)
+
+
 # Hyperparameter name patterns we treat as numeric when no explicit
 # constraint is supplied.
 _NUMERIC_HYPER_HINTS = (
@@ -331,6 +351,7 @@ def _suggest_next_configs(
     for hp_name, step_frac, label in plans[:n]:
         sens_entry = next(s for s in numeric_sens if s["hyperparam"] == hp_name)
         new_value = _perturb(
+            name=hp_name,
             current=base_config.get(hp_name, sens_entry["min"]),
             corr=sens_entry["correlation"],
             direction=direction,
@@ -352,8 +373,26 @@ def _suggest_next_configs(
     return suggestions
 
 
+def _soft_caps_for(name: str | None) -> tuple[float, float] | None:
+    """Look up domain-aware default bounds for a known hyperparameter name.
+
+    Substring match against the lower-cased name, so ``learning_rate``,
+    ``decoder_dropout``, ``encoder_dropout`` etc. all hit the right
+    cap entry. Returns ``None`` if no rule matches — the caller then
+    falls back to the open observed-range bounds.
+    """
+    if not name:
+        return None
+    lower = name.lower()
+    for pattern, lo, hi in _HYPER_SOFT_CAPS:
+        if pattern in lower:
+            return (lo, hi)
+    return None
+
+
 def _perturb(
     *,
+    name: str | None = None,
     current: Any,
     corr: float,
     direction: str,
@@ -375,6 +414,13 @@ def _perturb(
     User-supplied ``bounds`` always clamp the result and override the
     "preserve sign" heuristic, so users can deliberately let a value
     cross zero by setting ``bounds=(-x, y)``.
+
+    When ``bounds`` is ``None`` AND ``name`` matches a known hyper-
+    parameter pattern (``dropout``, ``lr``, ``weight_decay``, …), the
+    domain-aware soft caps from :data:`_HYPER_SOFT_CAPS` clamp the
+    result so the suggester never proposes nonsense like
+    ``dropout=0.95`` — caught during v0.6.0 field testing on the
+    Telco churn dataset.
     """
     current_val = float(current) if isinstance(current, (int, float)) else obs_min
 
@@ -399,6 +445,15 @@ def _perturb(
             lo, hi = bounds
         else:
             lo, hi = obs_min - span, obs_max + span
+
+    # Apply domain-aware soft caps unless the user has supplied an
+    # explicit bound that already dictates the range.
+    if bounds is None:
+        soft = _soft_caps_for(name)
+        if soft is not None:
+            soft_lo, soft_hi = soft
+            lo = max(lo, soft_lo)
+            hi = min(hi, soft_hi)
 
     clamped = max(lo, min(hi, raw))
 

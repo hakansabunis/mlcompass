@@ -161,6 +161,64 @@ def test_status_exits_nonzero_when_no_project(tmp_path: Path) -> None:
 
 
 # --------------------------------------------------------------------------- #
+# Version-key regression (field-test bug #7)                                  #
+# --------------------------------------------------------------------------- #
+
+
+def test_status_renders_mlcompass_version_from_current_key(
+    project: ProjectContext, tmp_path: Path
+) -> None:
+    """``mlcompass init`` writes ``mlcompass_version`` in project.yaml.
+
+    Pre-v0.6.1 the status panel looked for ``ml_compass_version``
+    (with the underscore) — a leftover from the v0.4 ml-copilot →
+    mlcompass rename — and silently rendered "—" instead. This test
+    pins the current key as the primary lookup.
+    """
+    import yaml
+
+    project_yaml = project.path / "project.yaml"
+    meta = yaml.safe_load(project_yaml.read_text(encoding="utf-8"))
+    meta["mlcompass_version"] = "0.6.1"
+    project_yaml.write_text(yaml.safe_dump(meta, sort_keys=False), encoding="utf-8")
+
+    runner = CliRunner()
+    cwd = os.getcwd()
+    os.chdir(tmp_path)
+    try:
+        result = runner.invoke(cli, ["status"])
+    finally:
+        os.chdir(cwd)
+
+    assert result.exit_code == 0, result.output
+    assert "0.6.1" in result.output
+    assert "mlcompass ver" in result.output
+
+
+def test_status_falls_back_to_legacy_version_keys(project: ProjectContext, tmp_path: Path) -> None:
+    """Projects pre-dating the v0.4 rename still render their version."""
+    import yaml
+
+    project_yaml = project.path / "project.yaml"
+    meta = yaml.safe_load(project_yaml.read_text(encoding="utf-8"))
+    # Simulate an old project: drop the new key, set the legacy one.
+    meta.pop("mlcompass_version", None)
+    meta["ml_copilot_version"] = "0.1.0"
+    project_yaml.write_text(yaml.safe_dump(meta, sort_keys=False), encoding="utf-8")
+
+    runner = CliRunner()
+    cwd = os.getcwd()
+    os.chdir(tmp_path)
+    try:
+        result = runner.invoke(cli, ["status"])
+    finally:
+        os.chdir(cwd)
+
+    assert result.exit_code == 0
+    assert "0.1.0" in result.output
+
+
+# --------------------------------------------------------------------------- #
 # Help / discovery                                                            #
 # --------------------------------------------------------------------------- #
 
