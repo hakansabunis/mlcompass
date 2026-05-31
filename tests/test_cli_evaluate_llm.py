@@ -42,6 +42,21 @@ def binary_csv(tmp_path: Path) -> Path:
 @pytest.fixture
 def with_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-test-key")
+    # v0.7: when the leakage-smell threshold fires (which it does on
+    # ``binary_csv`` because the synthesised predictions are very
+    # accurate), the CLI also calls the leakage investigator. Stub it
+    # so we don't accidentally hit the real Anthropic API mid-test.
+    monkeypatch.setattr(
+        cli_module,
+        "_leakage_investigator_callable",
+        lambda evidence, *, model: {
+            "verdict": "leakage_uncertain",
+            "confidence": "low",
+            "evidence_cited": [],
+            "primary_hypothesis": "(stub)",
+            "recommended_checks": [],
+        },
+    )
 
 
 @pytest.fixture

@@ -5,6 +5,87 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.7.0] — 2026-05-31
+
+The headline of v0.7 is **automatic leakage investigation**. When
+`mlcompass evaluate` sees a suspiciously perfect metric (AUC > 0.995,
+accuracy > 0.99, R² > 0.999), it now **runs a deterministic
+investigator** that gathers structured evidence about which columns
+might be the source — per-feature correlations against the target,
+the exact y_pred=y_true match rate, and a candidate-leak list. With
+`--llm`, an anti-hallucination Claude agent then narrates the
+evidence into a verdict + recommended manual checks. The
+investigator is forbidden from inventing columns or proposing code
+patches — it cites only what's in the evidence dict, or admits
+``cannot_determine``.
+
+This release also closes the four field-test findings the Ames House
+Prices dry run surfaced.
+
+### Added — Faz 9d / 9e / 9f (leakage auto-investigation)
+- New `src/mlcompass/tools/leakage.py` — pure pandas + numpy
+  evidence collector. Computes:
+  - **Target ↔ feature correlations** (top 10 by |corr|). Uses
+    Pearson for numeric targets (binary 0/1 ints included), and
+    rank-based Pearson for string class labels. For numeric targets
+    we now also compute the rank-based score and **report whichever
+    is stronger** — that's what catches monotone leaks like a
+    `log_price` column that's just `log(target)` (Pearson ~0.94,
+    Spearman = 1.00).
+  - **Exact y_pred == y_true match rate** — over 95% on a non-
+    trivial task is a smoking gun.
+  - **Candidate leak columns** — any feature whose |correlation|
+    with the target ≥ 0.99.
+  - **Sample-size trustworthiness flag** — below 50 rows the agent
+    is told to downgrade its confidence.
+- New `src/mlcompass/agents/leakage_investigator.py` — Claude-driven
+  narrator with a strict anti-hallucination contract:
+  - "Cite ONLY items present in the evidence dict."
+  - "If candidate_leak_columns is empty AND perfect_match_rate < 0.95,
+    say `cannot_determine`. Do NOT speculate."
+  - "Recommendations must be MANUAL checks. NEVER propose code
+    patches."
+  - Output schema clamped at the agent boundary (enum verdict +
+    confidence) so a stray hallucinated value can't break the UI.
+- `evaluate()` auto-attaches `result["leakage_investigation"]`
+  whenever the smell threshold fires (no flag needed — the
+  deterministic evidence is always free of charge). `--llm` then
+  chains the investigator agent on top.
+- New "🔬 Leakage investigation — evidence" panel (red border)
+  + "🔍 Leakage investigator (Claude)" panel (magenta border).
+- 11 leakage-tool tests covering numeric binary, string binary,
+  regression with monotone leaks, sample-size guard, K=10 cap, and
+  the schema contract.
+
+### Improved — `advise` (Ames Field Test #2 patches)
+- **FT#2-1**: Regression target name hints. `TARGET_NAME_HINTS`
+  extended with `saleprice`, `sale_price`, `price`, `saleamount`,
+  `sale_amount` (high-confidence) and `amount`, `value`, `score`,
+  `revenue`, `cost`, `salary`, `rating` (medium). Ames-style
+  regression targets now auto-detect.
+- **FT#2-2**: Year/Yr columns escape the "2 distinct values →
+  categorical" v0.6.1 rule. Columns whose name matches `year`,
+  `yr`, `_yr_`, `_year_` AND whose min lands in the plausible
+  1800-2200 band stay numeric — `Yr Sold` 2006-2010 is temporal,
+  not nominal.
+- **FT#2-3**: Sparse numeric columns. When > 50% of values are zero
+  (Ames `Open Porch SF`, `Pool Area`, …) the analyzer flags the
+  column with `sparse: True`, skips the otherwise-misleading IQR
+  outlier count, and adds a "consider binarising or zero-inflated
+  model" warning.
+
+### Tests
+- 14 new dataset analyzer tests: 3 target-hint regressions (FT#2-1),
+  3 year-column heuristic edge cases (FT#2-2), 2 sparse-column
+  scenarios (FT#2-3), 6 v0.6.1 regressions kept green.
+- 11 leakage-tool tests (Faz 9d).
+- `with_api_key` fixture in `test_cli_evaluate_llm.py` auto-stubs
+  the leakage investigator so existing `evaluate --llm` tests
+  don't accidentally hit the real Anthropic API.
+- Full suite: **514 passing**, 2 skipped (was 495 + 19 new).
+- `ruff check` / `ruff format --check` clean.
+- `mypy --strict` clean across **51** source files (was 49).
+
 ## [0.6.1] — 2026-05-31
 
 **Field-test patch release.** A dry run against the Kaggle Telco

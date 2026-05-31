@@ -368,3 +368,128 @@ def test_field_ux3_high_card_but_not_unique_not_flagged_as_id(tmp_path: Path) ->
     )
     result = analyze_dataset(_csv(tmp_path, df))
     assert not any("unique-per-row" in w.lower() for w in result["warnings"])
+
+
+# --------------------------------------------------------------------------- #
+# Field-test regressions #2 (v0.7.0 — Ames House Prices)                      #
+# --------------------------------------------------------------------------- #
+
+
+def test_field_ft2_saleprice_target_detected_high_confidence(tmp_path: Path) -> None:
+    """Ames-style ``SalePrice`` target must be detected with high confidence.
+
+    Pre-v0.7 the analyzer only knew classification target names, so
+    a regression dataset with SalePrice as the obvious target gave
+    "No target column auto-detected" — caught during FT#2.
+    """
+    df = pd.DataFrame(
+        {
+            "rooms": [3, 4, 5, 6, 7] * 20,
+            "sqft": [800, 1200, 1600, 2000, 2400] * 20,
+            "SalePrice": [150_000, 200_000, 280_000, 350_000, 420_000] * 20,
+        }
+    )
+    result = analyze_dataset(_csv(tmp_path, df))
+    assert result["target_hint"]["column"] == "SalePrice"
+    assert result["target_hint"]["confidence"] == "high"
+
+
+def test_field_ft2_lowercase_price_target_detected(tmp_path: Path) -> None:
+    """The single-word ``price`` should also count as a high-confidence target."""
+    df = pd.DataFrame(
+        {
+            "feature_a": list(range(100)),
+            "price": [i * 1000 + 50_000 for i in range(100)],
+        }
+    )
+    result = analyze_dataset(_csv(tmp_path, df))
+    assert result["target_hint"]["column"] == "price"
+    assert result["target_hint"]["confidence"] == "high"
+
+
+def test_field_ft2_medium_confidence_amount_target(tmp_path: Path) -> None:
+    """Softer signals like ``amount`` land in the medium-confidence bucket."""
+    df = pd.DataFrame(
+        {
+            "feature_a": list(range(50)),
+            "amount": [i * 10.0 for i in range(50)],
+        }
+    )
+    result = analyze_dataset(_csv(tmp_path, df))
+    assert result["target_hint"]["column"] == "amount"
+    assert result["target_hint"]["confidence"] == "medium"
+
+
+def test_field_ft2_year_column_stays_numeric(tmp_path: Path) -> None:
+    """``Yr Sold`` 2006-2010 must stay numeric, not get force-categorical.
+
+    The v0.6.1 "2 distinct values → categorical" heuristic was too
+    aggressive on small year ranges. v0.7 adds a year-name + plausible-
+    range escape hatch for temporal columns.
+    """
+    df = pd.DataFrame(
+        {
+            # Two-value year column — exactly the case the old
+            # heuristic would force-categorical pre-v0.7.
+            "Yr Sold": [2007, 2008] * 50,
+            "feature": list(range(100)),
+            "price": [i * 1000 + 50_000 for i in range(100)],
+        }
+    )
+    result = analyze_dataset(_csv(tmp_path, df))
+    yr = next(c for c in result["columns"] if c["name"] == "Yr Sold")
+    assert yr["type"] == "numeric"
+
+
+def test_field_ft2_two_value_non_year_still_categorical(tmp_path: Path) -> None:
+    """A column named ``flag`` with values 0/1 must STILL go categorical."""
+    df = pd.DataFrame(
+        {
+            "flag": [0, 1] * 50,
+            "target": [0, 1] * 50,
+        }
+    )
+    result = analyze_dataset(_csv(tmp_path, df))
+    flag = next(c for c in result["columns"] if c["name"] == "flag")
+    assert flag["type"] == "categorical"
+
+
+def test_field_ft2_year_in_name_but_implausible_range_falls_back(tmp_path: Path) -> None:
+    """A column with 'year' in the name but values like 5/10 isn't a year."""
+    df = pd.DataFrame(
+        {
+            "year_index": [5, 10] * 50,  # not a plausible year
+            "target": [0, 1] * 50,
+        }
+    )
+    result = analyze_dataset(_csv(tmp_path, df))
+    yi = next(c for c in result["columns"] if c["name"] == "year_index")
+    # Falls back to the binary-numeric → categorical rule.
+    assert yi["type"] == "categorical"
+
+
+def test_field_ft2_sparse_numeric_skips_iqr_outliers(tmp_path: Path) -> None:
+    """Ames ``Open Porch SF`` pattern: 70% of values are zero.
+
+    Pre-v0.7 the IQR outlier counter would tag every non-zero value as
+    an outlier (e.g. 459 outliers on a 1500-row column). The summariser
+    now flags the column as sparse and skips the outlier block.
+    """
+    rng = pd.Series([0] * 700 + [50, 100, 150, 200, 250] * 60).astype(float)
+    df = pd.DataFrame({"Open Porch SF": rng, "target": [0, 1] * 500})
+    result = analyze_dataset(_csv(tmp_path, df))
+    porch = next(c for c in result["columns"] if c["name"] == "Open Porch SF")
+    assert porch.get("sparse") is True
+    assert porch.get("outliers") is None
+    assert any("sparse" in w.lower() and "majority-zero" in w.lower() for w in result["warnings"])
+
+
+def test_field_ft2_non_sparse_numeric_keeps_outliers(tmp_path: Path) -> None:
+    """A real continuous numeric column must STILL get its outlier counts."""
+    rng = pd.Series(list(range(1, 101))).astype(float)
+    df = pd.DataFrame({"sqft": rng, "target": [0, 1] * 50})
+    result = analyze_dataset(_csv(tmp_path, df))
+    sqft = next(c for c in result["columns"] if c["name"] == "sqft")
+    assert sqft.get("sparse") is False
+    assert sqft["outliers"] is not None
+    assert "iqr_count" in sqft["outliers"]

@@ -45,6 +45,11 @@ def render_evaluation(console: Console, result: dict[str, Any]) -> None:
         console.print()
         console.print("[green]✓ No evaluation warnings.[/green]")
 
+    investigation = result.get("leakage_investigation")
+    if investigation:
+        console.print()
+        console.print(_leakage_evidence_panel(investigation))
+
 
 # --------------------------------------------------------------------------- #
 # Sections                                                                    #
@@ -289,3 +294,100 @@ def _format_number(value: float | int) -> str:
     if magnitude >= 0.0001:
         return f"{value:.4f}".rstrip("0").rstrip(".") or "0"
     return f"{value:.2e}"
+
+
+# --------------------------------------------------------------------------- #
+# Leakage investigation (v0.7.0)                                              #
+# --------------------------------------------------------------------------- #
+
+
+def _leakage_evidence_panel(investigation: dict[str, Any]) -> Panel:
+    """Render the deterministic leakage-evidence dict as a red-bordered panel.
+
+    Always rendered when the smell threshold fires — this is the
+    "facts" panel. The optional ``--llm`` narration is rendered
+    separately by :func:`render_leakage_narration`.
+    """
+    lines: list[str] = []
+    smell = investigation.get("suspicious_metric")
+    if smell:
+        lines.append(
+            f"[bold red]Suspicious metric:[/bold red] {smell.get('name')} = {smell.get('value')}"
+        )
+    candidates = investigation.get("candidate_leak_columns") or []
+    if candidates:
+        names = ", ".join(candidates)
+        lines.append(f"[bold]Candidate leak columns:[/bold] {names}")
+    else:
+        lines.append("[dim]No column correlates ≥ 0.99 with the target.[/dim]")
+
+    match_rate = investigation.get("perfect_match_rate")
+    if match_rate is not None:
+        rate_pct = match_rate * 100
+        colour = "red" if match_rate >= 0.95 else "yellow" if match_rate >= 0.5 else "dim"
+        lines.append(f"[{colour}]y_pred == y_true match rate:[/{colour}] {rate_pct:.1f}%")
+
+    correlations = investigation.get("target_feature_correlations") or []
+    if correlations:
+        lines.append("\n[bold]Top correlations with target:[/bold]")
+        for entry in correlations[:5]:
+            lines.append(
+                f"  • {entry['feature']:<30} r={entry['correlation']:+.4f} ({entry['method']})"
+            )
+
+    if not investigation.get("trustworthy_sample_size"):
+        lines.append(
+            f"\n[yellow]⚠ Sample size {investigation.get('row_count')} "
+            "is below the trustworthiness threshold.[/yellow]"
+        )
+
+    body = "\n".join(lines)
+    return Panel(
+        body,
+        title="🔬 Leakage investigation — evidence",
+        border_style="red",
+    )
+
+
+def render_leakage_narration(
+    console: Console,
+    narration: dict[str, Any],
+) -> None:
+    """Render the optional ``--llm`` leakage investigator output."""
+    verdict = narration.get("verdict", "cannot_determine")
+    confidence = narration.get("confidence", "cannot_determine")
+    verdict_colour = {
+        "leakage_likely": "bold red",
+        "leakage_uncertain": "yellow",
+        "score_legitimate": "green",
+        "cannot_determine": "dim",
+    }.get(verdict, "white")
+
+    lines: list[str] = []
+    lines.append(
+        f"[bold]Verdict:[/bold] [{verdict_colour}]{verdict}[/{verdict_colour}]   "
+        f"[dim]confidence: {confidence}[/dim]"
+    )
+    hypothesis = narration.get("primary_hypothesis", "").strip()
+    if hypothesis:
+        lines.append(f"\n[bold]Hypothesis:[/bold] {hypothesis}")
+
+    cited = narration.get("evidence_cited") or []
+    if cited:
+        lines.append("\n[bold]Evidence cited:[/bold]")
+        for e in cited:
+            lines.append(f"  • {e}")
+
+    checks = narration.get("recommended_checks") or []
+    if checks:
+        lines.append("\n[bold]Recommended manual checks:[/bold]")
+        for i, c in enumerate(checks, 1):
+            lines.append(f"  {i}. {c}")
+
+    console.print(
+        Panel(
+            "\n".join(lines).strip(),
+            title="🔍 Leakage investigator (Claude)",
+            border_style="magenta",
+        )
+    )

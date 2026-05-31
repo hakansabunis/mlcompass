@@ -144,7 +144,54 @@ def evaluate(
         "y_pred": y_pred_col,
         "y_prob": y_prob_col,
     }
+
+    # v0.7: when the leakage-smell threshold fired, automatically
+    # gather structured evidence about WHICH columns might be the
+    # source. This stays deterministic (no LLM); the optional
+    # ``--llm`` mode then hands the evidence to an investigator
+    # agent that narrates it under strict anti-hallucination rules.
+    smell = _detect_leakage_smell_metric(result, inferred)
+    if smell is not None:
+        from .leakage import detect_leakage
+
+        result["leakage_investigation"] = detect_leakage(
+            df,
+            y_true_col=y_true_col,
+            y_pred_col=y_pred_col,
+            y_prob_col=y_prob_col,
+            task=inferred,
+            suspicious_metric=smell,
+        )
+
     return result
+
+
+def _detect_leakage_smell_metric(
+    result: dict[str, Any],
+    task: str,
+) -> dict[str, Any] | None:
+    """Return ``{name, value}`` if the smell threshold fired, else ``None``.
+
+    Drives the auto-leakage-investigation hook above. We sniff the
+    ``warnings`` list rather than reach back into the threshold
+    constants so the policy stays in one place (the per-task
+    too-good-to-be-true helpers).
+    """
+    warnings = result.get("warnings") or []
+    metrics = result.get("metrics") or {}
+    smell_keywords = ("Suspiciously", "implausibly", "too good to be true")
+    if not any(any(kw.lower() in w.lower() for kw in smell_keywords) for w in warnings):
+        return None
+    if task == "regression":
+        return {"name": "r2", "value": metrics.get("r2")}
+    if task == "binary_classification":
+        # Pick AUC if present (more sensitive), otherwise accuracy.
+        if metrics.get("auc") is not None:
+            return {"name": "auc", "value": metrics.get("auc")}
+        return {"name": "accuracy", "value": metrics.get("accuracy")}
+    if task == "multiclass_classification":
+        return {"name": "accuracy", "value": metrics.get("accuracy")}
+    return None
 
 
 # --------------------------------------------------------------------------- #

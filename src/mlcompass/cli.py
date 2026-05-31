@@ -36,6 +36,7 @@ from .agents.audit import AuditAgentError, prioritize_findings
 from .agents.compare import CompareAgentError, hypothesize_comparison
 from .agents.deploy import DeployAgentError, advise_deployment
 from .agents.evaluate import EvaluateAgentError, interpret_evaluation
+from .agents.leakage_investigator import LeakageAgentError, investigate_leakage
 from .agents.monitor import MonitorAgentError, interpret_drift
 from .agents.optimize import OptimizeAgentError, strategize_optimize
 from .agents.watch import WatchAgentError, diagnose_findings
@@ -80,7 +81,11 @@ from .ui.audit import render_audit, render_audit_priorities
 from .ui.compare import render_compare, render_compare_hypothesis
 from .ui.config_edit import make_console_confirm, render_apply_summary
 from .ui.deploy import render_deployment, render_deployment_advice
-from .ui.evaluate import render_evaluation, render_evaluation_interpretation
+from .ui.evaluate import (
+    render_evaluation,
+    render_evaluation_interpretation,
+    render_leakage_narration,
+)
 from .ui.monitor import render_drift, render_drift_interpretation
 from .ui.optimize import render_optimize, render_optimize_strategy
 from .ui.status import render_status
@@ -951,10 +956,20 @@ def evaluate(
     render_evaluation(console, result)
 
     interpretation: dict[str, Any] | None = None
+    leakage_narration: dict[str, Any] | None = None
     if use_llm:
         interpretation = _maybe_interpret_evaluation(result, model=llm_model)
         if interpretation is not None:
             render_evaluation_interpretation(console, interpretation)
+        # v0.7: when evaluate auto-attached leakage evidence (smell
+        # threshold fired), narrate it with the anti-hallucination
+        # investigator agent.
+        if result.get("leakage_investigation"):
+            leakage_narration = _maybe_investigate_leakage(
+                result["leakage_investigation"], model=llm_model
+            )
+            if leakage_narration is not None:
+                render_leakage_narration(console, leakage_narration)
 
     if project is not None:
         _persist_evaluate_result(
@@ -963,6 +978,30 @@ def evaluate(
             result=result,
             interpretation=interpretation,
         )
+
+
+def _maybe_investigate_leakage(evidence: dict[str, Any], *, model: str) -> dict[str, Any] | None:
+    """Run the leakage investigator if an API key is available."""
+    if not _has_api_key():
+        console.print(
+            "\n[yellow]⚠ Leakage smell fired but ANTHROPIC_API_KEY is unset; "
+            "skipping investigator narration. The evidence panel above is "
+            "still the deterministic ground truth.[/yellow]"
+        )
+        return None
+    try:
+        with console.status("[cyan]Asking the leakage investigator...[/cyan]", spinner="dots"):
+            return _leakage_investigator_callable(evidence, model=model)
+    except LeakageAgentError as exc:
+        console.print(f"\n[red]✗ Leakage investigator returned malformed response:[/red] {exc}")
+        return None
+
+
+def _default_leakage_investigator(evidence: dict[str, Any], *, model: str) -> dict[str, Any]:
+    return investigate_leakage(evidence, model=model)
+
+
+_leakage_investigator_callable: Callable[..., dict[str, Any]] = _default_leakage_investigator
 
 
 def _maybe_interpret_evaluation(result: dict[str, Any], *, model: str) -> dict[str, Any] | None:

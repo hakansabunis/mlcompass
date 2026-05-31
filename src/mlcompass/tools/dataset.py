@@ -18,23 +18,46 @@ import pandas as pd
 SUPPORTED_FORMATS = {".csv", ".parquet", ".xlsx", ".xls", ".jsonl", ".json"}
 
 # Column-name heuristics for target detection. Lower-case match.
+#
+# The lists were classification-only through v0.6.1 — the field-test
+# on Ames House Prices surfaced that the canonical regression target
+# names (``saleprice``, ``price``, …) were missing, so the analyzer
+# couldn't auto-detect even an obvious regression target. v0.7
+# extends both lists with the common regression-target conventions.
 TARGET_NAME_HINTS: dict[str, list[str]] = {
     "high_confidence": [
+        # Generic
         "target",
         "label",
         "y",
+        # Classification
         "churn",
         "fraud",
         "default",
         "is_fraud",
         "is_churn",
+        # Regression — common Kaggle / public-dataset spellings
+        "saleprice",
+        "sale_price",
+        "price",
+        "saleamount",
+        "sale_amount",
     ],
     "medium_confidence": [
+        # Classification
         "outcome",
         "result",
         "class",
         "category",
         "response",
+        # Regression — softer signals
+        "amount",
+        "value",
+        "score",
+        "revenue",
+        "cost",
+        "salary",
+        "rating",
     ],
 }
 
@@ -144,7 +167,40 @@ def analyze_dataset(
 # --------------------------------------------------------------------------- #
 
 
-def _classify_column(series: pd.Series) -> str:
+_YEAR_NAME_HINTS = ("year", "yr", "_yr_", "_year_")
+# The plausible-year range we expect human-recorded year values to
+# fall inside. Values *outside* this band are passed through unchanged
+# but caught later by the data-quality warning.
+_YEAR_VALID_RANGE = (1800.0, 2200.0)
+
+
+def _looks_like_year_column(name: str, series: pd.Series) -> bool:
+    """True if the column's NAME suggests a year AND its values look year-shaped.
+
+    Used by ``_classify_column`` to override the otherwise-categorical
+    "2 distinct values" rule for the Ames ``Yr Sold`` (2006-2010)
+    pattern — small year ranges are still ordered + temporal, not
+    nominal categories.
+    """
+    lower = name.lower()
+    if not any(h in lower for h in _YEAR_NAME_HINTS):
+        return False
+    non_null = series.dropna()
+    if len(non_null) == 0:
+        return False
+    try:
+        nmin = float(non_null.min())
+    except (TypeError, ValueError):
+        return False
+    lo, hi = _YEAR_VALID_RANGE
+    # Accept if the column's minimum value lands in the plausible
+    # range — Ames has `Garage Yr Blt` max=2207 (data error) but the
+    # bulk is fine, and we only care that this is *temporal*, not
+    # that every value is sane.
+    return nmin >= lo and nmin <= hi
+
+
+def _classify_column(series: pd.Series, *, name: str = "") -> str:
     """Return one of: ``numeric``, ``categorical``, ``datetime``, ``boolean``, ``text``."""
     if pd.api.types.is_bool_dtype(series):
         return "boolean"
@@ -156,8 +212,18 @@ def _classify_column(series: pd.Series) -> str:
         # pattern). Treat them as categorical so the summariser doesn't
         # report the nonsense "1142 IQR outliers" you get when you run
         # a quantile-based outlier detector on a 0/1 vector.
+        #
+        # FT#2 follow-up: Year columns (``Yr Sold``, ``Year Built``)
+        # often have only a handful of distinct integer values too,
+        # but they're ordered temporal data — not nominal categories.
+        # If the name matches our year-hint patterns AND the values
+        # land in the plausible year range, keep them numeric.
         non_null = series.dropna()
-        if len(non_null) > 0 and non_null.nunique() == 2:
+        if (
+            len(non_null) > 0
+            and non_null.nunique() == 2
+            and not _looks_like_year_column(name, series)
+        ):
             return "categorical"
         return "numeric"
 
@@ -213,7 +279,7 @@ def _looks_numeric_with_dirty_strings(series: pd.Series) -> bool:
 def _analyze_column(df: pd.DataFrame, col: str) -> dict[str, Any]:
     """Analyze a single column and return a typed summary dict."""
     s = df[col]
-    col_type = _classify_column(s)
+    col_type = _classify_column(s, name=col)
 
     base: dict[str, Any] = {
         "name": col,
@@ -238,7 +304,16 @@ def _analyze_column(df: pd.DataFrame, col: str) -> dict[str, Any]:
 
 
 def _summarize_numeric(s: pd.Series) -> dict[str, Any]:
-    """Numeric column: descriptive stats + IQR and Z-score outlier counts."""
+    """Numeric column: descriptive stats + IQR and Z-score outlier counts.
+
+    FT#2 follow-up: heavily zero-dominated columns (Ames ``Open Porch SF``,
+    ``Enclosed Porch``, …) trigger meaningless IQR outlier counts —
+    the quartile bands collapse around zero and every non-zero value
+    falls "outside". When >50% of values are exactly zero we tag the
+    column as ``sparse`` and skip the IQR / Z-score counters; the
+    advisor reader gets a clean ``stats`` block instead of misleading
+    "459 IQR outliers" reports.
+    """
     s_clean = s.dropna()
     if len(s_clean) == 0:
         return {"stats": None, "outliers": None}
@@ -253,6 +328,15 @@ def _summarize_numeric(s: pd.Series) -> dict[str, Any]:
         "q50": float(q[0.5]),
         "q75": float(q[0.75]),
     }
+
+    zero_ratio = float((s_clean == 0).mean())
+    if zero_ratio > 0.5:
+        return {
+            "stats": stats,
+            "outliers": None,
+            "sparse": True,
+            "zero_ratio": zero_ratio,
+        }
 
     # IQR outliers
     iqr = q[0.75] - q[0.25]
@@ -271,6 +355,8 @@ def _summarize_numeric(s: pd.Series) -> dict[str, Any]:
     return {
         "stats": stats,
         "outliers": {"iqr_count": iqr_count, "z_score_count": z_count},
+        "sparse": False,
+        "zero_ratio": zero_ratio,
     }
 
 
@@ -486,6 +572,22 @@ def _generate_warnings(
             f"{len(id_like)} column(s) look like unique-per-row "
             f"identifiers ({names}{suffix}); drop before training so "
             "the model doesn't memorise row IDs."
+        )
+
+    # FT#2 follow-up: numeric columns where >50% of values are zero
+    # are sparse — Ames ``Open Porch SF``, ``Pool Area``, …. Treating
+    # them like normal numerics gives misleading IQR outlier counts;
+    # the right move is to either binarise (present / absent) or use a
+    # zero-inflated model. Surface this so the advisor can advise.
+    sparse_numeric = [c for c in columns if c["type"] == "numeric" and c.get("sparse")]
+    if sparse_numeric:
+        names = ", ".join(c["name"] for c in sparse_numeric[:5])
+        suffix = "..." if len(sparse_numeric) > 5 else ""
+        warnings.append(
+            f"{len(sparse_numeric)} numeric column(s) are sparse "
+            f"(majority-zero) ({names}{suffix}); consider binarising "
+            "(presence/absence) or using a zero-inflated model — "
+            "outlier statistics are not meaningful here."
         )
 
     if target_hint.get("confidence") == "none":
