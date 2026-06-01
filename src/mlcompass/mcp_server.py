@@ -133,12 +133,19 @@ def _persist_to_ledger(
     summary: str,
     reasoning: str = "",
     log_extra: dict[str, Any] | None = None,
+    state_updates: dict[str, Any] | None = None,
 ) -> None:
     """Append a decision + advice.log entry to the active project, if any.
 
-    All exceptions are swallowed deliberately. The ledger is a "nice
-    to have" — never the reason a tool fails. The actual analysis the
-    user asked for has already happened by the time this is called.
+    Optional ``state_updates`` writes through ``ProjectContext.write_context``
+    so the MCP layer keeps the same active-state fields (``project_type``,
+    ``target_column``, ``active_dataset``) in sync that the CLI commands
+    have always maintained. Field Test #5 surfaced that pre-v0.7.3 MCP
+    tools left these fields ``null`` even after a full ``advise`` →
+    ``evaluate`` pass, breaking parity between the CLI and MCP surfaces.
+
+    All writes are best-effort. The ledger is a "nice to have" — never
+    the reason a tool fails.
     """
     try:
         project = ProjectContext.load(search_from=search_from)
@@ -147,8 +154,6 @@ def _persist_to_ledger(
     except Exception:  # noqa: BLE001 — defensive
         return
 
-    # Both writes are best-effort — the ledger is a "nice to have"
-    # and never the reason a tool fails. Suppress everything.
     with contextlib.suppress(Exception):
         project.append_decision(
             command=command,
@@ -167,6 +172,14 @@ def _persist_to_ledger(
             entry.update(log_extra)
         with (project.path / "advice.log").open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(entry, default=str) + "\n")
+
+    if state_updates:
+        with contextlib.suppress(Exception):
+            # Drop ``None`` values so a missing target_hint doesn't
+            # blank out a previously-set target_column.
+            cleaned = {k: v for k, v in state_updates.items() if v is not None}
+            if cleaned:
+                project.write_context(cleaned)
 
 
 def _path_dir(path: str) -> str:
@@ -284,6 +297,21 @@ def mlcompass_status(
             if isinstance(command, str):
                 counts[command] += 1
 
+    # v0.7.3: fresh-project hint. When the only thing the ledger
+    # remembers is the init itself, surface a soft note so users who
+    # ran a few MCP tools BEFORE calling init don't get confused that
+    # their work isn't reflected. The tools didn't write to the
+    # ledger then (no project to write to), and that's expected
+    # behaviour — but the hint makes it discoverable.
+    hints: list[str] = []
+    if len(decisions) == 1 and decisions[0].get("command") == "init":
+        hints.append(
+            "Only the init decision is on file. If you called MCP tools "
+            "in this session BEFORE running mlcompass_init, those "
+            "calls weren't recorded — re-run them now and they'll show "
+            "up here."
+        )
+
     return {
         "ok": True,
         "project": project.project_meta,
@@ -297,6 +325,7 @@ def mlcompass_status(
         "command_counts": dict(counts),
         "decisions": decisions[-recent_decisions:] if decisions else [],
         "total_decisions": len(decisions),
+        "hints": hints,
     }
 
 
@@ -344,6 +373,20 @@ def mlcompass_advise(
         f"target={target_hint.get('column', 'auto')} "
         f"({shape.get('rows', '?')}×{shape.get('cols', '?')})"
     )
+    # v0.7.3: persist active-state fields so `mlcompass_status` lines
+    # up with what the CLI shows.
+    dataset_fingerprint: str | None = None
+    with contextlib.suppress(Exception):
+        proj = ProjectContext.load(search_from=_path_dir(dataset_path))
+        dataset_fingerprint = proj.register_dataset(
+            dataset_path,
+            {
+                "target": target_hint.get("column"),
+                "task": task_hint.get("type"),
+                "shape": shape,
+            },
+        )
+
     _persist_to_ledger(
         search_from=_path_dir(dataset_path),
         command="advise",
@@ -354,6 +397,15 @@ def mlcompass_advise(
             "target": target_hint.get("column"),
             "task": task_hint.get("type"),
             "via": "mcp",
+        },
+        state_updates={
+            "project_type": task_hint.get("type"),
+            "target_column": target_hint.get("column"),
+            "active_dataset": (
+                f"datasets/{dataset_fingerprint}.json"
+                if dataset_fingerprint
+                else dataset_path
+            ),
         },
     )
     return cast(dict[str, Any], _json_safe(result))
@@ -506,12 +558,21 @@ def mlcompass_compare(
     else:
         verdict_label = str(verdict) if verdict else "mixed"
     summary = f"Compare: {run_a} vs {run_b} ⇒ {verdict_label}"
+    # Pick the winning run as the new ``current_run`` so the next
+    # status invocation reflects "you're working on B now".
+    winning_run = None
+    if isinstance(verdict, dict):
+        if verdict.get("winner") == "A":
+            winning_run = run_a
+        elif verdict.get("winner") == "B":
+            winning_run = run_b
     _persist_to_ledger(
         search_from=project_path or ".",
         command="compare",
         summary=summary,
         reasoning=f"run_a={run_a}; run_b={run_b}; via=mcp",
         log_extra={"run_a": run_a, "run_b": run_b, "via": "mcp"},
+        state_updates={"current_run": winning_run} if winning_run else None,
     )
     return cast(dict[str, Any], _json_safe(comparison))
 

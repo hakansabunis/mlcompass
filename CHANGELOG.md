@@ -5,6 +5,70 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.7.3] — 2026-06-01
+
+**Field-test patch release.** A second end-to-end pipeline run through
+Claude Code's MCP integration on the Kaggle Insurance Charges dataset
+surfaced one CLI vs MCP parity gap, one missing target name, and a
+small UX confusion that the previous patches didn't catch.
+
+### Fixed
+- **#FT5-3 — MCP state fields stay null**. Pre-v0.7.3 the MCP tools
+  appended to `.mlcompass/context.json` `decisions[]` and to
+  `advice.log`, but the active-state fields (`project_type`,
+  `target_column`, `active_dataset`) were left null even after a
+  full advise pass through MCP. The CLI commands have always
+  populated those fields; this restores parity. `_persist_to_ledger`
+  grows a `state_updates` parameter that calls
+  `ProjectContext.write_context`, dropping `None` values so a
+  missing target doesn't blank out a previously-set one. `advise`
+  fingerprints + registers the dataset, then writes back
+  `project_type` / `target_column` / `active_dataset` in one go.
+  `compare` writes the winning run as the new `current_run`.
+
+### Improved — `advise` target detection (Field Test #5)
+- **Insurance / finance regression names** join the high-confidence
+  list: `charges` (Kaggle Insurance Charges), `total_charges`,
+  `medical_cost`. Plus four medium-confidence finance signals:
+  `fee`, `tuition`, `expenses`, `arpu`, `spend`. Picked specifically
+  because they cover canonical Kaggle / fintech / healthcare
+  regression targets that the v0.7 / v0.7.1 lists missed.
+
+### Improved — UX hints (Field Test #5)
+- **#FT5-1 — Pre-init activity hint**. `status` now surfaces a soft
+  hint when the ledger contains nothing but the init decision —
+  that's the signature of a user who ran MCP tools BEFORE calling
+  `mlcompass_init`, which silently skipped persistence (by design,
+  per v0.7.2). The hint reads: "If you called MCP tools in this
+  session BEFORE running mlcompass_init, those calls weren't
+  recorded — re-run them now and they'll show up here." Goes silent
+  the moment any non-init decision lands in the ledger.
+
+### Tests
+- 5 new regression tests:
+  - 2 dataset target-name (Insurance `charges` high-confidence,
+    `fee` medium-confidence).
+  - 3 MCP integration tests: advise writes the state fields,
+    pre-init hint fires for fresh projects, pre-init hint goes
+    silent after the first non-init decision.
+- Full suite: **533 passing**, 2 skipped (was 528 + 5 new).
+- `ruff check` / `ruff format --check` clean.
+- `mypy --strict` clean across 51 source files.
+
+### Verification on the live Insurance Charges pipeline
+After this patch, the Field Test #5 demo path through Claude Code's
+MCP succeeds end-to-end **and** the resulting status reflects the
+session faithfully:
+- `mlcompass_advise` on `insurance.csv` auto-detects `charges` as
+  the target with high confidence — no manual `target=` parameter
+  needed.
+- After a single advise pass, `mlcompass_status` shows
+  `target_column = "charges"`, `project_type = "regression"`, and
+  `active_dataset` pointing at the registered dataset file.
+- A fresh-project status surfaces the pre-init hint so users who
+  called MCP tools before init aren't confused that their work
+  isn't reflected.
+
 ## [0.7.2] — 2026-05-31
 
 **Field-test patch release.** A full 8-tool end-to-end pipeline run

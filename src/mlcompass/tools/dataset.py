@@ -67,12 +67,18 @@ TARGET_NAME_HINTS: dict[str, list[str]] = {
         "sentiment",
         "intent",
         "language",
-        # Regression — common Kaggle / public-dataset spellings
+        # Regression — common Kaggle / public-dataset spellings.
+        # ``charges`` was added in v0.7.3 after Field Test #5 on the
+        # Kaggle Insurance Charges dataset surfaced that this canonical
+        # healthcare-cost target name was missing from the list.
         "saleprice",
         "sale_price",
         "price",
         "saleamount",
         "sale_amount",
+        "charges",
+        "total_charges",
+        "medical_cost",
     ],
     "medium_confidence": [
         # Classification — softer signals
@@ -92,6 +98,12 @@ TARGET_NAME_HINTS: dict[str, list[str]] = {
         "cost",
         "salary",
         "rating",
+        # v0.7.3: more finance / healthcare-style regression targets.
+        "fee",
+        "tuition",
+        "expenses",
+        "arpu",
+        "spend",
     ],
 }
 

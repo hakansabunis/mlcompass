@@ -625,3 +625,44 @@ def test_field_ft4_digit_target_detected_for_mnist_style(tmp_path: Path) -> None
     result = analyze_dataset(_csv(tmp_path, df))
     assert result["target_hint"]["column"] == "digit"
     assert result["target_hint"]["confidence"] == "high"
+
+
+# --------------------------------------------------------------------------- #
+# Field-test regressions #5 (v0.7.3 — Insurance Charges)                      #
+# --------------------------------------------------------------------------- #
+
+
+def test_field_ft5_charges_target_detected_high_confidence(tmp_path: Path) -> None:
+    """Kaggle Insurance Charges ``charges`` regression target must be high-confidence.
+
+    Pre-v0.7.3 the regression-target list shipped with ``saleprice``,
+    ``sale_price``, ``price`` and a handful of softer medium signals,
+    but the canonical healthcare-cost target ``charges`` was missing.
+    Field Test #5 on the live Insurance Charges CSV via Claude Code
+    MCP surfaced this gap.
+    """
+    df = pd.DataFrame(
+        {
+            "age": list(range(20, 80)),
+            "bmi": [22.5 + i * 0.1 for i in range(60)],
+            "smoker": ["no", "yes"] * 30,
+            "charges": [1000 + i * 250.0 for i in range(60)],
+        }
+    )
+    result = analyze_dataset(_csv(tmp_path, df))
+    assert result["target_hint"]["column"] == "charges"
+    assert result["target_hint"]["confidence"] == "high"
+
+
+def test_field_ft5_fee_target_lands_in_medium(tmp_path: Path) -> None:
+    """``fee`` is a softer finance signal — medium confidence."""
+    df = pd.DataFrame(
+        {
+            "user_id": list(range(40)),
+            "sessions": list(range(40)),
+            "fee": [i * 5.5 for i in range(40)],
+        }
+    )
+    result = analyze_dataset(_csv(tmp_path, df))
+    assert result["target_hint"]["column"] == "fee"
+    assert result["target_hint"]["confidence"] == "medium"

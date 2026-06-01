@@ -473,3 +473,58 @@ def test_field_ft4_full_pipeline_status_reflects_all_tools(tmp_path: Path) -> No
     assert counts.get("advise", 0) >= 1
     assert counts.get("audit", 0) >= 1
     assert status["total_decisions"] >= 3
+
+
+# --------------------------------------------------------------------------- #
+# v0.7.3 — Field Test #5 regressions                                          #
+# --------------------------------------------------------------------------- #
+
+
+def test_field_ft5_advise_writes_state_fields(tmp_path: Path) -> None:
+    """v0.7.3 #FT5-3: MCP advise must populate project_type / target_column /
+    active_dataset, not just decisions[]. Pre-v0.7.3 these stayed null,
+    which Field Test #5 surfaced as a CLI vs MCP parity gap.
+    """
+    import pandas as pd
+
+    mlcompass_init("ft5-state-check", parent_dir=str(tmp_path))
+
+    csv = tmp_path / "data.csv"
+    pd.DataFrame({"age": list(range(50)), "churn": [0, 1] * 25}).to_csv(csv, index=False)
+
+    mlcompass_advise(str(csv))
+
+    status = mlcompass_status(project_path=str(tmp_path))
+    state = status["state"]
+    # Active-state fields must be populated after a single MCP advise.
+    assert state["target_column"] == "churn"
+    assert state["project_type"] in {"binary_classification", "multiclass_classification"}
+    assert state["active_dataset"] is not None
+    assert "datasets/" in state["active_dataset"] or str(csv) in state["active_dataset"]
+
+
+def test_field_ft5_pre_init_hint_fires_when_only_init_is_logged(tmp_path: Path) -> None:
+    """v0.7.3 #FT5-1: status surfaces a soft hint when the ledger holds
+    only the init decision — that signals the user may have called MCP
+    tools before mlcompass_init, which silently skipped persistence.
+    """
+    mlcompass_init("ft5-hint", parent_dir=str(tmp_path))
+    status = mlcompass_status(project_path=str(tmp_path))
+
+    hints = status.get("hints") or []
+    assert any("before running mlcompass_init" in h.lower() for h in hints), hints
+
+
+def test_field_ft5_pre_init_hint_silent_after_other_decisions(tmp_path: Path) -> None:
+    """The hint must NOT fire once any non-init decision is on the ledger."""
+    import pandas as pd
+
+    mlcompass_init("ft5-hint-silent", parent_dir=str(tmp_path))
+
+    csv = tmp_path / "data.csv"
+    pd.DataFrame({"x": [1, 2, 3, 4], "churn": [0, 1, 0, 1]}).to_csv(csv, index=False)
+    mlcompass_advise(str(csv))
+
+    status = mlcompass_status(project_path=str(tmp_path))
+    hints = status.get("hints") or []
+    assert not any("before running mlcompass_init" in h.lower() for h in hints)
