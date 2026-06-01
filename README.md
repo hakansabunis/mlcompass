@@ -27,11 +27,14 @@ Each command writes to and reads from a shared project context
 knows your dataset, your model choice, your training history, and your
 evaluation results.
 
-## What's in v0.6
+## What's in v0.7
 
-Eleven commands — every stage of the ML pipeline, post-deploy drift
-detection, hyperparameter optimization, a status inspector, and a
-self-driving agent with cross-session memory.
+Eleven commands cover every stage of the ML pipeline. v0.7 adds
+**automatic leakage investigation** with an anti-hallucination
+contract — when `evaluate` sees a suspiciously perfect metric, it
+gathers structured evidence about which columns might be the source
+and (with `--llm`) hands it to a Claude agent that's forbidden from
+inventing column names or proposing code patches.
 
 | Command    | When you run it                          | What you get                                                  | Status |
 | ---------- | ---------------------------------------- | ------------------------------------------------------------- | :----: |
@@ -40,7 +43,7 @@ self-driving agent with cross-session memory.
 | `audit`    | Before you press train                   | Static analysis of training script (seed, val, optimizer, …)  | ✅ v0.2 |
 | `watch`    | While training runs                      | Plateau / overfit / NaN / divergence (plain log / TB / W&B)   | ✅ v0.2 |
 | `compare`  | After several runs                       | Side-by-side config + final-metric diff with verdict          | ✅ v0.2 |
-| `evaluate` | Training done                            | Metrics, threshold sweep, confusion matrix, leakage-smell     | ✅ v0.3 |
+| `evaluate` | Training done                            | Metrics, threshold sweep, confusion matrix, **leakage investigation** | ✅ v0.3 / **v0.7 panel** |
 | `deploy`   | Going to production                      | Model + deps + target-specific checks + production checklist  | ✅ v0.3 |
 | `status`   | Any time                                 | Project metadata, active state, command activity, decisions   | ✅ v0.3 |
 | `agent`    | "Just do it for me"                      | LLM-driven router across the other tools, with memory         | ✅ v0.5 |
@@ -52,6 +55,11 @@ deterministic default path and offers an opt-in `--llm` flag that adds
 a Claude-driven interpretation step on top. The `agent` command is
 the inverse: LLM-first by design, with the other tools as its hands —
 and now remembers across runs via per-project memory.
+
+**Battle-tested**: v0.6 → v0.7.2 ships **5 field-test patches** that
+closed bugs surfaced by real Kaggle datasets (Telco Churn, Ames House
+Prices, Titanic, Penguins). Each release went through a live dry run
+before shipping — see [CHANGELOG.md](CHANGELOG.md) for the full log.
 
 ## Install
 
@@ -105,6 +113,43 @@ on macOS, `%APPDATA%\Claude\claude_desktop_config.json` on Windows):
   }
 }
 ```
+
+**Claude Code** (preferred: a project-local `.mcp.json` so the
+server only loads in the project that needs it):
+
+```json
+{
+  "mcpServers": {
+    "mlcompass": {
+      "command": "C:\\path\\to\\your\\project\\.venv\\Scripts\\mlcompass-mcp.exe"
+    }
+  }
+}
+```
+
+On the first run Claude Code asks whether to trust the MCP server —
+pick "Use this MCP server" (the narrowest option). Verify with the
+`/mcp` slash command; you should see `mlcompass` listed with all
+eight tools available.
+
+### Optional: project-local slash commands
+
+Drop a few `.md` files under `.claude/commands/` and the same MCP
+tools become one-keystroke commands:
+
+```bash
+mkdir -p .claude/commands
+cat > .claude/commands/advise.md <<'EOF'
+Use the mlcompass_advise tool to analyze the dataset at: $ARGUMENTS
+Summarize the result for the user, calling out target detection,
+NaN warnings, and the most important data-quality issues.
+EOF
+```
+
+Now in Claude Code you can type `/advise data.csv` and the assistant
+fires the tool with the right argument. (Custom slash names that
+collide with the tool name can route to the MCP tool browser instead;
+when that happens just describe the call in natural language.)
 
 Restart the client and the eight tools appear:
 
@@ -342,6 +387,53 @@ Config differences
 ⚖️ Mixed result: A wins 1, B wins 2, 0 tie(s).
 ```
 
+## Example — `evaluate` with automatic leakage investigation (v0.7)
+
+When `evaluate` sees a metric that looks too good to be true (AUC >
+0.995, accuracy > 0.99, or R² > 0.999), it doesn't just warn — it
+runs a **deterministic investigator** that gathers structured
+evidence about which columns might be the source:
+
+```bash
+mlcompass evaluate predictions.csv
+```
+
+```
+⚠ Warnings
+  • Suspiciously high R² (1.0000). On real-world data this almost always
+    means data leakage (target value present in features), train/test
+    contamination, or that the predictions table was scored on the
+    training set.
+
+┌──── 🔬 Leakage investigation — evidence ────┐
+│ Suspicious metric: r2 = 1.0                 │
+│ Candidate leak columns: log_price           │
+│ y_pred == y_true match rate: 0.9%           │
+│                                             │
+│ Top correlations with target:               │
+│   • log_price        r=+1.0000 (spearman)   │
+│   • overall_qual     r=+0.8088 (spearman)   │
+│   • sqft             r=+0.7233 (spearman)   │
+└─────────────────────────────────────────────┘
+```
+
+The panel is **always free of charge** — no flag needed, no LLM
+involved. With `--llm`, a second panel narrates the evidence under a
+strict **anti-hallucination contract**: the agent may only cite items
+present in the evidence dict, must say `cannot_determine` rather than
+speculate, and is forbidden from proposing code patches (only manual
+checks). **Facts → narration**, not the other way around.
+
+What gets caught:
+- **Exact label copy** — a feature whose Pearson correlation with
+  the target is ≥ 0.99.
+- **Monotone leaks** (`log(target)`, `sqrt(target)`, …) — Pearson sits
+  at ~0.94 but Spearman = 1.0; the detector reports
+  `max(|Pearson|, |Spearman|)` so the leak doesn't slip past the
+  threshold.
+- **Perfect-match predictions** — when `y_pred == y_true` ≥ 95% on a
+  non-trivial task, that's a smoking gun for train/test contamination.
+
 ## Why mlcompass
 
 The ML ecosystem already has great tools — but each owns one slice of
@@ -416,6 +508,8 @@ run `deploy`, every earlier decision is still in memory.
 | **Faz 6 (v0.4)**     | MCP server — `mlcompass-mcp`          | ✅ Shipped      |
 | **Faz 7 (v0.5)**     | `agent` — self-driving (api + claude-code backends) | ✅ Shipped |
 | **Faz 8 (v0.6)**     | `monitor` + `optimize` + agent memory   | ✅ Shipped      |
+| **Faz 9 (v0.7)**     | Automatic leakage investigation + anti-hallucination contract | ✅ Shipped |
+| **v0.7.1 — v0.7.2**  | Field-test patches (Titanic + Penguins)  | ✅ Shipped      |
 
 See [CHANGELOG.md](CHANGELOG.md) for the detailed log and
 [ARCHITECTURE.md](ARCHITECTURE.md) for the design.
