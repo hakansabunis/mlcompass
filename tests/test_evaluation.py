@@ -339,3 +339,58 @@ def test_task_override_forces_regression() -> None:
     result = evaluate(df, task="regression")
     assert result["task"] == "regression"
     assert "mae" in result["metrics"]
+
+
+# --------------------------------------------------------------------------- #
+# Field Test #4 — _infer_task multiclass detection                            #
+# --------------------------------------------------------------------------- #
+
+
+def test_field_ft4_multiclass_inferred_when_y_prob_present() -> None:
+    """Penguins regression: 3-label y_true + single ``y_prob`` column
+    used to be misclassified as binary because the y_prob heuristic
+    short-circuited the inference. v0.7.2: y_true.nunique() > 2 wins.
+    """
+    n = 60
+    df = pd.DataFrame(
+        {
+            "y_true": [0, 1, 2] * (n // 3),
+            "y_pred": [0, 1, 2] * (n // 3),
+            # Single "max softmax" column — looks like a binary y_prob but isn't.
+            "y_prob": [0.85, 0.90, 0.80] * (n // 3),
+        }
+    )
+    result = evaluate(df)
+    assert result["task"] == "multiclass_classification"
+    assert "metrics" in result
+
+
+def test_field_ft4_binary_still_inferred_when_two_labels_with_y_prob() -> None:
+    """Genuine binary classification with probability column must STILL
+    be inferred as binary — the v0.7.2 fix mustn't regress this path."""
+    rng = np.random.default_rng(0)
+    n = 100
+    y_true = rng.integers(0, 2, size=n)
+    df = pd.DataFrame(
+        {
+            "y_true": y_true,
+            "y_pred": y_true,
+            "y_prob": np.where(y_true == 1, 0.85, 0.15),
+        }
+    )
+    result = evaluate(df)
+    assert result["task"] == "binary_classification"
+    assert "auc" in result["metrics"]
+
+
+def test_field_ft4_multiclass_string_labels_with_y_prob() -> None:
+    """String labels + y_prob ⇒ multiclass too."""
+    df = pd.DataFrame(
+        {
+            "y_true": ["Adelie", "Chinstrap", "Gentoo"] * 20,
+            "y_pred": ["Adelie", "Chinstrap", "Gentoo"] * 20,
+            "y_prob": [0.95] * 60,
+        }
+    )
+    result = evaluate(df)
+    assert result["task"] == "multiclass_classification"

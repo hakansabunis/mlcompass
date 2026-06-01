@@ -7,7 +7,7 @@
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-🚧 **Alpha (v0.7.1)** — under active development. APIs may change before v1.0.
+🚧 **Alpha (v0.7.2)** — under active development. APIs may change before v1.0.
 
 ## What it does
 

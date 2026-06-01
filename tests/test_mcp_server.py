@@ -105,14 +105,17 @@ def test_init_returns_error_envelope_on_duplicate(tmp_path: Path) -> None:
 
 
 def test_status_fresh_project(tmp_path: Path) -> None:
+    """Just-initialised project carries a single init decision (v0.7.2)."""
     mlcompass_init("demo", parent_dir=str(tmp_path))
     result = mlcompass_status(project_path=str(tmp_path))
     assert result["ok"] is True
     assert result["project"]["name"] == "demo"
     assert result["state"]["project_type"] is None
-    assert result["command_counts"] == {}
-    assert result["decisions"] == []
-    assert result["total_decisions"] == 0
+    # v0.7.2: init writes itself into the ledger so the user sees the
+    # project creation in the activity / decisions panel right away.
+    assert result["command_counts"] == {"init": 1}
+    assert result["total_decisions"] == 1
+    assert result["decisions"][0]["command"] == "init"
 
 
 def test_status_aggregates_advice_log(tmp_path: Path) -> None:
@@ -124,7 +127,8 @@ def test_status_aggregates_advice_log(tmp_path: Path) -> None:
         fh.write(json.dumps({"timestamp": "2026-05-30T00:00:02Z", "command": "audit"}) + "\n")
 
     result = mlcompass_status(project_path=str(tmp_path))
-    assert result["command_counts"] == {"advise": 2, "audit": 1}
+    # init from mlcompass_init + 2 advise + 1 audit lines we added by hand.
+    assert result["command_counts"] == {"init": 1, "advise": 2, "audit": 1}
 
 
 def test_status_caps_recent_decisions(tmp_path: Path) -> None:
@@ -136,9 +140,10 @@ def test_status_caps_recent_decisions(tmp_path: Path) -> None:
         project.append_decision(command="advise", summary=f"decision-{i}")
 
     result = mlcompass_status(project_path=str(tmp_path), recent_decisions=3)
-    assert result["total_decisions"] == 8
+    # init + 8 manual decisions = 9 total.
+    assert result["total_decisions"] == 9
     assert len(result["decisions"]) == 3
-    # Last three should be the latest entries.
+    # Last three should be the latest manual additions.
     assert [d["summary"] for d in result["decisions"]] == [
         "decision-5",
         "decision-6",
@@ -386,3 +391,85 @@ def test_deploy_rejects_unknown_target(tmp_path: Path) -> None:
     result = mlcompass_deploy(str(model), target="azure-functions")
     assert result["ok"] is False
     assert "azure-functions" in result["message"].lower()
+
+
+# --------------------------------------------------------------------------- #
+# v0.7.2 — Field Test #4 regressions                                          #
+# --------------------------------------------------------------------------- #
+
+
+def test_field_ft4_mcp_advise_persists_to_project_ledger(tmp_path: Path) -> None:
+    """Field Test #4: MCP tools used to be stateless; they now write to
+    .mlcompass/context.json + advice.log when a project is active.
+    """
+    import json as _json
+
+    import pandas as pd
+
+    # 1. Create a project at tmp_path.
+    mlcompass_init("ft4-demo", parent_dir=str(tmp_path))
+
+    # 2. Run advise on a dataset under the project root.
+    csv = tmp_path / "data.csv"
+    pd.DataFrame({"age": list(range(20)), "churn": [0, 1] * 10}).to_csv(csv, index=False)
+
+    result = mlcompass_advise(str(csv))
+    assert "shape" in result  # tool itself still works
+
+    # 3. The project ledger now carries decisions + an advice.log line.
+    status = mlcompass_status(project_path=str(tmp_path))
+    assert status["ok"] is True
+    # Init + advise both recorded.
+    summaries = [d.get("summary", "") for d in status["decisions"]]
+    assert any("Project 'ft4-demo'" in s for s in summaries)
+    assert any("Advise:" in s for s in summaries)
+
+    # 4. advice.log is JSON-Lines with structured entries.
+    log_path = tmp_path / ".mlcompass" / "advice.log"
+    assert log_path.is_file()
+    lines = log_path.read_text(encoding="utf-8").strip().splitlines()
+    assert len(lines) >= 2
+    parsed = [_json.loads(line) for line in lines]
+    commands = {entry["command"] for entry in parsed}
+    assert {"init", "advise"}.issubset(commands)
+
+
+def test_field_ft4_mcp_advise_without_project_doesnt_crash(tmp_path: Path) -> None:
+    """No active project ⇒ MCP tools STILL work, they just don't persist."""
+    import pandas as pd
+
+    csv = tmp_path / "lonely.csv"
+    pd.DataFrame({"x": [1, 2, 3], "y": [0, 1, 0]}).to_csv(csv, index=False)
+
+    result = mlcompass_advise(str(csv))
+    assert "shape" in result
+    # No .mlcompass/ to find anywhere up the tree ⇒ no warnings/errors,
+    # just a clean analysis result.
+
+
+def test_field_ft4_full_pipeline_status_reflects_all_tools(tmp_path: Path) -> None:
+    """The big integration test: run advise + audit + status and watch the
+    ledger fill up the way Field Test #4 expected it to."""
+    import pandas as pd
+
+    mlcompass_init("ft4-pipeline", parent_dir=str(tmp_path))
+
+    # advise
+    csv = tmp_path / "preds.csv"
+    pd.DataFrame({"x": [1, 2, 3, 4], "target": [0, 1, 0, 1]}).to_csv(csv, index=False)
+    mlcompass_advise(str(csv))
+
+    # audit
+    script = tmp_path / "train.py"
+    script.write_text(
+        "import torch\nm = torch.nn.Linear(1, 1)\n",
+        encoding="utf-8",
+    )
+    mlcompass_audit(str(script))
+
+    status = mlcompass_status(project_path=str(tmp_path))
+    counts = status["command_counts"]
+    assert counts.get("init", 0) >= 1
+    assert counts.get("advise", 0) >= 1
+    assert counts.get("audit", 0) >= 1
+    assert status["total_decisions"] >= 3

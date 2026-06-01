@@ -214,19 +214,41 @@ def _infer_task(
     y_pred_col: str | None,
     y_prob_col: str | None,
 ) -> str:
-    """Heuristically pick the task from the values."""
+    """Heuristically pick the task from the values.
+
+    The ground truth column is authoritative: if ``y_true`` exposes more
+    than two distinct labels, the task is multiclass regardless of any
+    other signal. Pre-v0.7.2 the analyzer would short-circuit to
+    ``binary_classification`` whenever a ``y_prob`` column (even a
+    multiclass "max softmax probability" column) was present, which
+    surfaced as a hard error during Field Test #4 on the Penguins
+    dataset ("Binary task expected 2 distinct labels, got 3"). The
+    fix: rank the unique-label signal above the y_prob heuristic.
+    """
     y_true = df[y_true_col].dropna()
     if y_true.empty:
         raise EvaluationError(f"Column {y_true_col!r} has no non-null values.")
 
+    nunique = int(y_true.nunique())
+
+    # Numeric target with many distinct values ⇒ regression (unchanged).
+    if pd.api.types.is_numeric_dtype(y_true) and nunique > 10:
+        return "regression"
+
+    # Three or more distinct labels ⇒ multiclass classification.
+    # This takes precedence over the y_prob → binary heuristic because
+    # a single "y_prob" column on multiclass output is usually just the
+    # max softmax probability, which doesn't change the fact that
+    # there are more than two classes.
+    if nunique > 2:
+        return "multiclass_classification"
+
+    # Two distinct labels OR y_prob in [0, 1] ⇒ binary classification.
+    if nunique == 2:
+        return "binary_classification"
     if y_prob_col is not None and df[y_prob_col].dropna().between(0, 1, inclusive="both").all():
         return "binary_classification"
 
-    nunique = int(y_true.nunique())
-    if pd.api.types.is_numeric_dtype(y_true) and nunique > 10:
-        return "regression"
-    if nunique == 2:
-        return "binary_classification"
     return "multiclass_classification"
 
 

@@ -591,3 +591,37 @@ def test_field_ft3_existing_high_confidence_targets_still_work(tmp_path: Path) -
         result = analyze_dataset(_csv(tmp_path, df))
         assert result["target_hint"]["column"] == target, target
         assert result["target_hint"]["confidence"] == "high", target
+
+
+# --------------------------------------------------------------------------- #
+# Field-test regressions #4 (v0.7.2 — Penguins / multiclass target names)     #
+# --------------------------------------------------------------------------- #
+
+
+def test_field_ft4_species_target_detected_high_confidence(tmp_path: Path) -> None:
+    """Penguins ``species`` target must be auto-detected with high confidence."""
+    df = pd.DataFrame(
+        {
+            "bill_length_mm": [40.0 + i for i in range(60)],
+            "flipper_length_mm": [180 + i for i in range(60)],
+            "body_mass_g": [3500 + i * 10 for i in range(60)],
+            "species": ["Adelie", "Chinstrap", "Gentoo"] * 20,
+        }
+    )
+    result = analyze_dataset(_csv(tmp_path, df))
+    assert result["target_hint"]["column"] == "species"
+    assert result["target_hint"]["confidence"] == "high"
+
+
+def test_field_ft4_digit_target_detected_for_mnist_style(tmp_path: Path) -> None:
+    """MNIST-style ``digit`` target."""
+    df = pd.DataFrame(
+        {
+            "pixel_0": [0.1] * 100,
+            "pixel_1": [0.2] * 100,
+            "digit": list(range(10)) * 10,
+        }
+    )
+    result = analyze_dataset(_csv(tmp_path, df))
+    assert result["target_hint"]["column"] == "digit"
+    assert result["target_hint"]["confidence"] == "high"

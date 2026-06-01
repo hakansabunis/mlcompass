@@ -5,6 +5,69 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.7.2] — 2026-05-31
+
+**Field-test patch release.** A full 8-tool end-to-end pipeline run
+from Claude Code's MCP integration on the Palmer Penguins dataset
+(via `mlcompass-mcp`) surfaced two real bugs and one target-name
+gap. This release closes all three.
+
+### Fixed
+- **#FT4-1 — multiclass evaluate binary fallback** (`tools/evaluation.py`).
+  Pre-v0.7.2 `_infer_task` short-circuited to `binary_classification`
+  the moment a `y_prob` column was present, even when `y_true` had
+  3+ distinct labels. On Penguins, this surfaced as a hard error:
+  `Binary task expected 2 distinct labels, got 3`. The fix: rank
+  `y_true.nunique() > 2 → multiclass` above the y_prob heuristic.
+  Numeric binary 0/1 with a probability column still infers binary
+  (regression guard).
+- **#FT4-2 — MCP tools stateless** (`mcp_server.py`). The CLI commands
+  have always written to `.mlcompass/context.json` and `advice.log`,
+  but the MCP tools didn't — so `mlcompass_status` came back empty
+  even after a full pipeline run through MCP. Now `init`, `advise`,
+  `audit`, `watch`, `compare`, `evaluate`, and `deploy` all append
+  a structured decision entry + an advice.log line when an active
+  project is found. Missing project ⇒ silent skip (no crash). Every
+  ledger write is best-effort via `contextlib.suppress`, so a write
+  failure can never cascade into a tool-call failure.
+
+### Improved — `advise` target detection (Field Test #4)
+- **Penguins / multiclass classification names** join the high-
+  confidence list: `species`, `class_label`, `category_label`,
+  `digit`, `genre`, `sentiment`, `intent`, `language`. Picked
+  specifically because they cover the canonical multiclass labels
+  across image / NLP / biology Kaggle competitions (Penguins, MNIST,
+  movie genres, sentiment analysis, intent classification, language
+  detection).
+
+### Tests
+- 8 new regression tests:
+  - 3 `_infer_task` multiclass-with-y_prob path (Penguins, string
+    labels, binary regression guard).
+  - 2 new target-name regressions (Penguins `species`, MNIST `digit`).
+  - 3 MCP persistence integration tests: `advise` writes decisions,
+    no-project silent skip, full pipeline (`advise` + `audit`)
+    populates `status` correctly.
+- Three existing `test_status_*` tests updated to expect the v0.7.2
+  init-decision marker that `mlcompass_init` now appends.
+- `mlcompass_compare` summary helper hardened against string-vs-dict
+  verdict shapes (caught by the existing compare test).
+- Full suite: **528 passing**, 2 skipped (was 520 + 8 new).
+- `ruff check` / `ruff format --check` clean.
+- `mypy --strict` clean across **51** source files.
+
+### Verification on the live Penguins pipeline
+After this patch, the Field Test #4 demo path through Claude Code's
+MCP now succeeds at every step:
+- `mlcompass_evaluate` on `predictions.csv` (Penguins multiclass +
+  `y_prob` column) infers multiclass automatically — no `task=`
+  parameter needed.
+- `mlcompass_status` reflects every MCP tool call made during the
+  session: `init`, `advise`, `audit`, `watch`, `compare`, `evaluate`,
+  `deploy` all show up in `command_counts` and `decisions`.
+- `mlcompass_advise` on a dataset with a `species` column auto-
+  detects it as the target with high confidence.
+
 ## [0.7.1] — 2026-05-31
 
 **Field-test patch release.** A live test run from Claude Code's MCP

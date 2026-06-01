@@ -31,9 +31,11 @@ Design notes:
 
 from __future__ import annotations
 
+import contextlib
 import json
 import math
 from collections import Counter
+from pathlib import Path
 from typing import Any, cast
 
 try:
@@ -107,6 +109,75 @@ def _error(exc: BaseException) -> dict[str, Any]:
 
 
 # --------------------------------------------------------------------------- #
+# Ledger persistence (v0.7.2)                                                 #
+# --------------------------------------------------------------------------- #
+#
+# Field Test #4 surfaced that the MCP tools were stateless — they
+# returned structured output but didn't write to the .mlcompass/
+# ledger the way the CLI commands do. That made ``mlcompass_status``
+# come back empty even after a full pipeline run through the MCP
+# server, which broke the parity contract between the CLI and MCP
+# surfaces.
+#
+# Fix: a small helper that locates the active project (walks up from
+# the supplied path) and, if one is found, appends both a decision
+# entry and an advice.log line. Missing project ⇒ silent skip — we
+# don't want the MCP tool to fail just because the user hasn't run
+# ``mlcompass_init`` yet.
+
+
+def _persist_to_ledger(
+    *,
+    search_from: str,
+    command: str,
+    summary: str,
+    reasoning: str = "",
+    log_extra: dict[str, Any] | None = None,
+) -> None:
+    """Append a decision + advice.log entry to the active project, if any.
+
+    All exceptions are swallowed deliberately. The ledger is a "nice
+    to have" — never the reason a tool fails. The actual analysis the
+    user asked for has already happened by the time this is called.
+    """
+    try:
+        project = ProjectContext.load(search_from=search_from)
+    except ProjectNotFoundError:
+        return
+    except Exception:  # noqa: BLE001 — defensive
+        return
+
+    # Both writes are best-effort — the ledger is a "nice to have"
+    # and never the reason a tool fails. Suppress everything.
+    with contextlib.suppress(Exception):
+        project.append_decision(
+            command=command,
+            summary=summary,
+            reasoning=reasoning,
+        )
+
+    with contextlib.suppress(Exception):
+        from datetime import datetime, timezone
+
+        entry: dict[str, Any] = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "command": command,
+        }
+        if log_extra:
+            entry.update(log_extra)
+        with (project.path / "advice.log").open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(entry, default=str) + "\n")
+
+
+def _path_dir(path: str) -> str:
+    """Return the parent directory of ``path`` (or ``path`` itself if it's a dir)."""
+    p = Path(path)
+    if p.is_dir():
+        return str(p)
+    return str(p.parent or Path("."))
+
+
+# --------------------------------------------------------------------------- #
 # Project lifecycle                                                           #
 # --------------------------------------------------------------------------- #
 
@@ -139,6 +210,31 @@ def mlcompass_init(
         )
     except ProjectExistsError as e:
         return _error(e)
+
+    # v0.7.2: stamp the init itself into the decisions log so the
+    # ledger has a creation marker right from the first MCP call.
+    # All ledger writes are best-effort — init itself already succeeded.
+    with contextlib.suppress(Exception):
+        project.append_decision(
+            command="init",
+            summary=f"Project '{name}' initialised via MCP",
+            reasoning=f"parent_dir={parent_dir}; via=mcp",
+        )
+        from datetime import datetime, timezone
+
+        with (project.path / "advice.log").open("a", encoding="utf-8") as fh:
+            fh.write(
+                json.dumps(
+                    {
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                        "command": "init",
+                        "name": name,
+                        "via": "mcp",
+                    }
+                )
+                + "\n"
+            )
+
     return {"ok": True, "path": str(project.path), "name": name}
 
 
@@ -237,6 +333,29 @@ def mlcompass_advise(
         )
     except (ValueError, FileNotFoundError, OSError) as e:
         return _error(e)
+
+    # v0.7.2: persist to project ledger so `mlcompass_status` reflects
+    # the MCP-driven activity the same way it does CLI activity.
+    target_hint = result.get("target_hint") or {}
+    task_hint = result.get("task_hint") or {}
+    shape = result.get("shape") or {}
+    summary = (
+        f"Advise: {task_hint.get('type', 'unknown')} "
+        f"target={target_hint.get('column', 'auto')} "
+        f"({shape.get('rows', '?')}×{shape.get('cols', '?')})"
+    )
+    _persist_to_ledger(
+        search_from=_path_dir(dataset_path),
+        command="advise",
+        summary=summary,
+        reasoning=f"dataset={dataset_path}; via=mcp",
+        log_extra={
+            "dataset": dataset_path,
+            "target": target_hint.get("column"),
+            "task": task_hint.get("type"),
+            "via": "mcp",
+        },
+    )
     return cast(dict[str, Any], _json_safe(result))
 
 
@@ -262,9 +381,25 @@ def mlcompass_audit(
     """
     try:
         skip = set(skip_rules) if skip_rules else None
-        return audit_script(script_path, skip_rules=skip)
+        result = audit_script(script_path, skip_rules=skip)
     except (SyntaxError, FileNotFoundError, OSError) as e:
         return _error(e)
+
+    findings = result.get("findings") or []
+    counts = Counter(f.get("severity", "info") for f in findings)
+    summary = (
+        f"Audit: {counts.get('error', 0)} error, "
+        f"{counts.get('warning', 0)} warning, "
+        f"{counts.get('info', 0)} info"
+    )
+    _persist_to_ledger(
+        search_from=_path_dir(script_path),
+        command="audit",
+        summary=summary,
+        reasoning=f"script={script_path}; via=mcp",
+        log_extra={"script": script_path, "findings": len(findings), "via": "mcp"},
+    )
+    return result
 
 
 @mcp.tool()
@@ -299,6 +434,25 @@ def mlcompass_watch(log_path: str) -> dict[str, Any]:
         if snap.epoch is not None:
             last_epoch = snap.epoch
             break
+
+    counts = Counter(f.to_dict().get("severity", "info") for f in findings)
+    summary = (
+        f"Watch ({source}): {len(findings)} finding(s) "
+        f"[{counts.get('error', 0)}e/{counts.get('warning', 0)}w]"
+    )
+    _persist_to_ledger(
+        search_from=_path_dir(log_path),
+        command="watch",
+        summary=summary,
+        reasoning=f"log={log_path}; source={source}; via=mcp",
+        log_extra={
+            "log": log_path,
+            "source": source,
+            "snapshots": len(snapshots),
+            "findings": len(findings),
+            "via": "mcp",
+        },
+    )
 
     return {
         "ok": True,
@@ -345,7 +499,21 @@ def mlcompass_compare(
     except RunNotFoundError as e:
         return _error(e)
 
-    return cast(dict[str, Any], _json_safe(compare_runs(a, b)))
+    comparison = compare_runs(a, b)
+    verdict = comparison.get("verdict")
+    if isinstance(verdict, dict):
+        verdict_label = verdict.get("label") or verdict.get("verdict") or "mixed"
+    else:
+        verdict_label = str(verdict) if verdict else "mixed"
+    summary = f"Compare: {run_a} vs {run_b} ⇒ {verdict_label}"
+    _persist_to_ledger(
+        search_from=project_path or ".",
+        command="compare",
+        summary=summary,
+        reasoning=f"run_a={run_a}; run_b={run_b}; via=mcp",
+        log_extra={"run_a": run_a, "run_b": run_b, "via": "mcp"},
+    )
+    return cast(dict[str, Any], _json_safe(comparison))
 
 
 @mcp.tool()
@@ -390,6 +558,26 @@ def mlcompass_evaluate(
         )
     except (EvaluationError, FileNotFoundError, OSError) as e:
         return _error(e)
+
+    metrics = result.get("metrics") or {}
+    inferred_task = result.get("task", "unknown")
+    leakage = result.get("leakage_investigation")
+    headline = ", ".join(f"{k}={v}" for k, v in list(metrics.items())[:3]) or "no metrics"
+    smell = " [LEAKAGE-SMELL]" if leakage else ""
+    summary = f"Evaluate ({inferred_task}): {headline}{smell}"
+    _persist_to_ledger(
+        search_from=_path_dir(results_path),
+        command="evaluate",
+        summary=summary,
+        reasoning=f"results={results_path}; via=mcp",
+        log_extra={
+            "results": results_path,
+            "task": inferred_task,
+            "metrics": metrics,
+            "leakage_smell": bool(leakage),
+            "via": "mcp",
+        },
+    )
     return cast(dict[str, Any], _json_safe(result))
 
 
@@ -427,6 +615,26 @@ def mlcompass_deploy(
         )
     except (DeployAnalysisError, FileNotFoundError, OSError) as e:
         return _error(e)
+
+    model_info = result.get("model") or {}
+    warnings = result.get("warnings") or []
+    summary = (
+        f"Deploy ({target}): {model_info.get('format', 'unknown')} "
+        f"{model_info.get('size_class', '')}, "
+        f"{len(warnings)} warning(s)"
+    )
+    _persist_to_ledger(
+        search_from=_path_dir(model_path),
+        command="deploy",
+        summary=summary,
+        reasoning=f"model={model_path}; target={target}; via=mcp",
+        log_extra={
+            "model": model_path,
+            "target": target,
+            "warnings": len(warnings),
+            "via": "mcp",
+        },
+    )
     return cast(dict[str, Any], _json_safe(result))
 
 

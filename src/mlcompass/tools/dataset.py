@@ -56,6 +56,17 @@ TARGET_NAME_HINTS: dict[str, list[str]] = {
         "accepted",
         "approved",
         "winner",
+        # Multiclass classification — Penguins (FT#4), MNIST, sentiment,
+        # genre, intent, language — the canonical multiclass labels
+        # across image / NLP / biology Kaggle competitions.
+        "species",
+        "class_label",
+        "category_label",
+        "digit",
+        "genre",
+        "sentiment",
+        "intent",
+        "language",
         # Regression — common Kaggle / public-dataset spellings
         "saleprice",
         "sale_price",
