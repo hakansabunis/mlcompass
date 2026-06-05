@@ -5,6 +5,80 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.8.0] — 2026-06-05
+
+**Feature release — Claude Code slash commands.** mlcompass now ships
+eleven ready-made Claude Code slash commands and a one-shot installer
+that copies them into Claude Code's commands directory. The previous
+release required users to hand-write `.md` files under
+`.claude/commands/`; v0.8 closes that gap with a first-class CLI
+command and a `mlc-` naming convention that sidesteps Claude Code's
+collision behaviour with MCP tool names.
+
+### Added — `install-slash-commands` CLI
+
+- **`mlcompass install-slash-commands [--scope project|user] [--force]`**
+  copies the eleven shipped `mlc-*.md` files from
+  `src/mlcompass/slash_commands/` to either `.claude/commands/` in
+  the current working directory (default — loads only when the user
+  cd's into the project) or `~/.claude/commands/` (loads everywhere).
+  Idempotent: a second run preserves user edits unless `--force` is
+  passed. Reports the destination, the count installed vs skipped,
+  and a slash-prefixed list of the commands now available.
+
+### Added — eleven `/mlc-*` slash commands
+
+Each command is a `.md` file with YAML frontmatter (`description:`)
+and a body that tells Claude Code which `mlcompass_*` MCP tool to
+call (or which `mlcompass` CLI command to shell out to) and how to
+narrate the result in the user's language:
+
+| Slash command       | MCP tool / CLI fallback     | Notes                                                  |
+| ------------------- | --------------------------- | ------------------------------------------------------ |
+| `/mlc-init`         | `mlcompass_init`            | Suggests next step (`advise`)                          |
+| `/mlc-advise`       | `mlcompass_advise`          | Surfaces target / NaN / leak warnings                  |
+| `/mlc-audit`        | `mlcompass_audit`           | Groups findings by severity                            |
+| `/mlc-watch`        | `mlcompass_watch`           | NaN / divergence / plateau / overfit                   |
+| `/mlc-compare`      | `mlcompass_compare`         | Notes mixed-verdict train-vs-val confusion             |
+| `/mlc-evaluate`     | `mlcompass_evaluate`        | 🔬 prefix when leakage panel present                   |
+| `/mlc-leak`         | `mlcompass_evaluate`        | Anti-hallucination — cites only what's in the panel    |
+| `/mlc-deploy`       | `mlcompass_deploy`          | Target-specific (lambda / docker / sagemaker)          |
+| `/mlc-status`       | `mlcompass_status`          | Surfaces the v0.7.3 hints field                        |
+| `/mlc-monitor`      | CLI `mlcompass monitor`     | Notes exit-code 1 is intentional CI gate               |
+| `/mlc-optimize`     | CLI `mlcompass optimize`    | Notes domain-aware soft-cap signals                    |
+
+All commands prefixed `mlc-` so the slash menu doesn't route them to
+the MCP tool browser (Claude Code's slash-vs-tool collision behaviour
+surfaced during field test #4).
+
+### Packaging
+- New `[tool.setuptools.package-data]` entry ships
+  `src/mlcompass/slash_commands/*.md` inside the wheel, so
+  `pip install mlcompass` puts the `.md` bodies on disk where the
+  install command can find them.
+
+### Tests
+- 6 new CLI integration tests in
+  `tests/test_cli_install_slash_commands.py` cover project scope
+  (writes to cwd `.claude/commands/`), summary panel rendering,
+  idempotency (skip existing files), `--force` overwrite, user scope
+  (HOME redirection), and root-help discovery of the new subcommand.
+- Full suite: **539 passing**, 2 skipped (was 533 + 6 new).
+- `ruff check` clean (2 auto-fixed during release prep).
+- `ruff format --check` clean.
+- `mypy --strict` clean across 51 source files.
+
+### Documentation
+- README's MCP section gains a new **"Use as Claude Code slash
+  commands (v0.8)"** subsection with the one-liner install command,
+  the 11-command table, an explicit anti-hallucination note for
+  `/mlc-evaluate` + `/mlc-leak`, and a callout for the two CLI
+  fallback commands.
+- README `What's in v0.8` headline replaces the v0.7 leakage banner
+  with a slash-commands lede that backpoints to the v0.7
+  anti-hallucination contract.
+- Roadmap gains `Faz 10 (v0.8)` row.
+
 ## [0.7.3] — 2026-06-01
 
 **Field-test patch release.** A second end-to-end pipeline run through

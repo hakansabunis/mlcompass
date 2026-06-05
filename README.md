@@ -7,7 +7,7 @@
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-🚧 **Alpha (v0.7.3)** — under active development. APIs may change before v1.0.
+🚧 **Alpha (v0.8.0)** — under active development. APIs may change before v1.0.
 
 ## What it does
 
@@ -27,14 +27,20 @@ Each command writes to and reads from a shared project context
 knows your dataset, your model choice, your training history, and your
 evaluation results.
 
-## What's in v0.7
+## What's in v0.8
 
-Eleven commands cover every stage of the ML pipeline. v0.7 adds
-**automatic leakage investigation** with an anti-hallucination
-contract — when `evaluate` sees a suspiciously perfect metric, it
-gathers structured evidence about which columns might be the source
-and (with `--llm`) hands it to a Claude agent that's forbidden from
-inventing column names or proposing code patches.
+Eleven commands cover every stage of the ML pipeline. **v0.8 ships
+eleven ready-made Claude Code slash commands** so the same eleven
+tools become one-keystroke calls inside Claude Code — one
+`mlcompass install-slash-commands` and you get `/mlc-advise`,
+`/mlc-evaluate`, `/mlc-leak`, … as first-class slash entries.
+
+v0.7 introduced **automatic leakage investigation** with an
+anti-hallucination contract — when `evaluate` sees a suspiciously
+perfect metric, it gathers structured evidence about which columns
+might be the source and (with `--llm`) hands it to a Claude agent
+that's forbidden from inventing column names or proposing code
+patches.
 
 | Command    | When you run it                          | What you get                                                  | Status |
 | ---------- | ---------------------------------------- | ------------------------------------------------------------- | :----: |
@@ -56,10 +62,11 @@ a Claude-driven interpretation step on top. The `agent` command is
 the inverse: LLM-first by design, with the other tools as its hands —
 and now remembers across runs via per-project memory.
 
-**Battle-tested**: v0.6 → v0.7.2 ships **5 field-test patches** that
+**Battle-tested**: v0.6 → v0.7.3 ships **4 field-test patches** that
 closed bugs surfaced by real Kaggle datasets (Telco Churn, Ames House
-Prices, Titanic, Penguins). Each release went through a live dry run
-before shipping — see [CHANGELOG.md](CHANGELOG.md) for the full log.
+Prices, Titanic, Penguins, Insurance Charges). Each release went
+through a live dry run before shipping — see
+[CHANGELOG.md](CHANGELOG.md) for the full log.
 
 ## Install
 
@@ -132,24 +139,50 @@ pick "Use this MCP server" (the narrowest option). Verify with the
 `/mcp` slash command; you should see `mlcompass` listed with all
 eight tools available.
 
-### Optional: project-local slash commands
+### Use as Claude Code slash commands (v0.8)
 
-Drop a few `.md` files under `.claude/commands/` and the same MCP
-tools become one-keystroke commands:
+`pip install mlcompass` ships **eleven ready-made Claude Code slash
+commands**. One command installs them into Claude Code's commands
+directory:
 
 ```bash
-mkdir -p .claude/commands
-cat > .claude/commands/advise.md <<'EOF'
-Use the mlcompass_advise tool to analyze the dataset at: $ARGUMENTS
-Summarize the result for the user, calling out target detection,
-NaN warnings, and the most important data-quality issues.
-EOF
+mlcompass install-slash-commands           # → .claude/commands/ in cwd
+mlcompass install-slash-commands --scope user   # → ~/.claude/commands/
+mlcompass install-slash-commands --force        # overwrite local edits
 ```
 
-Now in Claude Code you can type `/advise data.csv` and the assistant
-fires the tool with the right argument. (Custom slash names that
-collide with the tool name can route to the MCP tool browser instead;
-when that happens just describe the call in natural language.)
+Restart Claude Code (or reload the project) and type the slash key —
+the eleven commands appear in the slash menu, each one prefixed
+`mlc-` so they don't collide with the underlying MCP tool names
+(Claude Code routes `/advise` to the MCP tool browser; `/mlc-advise`
+fires our command):
+
+| Slash command         | When you type it…                                         |
+| --------------------- | --------------------------------------------------------- |
+| `/mlc-init <name>`    | Start a new mlcompass project here                        |
+| `/mlc-advise <csv>`   | Look at this dataset and tell me what to do               |
+| `/mlc-audit <script>` | Review my training script before I press train            |
+| `/mlc-watch <log>`    | Look at this training log and flag anything weird         |
+| `/mlc-compare <a> <b>`| Which of these two runs is better, and why?               |
+| `/mlc-evaluate <csv>` | Read these predictions and tell me what they mean         |
+| `/mlc-leak <csv>`     | Focused leakage check — anti-hallucination panel only     |
+| `/mlc-deploy <model>` | Is this model ready to ship?                              |
+| `/mlc-status`         | What does this project look like right now?               |
+| `/mlc-monitor <ref> <cur>` | Drift check against a reference dataset (CLI fallback) |
+| `/mlc-optimize <metric>`   | What hyperparameters to try next? (CLI fallback)       |
+
+`/mlc-evaluate` and `/mlc-leak` honour the same anti-hallucination
+contract as the CLI — if the leakage investigation is absent,
+Claude won't invent column names; if present, it can cite **only**
+items in the evidence panel.
+
+`/mlc-monitor` and `/mlc-optimize` shell out to the CLI rather than
+the MCP server (these two tools aren't exposed via MCP in v0.7.x);
+everything else runs through the `mlcompass-mcp` tool layer.
+
+The install command is idempotent: a second run skips files you've
+already customised. Add `--force` if you've upgraded mlcompass and
+want the new versions.
 
 Restart the client and the eight tools appear:
 
@@ -509,7 +542,8 @@ run `deploy`, every earlier decision is still in memory.
 | **Faz 7 (v0.5)**     | `agent` — self-driving (api + claude-code backends) | ✅ Shipped |
 | **Faz 8 (v0.6)**     | `monitor` + `optimize` + agent memory   | ✅ Shipped      |
 | **Faz 9 (v0.7)**     | Automatic leakage investigation + anti-hallucination contract | ✅ Shipped |
-| **v0.7.1 — v0.7.2**  | Field-test patches (Titanic + Penguins)  | ✅ Shipped      |
+| **v0.7.1 — v0.7.3**  | Field-test patches (Titanic + Penguins + Insurance) | ✅ Shipped |
+| **Faz 10 (v0.8)**    | Claude Code slash commands — `mlcompass install-slash-commands` + 11 `/mlc-*` entries | ✅ Shipped |
 
 See [CHANGELOG.md](CHANGELOG.md) for the detailed log and
 [ARCHITECTURE.md](ARCHITECTURE.md) for the design.

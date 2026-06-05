@@ -1732,6 +1732,101 @@ _agent_runner: Callable[..., Any] = _default_agent_runner
 
 
 # --------------------------------------------------------------------------- #
+# install-slash-commands — Claude Code slash-command bootstrapper (Faz 10)    #
+# --------------------------------------------------------------------------- #
+
+
+@cli.command(
+    "install-slash-commands",
+    help="Install mlcompass Claude Code slash commands to .claude/commands/.",
+)
+@click.option(
+    "--scope",
+    type=click.Choice(["project", "user"]),
+    default="project",
+    show_default=True,
+    help=(
+        "Where to install: 'project' = .claude/commands/ in cwd "
+        "(loads only when you cd in); 'user' = ~/.claude/commands/ "
+        "(loads everywhere)."
+    ),
+)
+@click.option(
+    "--force",
+    is_flag=True,
+    help="Overwrite existing files with the same name.",
+)
+def install_slash_commands(scope: str, force: bool) -> None:
+    """Copy mlcompass's shipped slash-command .md files into Claude Code's
+    commands directory so the user gets ``/mlc-advise``, ``/mlc-leak``,
+    ``/mlc-evaluate``, … as first-class slash commands.
+
+    All eleven commands are prefixed ``mlc-`` to avoid colliding with
+    MCP tool names (Claude Code's slash menu would otherwise route
+    ``/advise`` to the MCP tool browser instead of firing the command).
+    """
+    target = (
+        Path.home() / ".claude" / "commands"
+        if scope == "user"
+        else Path.cwd() / ".claude" / "commands"
+    )
+    target.mkdir(parents=True, exist_ok=True)
+
+    source = Path(__file__).parent / "slash_commands"
+    if not source.is_dir():
+        console.print(
+            "[red]✗[/red] Could not locate the shipped slash_commands/ "
+            "directory inside the mlcompass package. This is likely a "
+            "packaging bug — please file an issue."
+        )
+        raise SystemExit(2)
+
+    md_files = sorted(source.glob("*.md"))
+    if not md_files:
+        console.print(
+            "[red]✗[/red] No slash-command .md files were shipped. This is a packaging bug."
+        )
+        raise SystemExit(2)
+
+    installed: list[str] = []
+    skipped: list[str] = []
+    for md in md_files:
+        dest = target / md.name
+        if dest.exists() and not force:
+            skipped.append(md.name)
+            continue
+        dest.write_text(md.read_text(encoding="utf-8"), encoding="utf-8")
+        installed.append(md.name)
+
+    body_lines: list[str] = [
+        f"[bold]Target:[/bold] {target}",
+        f"[bold]Installed:[/bold] {len(installed)} / {len(md_files)}",
+    ]
+    if installed:
+        commands = ", ".join(f"/{md[:-3]}" for md in installed)
+        body_lines.append(f"\n[green]✓ Available now:[/green]\n  {commands}")
+    if skipped:
+        body_lines.append(
+            "\n[yellow]⚠ Skipped (already exist):[/yellow]\n  "
+            + ", ".join(f"/{md[:-3]}" for md in skipped)
+        )
+        body_lines.append("\n[dim]Re-run with --force to overwrite the skipped files.[/dim]")
+
+    body_lines.append(
+        "\n[dim]Restart Claude Code (or reload the project) and type "
+        "the slash key to see them in the slash menu.[/dim]"
+    )
+
+    console.print(
+        Panel.fit(
+            "\n".join(body_lines),
+            title=":sparkles: mlcompass slash commands",
+            border_style="cyan",
+        )
+    )
+
+
+# --------------------------------------------------------------------------- #
 # Entry point                                                                 #
 # --------------------------------------------------------------------------- #
 

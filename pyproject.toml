@@ -1,6 +1,6 @@
 [project]
 name = "mlcompass"
-version = "0.7.3"
+version = "0.8.0"
 description = "An LLM agent that sits next to you through your whole ML pipeline"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -87,6 +87,14 @@ where = ["src"]
 
 [tool.setuptools.package-dir]
 "" = "src"
+
+[tool.setuptools.package-data]
+# Ship the .md slash-command bodies so ``mlcompass install-slash-commands``
+# can copy them into the user's ``.claude/commands/`` directory. Without
+# this entry, ``pip install mlcompass`` would not put the .md files inside
+# the wheel and the install command would fail with "no slash-command
+# .md files were shipped".
+mlcompass = ["slash_commands/*.md"]
 
 [tool.ruff]
 target-version = "py310"

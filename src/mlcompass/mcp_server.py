@@ -402,9 +402,7 @@ def mlcompass_advise(
             "project_type": task_hint.get("type"),
             "target_column": target_hint.get("column"),
             "active_dataset": (
-                f"datasets/{dataset_fingerprint}.json"
-                if dataset_fingerprint
-                else dataset_path
+                f"datasets/{dataset_fingerprint}.json" if dataset_fingerprint else dataset_path
             ),
         },
     )
