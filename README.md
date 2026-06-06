@@ -9,6 +9,8 @@
 
 🚧 **Alpha (v0.8.0)** — under active development. APIs may change before v1.0.
 
+📄 **Paper:** mlcompass is described in [our paper](Capstone_Report.pdf) — *"mlcompass: A Schema-Bounded LLM Narrator for Machine-Learning Pipeline Diagnosis"*. The paper's anti-hallucination ablation (Table I) is reproducible end-to-end via the scripts in [`scripts/`](scripts/). See [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md) for what the contract does and does not protect against, and [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md) for what we have not yet evaluated.
+
 ## What it does
 
 mlcompass is a single CLI that follows your ML project from data to
@@ -466,6 +468,35 @@ What gets caught:
   threshold.
 - **Perfect-match predictions** — when `y_pred == y_true` ≥ 95% on a
   non-trivial task, that's a smoking gun for train/test contamination.
+
+## Reproducing the paper's anti-hallucination ablation
+
+The paper's Table I (phantom-column fabrication rate under three
+contract configurations) is reproducible end-to-end via two scripts
+under [`scripts/`](scripts/). The default mode runs deterministically
+and requires no API key:
+
+```bash
+# Reproduces Table I in mock mode (~5 seconds, no API calls).
+python scripts/reproduce_hallucination_ablation.py
+
+# Tight confidence intervals at N=2000 (~$48 in API charges).
+python scripts/reproduce_hallucination_ablation.py --mode live --n 2000
+
+# Measure end-to-end latency and Layer-3 retry rate.
+python scripts/measure_latency.py --live --n 50
+```
+
+Output is a markdown table with Wilson 95% confidence intervals
+matching the format used in the paper. Pass `--json` for a
+machine-readable summary suitable for CI consumption.
+
+See [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md) for what the
+contract protects against and what it does not.
+See [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md) for the
+limitations that the v0.8.0 release has not yet addressed.
+See [`docs/FIELD_TEST_BUGS.md`](docs/FIELD_TEST_BUGS.md) for per-bug
+detail on the eleven field-test findings categorized in Table II.
 
 ## Why mlcompass
 

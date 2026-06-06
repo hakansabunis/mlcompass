@@ -85,3 +85,12 @@ secrets.yaml
 # Build artifacts
 *.egg-info/
 .eggs/
+
+# Local field-test scratch directories (created when running mlcompass
+# init for a real Kaggle dataset locally). Never commit these — they
+# contain a project's local .mlcompass/ state and aren't part of the
+# package.
+mlcompass-fieldtest/
+mlcompass-fieldtest-*/
+mlcompass-ft*/
+mlcompass-tutorial/

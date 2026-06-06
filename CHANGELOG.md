@@ -5,6 +5,81 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.8.1] — 2026-06-06
+
+**Documentation and reproducibility release.** Three reviewers gave us
+peer-review-style feedback on the v0.8.0 paper, and the eleven major
+weaknesses they surfaced — across statistical rigor, threat-model
+clarity, missing baselines, and hidden limitations — needed answers in
+the repo, not just in the paper revision. This release closes the most
+mechanical gaps. No runtime code changes; v0.8.0 users see no behavior
+differences.
+
+### Added — reproducibility scripts
+
+- **`scripts/reproduce_hallucination_ablation.py`** — the canonical
+  reproducibility entry point for Table I of the paper. Default mode
+  runs deterministically against fixed seeds (no API key required),
+  reproducing the paper's headline phantom-column fabrication rates
+  for all three contract layers, with Wilson 95% confidence intervals
+  on each. The `--mode live` flag fires real Anthropic API calls and
+  can be scaled to arbitrary N for tighter intervals (`--n 2000` at
+  roughly $48 in API charges). The `--json` flag emits a
+  machine-readable summary so the script can be wired into a
+  regression harness.
+- **`scripts/measure_latency.py`** — measures end-to-end latency and
+  Layer-3 retry rate of the leakage investigator. Default mode prints
+  a dry-run description; `--live` issues real API calls and reports
+  mean ± std, p50, p99, and the empirical retry rate. Produces the
+  numbers used in Section IV.C of the paper.
+
+### Added — long-form documentation
+
+- **`docs/THREAT_MODEL.md`** — the long-form version of paper Section
+  III.A. Specifies the contract's operating assumptions, the failure
+  modes the three-layer design defends against (with source-code
+  references), and the failure modes it does *not* defend against
+  (miscalibrated confidence, evidence omission, prompt injection,
+  cross-model generalization, API endpoint compromise). Includes a
+  summary matrix.
+- **`docs/KNOWN_LIMITATIONS.md`** — eight identified limitations of
+  the v0.8.0 release with severity weighting and recommended user
+  mitigations. Covers single-dataset evaluation, single-model
+  evaluation, single hallucination category, no constrained-
+  generation baseline, no external user study, the parity-discipline
+  caveat, self-reported field-test bug categorization, and the
+  single-account latency measurement constraint.
+- **`docs/FIELD_TEST_BUGS.md`** — per-bug detail on the eleven
+  field-test findings reported in Table II. Each bug is categorized
+  (Target Name / State Parity / Crash / UX), tied to the patch
+  release and the regression test that locks it in, and ranked by
+  engineering significance. Replaces the aggregate-count claim of
+  the paper's Table II with auditable detail.
+
+### Documentation
+
+- README's lead-in paragraph now points at the paper, the threat
+  model, and the limitations document.
+- New "Reproducing the paper's anti-hallucination ablation" section
+  near the bottom of the README walks through the two reproducibility
+  scripts.
+- Three internal cross-references between the docs (`THREAT_MODEL`,
+  `KNOWN_LIMITATIONS`, `FIELD_TEST_BUGS`) so a reader can navigate
+  between the safety claim, the open gaps, and the field-test
+  detail without leaving the repo.
+
+### Why this release exists
+
+Three independent peer-review-style reviews of the v0.8.0 paper
+identified eleven distinct major or minor weaknesses, of which six had
+direct repo answers (Wilson CIs, threat model, limitations,
+bug-categorization, latency, reproducibility tooling). This release
+ships those answers. The remaining five weaknesses are paper-level
+rather than code-level (cross-model evaluation, constrained-generation
+baseline, external user study, broader hallucination taxonomy, scaling
+N to 2000) and remain on the v0.9 roadmap as documented in
+`KNOWN_LIMITATIONS.md`.
+
 ## [0.8.0] — 2026-06-05
 
 **Feature release — Claude Code slash commands.** mlcompass now ships
