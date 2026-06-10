@@ -36,7 +36,10 @@ from .agents.audit import AuditAgentError, prioritize_findings
 from .agents.compare import CompareAgentError, hypothesize_comparison
 from .agents.deploy import DeployAgentError, advise_deployment
 from .agents.evaluate import EvaluateAgentError, interpret_evaluation
-from .agents.leakage_investigator import LeakageAgentError, investigate_leakage
+from .agents.leakage_investigator import (
+    LeakageAgentError,
+    investigate_leakage_bound,
+)
 from .agents.monitor import MonitorAgentError, interpret_drift
 from .agents.optimize import OptimizeAgentError, strategize_optimize
 from .agents.watch import WatchAgentError, diagnose_findings
@@ -998,7 +1001,12 @@ def _maybe_investigate_leakage(evidence: dict[str, Any], *, model: str) -> dict[
 
 
 def _default_leakage_investigator(evidence: dict[str, Any], *, model: str) -> dict[str, Any]:
-    return investigate_leakage(evidence, model=model)
+    # Production path: the evidence-bound runtime-schema contract. The
+    # narrator answers through a tool whose ``columns_referenced`` enum is
+    # generated from this evidence dict at call time, and the cited columns
+    # are deterministically re-validated against the evidence set. The prose
+    # ``investigate_leakage`` remains available as a tool-free fallback.
+    return investigate_leakage_bound(evidence, model=model)
 
 
 _leakage_investigator_callable: Callable[..., dict[str, Any]] = _default_leakage_investigator
