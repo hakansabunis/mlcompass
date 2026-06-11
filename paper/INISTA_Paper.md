@@ -1,8 +1,8 @@
 # An Evidence-Bound Runtime Schema for Claim-Faithful LLM Narration of Machine-Learning Pipeline Evidence
 
-**Hakan Sabuniş\*, Yusuf Ünlü\*, Selim Akyokuş†**
-*\*Dept. of Computer Engineering, †Dept. of Computer Engineering (Advisor), Istanbul Medipol University, Istanbul, Türkiye*
-*hakan.sabunis@std.medipol.edu.tr, yusuf.unlu@std.medipol.edu.tr, sakyokus@medipol.edu.tr*
+**Hakan Sabuniş, Yusuf Ünlü, and Selim Akyokuş**
+*School of Engineering and Natural Sciences, Istanbul Medipol University, Istanbul, Turkey*
+*{hakan.sabunis, yusuf.unlu}@std.medipol.edu.tr, sakyokus@medipol.edu.tr*
 
 ## Abstract
 
