@@ -23,7 +23,7 @@ Two modes:
                 --provider (anthropic / deepseek / openai) and set its API key
                 env var (ANTHROPIC_API_KEY / DEEPSEEK_API_KEY / OPENAI_API_KEY).
                 **This is the mode that produces the paper's Table I** — the
-                certified 2026-06-11 three-channel run used --provider deepseek.
+                certified 2026-06-12 battery (paper Tables I-II) used --provider deepseek.
 
   --mode mock   — ILLUSTRATIVE ONLY, no API calls. A deterministic simulator for
                 grading and for users without a key. The per-layer rates are
@@ -185,9 +185,9 @@ def build_csv_evidence(csv_path: str, target: str, seed: int = 0) -> dict[str, A
 # --------------------------------------------------------------------------- #
 
 
-# Per-layer illustrative rates for the no-API demo, set to the 2026-06-11
-# deepseek-chat three-channel live run (see paper/ablation_live_deepseek_
-# 2026-06-11_three_channel.md). Mock mode REPLAYS rates; it does not measure.
+# Per-layer illustrative rates for the no-API demo, set to the 2026-06-12
+# deepseek-chat battery run (see paper/ablation_live_deepseek_
+# 2026-06-12_battery.md). Mock mode REPLAYS rates; it does not measure.
 ILLUSTRATIVE_RATES: dict[str, dict[str, float]] = {
     "layer1": {"entity": 0.115, "value": 0.000, "omission": 0.000},
     "layer2": {"entity": 0.000, "value": 0.000, "omission": 0.000},

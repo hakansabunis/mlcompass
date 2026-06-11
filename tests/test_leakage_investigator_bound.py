@@ -499,3 +499,26 @@ def test_stress_config_tier_b_still_catches_and_strips() -> None:
     # And the open schema was sent (no enum on columns_referenced items).
     tool = client.last_create_kwargs["tools"][0]
     assert "enum" not in tool["input_schema"]["properties"]["columns_referenced"]["items"]
+
+
+def test_omission_recheck_after_strip() -> None:
+    # The anchor is referenced ONLY through a misquoted claim. Each attempt
+    # has a value violation (omission looks satisfied pre-strip); after the
+    # budget the unsound claim is stripped, so the returned response no longer
+    # addresses the anchor — the omission flag must fire (Prop. 2: omissions
+    # cannot be repaired by deletion).
+    bad = tool_use_response(
+        SUBMIT_TOOL_NAME,
+        {
+            "verdict": "leakage_likely",
+            "confidence": "high",
+            "columns_referenced": ["near_target_proxy"],
+            "claims": [{"column": "log_target_v2", "statistic": "correlation", "value": 0.5}],
+            "narration": "anchor only via bad claim",
+        },
+    )
+    client = MockClient(responses=[bad, _clone(bad), _clone(bad)])
+    out = investigate_leakage_bound(EVIDENCE, client=client, max_retries=2)
+    assert out["claims"] == []  # unsound claim stripped
+    assert out["had_unrecoverable_violation"] is True
+    assert out["omitted_critical_evidence"] is True  # post-strip recheck fired

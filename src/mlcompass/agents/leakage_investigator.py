@@ -625,6 +625,14 @@ def investigate_leakage_bound(
     if confidence not in _CONFIDENCE_VALUES:
         confidence = "cannot_determine"
 
+    # Completeness is re-checked AFTER stripping: if the anchor was referenced
+    # only through a claim that the strip removed, the returned response no
+    # longer addresses it, and the omission flag must reflect that (an
+    # omission cannot be repaired by deletion — Proposition 2).
+    if not omitted and verdict != "cannot_determine" and anchor is not None:
+        referenced_clean = set(cited_clean) | {str(c.get("column", "")) for c in claims_clean}
+        omitted = bool(tool_input) and anchor not in referenced_clean
+
     return {
         "verdict": verdict,
         "confidence": confidence,
