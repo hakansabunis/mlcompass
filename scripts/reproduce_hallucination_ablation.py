@@ -67,6 +67,8 @@ from mlcompass.agents.leakage_investigator import (  # noqa: E402
     LEAKAGE_MODEL_DEFAULT,
     SUBMIT_TOOL_NAME,
     VALUE_TOLERANCE,
+    build_submit_investigation_tool,
+    build_submit_investigation_tool_openai,
     evidence_allowed_columns,
     evidence_correlation_map,
     investigate_leakage_bound,
@@ -451,6 +453,63 @@ def _live_one_response(
     the narrator fabricates at its natural rate and every catch is visible in
     ``schema_rejections``.
     """
+    if layer == "tier_a":
+        # Tier A in isolation: the evidence-bound enum is IN the schema, the
+        # bare prompt states no rules, and Tier B verification is NOT applied.
+        # Measures how much the runtime enum alone steers this endpoint.
+        tool = (
+            build_submit_investigation_tool_openai(allowed)
+            if kind == "openai"
+            else build_submit_investigation_tool(allowed)
+        )
+        for attempt in range(2):
+            try:
+                if kind == "openai":
+                    response = client.chat.completions.create(
+                        model=model,
+                        messages=[
+                            {"role": "system", "content": LIVE_SYSTEM_PROMPT_BARE},
+                            {"role": "user", "content": _user_message(evidence)},
+                        ],
+                        tools=[tool],
+                        tool_choice="required",
+                    )
+                    return _input_from_openai(response)
+                response = client.messages.create(
+                    model=model,
+                    max_tokens=1024,
+                    system=LIVE_SYSTEM_PROMPT_BARE,
+                    tools=[tool],
+                    tool_choice={"type": "tool", "name": SUBMIT_TOOL_NAME},
+                    messages=[{"role": "user", "content": _user_message(evidence)}],
+                )
+                return _input_from_anthropic(response)
+            except Exception:  # noqa: BLE001
+                if attempt == 0:
+                    continue
+                return _normalize({})
+        return _normalize({})
+
+    if layer == "stress_mech":
+        # The FULL shipped contract (Tier A enums ON + Tier B) under the worst
+        # naturally occurring paraphrase from the sweep (100% bare fabrication)
+        # — answers "necessity shown only in an artificially weakened config".
+        mech_prompt = dict(SWEEP_BARE_VARIANTS)["mechanical"]
+        result = investigate_leakage_bound(
+            evidence,
+            client=client,
+            model=model,
+            provider=("openai" if kind == "openai" else "anthropic"),
+            system_prompt=mech_prompt,
+        )
+        return {
+            "columns": list(result["columns_referenced"]),
+            "claims": list(result["claims"]),
+            "verdict": result["verdict"],
+            "omitted": bool(result["omitted_critical_evidence"]),
+            "rejections": int(result["schema_rejections"]),
+        }
+
     if layer in ("layer3", "layer3_stress"):
         stress = layer == "layer3_stress"
         result = investigate_leakage_bound(
@@ -677,6 +736,8 @@ LAYER_LABELS = {
     "layer2": "L1+2 strict prompt",
     "layer3": "L1+2+3 evidence-bound",
     "layer3_stress": "STRESS bare+TierB only",
+    "tier_a": "TIER-A only (enum, no verify)",
+    "stress_mech": "L3 + worst paraphrase",
 }
 
 METRIC_LABELS = {"entity": "Entity-fab", "value": "Value-fab", "omission": "Omission"}
@@ -725,6 +786,11 @@ def main() -> int:
         "--no-stress",
         action="store_true",
         help="Skip the layer3_stress arm (bare prompt + Tier B only).",
+    )
+    ap.add_argument(
+        "--only-extra",
+        action="store_true",
+        help="Run ONLY the diagnostic arms tier_a and stress_mech (live only).",
     )
     ap.add_argument("--json", action="store_true", help="Emit machine-readable JSON.")
     args = ap.parse_args()
@@ -781,6 +847,10 @@ def main() -> int:
     arms: tuple[str, ...] = ("layer1", "layer2", "layer3", "layer3_stress")
     if args.no_stress or args.mode == "mock":
         arms = ("layer1", "layer2", "layer3")
+    if args.only_extra:
+        if args.mode != "live":
+            raise SystemExit("--only-extra is a live measurement; add --mode live.")
+        arms = ("tier_a", "stress_mech")
 
     if args.mode == "mock":
         responses_by_layer = mock_run(args.n, allowed, corr_map, anchor, seed=args.seed)
