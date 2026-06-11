@@ -323,7 +323,7 @@ _SUBMIT_DESCRIPTION = (
 )
 
 
-def _submit_input_schema(allowed_columns: list[str]) -> dict[str, Any]:
+def _submit_input_schema(allowed_columns: list[str], *, enforce_enum: bool = True) -> dict[str, Any]:
     """The JSON schema for the submit tool, with the runtime enum domain.
 
     The ``columns_referenced`` item schema and the ``claims[].column`` field
@@ -332,22 +332,27 @@ def _submit_input_schema(allowed_columns: list[str]) -> dict[str, Any]:
     domain is computed at call time. This inner schema is provider-neutral; the
     per-provider wrappers below place it under ``input_schema`` (Anthropic) or
     ``parameters`` (OpenAI).
+
+    ``enforce_enum=False`` drops the runtime column enums (Tier A) while
+    keeping the field structure — used by the stress configuration of the
+    measurement harness to demonstrate Tier B catching live violations on its
+    own. Production callers leave it True.
     """
+    col_schema: dict[str, Any] = {"type": "string"}
+    if enforce_enum:
+        col_schema = {"type": "string", "enum": list(allowed_columns)}
     return {
         "type": "object",
         "properties": {
             "verdict": {"type": "string", "enum": sorted(_VERDICT_VALUES)},
             "confidence": {"type": "string", "enum": sorted(_CONFIDENCE_VALUES)},
-            "columns_referenced": {
-                "type": "array",
-                "items": {"type": "string", "enum": list(allowed_columns)},
-            },
+            "columns_referenced": {"type": "array", "items": dict(col_schema)},
             "claims": {
                 "type": "array",
                 "items": {
                     "type": "object",
                     "properties": {
-                        "column": {"type": "string", "enum": list(allowed_columns)},
+                        "column": dict(col_schema),
                         "statistic": {"type": "string", "enum": ["correlation"]},
                         "value": {"type": "number"},
                     },
@@ -361,16 +366,20 @@ def _submit_input_schema(allowed_columns: list[str]) -> dict[str, Any]:
     }
 
 
-def build_submit_investigation_tool(allowed_columns: list[str]) -> dict[str, Any]:
+def build_submit_investigation_tool(
+    allowed_columns: list[str], *, enforce_enum: bool = True
+) -> dict[str, Any]:
     """Anthropic-format ``submit_investigation`` tool with the runtime enum."""
     return {
         "name": SUBMIT_TOOL_NAME,
         "description": _SUBMIT_DESCRIPTION,
-        "input_schema": _submit_input_schema(allowed_columns),
+        "input_schema": _submit_input_schema(allowed_columns, enforce_enum=enforce_enum),
     }
 
 
-def build_submit_investigation_tool_openai(allowed_columns: list[str]) -> dict[str, Any]:
+def build_submit_investigation_tool_openai(
+    allowed_columns: list[str], *, enforce_enum: bool = True
+) -> dict[str, Any]:
     """OpenAI-compatible (function) ``submit_investigation`` tool with the enum.
 
     Works with any OpenAI-compatible Chat Completions provider — including
@@ -383,7 +392,7 @@ def build_submit_investigation_tool_openai(allowed_columns: list[str]) -> dict[s
         "function": {
             "name": SUBMIT_TOOL_NAME,
             "description": _SUBMIT_DESCRIPTION,
-            "parameters": _submit_input_schema(allowed_columns),
+            "parameters": _submit_input_schema(allowed_columns, enforce_enum=enforce_enum),
         },
     }
 
@@ -397,20 +406,24 @@ def _extract_tool_input(response: Any, tool_name: str) -> dict[str, Any]:
     return {}
 
 
-def _emit_anthropic(api: Any, model: str, user: str, allowed: list[str]) -> dict[str, Any]:
+def _emit_anthropic(
+    api: Any, model: str, system: str, user: str, tool: dict[str, Any]
+) -> dict[str, Any]:
     """One forced ``submit_investigation`` call against an Anthropic-style API."""
     response = api.messages.create(
         model=model,
         max_tokens=1024,
-        system=LEAKAGE_BOUND_PROMPT,
-        tools=[build_submit_investigation_tool(allowed)],
+        system=system,
+        tools=[tool],
         tool_choice={"type": "tool", "name": SUBMIT_TOOL_NAME},
         messages=[{"role": "user", "content": user}],
     )
     return _extract_tool_input(response, SUBMIT_TOOL_NAME)
 
 
-def _emit_openai(api: Any, model: str, user: str, allowed: list[str]) -> dict[str, Any]:
+def _emit_openai(
+    api: Any, model: str, system: str, user: str, tool: dict[str, Any]
+) -> dict[str, Any]:
     """One forced ``submit_investigation`` call against an OpenAI-compatible API.
 
     Reads the tool-call arguments (a JSON string in the OpenAI schema) from
@@ -420,10 +433,10 @@ def _emit_openai(api: Any, model: str, user: str, allowed: list[str]) -> dict[st
     response = api.chat.completions.create(
         model=model,
         messages=[
-            {"role": "system", "content": LEAKAGE_BOUND_PROMPT},
+            {"role": "system", "content": system},
             {"role": "user", "content": user},
         ],
-        tools=[build_submit_investigation_tool_openai(allowed)],
+        tools=[tool],
         tool_choice="required",
     )
     message = response.choices[0].message
@@ -445,6 +458,8 @@ def investigate_leakage_bound(
     model: str = LEAKAGE_MODEL_DEFAULT,
     max_retries: int = 2,
     provider: str = "anthropic",
+    system_prompt: str | None = None,
+    enforce_schema_enum: bool = True,
 ) -> dict[str, Any]:
     """Narrate the evidence under the evidence-bound runtime-schema contract.
 
@@ -471,6 +486,14 @@ def investigate_leakage_bound(
             Completions API, also used for OpenAI-compatible endpoints such as
             DeepSeek). Tier B (deterministic validation) is identical for both —
             that is what makes the worst-case guarantee provider-independent.
+        system_prompt: Override for the system prompt. Defaults to the strict
+            :data:`LEAKAGE_BOUND_PROMPT`. The measurement harness passes a bare
+            prompt here in its stress configuration; production callers leave
+            it None.
+        enforce_schema_enum: When False, the Tier A runtime enums are dropped
+            from the tool schema (field structure kept) so Tier B's catches are
+            observable in isolation. Diagnostic use only; production callers
+            leave it True.
 
     Returns:
         Dict with the renderer-compatible keys (``verdict``, ``confidence``,
@@ -482,6 +505,11 @@ def investigate_leakage_bound(
     """
     allowed = evidence_allowed_columns(evidence)
     allowed_set = set(allowed)
+    system = system_prompt if system_prompt is not None else LEAKAGE_BOUND_PROMPT
+    if provider == "openai":
+        tool = build_submit_investigation_tool_openai(allowed, enforce_enum=enforce_schema_enum)
+    else:
+        tool = build_submit_investigation_tool(allowed, enforce_enum=enforce_schema_enum)
 
     # Keep the client untyped (Any) — the same discipline the agentlite path
     # uses. We pass raw dict tool/tool_choice params, which the provider's
@@ -517,9 +545,9 @@ def investigate_leakage_bound(
     for attempt in range(max_retries + 1):
         user = base_user + correction
         if provider == "openai":
-            tool_input = _emit_openai(api, model, user, allowed)
+            tool_input = _emit_openai(api, model, system, user, tool)
         else:
-            tool_input = _emit_anthropic(api, model, user, allowed)
+            tool_input = _emit_anthropic(api, model, system, user, tool)
         cited = [str(c) for c in (tool_input.get("columns_referenced") or [])]
         claims = [c for c in (tool_input.get("claims") or []) if isinstance(c, dict)]
 

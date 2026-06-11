@@ -450,3 +450,52 @@ def test_claims_enum_present_in_both_tool_formats() -> None:
     ]["enum"]
     assert ant_enum == ALLOWED
     assert oai_enum == ALLOWED
+
+
+# --------------------------------------------------------------------------- #
+# Stress-configuration parameters (system_prompt override + enum toggle)       #
+# --------------------------------------------------------------------------- #
+
+
+def test_enum_dropped_when_enforce_enum_false() -> None:
+    from mlcompass.agents.leakage_investigator import _submit_input_schema
+
+    open_schema = _submit_input_schema(ALLOWED, enforce_enum=False)
+    assert "enum" not in open_schema["properties"]["columns_referenced"]["items"]
+    col = open_schema["properties"]["claims"]["items"]["properties"]["column"]
+    assert "enum" not in col
+    # Default keeps the enums.
+    bound_schema = _submit_input_schema(ALLOWED)
+    assert bound_schema["properties"]["columns_referenced"]["items"]["enum"] == ALLOWED
+
+
+def test_stress_config_tier_b_still_catches_and_strips() -> None:
+    # Bare prompt + no enums: the model fabricates every attempt; Tier B alone
+    # must still keep the phantom from reaching the user.
+    phantom = tool_use_response(
+        SUBMIT_TOOL_NAME,
+        {
+            "verdict": "leakage_likely",
+            "confidence": "high",
+            "columns_referenced": ["log_target_v2", "revenue"],
+            "narration": "stress phantom",
+        },
+    )
+    client = MockClient(responses=[phantom, _clone(phantom), _clone(phantom)])
+    out = investigate_leakage_bound(
+        EVIDENCE,
+        client=client,
+        max_retries=2,
+        system_prompt="You are a bare narrator. Call submit_investigation once.",
+        enforce_schema_enum=False,
+    )
+    assert out["schema_rejections"] == 3
+    assert "revenue" not in out["columns_referenced"]
+    assert out["had_unrecoverable_violation"] is True
+    # The override prompt actually reached the API.
+    sent_system = client.last_create_kwargs["system"]
+    text = sent_system if isinstance(sent_system, str) else str(sent_system)
+    assert "bare narrator" in text
+    # And the open schema was sent (no enum on columns_referenced items).
+    tool = client.last_create_kwargs["tools"][0]
+    assert "enum" not in tool["input_schema"]["properties"]["columns_referenced"]["items"]

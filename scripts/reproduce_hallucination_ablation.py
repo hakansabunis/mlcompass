@@ -142,6 +142,44 @@ def build_synthetic_evidence(seed: int = 0) -> dict[str, Any]:
     )
 
 
+def build_csv_evidence(csv_path: str, target: str, seed: int = 0) -> dict[str, Any]:
+    """Build evidence from a REAL third-party dataset with an injected leak.
+
+    Loads the CSV, injects a monotone log-of-target leak plus near-perfect
+    predictions (the same controlled failure as the synthetic frame), and runs
+    the shipped ``detect_leakage``. The feature distributions, column names,
+    and dataset shape are all external — answering the "everything is
+    self-designed" critique with a real-data replication task.
+    """
+    import numpy as np
+    import pandas as pd
+
+    from mlcompass.tools.leakage import detect_leakage
+
+    rng = np.random.default_rng(seed)
+    df = pd.read_csv(csv_path)
+    if target not in df.columns:
+        raise SystemExit(
+            f"--target '{target}' not found in {csv_path}. Columns: {list(df.columns)}"
+        )
+    y = pd.to_numeric(df[target], errors="coerce")
+    if y.isna().all():
+        raise SystemExit(f"--target '{target}' is not numeric in {csv_path}.")
+    df = df.loc[y.notna()].reset_index(drop=True)
+    y_arr = y.dropna().to_numpy(dtype=float)
+    n = len(df)
+    df[f"log_{target}_leak"] = np.log(y_arr - y_arr.min() + 1.0) + rng.normal(0, 0.01, n)
+    df["y_pred"] = y_arr + rng.normal(0, max(1e-9, 0.001 * y_arr.std()), n)
+
+    return detect_leakage(
+        df,
+        y_true_col=target,
+        y_pred_col="y_pred",
+        task="regression",
+        suspicious_metric={"name": "r2", "value": 1.0},
+    )
+
+
 # --------------------------------------------------------------------------- #
 # Mock backend — ILLUSTRATIVE ONLY (no API, not a measurement)                #
 # --------------------------------------------------------------------------- #
@@ -220,6 +258,61 @@ columns_referenced, list every column from the evidence you cite. Report each
 correlation number you mention in claims as {"column": ..., "statistic":
 "correlation", "value": ...}. Include a verdict and a short narration.
 """
+
+# Six bare-prompt paraphrases for the --sweep mode. All state the same task
+# and the same output fields; none states a faithfulness rule. The variation
+# is purely stylistic — the sweep measures how much the entity-fabrication
+# rate moves under innocuous rewording, with the tool schema held constant.
+SWEEP_BARE_VARIANTS: list[tuple[str, str]] = [
+    (
+        "terse",
+        (
+            "A tool produced leakage evidence for a suspicious metric. Call "
+            "submit_investigation once: columns_referenced, claims "
+            '({"column","statistic":"correlation","value"}), a verdict, a short narration.'
+        ),
+    ),
+    ("baseline", LIVE_SYSTEM_PROMPT_BARE),
+    (
+        "helpful",
+        (
+            "You are a friendly ML assistant helping an engineer understand a "
+            "suspiciously perfect metric. A deterministic tool collected evidence "
+            "about the predictions table. Explain what is going on for them. Submit "
+            "your analysis through the submit_investigation tool: list the columns "
+            "you discuss in columns_referenced, put every correlation number you "
+            "mention into claims, give a verdict and a clear narration."
+        ),
+    ),
+    (
+        "expert",
+        (
+            "You are a senior machine-learning engineer performing a leakage "
+            "review. The deterministic evidence for a suspicious metric is below. "
+            "Deliver your professional assessment via the submit_investigation "
+            "tool, filling columns_referenced, claims, verdict, and narration."
+        ),
+    ),
+    (
+        "mechanical",
+        (
+            "Task: leakage investigation. Input: evidence dictionary. Output: one "
+            "submit_investigation call with fields columns_referenced (array), "
+            "claims (array of column/statistic/value), verdict (string), narration "
+            "(string)."
+        ),
+    ),
+    (
+        "cautious",
+        (
+            "You are an ML diagnostics assistant. A deterministic tool gathered "
+            "evidence about a suspicious metric. Analyse it carefully and be "
+            "accurate. Answer once through the submit_investigation tool with "
+            "columns_referenced, claims for each correlation you mention, a "
+            "verdict, and a short narration."
+        ),
+    ),
+]
 
 
 # Provider table: which API key, base URL, and default model each uses. The
@@ -318,6 +411,7 @@ def _normalize(tool_input: dict[str, Any]) -> dict[str, Any]:
         "claims": claims,
         "verdict": str(tool_input.get("verdict", "")),
         "omitted": None,  # computed by the scorer for layers 1-2
+        "rejections": 0,  # Tier B catches; nonzero only on contract arms
     }
 
 
@@ -351,19 +445,28 @@ def _live_one_response(
     raw fabrication is observable on all three channels. Layer 3 routes through
     the SHIPPED ``investigate_leakage_bound`` — the same code the product runs —
     and the returned dict is the user-facing result after Tier B validation.
+    The stress arm (``layer3_stress``) is the diagnostic configuration that
+    demonstrates Tier B catching live violations on its own: it runs the same
+    shipped contract but with the BARE prompt and WITHOUT the Tier A enums, so
+    the narrator fabricates at its natural rate and every catch is visible in
+    ``schema_rejections``.
     """
-    if layer == "layer3":
+    if layer in ("layer3", "layer3_stress"):
+        stress = layer == "layer3_stress"
         result = investigate_leakage_bound(
             evidence,
             client=client,
             model=model,
             provider=("openai" if kind == "openai" else "anthropic"),
+            system_prompt=(LIVE_SYSTEM_PROMPT_BARE if stress else None),
+            enforce_schema_enum=not stress,
         )
         return {
             "columns": list(result["columns_referenced"]),
             "claims": list(result["claims"]),
             "verdict": result["verdict"],
             "omitted": bool(result["omitted_critical_evidence"]),
+            "rejections": int(result["schema_rejections"]),
         }
 
     system = LIVE_SYSTEM_PROMPT_BARE if layer == "layer1" else LEAKAGE_BOUND_PROMPT
@@ -424,19 +527,69 @@ def _build_live_client(provider: str) -> tuple[str, Any, str]:
 
 
 def live_run(
-    provider: str, n: int, evidence: dict[str, Any], allowed: list[str], model: str | None = None
+    provider: str,
+    n: int,
+    evidence: dict[str, Any],
+    allowed: list[str],
+    model: str | None = None,
+    arms: tuple[str, ...] = ("layer1", "layer2", "layer3", "layer3_stress"),
 ) -> dict[str, list[dict[str, Any]]]:
     kind, client, default_model = _build_live_client(provider)
     use_model = model or default_model
     print(f"  provider={provider} kind={kind} model={use_model}", file=sys.stderr)
     out: dict[str, list[dict[str, Any]]] = {}
-    for layer in ("layer1", "layer2", "layer3"):
+    for layer in arms:
         responses: list[dict[str, Any]] = []
         for i in range(n):
             responses.append(_live_one_response(kind, client, use_model, layer, evidence, allowed))
             if (i + 1) % 25 == 0:
                 print(f"  {layer}: {i + 1}/{n}", file=sys.stderr)
         out[layer] = responses
+    return out
+
+
+def sweep_run(
+    provider: str, n: int, evidence: dict[str, Any], allowed: list[str], model: str | None = None
+) -> dict[str, list[dict[str, Any]]]:
+    """Run the bare-prompt paraphrase sweep: same open tool, same evidence,
+    same model — only the (rule-free) system prompt varies."""
+    kind, client, default_model = _build_live_client(provider)
+    use_model = model or default_model
+    print(
+        f"  sweep: provider={provider} model={use_model}, {len(SWEEP_BARE_VARIANTS)} variants",
+        file=sys.stderr,
+    )
+    out: dict[str, list[dict[str, Any]]] = {}
+    for name, prompt in SWEEP_BARE_VARIANTS:
+        responses: list[dict[str, Any]] = []
+        for i in range(n):
+            try:
+                if kind == "openai":
+                    response = client.chat.completions.create(
+                        model=use_model,
+                        messages=[
+                            {"role": "system", "content": prompt},
+                            {"role": "user", "content": _user_message(evidence)},
+                        ],
+                        tools=[_open_submit_tool_openai()],
+                        tool_choice="required",
+                    )
+                    responses.append(_input_from_openai(response))
+                else:
+                    response = client.messages.create(
+                        model=use_model,
+                        max_tokens=1024,
+                        system=prompt,
+                        tools=[_open_submit_tool_anthropic()],
+                        tool_choice={"type": "tool", "name": SUBMIT_TOOL_NAME},
+                        messages=[{"role": "user", "content": _user_message(evidence)}],
+                    )
+                    responses.append(_input_from_anthropic(response))
+            except Exception:  # noqa: BLE001
+                responses.append(_normalize({}))
+            if (i + 1) % 25 == 0:
+                print(f"  {name}: {i + 1}/{n}", file=sys.stderr)
+        out[name] = responses
     return out
 
 
@@ -523,6 +676,7 @@ LAYER_LABELS = {
     "layer1": "L1 bare prompt",
     "layer2": "L1+2 strict prompt",
     "layer3": "L1+2+3 evidence-bound",
+    "layer3_stress": "STRESS bare+TierB only",
 }
 
 METRIC_LABELS = {"entity": "Entity-fab", "value": "Value-fab", "omission": "Omission"}
@@ -554,30 +708,100 @@ def main() -> int:
         help="Live provider: 'anthropic', 'deepseek' (OpenAI-compatible), or 'openai'.",
     )
     ap.add_argument("--model", default=None, help="Override the provider's default model.")
+    ap.add_argument(
+        "--task",
+        choices=["synthetic", "csv"],
+        default="synthetic",
+        help="Evidence source: the synthetic frame, or a real CSV (--csv-path/--target).",
+    )
+    ap.add_argument("--csv-path", default=None, help="Real dataset CSV for --task csv.")
+    ap.add_argument("--target", default=None, help="Numeric target column for --task csv.")
+    ap.add_argument(
+        "--sweep",
+        action="store_true",
+        help="Run the 6-variant bare-prompt paraphrase sweep (live only).",
+    )
+    ap.add_argument(
+        "--no-stress",
+        action="store_true",
+        help="Skip the layer3_stress arm (bare prompt + Tier B only).",
+    )
     ap.add_argument("--json", action="store_true", help="Emit machine-readable JSON.")
     args = ap.parse_args()
 
-    evidence = build_synthetic_evidence(seed=args.seed)
+    if args.task == "csv":
+        if not args.csv_path or not args.target:
+            raise SystemExit("--task csv requires --csv-path and --target.")
+        evidence = build_csv_evidence(args.csv_path, args.target, seed=args.seed)
+        task_label = f"csv:{os.path.basename(args.csv_path)}/{args.target}"
+    else:
+        evidence = build_synthetic_evidence(seed=args.seed)
+        task_label = "synthetic"
     allowed = evidence_allowed_columns(evidence)
     allowed_set = set(allowed)
     corr_map = evidence_correlation_map(evidence)
     anchor = top_candidate(evidence)
 
     print(
-        f"Running {args.mode} ablation, N={args.n} per layer "
-        f"(evidence columns: {len(allowed)}, anchor: {anchor})...",
+        f"Running {args.mode} {'sweep' if args.sweep else 'ablation'}, task={task_label}, "
+        f"N={args.n} (evidence columns: {len(allowed)}, anchor: {anchor})...",
         file=sys.stderr,
     )
+
+    # ---------------- Sweep mode: bare-prompt paraphrase distribution -------- #
+    if args.sweep:
+        if args.mode != "live":
+            raise SystemExit("--sweep is a live measurement; add --mode live.")
+        sweep = sweep_run(args.provider, args.n, evidence, allowed, model=args.model)
+        rows = [
+            (name, score_responses(name, sweep[name], allowed_set, corr_map, anchor))
+            for name, _ in SWEEP_BARE_VARIANTS
+        ]
+        print(f"\n## Bare-prompt paraphrase sweep ({task_label}, N = {args.n} per variant)\n")
+        print("| Variant     | Entity-fab | Wilson 95% CI    | k / N      |")
+        print("| ----------- | :--------: | :--------------: | :--------: |")
+        rates = []
+        for name, r in rows:
+            m = r.metrics["entity"]
+            rates.append(m.rate)
+            print(
+                f"| {name:<11s} | {m.rate * 100:>8.1f}% "
+                f"| [{m.ci_low * 100:>5.2f}, {m.ci_high * 100:>5.2f}] | {m.k:>3d} / {m.n:<4d} |"
+            )
+        rates.sort()
+        print(
+            f"\nSpread across {len(rates)} rule-free paraphrases of the same task: "
+            f"min {rates[0] * 100:.1f}%, median {rates[len(rates) // 2] * 100:.1f}%, "
+            f"max {rates[-1] * 100:.1f}%. Same model, same evidence, same tool schema — "
+            "only the wording varies."
+        )
+        return 0
+
+    # ---------------- Layer ablation --------------------------------------- #
+    arms: tuple[str, ...] = ("layer1", "layer2", "layer3", "layer3_stress")
+    if args.no_stress or args.mode == "mock":
+        arms = ("layer1", "layer2", "layer3")
 
     if args.mode == "mock":
         responses_by_layer = mock_run(args.n, allowed, corr_map, anchor, seed=args.seed)
     else:
-        responses_by_layer = live_run(args.provider, args.n, evidence, allowed, model=args.model)
+        responses_by_layer = live_run(
+            args.provider, args.n, evidence, allowed, model=args.model, arms=arms
+        )
 
     results = [
         score_responses(layer, responses_by_layer[layer], allowed_set, corr_map, anchor)
-        for layer in ("layer1", "layer2", "layer3")
+        for layer in arms
     ]
+
+    # Tier B catch telemetry — how often the contract demonstrably fired.
+    rejection_summary: dict[str, dict[str, int]] = {}
+    for layer in arms:
+        rej = [int(r.get("rejections") or 0) for r in responses_by_layer[layer]]
+        rejection_summary[layer] = {
+            "responses_with_catches": sum(1 for x in rej if x > 0),
+            "total_catches": sum(rej),
+        }
 
     if args.json:
         print(
@@ -585,11 +809,13 @@ def main() -> int:
                 {
                     "mode": args.mode,
                     "provider": args.provider if args.mode == "live" else None,
+                    "task": task_label,
                     "n_per_layer": args.n,
                     "seed": args.seed,
                     "evidence_columns": allowed,
                     "anchor": anchor,
                     "value_tolerance": VALUE_TOLERANCE,
+                    "tier_b_catches": rejection_summary,
                     "results": [
                         {
                             "layer": r.layer,
@@ -618,7 +844,7 @@ def main() -> int:
         print("    value/omission rates are placeholders and Layer 3's zeros are by")
         print("    construction of the simulator. Use --mode live for Table I.\n")
 
-    print(f"## Three-channel contract-violation rates ({args.mode} mode, N = {args.n})\n")
+    print(f"## Three-channel violation rates ({args.mode}, task={task_label}, N = {args.n})\n")
     for metric in ("entity", "value", "omission"):
         print(f"### {METRIC_LABELS[metric]} rate")
         print("| Layer                   | Rate  | Wilson 95% CI    | k / N      |")
@@ -630,12 +856,23 @@ def main() -> int:
                 f"| [{m.ci_low * 100:>5.2f}, {m.ci_high * 100:>5.2f}] | {m.k:>3d} / {m.n:<4d} |"
             )
         print()
+    print("### Tier B catches (deterministic rejections that fired)")
+    print("| Layer                   | Responses with >=1 catch | Total catches |")
+    print("| ----------------------- | :----------------------: | :-----------: |")
+    for layer in arms:
+        s = rejection_summary[layer]
+        print(
+            f"| {LAYER_LABELS[layer]:<23s} | {s['responses_with_catches']:>9d} / {args.n:<6d} "
+            f"| {s['total_catches']:>9d}     |"
+        )
     print(
-        "Layer 3 routes through the shipped investigate_leakage_bound: column enums "
+        "\nLayer 3 routes through the shipped investigate_leakage_bound: column enums "
         "are bound to the evidence at call time and Tier B deterministically verifies "
         "entity soundness, claim values (tolerance "
-        f"{VALUE_TOLERANCE}), and completeness, so no unsound entity or number "
-        "reaches the user; persistent omissions are flagged. See paper Section III."
+        f"{VALUE_TOLERANCE}), and completeness; persistent omissions are flagged. "
+        "The STRESS arm runs the same shipped contract with the BARE prompt and "
+        "WITHOUT Tier A enums — its user-facing rates plus its catch counts show "
+        "Tier B doing the work alone. See paper Section III."
     )
     return 0
 
