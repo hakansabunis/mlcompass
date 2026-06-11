@@ -62,7 +62,7 @@ mlcompass is organized into three layers (Fig. 1): user-facing surfaces (a CLI, 
 
 **[INSERT FIGURE 1 HERE]**
 
-*Fig. 1. System architecture. Surfaces over a two-layer brain (deterministic tools + optional LLM narrator) over persistent context. The evidence-bound schema is generated at the tool→narrator boundary; the narrator's entities and claims are verified against the evidence before reaching the user.*
+*Fig. 1. The evidence-bound contract. The deterministic layer emits the evidence dictionary E; Tier A binds the tool-schema enums to E at call time; Tier B deterministically verifies entity soundness, claim values, and completeness, with corrective retry, residual stripping, and omission flagging. Only validated citations and verified claims reach the user.*
 
 ### C. The Evidence-Bound Contract
 
