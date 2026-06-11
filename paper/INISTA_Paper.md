@@ -170,12 +170,6 @@ Evidence-closed narration names the class of tasks whose citable entities and ve
 
 ---
 
-## Acknowledgment
-
-The authors used a large language model as a coding and writing assistant during the development of mlcompass and the preparation of this manuscript. All experimental results come from the recorded harness runs in the public repository; the authors reviewed and verified all content and bear full responsibility for it.
-
----
-
 ## References
 
 [1] Z. Ji *et al.*, "Survey of hallucination in natural language generation," *ACM Comput. Surv.*, vol. 55, no. 12, Art. 248, 2023.
