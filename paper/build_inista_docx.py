@@ -29,7 +29,7 @@ import build_capstone_docx as base
 ROOT = Path(__file__).parent
 SRC = ROOT / "INISTA_Paper.md"
 DST = ROOT / "INISTA_Paper.docx"
-FIG = ROOT / "contract_flow.png"
+FIG = ROOT / "contract_boundary.png"
 
 
 def _unescape(s: str) -> str:
