@@ -191,18 +191,38 @@ def _compact(evidence: dict[str, Any]) -> dict[str, Any]:
 #
 #   Tier B — Deterministic post-validation (provider-independent guarantee).
 #            We do not *trust* the provider to honour the enum. After the tool
-#            input comes back, we re-check every cited column against the
-#            evidence set ourselves. On a violation we reject and retry with a
-#            corrective message; after the retry budget is exhausted we strip
-#            any residual out-of-evidence column. So the worst-case guarantee
-#            ("every column the user sees is in the evidence") holds regardless
-#            of whether the provider enforced the enum.
+#            input comes back we deterministically check THREE properties:
+#
+#            (1) Entity soundness — every cited column is in the evidence set.
+#            (2) Value soundness  — every quantitative claim, emitted as a
+#                structured {column, statistic, value} triple, matches the
+#                value the deterministic layer actually measured (within
+#                VALUE_TOLERANCE, so honest 2-decimal rounding passes).
+#            (3) Completeness    — when the narrator commits to a verdict, it
+#                must address the top-ranked candidate-leak column; silently
+#                omitting the most critical evidence item is a violation.
+#                Skipped when the verdict is "cannot_determine" (an explicit
+#                abstention is not an omission).
+#
+#            On any violation we reject and retry with a corrective message;
+#            after the retry budget is exhausted we strip residual unsound
+#            entities/claims (omissions cannot be stripped — they are flagged).
+#            So the worst-case guarantee — "every entity and every number the
+#            user sees is present in, and equal to, the deterministic
+#            evidence" — holds regardless of provider schema enforcement.
 #
 # Tier A is what positions the contract against the constrained-generation
 # literature; Tier B is what makes the guarantee real, testable offline with a
 # mock client, and independent of any single provider's schema enforcement.
+# Together (1)+(2) give claim-level soundness and (3) gives critical-evidence
+# completeness — both decidable because the evidence world is closed.
 
 SUBMIT_TOOL_NAME = "submit_investigation"
+
+# Absolute tolerance for verifying cited correlation values against the
+# evidence. 0.005 means a value quoted to two decimal places (0.94 for a
+# measured 0.9412) passes, while genuine misquotes (0.85 for 0.9412) fail.
+VALUE_TOLERANCE = 0.005
 
 LEAKAGE_BOUND_PROMPT = """You are mlcompass-leakage-investigator.
 
@@ -220,14 +240,23 @@ STRICT CONTRACT — these guard against hallucination:
    ONLY columns that appear in the evidence dictionary. The tool input schema
    restricts this field to the evidence columns; naming any other column is
    rejected and you will be asked to answer again.
-2. If `candidate_leak_columns` is empty AND `perfect_match_rate` is below 0.95,
+2. Every correlation number you mention MUST also be reported in `claims` as
+   {"column": ..., "statistic": "correlation", "value": ...}, copied EXACTLY
+   from the evidence dictionary. Each claim is checked against the measured
+   value; a mismatched number is rejected and you will be asked to answer
+   again.
+3. If you give a verdict other than "cannot_determine", you MUST address the
+   first column in `candidate_leak_columns` (the top-ranked candidate) in
+   `columns_referenced`. Silently skipping the strongest evidence is a
+   contract violation.
+4. If `candidate_leak_columns` is empty AND `perfect_match_rate` is below 0.95,
    set verdict to "cannot_determine" and leave `columns_referenced` empty
    rather than speculating about a leak you have no evidence for.
-3. If `trustworthy_sample_size` is false, downgrade confidence to "low" or
+5. If `trustworthy_sample_size` is false, downgrade confidence to "low" or
    "cannot_determine" regardless of other signals.
-4. `recommended_checks` must be MANUAL checks the user runs themselves
+6. `recommended_checks` must be MANUAL checks the user runs themselves
    (inspect file X, verify split Y, re-run on holdout Z) — NEVER code patches.
-5. `narration` must paraphrase only facts present in the evidence dictionary.
+7. `narration` must paraphrase only facts present in the evidence dictionary.
 
 Verdict mapping:
 - "leakage_likely": >= 1 candidate_leak_columns OR perfect_match_rate >= 0.95.
@@ -260,20 +289,49 @@ def evidence_allowed_columns(evidence: dict[str, Any]) -> list[str]:
     return sorted(allowed)
 
 
+def evidence_correlation_map(evidence: dict[str, Any]) -> dict[str, float]:
+    """Map feature name -> measured correlation, from the evidence dict.
+
+    This is the reference set Tier B verifies quantitative claims against:
+    a cited correlation value is sound iff it matches this map within
+    :data:`VALUE_TOLERANCE`.
+    """
+    out: dict[str, float] = {}
+    for entry in evidence.get("target_feature_correlations") or []:
+        if isinstance(entry, dict):
+            feature = entry.get("feature")
+            corr = entry.get("correlation")
+            if feature is not None and isinstance(corr, (int, float)):
+                out[str(feature)] = float(corr)
+    return out
+
+
+def top_candidate(evidence: dict[str, Any]) -> str | None:
+    """The top-ranked candidate-leak column, or None if there is none.
+
+    This is the completeness anchor: a committed verdict that does not address
+    this column has omitted the most critical evidence item.
+    """
+    candidates = evidence.get("candidate_leak_columns") or []
+    return str(candidates[0]) if candidates else None
+
+
 _SUBMIT_DESCRIPTION = (
     "Submit the leakage investigation result. Cite only columns present in the "
-    "evidence dictionary."
+    "evidence dictionary, and report every correlation number you mention as a "
+    "structured claim copied exactly from the evidence."
 )
 
 
 def _submit_input_schema(allowed_columns: list[str]) -> dict[str, Any]:
     """The JSON schema for the submit tool, with the runtime enum domain.
 
-    The ``columns_referenced`` item schema carries an ``enum`` equal to
-    ``allowed_columns`` — the evidence-bound value domain. Verdict and
-    confidence keep their static enums; only the column domain is computed at
-    call time. This inner schema is provider-neutral; the per-provider wrappers
-    below place it under ``input_schema`` (Anthropic) or ``parameters`` (OpenAI).
+    The ``columns_referenced`` item schema and the ``claims[].column`` field
+    carry an ``enum`` equal to ``allowed_columns`` — the evidence-bound value
+    domain. Verdict and confidence keep their static enums; only the column
+    domain is computed at call time. This inner schema is provider-neutral; the
+    per-provider wrappers below place it under ``input_schema`` (Anthropic) or
+    ``parameters`` (OpenAI).
     """
     return {
         "type": "object",
@@ -284,10 +342,22 @@ def _submit_input_schema(allowed_columns: list[str]) -> dict[str, Any]:
                 "type": "array",
                 "items": {"type": "string", "enum": list(allowed_columns)},
             },
+            "claims": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "column": {"type": "string", "enum": list(allowed_columns)},
+                        "statistic": {"type": "string", "enum": ["correlation"]},
+                        "value": {"type": "number"},
+                    },
+                    "required": ["column", "statistic", "value"],
+                },
+            },
             "narration": {"type": "string"},
             "recommended_checks": {"type": "array", "items": {"type": "string"}},
         },
-        "required": ["verdict", "confidence", "columns_referenced", "narration"],
+        "required": ["verdict", "confidence", "columns_referenced", "claims", "narration"],
     }
 
 
@@ -380,10 +450,14 @@ def investigate_leakage_bound(
 
     Unlike :func:`investigate_leakage` (a prose narrator constrained only by
     its prompt), this path forces the answer through a ``submit_investigation``
-    tool whose ``columns_referenced`` enum is generated from ``evidence`` at
-    call time (Tier A), and then deterministically re-validates the cited
-    columns against the evidence set, retrying on a violation and stripping any
-    residual out-of-evidence column (Tier B).
+    tool whose column enums are generated from ``evidence`` at call time
+    (Tier A), then deterministically verifies three properties (Tier B):
+    entity soundness (cited columns exist in the evidence), value soundness
+    (every structured ``{column, statistic, value}`` claim matches the measured
+    value within :data:`VALUE_TOLERANCE`), and completeness (a committed
+    verdict addresses the top-ranked candidate column). Violations trigger a
+    corrective retry; after the budget, unsound entities/claims are stripped
+    and persistent omissions are flagged.
 
     Args:
         evidence: The dict from :func:`mlcompass.tools.leakage.detect_leakage`.
@@ -430,10 +504,15 @@ def investigate_leakage_bound(
         f"```json\n{json.dumps(_compact(evidence), default=str)}\n```"
     )
 
+    corr_map = evidence_correlation_map(evidence)
+    anchor = top_candidate(evidence)
+
     schema_rejections = 0
     correction = ""
     tool_input: dict[str, Any] = {}
     cited: list[str] = []
+    claims: list[dict[str, Any]] = []
+    omitted = False
 
     for attempt in range(max_retries + 1):
         user = base_user + correction
@@ -442,23 +521,74 @@ def investigate_leakage_bound(
         else:
             tool_input = _emit_anthropic(api, model, user, allowed)
         cited = [str(c) for c in (tool_input.get("columns_referenced") or [])]
-        violations = [c for c in cited if c not in allowed_set]
-        if not violations:
+        claims = [c for c in (tool_input.get("claims") or []) if isinstance(c, dict)]
+
+        # Tier B (1) — entity soundness.
+        entity_violations = [c for c in cited if c not in allowed_set]
+        # Tier B (2) — value soundness of structured claims.
+        value_violations: list[str] = []
+        for claim in claims:
+            col = str(claim.get("column", ""))
+            val = claim.get("value")
+            if col not in corr_map:
+                value_violations.append(f"{col}: not in evidence")
+            elif (
+                not isinstance(val, (int, float))
+                or abs(float(val) - corr_map[col]) > VALUE_TOLERANCE
+            ):
+                value_violations.append(f"{col}: cited {val}, evidence says {corr_map[col]:.4f}")
+        # Tier B (3) — completeness. Only when the narrator commits to a
+        # verdict; an explicit abstention (or a declined call) is not an
+        # omission. Claims columns count as addressing the anchor.
+        raw_verdict = str(tool_input.get("verdict", "cannot_determine"))
+        committed = (
+            bool(tool_input)
+            and raw_verdict in _VERDICT_VALUES
+            and raw_verdict != "cannot_determine"
+        )
+        referenced = set(cited) | {str(c.get("column", "")) for c in claims}
+        omitted = committed and anchor is not None and anchor not in referenced
+
+        if not entity_violations and not value_violations and not omitted:
             break
-        # Tier B — deterministic rejection, independent of the provider.
+        # Deterministic rejection, independent of the provider.
         schema_rejections += 1
         if attempt < max_retries:
+            parts: list[str] = []
+            if entity_violations:
+                parts.append(
+                    f"you cited columns NOT in the evidence dictionary: {entity_violations}; "
+                    f"you may cite only these columns: {allowed}"
+                )
+            if value_violations:
+                parts.append(
+                    "these claims do not match the measured values: "
+                    + "; ".join(value_violations)
+                    + " — copy values exactly from the evidence"
+                )
+            if omitted:
+                parts.append(
+                    f"you committed to a verdict but did not address the top-ranked "
+                    f"candidate-leak column '{anchor}' — address it or answer cannot_determine"
+                )
             correction = (
-                "\n\nYour previous answer cited columns that are NOT in the "
-                f"evidence dictionary: {violations}. You may cite only these "
-                f"columns: {allowed}. Re-answer through submit_investigation, "
-                "using columns_referenced drawn solely from that set."
+                "\n\nYour previous answer violated the contract: "
+                + ". Also, ".join(parts)
+                + ". Re-answer through submit_investigation."
             )
 
-    # Final deterministic strip — the worst-case guarantee. Anything still out
-    # of evidence after the retry budget is removed before it reaches the user.
+    # Final deterministic strip — the worst-case guarantee. Any entity or claim
+    # still unsound after the retry budget is removed before it reaches the
+    # user. Omissions cannot be stripped; they are flagged instead.
     cited_clean = [c for c in cited if c in allowed_set]
-    had_unrecoverable = len(cited_clean) != len(cited)
+    claims_clean = [
+        c
+        for c in claims
+        if str(c.get("column", "")) in corr_map
+        and isinstance(c.get("value"), (int, float))
+        and abs(float(c["value"]) - corr_map[str(c["column"])]) <= VALUE_TOLERANCE
+    ]
+    had_unrecoverable = len(cited_clean) != len(cited) or len(claims_clean) != len(claims)
 
     verdict = str(tool_input.get("verdict", "cannot_determine"))
     if verdict not in _VERDICT_VALUES:
@@ -478,8 +608,10 @@ def investigate_leakage_bound(
         ],
         # Contract telemetry:
         "columns_referenced": cited_clean,
+        "claims": claims_clean,
         "schema_rejections": schema_rejections,
         "had_unrecoverable_violation": had_unrecoverable,
+        "omitted_critical_evidence": omitted,
         "evidence_bound": True,
     }
 
@@ -490,8 +622,11 @@ __all__ = [
     "investigate_leakage",
     "investigate_leakage_bound",
     "evidence_allowed_columns",
+    "evidence_correlation_map",
+    "top_candidate",
     "build_submit_investigation_tool",
     "build_submit_investigation_tool_openai",
     "SUBMIT_TOOL_NAME",
     "LEAKAGE_MODEL_DEFAULT",
+    "VALUE_TOLERANCE",
 ]

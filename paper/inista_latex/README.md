@@ -21,17 +21,21 @@ pdflatex main.tex
 pdflatex main.tex      # run twice so \ref / \label resolve
 ```
 
-## ✅ Table I is CERTIFIED — live run completed 2026-06-10
-Table I carries **measured** figures from a live run (DeepSeek OpenAI-compatible
-endpoint, `deepseek-chat`, N = 200 per layer, default seed):
+## ✅ Table I is CERTIFIED — three-channel live run completed 2026-06-11
+Table I carries **measured** figures from the three-channel live run (DeepSeek
+OpenAI-compatible endpoint, `deepseek-chat`, N = 200 per layer, default seed):
 
-| Layer | Rate | Wilson 95% CI | k/N |
+| Layer | Entity-fab | Value-fab | Omission |
 |---|---|---|---|
-| L1 bare prompt | 56.5% | [49.57, 63.18] | 113/200 |
-| L2 + strict prompt | 0.0% | [0.00, 1.88] | 0/200 |
-| L3 + evidence-bound | 0.0% | [0.00, 1.88] | 0/200 |
+| L1 bare prompt | 15.0% (30/200) | 0.0% (0/200) | 0.0% (0/200) |
+| L2 + strict prompt | 0.0% (0/200) | 0.0% (0/200) | 0.0% (0/200) |
+| L3 + evidence-bound | 0.0% (0/200) | 0.0% (0/200) | 0.0% (0/200) |
 
-Full record (command, environment, verbatim output, reading):
+Plus the prompt-sensitivity datum: the 2026-06-10 run's bare prompt (no
+structured-claims request) measured **56.5%** entity fabrication — a near-4×
+swing from one prompt sentence, reported in the paper as a finding.
+
+Full records: `paper/ablation_live_deepseek_2026-06-11_three_channel.md` and
 `paper/ablation_live_deepseek_2026-06-10.md`. To re-run:
 
 ```powershell

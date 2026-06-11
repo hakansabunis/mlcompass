@@ -325,3 +325,128 @@ def test_openai_declined_tool_call_is_safe() -> None:
     )
     assert out["columns_referenced"] == []
     assert out["had_unrecoverable_violation"] is False
+
+
+# --------------------------------------------------------------------------- #
+# Verified claims (value soundness) + completeness (omission)                  #
+# --------------------------------------------------------------------------- #
+#
+# The contract upgrade: quantitative claims are structured {column, statistic,
+# value} triples checked against the measured correlations (VALUE_TOLERANCE),
+# and a committed verdict must address the top-ranked candidate column.
+
+
+def _resp(verdict="leakage_likely", cols=None, claims=None, narration="ok"):
+    payload = {
+        "verdict": verdict,
+        "confidence": "high",
+        "columns_referenced": cols if cols is not None else ["log_target_v2"],
+        "narration": narration,
+    }
+    if claims is not None:
+        payload["claims"] = claims
+    return tool_use_response(SUBMIT_TOOL_NAME, payload)
+
+
+def test_claim_with_exact_value_passes() -> None:
+    client = MockClient(
+        responses=[
+            _resp(claims=[{"column": "log_target_v2", "statistic": "correlation", "value": 1.0}])
+        ]
+    )
+    out = investigate_leakage_bound(EVIDENCE, client=client)
+    assert out["schema_rejections"] == 0
+    assert out["claims"] == [{"column": "log_target_v2", "statistic": "correlation", "value": 1.0}]
+
+
+def test_claim_rounded_to_two_decimals_passes_tolerance() -> None:
+    # Evidence says near_target_proxy = 0.95; citing 0.95 (or 0.9512-style
+    # rounding within 0.005) must pass — honest rounding is not fabrication.
+    client = MockClient(
+        responses=[
+            _resp(
+                cols=["log_target_v2", "near_target_proxy"],
+                claims=[
+                    {"column": "near_target_proxy", "statistic": "correlation", "value": 0.948}
+                ],
+            )
+        ]
+    )
+    out = investigate_leakage_bound(EVIDENCE, client=client)
+    assert out["schema_rejections"] == 0
+    assert len(out["claims"]) == 1
+
+
+def test_misquoted_value_triggers_retry_then_clean() -> None:
+    # First answer misquotes the correlation (0.85 vs measured 1.0) — Tier B
+    # rejects deterministically and retries; second answer is exact.
+    client = MockClient(
+        responses=[
+            _resp(claims=[{"column": "log_target_v2", "statistic": "correlation", "value": 0.85}]),
+            _resp(claims=[{"column": "log_target_v2", "statistic": "correlation", "value": 1.0}]),
+        ]
+    )
+    out = investigate_leakage_bound(EVIDENCE, client=client)
+    assert out["schema_rejections"] == 1
+    assert out["claims"][0]["value"] == 1.0
+    assert out["had_unrecoverable_violation"] is False
+    assert client.create_call_count == 2
+
+
+def test_persistent_misquote_is_stripped() -> None:
+    bad = _resp(claims=[{"column": "log_target_v2", "statistic": "correlation", "value": 0.5}])
+    client = MockClient(responses=[bad, _clone(bad), _clone(bad)])
+    out = investigate_leakage_bound(EVIDENCE, client=client, max_retries=2)
+    assert out["had_unrecoverable_violation"] is True
+    assert out["claims"] == []  # the unsound claim never reaches the user
+    assert out["columns_referenced"] == ["log_target_v2"]  # entity channel intact
+
+
+def test_omitting_top_candidate_triggers_retry_then_flag() -> None:
+    # The narrator commits to leakage_likely but never addresses the top
+    # candidate (log_target_v2) — completeness violation every attempt.
+    evasive = _resp(cols=["near_target_proxy"])
+    client = MockClient(responses=[evasive, _clone(evasive), _clone(evasive)])
+    out = investigate_leakage_bound(EVIDENCE, client=client, max_retries=2)
+    assert out["schema_rejections"] == 3
+    assert out["omitted_critical_evidence"] is True
+    assert out["had_unrecoverable_violation"] is False  # nothing unsound, just incomplete
+
+
+def test_cannot_determine_is_not_an_omission() -> None:
+    # An explicit abstention with empty citations is allowed — completeness
+    # only binds committed verdicts.
+    client = MockClient(responses=[_resp(verdict="cannot_determine", cols=[])])
+    out = investigate_leakage_bound(EVIDENCE, client=client)
+    assert out["schema_rejections"] == 0
+    assert out["omitted_critical_evidence"] is False
+    assert client.create_call_count == 1
+
+
+def test_claim_column_counts_as_addressing_anchor() -> None:
+    # Addressing the top candidate via a claim (not columns_referenced) is
+    # sufficient for completeness.
+    client = MockClient(
+        responses=[
+            _resp(
+                cols=["near_target_proxy"],
+                claims=[{"column": "log_target_v2", "statistic": "correlation", "value": 1.0}],
+            )
+        ]
+    )
+    out = investigate_leakage_bound(EVIDENCE, client=client)
+    assert out["schema_rejections"] == 0
+    assert out["omitted_critical_evidence"] is False
+
+
+def test_claims_enum_present_in_both_tool_formats() -> None:
+    from mlcompass.agents.leakage_investigator import build_submit_investigation_tool_openai
+
+    ant = build_submit_investigation_tool(ALLOWED)
+    oai = build_submit_investigation_tool_openai(ALLOWED)
+    ant_enum = ant["input_schema"]["properties"]["claims"]["items"]["properties"]["column"]["enum"]
+    oai_enum = oai["function"]["parameters"]["properties"]["claims"]["items"]["properties"][
+        "column"
+    ]["enum"]
+    assert ant_enum == ALLOWED
+    assert oai_enum == ALLOWED
