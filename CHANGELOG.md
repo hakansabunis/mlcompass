@@ -5,6 +5,65 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.9.0] — 2026-06-11
+
+**The claim-faithful contract release.** The leakage narrator now ships the
+evidence-bound runtime-schema contract that is the subject of the INISTA 2026
+paper: every entity and every number the narrator returns is verified against
+the deterministic evidence — by construction, independent of the provider.
+
+### Added — evidence-bound contract (`agents/leakage_investigator.py`)
+
+- **`investigate_leakage_bound`** — the production narration path. The
+  narrator answers through a `submit_investigation` tool whose
+  `columns_referenced` and `claims[].column` enums are **generated at call
+  time from the evidence dictionary** (Tier A), then deterministically
+  verified in plain Python (Tier B) on three channels:
+  - **Entity soundness** — every cited column exists in the evidence.
+  - **Value soundness** — every quantitative claim, a structured
+    `{column, statistic, value}` triple, matches the measured correlation
+    within `VALUE_TOLERANCE = 0.005` (two-decimal rounding passes; genuine
+    misquotes fail).
+  - **Completeness** — a verdict other than `cannot_determine` must address
+    the top-ranked candidate column; explicit abstention is exempt.
+  Violations trigger a corrective retry (budget 2); residual unsound
+  entities/claims are stripped, persistent omissions are flagged
+  (`omitted_critical_evidence`). Telemetry: `schema_rejections`,
+  `had_unrecoverable_violation`, `evidence_bound`.
+- **Provider-independent enforcement** — `provider="anthropic"` (Messages
+  API) or `provider="openai"` (Chat Completions; covers OpenAI-compatible
+  endpoints such as DeepSeek). Tier B is identical for both, so the guarantee
+  does not depend on any provider honouring the schema during decoding.
+- Helpers exported: `evidence_allowed_columns`, `evidence_correlation_map`,
+  `top_candidate`, `build_submit_investigation_tool[_openai]`.
+- The CLI's live leakage path now routes through the bound contract; the
+  prose `investigate_leakage` remains as a tool-free fallback.
+
+### Changed — measurement harness (`scripts/reproduce_hallucination_ablation.py`)
+
+- Live mode builds the evidence with the real `detect_leakage` and routes
+  Layer 3 through the **shipped** `investigate_leakage_bound`; scores three
+  channels per layer (entity-fab / value-fab / omission) with Wilson 95% CIs
+  and raw k/N; `--provider anthropic|deepseek|openai`.
+- Mock mode is clearly labelled illustrative (replays certified rates; not a
+  measurement).
+
+### Measured — certified live runs (deepseek-chat, N=200/layer, records in `paper/`)
+
+- Entity fabrication: bare prompt 15.0% (30/200) → strict prompt 0/200 →
+  full contract 0/200. Value fabrication and critical omission: 0/200 in
+  every configuration.
+- Prompt-sensitivity finding: an earlier bare-prompt variant (no
+  structured-claims request) measured **56.5%** entity fabrication on the
+  same model/task/seed — a near-fourfold swing from one prompt sentence.
+
+### Tests
+
+- 20 end-to-end contract tests (`tests/test_leakage_investigator_bound.py`):
+  enum binding, value tolerance, misquote retry/strip, omission retry/flag,
+  abstention exemption, claim-anchor coverage, both provider tool formats.
+  `ruff` and `mypy --strict` clean.
+
 ## [0.8.1] — 2026-06-06
 
 **Documentation and reproducibility release.** Three reviewers gave us
