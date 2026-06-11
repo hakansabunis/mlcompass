@@ -189,7 +189,7 @@ def build_csv_evidence(csv_path: str, target: str, seed: int = 0) -> dict[str, A
 # deepseek-chat three-channel live run (see paper/ablation_live_deepseek_
 # 2026-06-11_three_channel.md). Mock mode REPLAYS rates; it does not measure.
 ILLUSTRATIVE_RATES: dict[str, dict[str, float]] = {
-    "layer1": {"entity": 0.150, "value": 0.000, "omission": 0.000},
+    "layer1": {"entity": 0.115, "value": 0.000, "omission": 0.000},
     "layer2": {"entity": 0.000, "value": 0.000, "omission": 0.000},
     "layer3": {"entity": 0.000, "value": 0.000, "omission": 0.000},
 }
@@ -771,8 +771,8 @@ def main() -> int:
         rates.sort()
         print(
             f"\nSpread across {len(rates)} rule-free paraphrases of the same task: "
-            f"min {rates[0] * 100:.1f}%, median {rates[len(rates) // 2] * 100:.1f}%, "
-            f"max {rates[-1] * 100:.1f}%. Same model, same evidence, same tool schema — "
+            f"min {rates[0] * 100:.1f}%, max {rates[-1] * 100:.1f}%. "
+            "Same model, same evidence, same tool schema — "
             "only the wording varies."
         )
         return 0

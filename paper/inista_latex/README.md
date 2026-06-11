@@ -21,22 +21,21 @@ pdflatex main.tex
 pdflatex main.tex      # run twice so \ref / \label resolve
 ```
 
-## ✅ Table I is CERTIFIED — three-channel live run completed 2026-06-11
-Table I carries **measured** figures from the three-channel live run (DeepSeek
-OpenAI-compatible endpoint, `deepseek-chat`, N = 200 per layer, default seed):
+## ✅ All tables CERTIFIED — full measurement battery completed 2026-06-12
+The paper's tables carry **measured** figures (DeepSeek OpenAI-compatible
+endpoint, `deepseek-chat`, Wilson 95% CIs):
 
-| Layer | Entity-fab | Value-fab | Omission |
-|---|---|---|---|
-| L1 bare prompt | 15.0% (30/200) | 0.0% (0/200) | 0.0% (0/200) |
-| L2 + strict prompt | 0.0% (0/200) | 0.0% (0/200) | 0.0% (0/200) |
-| L3 + evidence-bound | 0.0% (0/200) | 0.0% (0/200) | 0.0% (0/200) |
+- **Table I** (entity-fab, N=200/cell): synthetic L1 11.5% → L2/L3/STRESS 0/200;
+  real-data (Insurance) L1 43.5% → L2/L3/STRESS 0/200. Value-fab & omission:
+  0/200 in every cell of both tasks.
+- **Table II** (paraphrase sweep, 6 rule-free variants × N=100): **1% → 100%**
+  (terse 1%, baseline 7%, cautious 45%, expert 90%, helpful 93%, mechanical 100%).
+- **Tier B catches (STRESS)**: real-data 75/200 responses, 76 total catches,
+  0 user-facing; repeat-violation rate 37.5% → 1.3% after one corrective
+  message (~28×). Synthetic: 4 catches, 0 user-facing.
 
-Plus the prompt-sensitivity datum: the 2026-06-10 run's bare prompt (no
-structured-claims request) measured **56.5%** entity fabrication — a near-4×
-swing from one prompt sentence, reported in the paper as a finding.
-
-Full records: `paper/ablation_live_deepseek_2026-06-11_three_channel.md` and
-`paper/ablation_live_deepseek_2026-06-10.md`. To re-run:
+Full records: `paper/ablation_live_deepseek_2026-06-12_battery.md` (+ the
+2026-06-10/-11 historical records). To re-run:
 
 ```powershell
 cd C:\Users\SABUNIS\OneDrive\Desktop\ml-copilot
