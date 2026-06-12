@@ -14,13 +14,13 @@ LLM agents increasingly explain what deterministic tools have measured, and the 
 
 ## I. Introduction
 
-Machine-learning practice runs on a patchwork of single-purpose tools. A profiling library inspects the dataset [13], experiment trackers log training runs [14], [15], and automated model search picks an estimator [16]. Each covers one slice; none tells the engineer what the results mean. The now-standard answer to that gap is agentic: put a large language model (LLM) on top, let it call the tools, read their structured output, and explain, following the pattern formalized by ReAct [5] and Toolformer [6] and operationalized by tool-integration standards [7].
+Machine-learning practice runs on a patchwork of single-purpose tools. A profiling library inspects the dataset [1], experiment trackers log training runs [2], [3], and automated model search picks an estimator [4]. Each covers one slice; none tells the engineer what the results mean. The now-standard answer to that gap is agentic: put a large language model (LLM) on top, let it call the tools, read their structured output, and explain, following the pattern formalized by ReAct [5] and Toolformer [6] and operationalized by tool-integration standards [7].
 
-The trouble is that LLMs hallucinate [1], [2], and assistants built on the same foundation models [3] still fail real software tasks at substantial rates [4]. In an advisory ML setting the failure takes a specific form. The narrated object is *structured evidence*, a dictionary of facts that a deterministic tool actually measured, and the narrator can invent members of it: a column the data does not contain, a defect nobody detected, a number that contradicts the report. We call this **phantom-entity fabrication**. In the taxonomy of Ji *et al.* [1] it is a closed-world faithfulness failure, extrinsic when an entity is invented and intrinsic when a quantity contradicts the source, but the source here happens to be fully enumerable. The cost is concrete. A wrong diagnosis delivered fluently is worse than no diagnosis, because the practitioner acts on it.
+The trouble is that LLMs hallucinate [8], [9], and assistants built on the same foundation models [10] still fail real software tasks at substantial rates [11]. In an advisory ML setting the failure takes a specific form. The narrated object is *structured evidence*, a dictionary of facts that a deterministic tool actually measured, and the narrator can invent members of it: a column the data does not contain, a defect nobody detected, a number that contradicts the report. We call this **phantom-entity fabrication**. In the taxonomy of Ji *et al.* [8] it is a closed-world faithfulness failure, extrinsic when an entity is invented and intrinsic when a quantity contradicts the source, but the source here happens to be fully enumerable. The cost is concrete. A wrong diagnosis delivered fluently is worse than no diagnosis, because the practitioner acts on it.
 
 That enumerability is what this paper is built on. **Definition (evidence-closed narration).** *A narration task is evidence-closed if the set of citable entities and verifiable quantities is finite and machine-enumerable at the moment of the narration call.* Once a task is evidence-closed, faithfulness checking stops being a modeling problem. Entity citations are set-membership tests, quantitative claims are numeric comparisons, and coverage of the critical finding is one more membership test. The check is *decidable*, which changes the sensible goal from *mitigation*, pushing a fabrication probability down, to *prevention*, making an unfaithful answer impossible to return.
 
-Constrained generation looks like the natural tool for this. Outlines [8], LMQL [9], grammar-constrained decoding [10], and Guidance [11] restrict what a model may emit during decoding, and provider tool-use APIs validate calls against a declared JSON schema [12]. Input-dependent grammars exist too [10]. Two things still go wrong in our setting. Decoding-time enforcement needs access to the token distribution, and commercial APIs do not expose it. A per-call schema, in turn, only helps if the provider's enforcement is trusted, and for a safety claim it should not be.
+Constrained generation looks like the natural tool for this. Outlines [12], LMQL [13], grammar-constrained decoding [14], and Guidance [15] restrict what a model may emit during decoding, and provider tool-use APIs validate calls against a declared JSON schema [16]. Input-dependent grammars exist too [14]. Two things still go wrong in our setting. Decoding-time enforcement needs access to the token distribution, and commercial APIs do not expose it. A per-call schema, in turn, only helps if the provider's enforcement is trusted, and for a safety claim it should not be.
 
 Our answer is a two-tier **evidence-bound runtime schema**. *Tier A* generates the `enum` domains of the narrator's tool-input fields from the deterministic evidence dictionary at call time, which constrains generation as far as a closed API allows. *Tier B* takes over where trust ends. Plain code re-checks the returned answer on three channels: entity soundness; value soundness of structured `{column, statistic, value}` claims, with a small tolerance so honest rounding passes; and completeness with respect to the top-ranked candidate. A violation triggers a corrective retry. When the retry budget runs out, unsound entities and claims are stripped and a persistent omission is flagged. What survives is a guarantee that owes nothing to the provider: *every entity and every number in the validated citation and claim channels is present in, and equal to, the deterministic evidence*. Free-text narration sits outside these channels, and renderers surface the validated fields as the actionable output. None of the checks is sophisticated, and that is the point: decidability makes simple checks sufficient (Sec. III-C) and lets the guarantee be absolute where decoding-time machinery cannot run at all.
 
@@ -38,15 +38,15 @@ Section II positions the contract against prior work, Section III describes the 
 
 ## II. Related Work
 
-**Hallucination and faithfulness.** Ji *et al.* [1] survey hallucination across generation tasks and separate intrinsic from extrinsic failures; Huang *et al.* [2] give an LLM-specific taxonomy. Phantom-entity fabrication is extrinsic, but with structure the general problem lacks: the source is a finite, machine-enumerable dictionary, so the faithfulness check is decidable rather than open-world. We eliminate this decidable slice at the tool boundary and claim nothing beyond it.
+**Hallucination and faithfulness.** Ji *et al.* [8] survey hallucination across generation tasks and separate intrinsic from extrinsic failures; Huang *et al.* [9] give an LLM-specific taxonomy. Phantom-entity fabrication is extrinsic, but with structure the general problem lacks: the source is a finite, machine-enumerable dictionary, so the faithfulness check is decidable rather than open-world. We eliminate this decidable slice at the tool boundary and claim nothing beyond it.
 
 **LLM agents and tool use.** ReAct [5] interleaves reasoning with tool calls, Toolformer [6] teaches a model when and how to call, and tool-integration standards [7] make third-party tools discoverable over one protocol. All of this governs how an agent *acts*. None of it constrains what the agent may afterwards *say* about a tool's output. The contract lives at exactly that unspecified boundary.
 
-**Constrained and structured generation (closest prior art).** Outlines [8] casts guided decoding as a finite-state machine. LMQL [9] adds declarative constraints over a typed grammar. Grammar-constrained decoding [10] guarantees grammatical validity without fine-tuning, input-dependent grammars included. Guidance [11] pushes JSON-schema and regex constraints down to the token level, and provider APIs validate tool calls against a declared schema [12]. We do not claim that varying a constraint with the input is new; [10] already does it. The differences are in what the constraint is bound to and in who enforces it. Here the value domain comes from a deterministic evidence producer, so the constraint tracks ground-truth observations rather than task structure. And enforcement never leaves our own code: deterministic post-verification keeps the guarantee intact even if the provider admits an out-of-enum token, which matters because decoding-time enforcement is simply unavailable behind commercial APIs. To our knowledge, no prior work packages evidence-bound domains, claim-level value checks, completeness checking, and provider-independent enforcement as a single contract over a decidable faithfulness class. The closest practical relatives are the validate-and-reask toolkits Guardrails AI [18] and NeMo Guardrails [19], which ship the same outer loop as general-purpose infrastructure. Tier B shares the loop's shape; the validator inside differs: decidable faithfulness against a deterministic evidence producer, with the strip-vs-flag semantics Prop. 2 shows is forced, not user-authored heuristic checks.
+**Constrained and structured generation (closest prior art).** Outlines [12] casts guided decoding as a finite-state machine. LMQL [13] adds declarative constraints over a typed grammar. Grammar-constrained decoding [14] guarantees grammatical validity without fine-tuning, input-dependent grammars included. Guidance [15] pushes JSON-schema and regex constraints down to the token level, and provider APIs validate tool calls against a declared schema [16]. We do not claim that varying a constraint with the input is new; [14] already does it. The differences are in what the constraint is bound to and in who enforces it. Here the value domain comes from a deterministic evidence producer, so the constraint tracks ground-truth observations rather than task structure. And enforcement never leaves our own code: deterministic post-verification keeps the guarantee intact even if the provider admits an out-of-enum token, which matters because decoding-time enforcement is simply unavailable behind commercial APIs. To our knowledge, no prior work packages evidence-bound domains, claim-level value checks, completeness checking, and provider-independent enforcement as a single contract over a decidable faithfulness class. The closest practical relatives are the validate-and-reask toolkits Guardrails AI [18] and NeMo Guardrails [19], which ship the same outer loop as general-purpose infrastructure. Tier B shares the loop's shape; the validator inside differs: decidable faithfulness against a deterministic evidence producer, with the strip-vs-flag semantics Prop. 2 shows is forced, not user-authored heuristic checks.
 
-**Code assistants and their reliability.** Foundation models trained on code [3] power widely used assistants that still resolve only a fraction of real-world issues [4]; in our own informal trials they also accepted semantically invalid training configurations without comment. A pipeline assistant has to be right about one concrete artifact, and right without fabricating.
+**Code assistants and their reliability.** Foundation models trained on code [10] power widely used assistants that still resolve only a fraction of real-world issues [11]; in our own informal trials they also accepted semantically invalid training configurations without comment. A pipeline assistant has to be right about one concrete artifact, and right without fabricating.
 
-**ML pipeline tooling.** Profiling libraries [13] do not know what a target column is. Experiment trackers [14], [15] record metrics without interpreting them. Automated model search [16] picks estimators without saying why. mlcompass layers a state-carrying advisory surface over the same artifacts; what this paper contributes is the reliability contract on that surface, not the tool surface itself.
+**ML pipeline tooling.** Profiling libraries [1] do not know what a target column is. Experiment trackers [2], [3] record metrics without interpreting them. Automated model search [4] picks estimators without saying why. mlcompass layers a state-carrying advisory surface over the same artifacts; what this paper contributes is the reliability contract on that surface, not the tool surface itself.
 
 ---
 
@@ -80,7 +80,7 @@ Strip for one property, flag for the other: the asymmetry looks like a preferenc
 
 > **Proposition 2 (repair asymmetry).** *Call a repair* safe *if it only deletes content: deletion never attributes new content to the narrator. Soundness is safe-repairable: the projection Π_E(r) that deletes out-of-evidence entities and out-of-tolerance claims lands in the sound set for every r and is the identity on sound responses. Completeness is not safe-repairable: it is an existential requirement, and any repair must add a reference the model did not produce; the repair itself would fabricate attribution. Deleting the committed verdict is no escape: the schema requires a verdict field, and substituting an abstention attributes an epistemic stance the model did not take, which is likewise unsafe.* **Consequence.** A contract can *enforce* soundness by construction (strip) but can only *detect, re-prompt, and flag* incompleteness. ∎
 
-The invariant that results is easy to state: *any response the contract returns cites only entities present in the deterministic evidence and quotes only values equal to it, by construction, whoever the provider is.* Membership, comparison, anchor. The checks are almost embarrassingly small, and that smallness is what decidability buys; it is why the guarantee can be absolute in a setting where decoding-time methods [8], [10] cannot even be attached.
+The invariant that results is easy to state: *any response the contract returns cites only entities present in the deterministic evidence and quotes only values equal to it, by construction, whoever the provider is.* Membership, comparison, anchor. The checks are almost embarrassingly small, and that smallness is what decidability buys; it is why the guarantee can be absolute in a setting where decoding-time methods [12], [14] cannot even be attached.
 
 ---
 
@@ -172,13 +172,13 @@ Evidence-closed narration names the class of tasks whose citable entities and ve
 
 ## References
 
-[1] Z. Ji *et al.*, "Survey of hallucination in natural language generation," *ACM Comput. Surv.*, vol. 55, no. 12, Art. 248, 2023.
+[1] ydata-profiling: Automated exploratory data analysis for pandas DataFrames. [Online]. Available: https://github.com/ydataai/ydata-profiling
 
-[2] L. Huang *et al.*, "A survey on hallucination in large language models: Principles, taxonomy, challenges, and open questions," *arXiv:2311.05232*, 2023.
+[2] M. Zaharia *et al.*, "Accelerating the machine learning lifecycle with MLflow," *IEEE Data Eng. Bull.*, vol. 41, no. 4, pp. 39–45, 2018.
 
-[3] M. Chen *et al.*, "Evaluating large language models trained on code," *arXiv:2107.03374*, 2021.
+[3] M. Abadi *et al.*, "TensorFlow: A system for large-scale machine learning," in *Proc. USENIX Symp. Operating Syst. Design Implementation (OSDI)*, 2016, pp. 265–283.
 
-[4] C. E. Jimenez *et al.*, "SWE-bench: Can language models resolve real-world GitHub issues?" in *Proc. Int. Conf. Learn. Representations (ICLR)*, 2024.
+[4] M. Feurer *et al.*, "Efficient and robust automated machine learning," in *Proc. Adv. Neural Inf. Process. Syst. (NeurIPS)*, 2015, pp. 2962–2970.
 
 [5] S. Yao *et al.*, "ReAct: Synergizing reasoning and acting in language models," in *Proc. Int. Conf. Learn. Representations (ICLR)*, 2023.
 
@@ -186,23 +186,23 @@ Evidence-closed narration names the class of tasks whose citable entities and ve
 
 [7] Model Context Protocol specification, 2024. [Online]. Available: https://modelcontextprotocol.io
 
-[8] B. T. Willard and R. Louf, "Efficient guided generation for large language models," *arXiv:2307.09702*, 2023.
+[8] Z. Ji *et al.*, "Survey of hallucination in natural language generation," *ACM Comput. Surv.*, vol. 55, no. 12, Art. 248, 2023.
 
-[9] L. Beurer-Kellner, M. Fischer, and M. Vechev, "Prompting is programming: A query language for large language models," *Proc. ACM Program. Lang.*, vol. 7, no. PLDI, pp. 1946–1969, 2023.
+[9] L. Huang *et al.*, "A survey on hallucination in large language models: Principles, taxonomy, challenges, and open questions," *arXiv:2311.05232*, 2023.
 
-[10] S. Geng, M. Josifoski, M. Peyrard, and R. West, "Grammar-constrained decoding for structured NLP tasks without finetuning," in *Proc. Conf. Empirical Methods Natural Lang. Process. (EMNLP)*, 2023, pp. 10932–10952.
+[10] M. Chen *et al.*, "Evaluating large language models trained on code," *arXiv:2107.03374*, 2021.
 
-[11] Guidance: A guidance language for controlling large language models, 2023. [Online]. Available: https://github.com/guidance-ai/guidance
+[11] C. E. Jimenez *et al.*, "SWE-bench: Can language models resolve real-world GitHub issues?" in *Proc. Int. Conf. Learn. Representations (ICLR)*, 2024.
 
-[12] Structured outputs for schema-constrained tool use, 2024. [Online]. Available: https://platform.openai.com/docs/guides/structured-outputs
+[12] B. T. Willard and R. Louf, "Efficient guided generation for large language models," *arXiv:2307.09702*, 2023.
 
-[13] ydata-profiling: Automated exploratory data analysis for pandas DataFrames. [Online]. Available: https://github.com/ydataai/ydata-profiling
+[13] L. Beurer-Kellner, M. Fischer, and M. Vechev, "Prompting is programming: A query language for large language models," *Proc. ACM Program. Lang.*, vol. 7, no. PLDI, pp. 1946–1969, 2023.
 
-[14] M. Zaharia *et al.*, "Accelerating the machine learning lifecycle with MLflow," *IEEE Data Eng. Bull.*, vol. 41, no. 4, pp. 39–45, 2018.
+[14] S. Geng, M. Josifoski, M. Peyrard, and R. West, "Grammar-constrained decoding for structured NLP tasks without finetuning," in *Proc. Conf. Empirical Methods Natural Lang. Process. (EMNLP)*, 2023, pp. 10932–10952.
 
-[15] M. Abadi *et al.*, "TensorFlow: A system for large-scale machine learning," in *Proc. USENIX Symp. Operating Syst. Design Implementation (OSDI)*, 2016, pp. 265–283.
+[15] Guidance: A guidance language for controlling large language models, 2023. [Online]. Available: https://github.com/guidance-ai/guidance
 
-[16] M. Feurer *et al.*, "Efficient and robust automated machine learning," in *Proc. Adv. Neural Inf. Process. Syst. (NeurIPS)*, 2015, pp. 2962–2970.
+[16] Structured outputs for schema-constrained tool use, 2024. [Online]. Available: https://platform.openai.com/docs/guides/structured-outputs
 
 [17] S. Kaufman, S. Rosset, C. Perlich, and O. Stitelman, "Leakage in data mining: Formulation, detection, and avoidance," *ACM Trans. Knowl. Discovery Data*, vol. 6, no. 4, Art. 15, 2012.
 

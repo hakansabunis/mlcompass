@@ -206,22 +206,23 @@ Three invariants make the contract portable: a deterministic evidence producer, 
 Evidence-closed narration names the class of tasks whose citable entities and verifiable quantities are finite and machine-enumerable at call time. For this class, faithfulness checking is linear-time (Prop.~\ref{prop:linear}), soundness can be enforced by safe deletion while completeness can only be detected (Prop.~\ref{prop:asym}), and fabrication on the verified channels is therefore preventable rather than merely mitigable. The two-tier contract built on those facts ships in the production narrator of mlcompass, and we measured it live. Bare narrators fabricated at 11.5\% and 43.5\% on a synthetic and a real-data leakage task, and at anywhere from 1\% to 100\% across six paraphrases of one instruction. The contract held the user-facing rate at 0/200 on every channel of both tasks; its verifier caught 80 violations across the stress configurations, 76 of them on real data; and one named corrective message cut repeat violations from 37.5\% to 1.3\%. We are explicit about what is being claimed: not a new decoding algorithm, but a decidable-class framing, a provider-independent contract with two formal observations, and first measurements, among which the paraphrase sweep is, we believe, the sharpest quantitative evidence so far that prompt-level faithfulness cannot be certified from observed behavior alone. The program ahead is concrete: a public narrator-fabrication benchmark across providers, tasks, and leak patterns; verified claims over derived and relational statistics; contract composition along multi-step agent chains, each step's enum derived from the verified output of the step before; and transposition to evidence-closed narrators beyond ML tooling.
 
 \begin{thebibliography}{00}
+%% Order = first citation in the text (IEEE numbering convention).
+\bibitem{ydata} ``ydata-profiling: Automated exploratory data analysis for pandas DataFrames.'' [Online]. Available: \url{https://github.com/ydataai/ydata-profiling}
+\bibitem{mlflow} M. Zaharia \emph{et al.}, ``Accelerating the machine learning lifecycle with MLflow,'' \emph{IEEE Data Eng. Bull.}, vol.~41, no.~4, pp.~39--45, 2018.
+\bibitem{tensorflow} M. Abadi \emph{et al.}, ``TensorFlow: A system for large-scale machine learning,'' in \emph{Proc. USENIX OSDI}, 2016, pp.~265--283.
+\bibitem{autosklearn} M. Feurer \emph{et al.}, ``Efficient and robust automated machine learning,'' in \emph{Proc. NeurIPS}, 2015, pp.~2962--2970.
+\bibitem{react} S. Yao \emph{et al.}, ``ReAct: Synergizing reasoning and acting in language models,'' in \emph{Proc. ICLR}, 2023.
+\bibitem{toolformer} T. Schick \emph{et al.}, ``Toolformer: Language models can teach themselves to use tools,'' in \emph{Proc. NeurIPS}, 2023.
+\bibitem{mcp} ``Model Context Protocol specification,'' 2024. [Online]. Available: \url{https://modelcontextprotocol.io}
 \bibitem{ji} Z. Ji \emph{et al.}, ``Survey of hallucination in natural language generation,'' \emph{ACM Comput. Surv.}, vol.~55, no.~12, Art.~248, 2023.
 \bibitem{huang} L. Huang \emph{et al.}, ``A survey on hallucination in large language models: Principles, taxonomy, challenges, and open questions,'' arXiv:2311.05232, 2023.
 \bibitem{codex} M. Chen \emph{et al.}, ``Evaluating large language models trained on code,'' arXiv:2107.03374, 2021.
 \bibitem{swebench} C. E. Jimenez \emph{et al.}, ``SWE-bench: Can language models resolve real-world GitHub issues?'' in \emph{Proc. ICLR}, 2024.
-\bibitem{react} S. Yao \emph{et al.}, ``ReAct: Synergizing reasoning and acting in language models,'' in \emph{Proc. ICLR}, 2023.
-\bibitem{toolformer} T. Schick \emph{et al.}, ``Toolformer: Language models can teach themselves to use tools,'' in \emph{Proc. NeurIPS}, 2023.
-\bibitem{mcp} ``Model Context Protocol specification,'' 2024. [Online]. Available: \url{https://modelcontextprotocol.io}
 \bibitem{outlines} B. T. Willard and R. Louf, ``Efficient guided generation for large language models,'' arXiv:2307.09702, 2023.
 \bibitem{lmql} L. Beurer-Kellner, M. Fischer, and M. Vechev, ``Prompting is programming: A query language for large language models,'' \emph{Proc. ACM Program. Lang.}, vol.~7, no.~PLDI, pp.~1946--1969, 2023.
 \bibitem{gcd} S. Geng, M. Josifoski, M. Peyrard, and R. West, ``Grammar-constrained decoding for structured NLP tasks without finetuning,'' in \emph{Proc. EMNLP}, 2023, pp.~10932--10952.
 \bibitem{guidance} ``Guidance: A guidance language for controlling large language models,'' 2023. [Online]. Available: \url{https://github.com/guidance-ai/guidance}
 \bibitem{structured} ``Structured outputs for schema-constrained tool use,'' 2024. [Online]. Available: \url{https://platform.openai.com/docs/guides/structured-outputs}
-\bibitem{ydata} ``ydata-profiling: Automated exploratory data analysis for pandas DataFrames.'' [Online]. Available: \url{https://github.com/ydataai/ydata-profiling}
-\bibitem{mlflow} M. Zaharia \emph{et al.}, ``Accelerating the machine learning lifecycle with MLflow,'' \emph{IEEE Data Eng. Bull.}, vol.~41, no.~4, pp.~39--45, 2018.
-\bibitem{tensorflow} M. Abadi \emph{et al.}, ``TensorFlow: A system for large-scale machine learning,'' in \emph{Proc. USENIX OSDI}, 2016, pp.~265--283.
-\bibitem{autosklearn} M. Feurer \emph{et al.}, ``Efficient and robust automated machine learning,'' in \emph{Proc. NeurIPS}, 2015, pp.~2962--2970.
 \bibitem{leakage} S. Kaufman, S. Rosset, C. Perlich, and O. Stitelman, ``Leakage in data mining: Formulation, detection, and avoidance,'' \emph{ACM Trans. Knowl. Discovery Data}, vol.~6, no.~4, Art.~15, 2012.
 \bibitem{guardrailsai} ``Guardrails AI: Adding guardrails to large language models.'' [Online]. Available: \url{https://github.com/guardrails-ai/guardrails}
 \bibitem{nemo} T. Rebedea, R. Dinu, M. N. Sreedhar, C. Parisien, and J. Cohen, ``NeMo Guardrails: A toolkit for controllable and safe LLM applications with programmable rails,'' in \emph{Proc. EMNLP: System Demonstrations}, 2023, pp.~431--445.
