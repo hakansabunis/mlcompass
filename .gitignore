@@ -97,3 +97,8 @@ mlcompass-tutorial/
 
 # Q1 measurement JSONL run logs are audit records (analysis_plan R6/R8) - keep tracked.
 !scripts/runs/
+
+# Case-study datasets are fetched on demand (--fetch-cases), NOT committed:
+# bodyfat has no explicit redistribution license; sambanis is 12 MB (CC0).
+scripts/data/bodyfat.csv
+scripts/data/sambanis_civil_war.csv

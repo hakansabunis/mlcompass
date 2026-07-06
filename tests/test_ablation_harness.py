@@ -496,6 +496,23 @@ def test_frozen_phase2_instances_all_verify() -> None:
     assert fetch_mod.verify() == 0
 
 
+@pytest.mark.skipif(
+    not (DATA_DIR / "bodyfat.csv").exists() or not (DATA_DIR / "sambanis_civil_war.csv").exists(),
+    reason="case-study datasets not fetched (run fetch_fabbench_datasets.py --fetch-cases)",
+)
+def test_case_studies_meet_prestated_expectations() -> None:
+    """A2 lock: bodyfat fires on the NATURAL Density leak; the sambanis
+    negative control stays silent (no candidates, no perfect-match)."""
+    spec = importlib.util.spec_from_file_location(
+        "fabbench_fetch_cases", ROOT / "scripts" / "fetch_fabbench_datasets.py"
+    )
+    assert spec is not None and spec.loader is not None
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules["fabbench_fetch_cases"] = mod
+    spec.loader.exec_module(mod)
+    assert mod.verify_cases() == 0
+
+
 def test_contract_result_normalizer_carries_kinds() -> None:
     out = harness._from_contract_result(
         {

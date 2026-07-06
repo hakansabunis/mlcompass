@@ -1179,9 +1179,18 @@ def main() -> int:
     )
     ap.add_argument(
         "--task",
-        choices=["synthetic", "csv"],
+        choices=["synthetic", "csv", "case"],
         default="synthetic",
-        help="Evidence source: the synthetic frame, or a real CSV (--csv-path/--target).",
+        help=(
+            "Evidence source: the synthetic frame, a real CSV with an injected "
+            "leak (--csv-path/--target/--injector), or a real-world case study "
+            "with a NATURAL documented leak (--case; analysis_plan A2)."
+        ),
+    )
+    ap.add_argument(
+        "--case",
+        default=None,
+        help="Case study for --task case: 'bodyfat' (real leak) or 'sambanis' (negative control).",
     )
     ap.add_argument("--csv-path", default=None, help="Real dataset CSV for --task csv.")
     ap.add_argument("--target", default=None, help="Numeric target column for --task csv.")
@@ -1253,6 +1262,15 @@ def main() -> int:
             args.csv_path, args.target, seed=args.seed, injector=args.injector
         )
         task_label = f"csv:{os.path.basename(args.csv_path)}/{args.target}/{args.injector}"
+    elif args.task == "case":
+        if not args.case:
+            raise SystemExit("--task case requires --case (bodyfat or sambanis).")
+        if args.injector != "monotone_log":
+            raise SystemExit("--injector does not apply to case studies (natural leaks).")
+        from fetch_fabbench_datasets import build_case_evidence
+
+        evidence = build_case_evidence(args.case)
+        task_label = f"case:{args.case}"
     else:
         if args.injector != "monotone_log":
             raise SystemExit(

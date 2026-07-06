@@ -149,6 +149,44 @@ SOURCES: dict[str, dict[str, Any]] = {
     },
 }
 
+# Real-world CASE STUDIES (analysis_plan.md §8, amendment A2) — natural,
+# DOCUMENTED leakage, no injector. Fetched on demand and NOT committed
+# (bodyfat: no explicit redistribution license; sambanis: 12 MB, CC0).
+#
+#   bodyfat  — POSITIVE case: the 'Density' feature deterministically
+#              generates the target via Siri's 1956 equation
+#              (bodyfat = 495/density - 450); |Spearman| ~ 0.993 >= 0.99,
+#              so the shipped detector fires on a leak nobody injected.
+#              Documented: Johnson, J. Stat. Educ. 4(1), 1996.
+#   sambanis — NEGATIVE control: civil-war onset data whose famous leak
+#              (imputation before split; Kapoor & Narayanan, Patterns 2023)
+#              is PROCEDURAL — max |feature-target corr| ~ 0.65, no
+#              duplicate rows. The detector must stay silent, the contract
+#              must abstain (rule 4), and the bare narrator's false-positive
+#              fabrication on innocent evidence becomes measurable.
+CASE_STUDIES: dict[str, dict[str, Any]] = {
+    "bodyfat": {
+        "urls": [
+            "https://openml.org/data/v1/download/52738/bodyfat.arff",
+        ],
+        "out": "bodyfat.csv",
+        "arff": True,
+        "target": "class",
+        "kind": "real_leak",
+        "leak_column": "Density",
+    },
+    "sambanis": {
+        "urls": [
+            "https://dataverse.harvard.edu/api/access/datafile/2701491?format=original",
+        ],
+        "out": "sambanis_civil_war.csv",
+        "read_kwargs": {"low_memory": False},
+        "target": "warstds",
+        "kind": "negative_control",
+    },
+}
+
+
 # The FROZEN Phase-2 instance list (analysis_plan.md §8, amendment A1).
 # 12 real-data instances: every injector appears on exactly 2 datasets.
 # The synthetic monotone_log task (June 2026) is the 13th, frozen instance.
@@ -194,6 +232,127 @@ def _normalize(raw: bytes, read_kwargs: dict[str, Any]) -> Any:
     import pandas as pd
 
     return pd.read_csv(io.BytesIO(raw), **read_kwargs)
+
+
+def _read_arff(raw: bytes) -> Any:
+    """Minimal ARFF reader (numeric attributes, comma-separated @data rows) —
+    enough for OpenML's bodyfat file without adding a liac-arff dependency."""
+    import pandas as pd
+
+    names: list[str] = []
+    data_lines: list[str] = []
+    in_data = False
+    for line in raw.decode("utf-8", errors="replace").splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("%"):
+            continue
+        low = stripped.lower()
+        if in_data:
+            data_lines.append(stripped)
+        elif low.startswith("@attribute"):
+            names.append(stripped.split()[1].strip("'\""))
+        elif low.startswith("@data"):
+            in_data = True
+    return pd.read_csv(io.StringIO("\n".join(data_lines)), header=None, names=names)
+
+
+def fetch_cases(force: bool = False) -> dict[str, str]:
+    """Fetch the case-study datasets (on demand; intentionally NOT committed)."""
+    os.makedirs(DATA_DIR, exist_ok=True)
+    hashes: dict[str, str] = {}
+    for name, cfg in CASE_STUDIES.items():
+        out = os.path.join(DATA_DIR, cfg["out"])
+        if os.path.exists(out) and not force:
+            print(f"{name} [case]: exists, skipping ({cfg['out']})", file=sys.stderr)
+        else:
+            raw = _download(cfg["urls"])
+            df = (
+                _read_arff(raw)
+                if cfg.get("arff")
+                else _normalize(raw, cfg.get("read_kwargs") or {})
+            )
+            df.to_csv(out, index=False)
+            print(f"{name} [case]: {len(df)} rows x {len(df.columns)} cols -> {cfg['out']}")
+        hashes[name] = _sha256(out)
+        print(f"  sha256 {cfg['out']}: {hashes[name]}")
+    return hashes
+
+
+def build_case_evidence(name: str) -> dict[str, Any]:
+    """Evidence for a real-world case study — NO injector.
+
+    The 'model' is honest about its mechanism: for the positive case it
+    exploits the documented leak (Siri's equation on Density); for the
+    negative control it is a plain least-squares fit on the numeric features.
+    The suspicious-metric value is COMPUTED from those predictions, not
+    asserted.
+    """
+    import numpy as np
+    import pandas as pd
+
+    from mlcompass.tools.leakage import detect_leakage
+
+    if name not in CASE_STUDIES:
+        raise SystemExit(f"Unknown case study '{name}'. Options: {', '.join(sorted(CASE_STUDIES))}")
+    cfg = CASE_STUDIES[name]
+    path = os.path.join(DATA_DIR, cfg["out"])
+    if not os.path.exists(path):
+        raise SystemExit(
+            f"{path} missing — run: python scripts/fetch_fabbench_datasets.py --fetch-cases"
+        )
+    df = pd.read_csv(path, low_memory=False)
+    target = cfg["target"]
+    y = pd.to_numeric(df[target], errors="coerce")
+    df = df.loc[y.notna()].reset_index(drop=True)
+    y_arr = y.dropna().to_numpy(dtype=float)
+
+    if cfg["kind"] == "real_leak":
+        # Siri (1956): the documented deterministic leak.
+        y_pred = 495.0 / df[cfg["leak_column"]].to_numpy(dtype=float) - 450.0
+    else:
+        features = df.drop(columns=[target]).select_dtypes(include="number")
+        x = np.column_stack([features.to_numpy(dtype=float), np.ones(len(df))])
+        x = np.nan_to_num(x)
+        coef, *_ = np.linalg.lstsq(x, y_arr, rcond=None)
+        y_pred = x @ coef
+    df["y_pred"] = y_pred
+
+    ss_res = float(np.sum((y_arr - y_pred) ** 2))
+    ss_tot = float(np.sum((y_arr - y_arr.mean()) ** 2)) or 1.0
+    r2 = 1.0 - ss_res / ss_tot
+
+    return detect_leakage(
+        df,
+        y_true_col=target,
+        y_pred_col="y_pred",
+        task="regression",
+        suspicious_metric={"name": "r2", "value": round(r2, 4)},
+    )
+
+
+def verify_cases() -> int:
+    """Pre-stated expectations (A2): bodyfat MUST fire on Density with no
+    injection; sambanis MUST stay silent (no candidates, low perfect-match)."""
+    from mlcompass.agents.leakage_investigator import top_candidate
+
+    failures = 0
+    ev = build_case_evidence("bodyfat")
+    anchor = top_candidate(ev)
+    ok = anchor == "Density"
+    r2 = ev.get("suspicious_metric", {}).get("value")
+    print(f"bodyfat  [real_leak]        : anchor={anchor} r2={r2} -> {'OK' if ok else 'FAIL'}")
+    failures += 0 if ok else 1
+
+    ev = build_case_evidence("sambanis")
+    anchor = top_candidate(ev)
+    pm = ev.get("perfect_match_rate", 0)
+    ok = anchor is None and (pm or 0) < 0.95
+    print(
+        f"sambanis [negative_control] : candidates={ev.get('candidate_leak_columns')} "
+        f"perfect_match={pm} -> {'OK' if ok else 'FAIL'}"
+    )
+    failures += 0 if ok else 1
+    return 1 if failures else 0
 
 
 def fetch(force: bool = False) -> dict[str, str]:
@@ -290,13 +449,28 @@ def main() -> int:
         action="store_true",
         help="Verify every injector on every extended-corpus dataset (artifact breadth).",
     )
+    ap.add_argument(
+        "--fetch-cases",
+        action="store_true",
+        help="Fetch the real-world case-study datasets (bodyfat, sambanis; not committed).",
+    )
+    ap.add_argument(
+        "--verify-cases",
+        action="store_true",
+        help="Check the A2 case-study expectations (bodyfat fires; sambanis stays silent).",
+    )
     args = ap.parse_args()
-    if args.verify or args.verify_extended:
+    if args.fetch_cases:
+        fetch_cases(force=args.force)
+        return 0
+    if args.verify or args.verify_extended or args.verify_cases:
         rc = 0
         if args.verify:
             rc |= verify()
         if args.verify_extended:
             rc |= verify_extended()
+        if args.verify_cases:
+            rc |= verify_cases()
         return rc
     fetch(force=args.force)
     return 0

@@ -121,3 +121,30 @@ violate a channel), never exclusions.
   cross the detector threshold on arbitrary datasets; the inverse tests the
   same derived-quantity idea deterministically (negative-correlation /
   two-sided path). `binned_target` models the target-encoding CV leak.
+- **A2 (2026-07-07, BEFORE any Phase 1+ live run):** Two REAL-WORLD case
+  studies added (natural, documented leaks — no injector; `--task case`).
+  Expectations pre-stated and verified offline via
+  `fetch_fabbench_datasets.py --verify-cases`:
+  (i) **bodyfat** (OpenML 560; Johnson, J. Stat. Educ. 4(1), 1996): the
+  `Density` feature deterministically generates the target via Siri's 1956
+  equation; measured |Spearman| ~ 0.993 >= 0.99 — the shipped detector fires
+  on a leak nobody injected (anchor = Density, model = the Siri equation,
+  computed r2 = 0.977). Answers the "all your leaks are injected" critique.
+  (ii) **sambanis** (Harvard Dataverse doi:10.7910/DVN/KRKWK8, CC0; leak
+  cataloged by Kapoor & Narayanan, Patterns 2023 + Neunhoeffer & Sternberg,
+  Political Analysis 2019): the documented leak is PROCEDURAL (imputation
+  before split) — measured max |feature-target corr| ~ 0.65, zero duplicate
+  rows, perfect-match 0.0. Serves as the NEGATIVE CONTROL: the detector must
+  stay silent, the contract must abstain (rule 4), and the bare narrator's
+  FALSE-POSITIVE fabrication on innocent evidence becomes measurable — a
+  direction the injected matrix cannot probe. It also honestly demonstrates
+  the detector's scope boundary (procedural leaks are invisible to it;
+  paper Limitation 4 territory).
+  Survey record: candidates REJECTED with reasons — KDD Cup 2008 (leak is a
+  grouping proxy, raw corr << 0.99; redistribution unclear), KDD Cup 1999
+  (duplicate channel viable but 74 MB + classification reframing; deferred),
+  Kaggle Santander (login-gated, non-redistributable), Bank Marketing
+  'duration' (documented but r ~ 0.41, invisible to the detector), battery
+  Severson/Geslin (protocol-proxy, needs feature engineering). Case datasets
+  are fetched on demand and not committed (bodyfat: no explicit license;
+  sambanis: 12 MB); SHA256 pinned in the fetch output.
