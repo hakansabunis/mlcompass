@@ -475,6 +475,27 @@ def test_default_injector_reproduces_the_june_task(tmp_path: Path) -> None:
     assert harness._evidence_hash(default) == harness._evidence_hash(explicit)
 
 
+DATA_DIR = ROOT / "scripts" / "data"
+
+
+@pytest.mark.skipif(
+    not (DATA_DIR / "insurance.csv").exists(),
+    reason="FabBench datasets not fetched (run scripts/fetch_fabbench_datasets.py)",
+)
+def test_frozen_phase2_instances_all_verify() -> None:
+    """Amendment A1 lock: every frozen (dataset x injector) instance must stay
+    detectable by the shipped detector — the zero-cost gate before any paid
+    Phase-2 run."""
+    spec = importlib.util.spec_from_file_location(
+        "fabbench_fetch", ROOT / "scripts" / "fetch_fabbench_datasets.py"
+    )
+    assert spec is not None and spec.loader is not None
+    fetch_mod = importlib.util.module_from_spec(spec)
+    sys.modules["fabbench_fetch"] = fetch_mod
+    spec.loader.exec_module(fetch_mod)
+    assert fetch_mod.verify() == 0
+
+
 def test_contract_result_normalizer_carries_kinds() -> None:
     out = harness._from_contract_result(
         {

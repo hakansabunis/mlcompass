@@ -106,4 +106,18 @@ violate a channel), never exclusions.
 
 ## 8. Amendments log
 
-- (none yet)
+- **A1 (2026-07-07, BEFORE any Phase 1+ live run):** Phase-2 task-instance
+  list FROZEN. Datasets (fetched + SHA256-pinned; see
+  `scripts/data/README.md`): insurance/`charges`, heart_cleveland/`chol`,
+  telco_churn/`MonthlyCharges`, ames_housing/`SalePrice`. Instances = the 12
+  (dataset x injector) cells in
+  `scripts/fetch_fabbench_datasets.py::FROZEN_INSTANCES` (every injector on
+  exactly 2 datasets) + the frozen June synthetic monotone_log task = 13.
+  All 12 real-data instances verified detectable by the shipped detector at
+  its thresholds via `fetch_fabbench_datasets.py --verify` (zero API calls)
+  before freezing. Injector deviation from the roadmap's tentative list:
+  `derived-ratio` replaced by `inverse_target` — a ratio's correlation with
+  the target depends on the divisor's variance and cannot be guaranteed to
+  cross the detector threshold on arbitrary datasets; the inverse tests the
+  same derived-quantity idea deterministically (negative-correlation /
+  two-sided path). `binned_target` models the target-encoding CV leak.

@@ -94,3 +94,6 @@ mlcompass-fieldtest/
 mlcompass-fieldtest-*/
 mlcompass-ft*/
 mlcompass-tutorial/
+
+# Q1 measurement JSONL run logs are audit records (analysis_plan R6/R8) - keep tracked.
+!scripts/runs/
