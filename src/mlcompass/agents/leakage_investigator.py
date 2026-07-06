@@ -323,7 +323,9 @@ _SUBMIT_DESCRIPTION = (
 )
 
 
-def _submit_input_schema(allowed_columns: list[str], *, enforce_enum: bool = True) -> dict[str, Any]:
+def _submit_input_schema(
+    allowed_columns: list[str], *, enforce_enum: bool = True
+) -> dict[str, Any]:
     """The JSON schema for the submit tool, with the runtime enum domain.
 
     The ``columns_referenced`` item schema and the ``claims[].column`` field
@@ -500,6 +502,9 @@ def investigate_leakage_bound(
         ``evidence_cited``, ``primary_hypothesis``, ``recommended_checks``)
         plus contract telemetry: ``columns_referenced`` (the validated set),
         ``schema_rejections`` (how many times a violation was caught),
+        ``rejection_kinds`` (per rejection round, which channels fired, e.g.
+        ``["entity", "entity+value"]`` — violation-composition telemetry),
+        ``attempts_made`` (provider calls issued, 1..max_retries+1),
         ``had_unrecoverable_violation`` (True if a phantom survived the retry
         budget and was stripped deterministically), and ``evidence_bound``.
     """
@@ -536,6 +541,8 @@ def investigate_leakage_bound(
     anchor = top_candidate(evidence)
 
     schema_rejections = 0
+    rejection_kinds: list[str] = []
+    attempts_made = 0
     correction = ""
     tool_input: dict[str, Any] = {}
     cited: list[str] = []
@@ -543,6 +550,7 @@ def investigate_leakage_bound(
     omitted = False
 
     for attempt in range(max_retries + 1):
+        attempts_made = attempt + 1
         user = base_user + correction
         if provider == "openai":
             tool_input = _emit_openai(api, model, system, user, tool)
@@ -581,6 +589,15 @@ def investigate_leakage_bound(
             break
         # Deterministic rejection, independent of the provider.
         schema_rejections += 1
+        # Violation-composition telemetry (which channels fired this round).
+        kinds: list[str] = []
+        if entity_violations:
+            kinds.append("entity")
+        if value_violations:
+            kinds.append("value")
+        if omitted:
+            kinds.append("omission")
+        rejection_kinds.append("+".join(kinds))
         if attempt < max_retries:
             parts: list[str] = []
             if entity_violations:
@@ -646,6 +663,8 @@ def investigate_leakage_bound(
         "columns_referenced": cited_clean,
         "claims": claims_clean,
         "schema_rejections": schema_rejections,
+        "rejection_kinds": rejection_kinds,
+        "attempts_made": attempts_made,
         "had_unrecoverable_violation": had_unrecoverable,
         "omitted_critical_evidence": omitted,
         "evidence_bound": True,

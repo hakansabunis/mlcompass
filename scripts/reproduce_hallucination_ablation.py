@@ -20,8 +20,8 @@ Two modes:
                 runs the real ``detect_leakage`` to get the evidence dict, and
                 samples N narrator responses per layer. Layer 3 goes through the
                 shipped ``investigate_leakage_bound``. Pick the provider with
-                --provider (anthropic / deepseek / openai) and set its API key
-                env var (ANTHROPIC_API_KEY / DEEPSEEK_API_KEY / OPENAI_API_KEY).
+                --provider (see PROVIDERS: anthropic, deepseek, openai, gemini,
+                mistral, xai, qwen, groq, vllm) and export its API key env var.
                 **This is the mode that produces the paper's Table I** — the
                 certified 2026-06-12 battery (paper Tables I-II) used --provider deepseek.
 
@@ -31,13 +31,32 @@ Two modes:
                 the simulator* — it is NOT a measurement. Do not cite mock-mode
                 output as a result; use --mode live for that.
 
+Money-safety controls (Q1 campaign, Phase 0):
+
+  --check-providers   zero-cost wiring table (which keys are set)
+  --dry-run           print the run plan + ESTIMATED cost, exit before any call
+  --smoke             N=5, layer1+layer3 only — validate a provider for pennies
+  --max-cost-usd X    abort before the first call if the estimate exceeds X
+  (default on)        incremental JSONL run log under scripts/runs/ — every paid
+                      response is flushed to disk immediately; --resume continues
+                      an interrupted run without repeating paid calls
+
 Usage::
+
+    # zero-cost: is everything wired?
+    python scripts/reproduce_hallucination_ablation.py --check-providers
+
+    # zero-cost: what would this run cost?
+    python scripts/reproduce_hallucination_ablation.py --mode live --provider gemini --dry-run
+
+    # pennies: validate a new provider end-to-end
+    python scripts/reproduce_hallucination_ablation.py --mode live --provider gemini --smoke
 
     # real measurement, N=200 per layer (paper Table I)
     python scripts/reproduce_hallucination_ablation.py --mode live --n 200
 
-    # tighter CIs at N=1000
-    python scripts/reproduce_hallucination_ablation.py --mode live --n 1000
+    # continue an interrupted battery without re-paying for finished calls
+    python scripts/reproduce_hallucination_ablation.py --mode live --n 200 --resume
 
     # no-API illustrative demo (clearly labelled as such)
     python scripts/reproduce_hallucination_ablation.py --mode mock
@@ -50,6 +69,7 @@ contract does and does not promise.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import os
@@ -64,7 +84,6 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from mlcompass.agents.leakage_investigator import (  # noqa: E402
     LEAKAGE_BOUND_PROMPT,
-    LEAKAGE_MODEL_DEFAULT,
     SUBMIT_TOOL_NAME,
     VALUE_TOLERANCE,
     build_submit_investigation_tool,
@@ -317,30 +336,134 @@ SWEEP_BARE_VARIANTS: list[tuple[str, str]] = [
 ]
 
 
-# Provider table: which API key, base URL, and default model each uses. The
-# DeepSeek endpoint is OpenAI-compatible; its weaker schema enforcement makes
-# Tier B (deterministic validation) the load-bearing guarantee — a useful
-# cross-provider robustness signal for the contract.
+# Provider table: which API key, base URL, and default model each uses.
+# Default models are the Q1-campaign SUBJECT tier fixed in
+# paper/Q1_ROADMAP.md §2b (verified 2026-07-07); override with --model.
+# All non-Anthropic providers speak the OpenAI-compatible Chat Completions
+# protocol, so one client path covers them via base_url. Enforcement of
+# schema enums varies by provider and mode (always-strict / opt-in / hints);
+# Tier B never relies on it — that is the provider-independence claim.
 PROVIDERS: dict[str, dict[str, Any]] = {
     "anthropic": {
         "kind": "anthropic",
         "key_env": "ANTHROPIC_API_KEY",
-        "model": LEAKAGE_MODEL_DEFAULT,
+        # Panel subject tier (product default is LEAKAGE_MODEL_DEFAULT).
+        "model": "claude-haiku-4-5",
         "base_url": None,
     },
     "deepseek": {
         "kind": "openai",
         "key_env": "DEEPSEEK_API_KEY",
-        "model": "deepseek-chat",
+        # The 'deepseek-chat' alias is deprecated 2026-07-24; pin the direct
+        # name so replication runs after that date keep working.
+        "model": "deepseek-v4-flash",
         "base_url": "https://api.deepseek.com",
     },
     "openai": {
         "kind": "openai",
         "key_env": "OPENAI_API_KEY",
-        "model": "gpt-4o-mini",
+        "model": "gpt-5.4-mini",
         "base_url": None,
     },
+    "gemini": {
+        "kind": "openai",
+        "key_env": "GEMINI_API_KEY",
+        "model": "gemini-2.5-flash-lite",
+        "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
+    },
+    "mistral": {
+        "kind": "openai",
+        "key_env": "MISTRAL_API_KEY",
+        "model": "mistral-small-latest",
+        "base_url": "https://api.mistral.ai/v1",
+    },
+    "xai": {
+        "kind": "openai",
+        "key_env": "XAI_API_KEY",
+        # xAI enforces tool schemas unconditionally ("strict implicitly always
+        # true") — the panel's always-enforced (E-class) data point.
+        "model": "grok-4.20-0309-non-reasoning",
+        "base_url": "https://api.x.ai/v1",
+    },
+    "qwen": {
+        "kind": "openai",
+        "key_env": "DASHSCOPE_API_KEY",
+        # DashScope international (Singapore) OpenAI-compatible mode.
+        "model": "qwen-flash",
+        "base_url": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+    },
+    "groq": {
+        "kind": "openai",
+        "key_env": "GROQ_API_KEY",
+        "model": "llama-3.1-8b-instant",
+        "base_url": "https://api.groq.com/openai/v1",
+    },
+    "vllm": {
+        "kind": "openai",
+        "key_env": "VLLM_API_KEY",
+        # Local vLLM OpenAI-compatible server (WSL2); the decode-enforced
+        # Outlines/GCD baseline lane. Server ignores the key ("EMPTY" ok).
+        "model": "Qwen/Qwen2.5-3B-Instruct",
+        "base_url": "http://localhost:8000/v1",
+        "key_optional": True,
+    },
 }
+
+
+# --------------------------------------------------------------------------- #
+# Cost estimation (--dry-run) — burns zero dollars                            #
+# --------------------------------------------------------------------------- #
+
+# $ per 1M tokens (input, output). Verified against official pricing pages on
+# 2026-07-07 — see paper/Q1_ROADMAP.md §2b for sources. Estimates only; the
+# authoritative spend is whatever the provider bills.
+PRICING_PER_M: dict[str, tuple[float, float]] = {
+    "deepseek-v4-flash": (0.14, 0.28),
+    "deepseek-chat": (0.14, 0.28),  # legacy alias of deepseek-v4-flash
+    "gpt-5.4-mini": (0.75, 4.50),
+    "gpt-5.4-nano": (0.20, 1.25),
+    "claude-haiku-4-5": (1.00, 5.00),
+    "gemini-2.5-flash-lite": (0.10, 0.40),
+    "mistral-small-latest": (0.15, 0.60),
+    "ministral-3b-latest": (0.10, 0.10),
+    "grok-4.20-0309-non-reasoning": (1.25, 2.50),
+    "qwen-flash": (0.05, 0.40),
+    "llama-3.1-8b-instant": (0.05, 0.08),
+    "Qwen/Qwen2.5-3B-Instruct": (0.0, 0.0),  # local vLLM
+    # Strong tier (P2 spot-checks / judges):
+    "gpt-5.5": (5.00, 30.00),
+    "claude-opus-4-8": (5.00, 25.00),
+    "gemini-3.1-pro-preview": (2.00, 12.00),
+}
+
+# Rough per-call token estimate from the June 2026 battery runs: the evidence
+# JSON plus prompt lands around ~1.3k input tokens; a tool-call answer around
+# ~300 output tokens. Deliberately round; used for the --dry-run banner only.
+EST_IN_TOKENS_PER_CALL = 1300
+EST_OUT_TOKENS_PER_CALL = 300
+
+# Expected provider calls per response, by arm: contract arms may issue up to
+# two corrective retries. Factors follow the measured June rates (production
+# ~1.0; stress on the hard task ~1.45).
+ARM_CALL_FACTOR: dict[str, float] = {
+    "layer1": 1.0,
+    "layer2": 1.0,
+    "layer3": 1.05,
+    "layer3_stress": 1.45,
+    "tier_a": 1.0,
+    "stress_mech": 1.05,
+}
+
+
+def estimate_cost_usd(model: str, arms: tuple[str, ...], n: int) -> tuple[float | None, int]:
+    """Return (estimated USD or None if pricing unknown, estimated call count)."""
+    calls = sum(int(math.ceil(n * ARM_CALL_FACTOR.get(arm, 1.0))) for arm in arms)
+    pricing = PRICING_PER_M.get(model)
+    if pricing is None:
+        return None, calls
+    p_in, p_out = pricing
+    usd = calls * (EST_IN_TOKENS_PER_CALL * p_in + EST_OUT_TOKENS_PER_CALL * p_out) / 1_000_000.0
+    return usd, calls
 
 
 # Open (unenforced) schema for layers 1 and 2: same fields as the bound tool,
@@ -405,6 +528,27 @@ def _user_message(evidence: dict[str, Any]) -> str:
 # the contract's omission flag carried through as "omitted".
 
 
+def _from_contract_result(result: dict[str, Any]) -> dict[str, Any]:
+    """Normalize an ``investigate_leakage_bound`` result for scoring/logging.
+
+    Provider token usage is not surfaced by the contract path (it may issue
+    up to three internal calls), so usage stays None there; latency is set by
+    the run loop around the whole contract call.
+    """
+    out = _normalize({})
+    out.update(
+        {
+            "columns": list(result["columns_referenced"]),
+            "claims": list(result["claims"]),
+            "verdict": result["verdict"],
+            "omitted": bool(result["omitted_critical_evidence"]),
+            "rejections": int(result["schema_rejections"]),
+            "rejection_kinds": list(result.get("rejection_kinds") or []),
+        }
+    )
+    return out
+
+
 def _normalize(tool_input: dict[str, Any]) -> dict[str, Any]:
     cols = tool_input.get("columns_referenced") or []
     claims = [c for c in (tool_input.get("claims") or []) if isinstance(c, dict)]
@@ -414,28 +558,50 @@ def _normalize(tool_input: dict[str, Any]) -> dict[str, Any]:
         "verdict": str(tool_input.get("verdict", "")),
         "omitted": None,  # computed by the scorer for layers 1-2
         "rejections": 0,  # Tier B catches; nonzero only on contract arms
+        "rejection_kinds": [],  # violation composition per catch (contract arms)
+        "usage_in": None,  # prompt tokens, when the provider reports them
+        "usage_out": None,  # completion tokens, when the provider reports them
+        "latency_ms": None,  # wall-clock per response; set by the run loop
     }
+
+
+def _attach_usage_anthropic(normalized: dict[str, Any], response: Any) -> dict[str, Any]:
+    usage = getattr(response, "usage", None)
+    if usage is not None:
+        normalized["usage_in"] = getattr(usage, "input_tokens", None)
+        normalized["usage_out"] = getattr(usage, "output_tokens", None)
+    return normalized
+
+
+def _attach_usage_openai(normalized: dict[str, Any], response: Any) -> dict[str, Any]:
+    usage = getattr(response, "usage", None)
+    if usage is not None:
+        normalized["usage_in"] = getattr(usage, "prompt_tokens", None)
+        normalized["usage_out"] = getattr(usage, "completion_tokens", None)
+    return normalized
 
 
 def _input_from_anthropic(response: Any) -> dict[str, Any]:
     for block in getattr(response, "content", []) or []:
         if getattr(block, "type", None) == "tool_use":
             raw = getattr(block, "input", {})
-            return _normalize(dict(raw) if isinstance(raw, dict) else {})
-    return _normalize({})
+            return _attach_usage_anthropic(
+                _normalize(dict(raw) if isinstance(raw, dict) else {}), response
+            )
+    return _attach_usage_anthropic(_normalize({}), response)
 
 
 def _input_from_openai(response: Any) -> dict[str, Any]:
     message = response.choices[0].message
     calls = getattr(message, "tool_calls", None) or []
     if not calls:
-        return _normalize({})
+        return _attach_usage_openai(_normalize({}), response)
     args = calls[0].function.arguments
     try:
         parsed = json.loads(args) if isinstance(args, str) else args
     except (json.JSONDecodeError, TypeError):
-        return _normalize({})
-    return _normalize(parsed if isinstance(parsed, dict) else {})
+        return _attach_usage_openai(_normalize({}), response)
+    return _attach_usage_openai(_normalize(parsed if isinstance(parsed, dict) else {}), response)
 
 
 def _live_one_response(
@@ -495,38 +661,41 @@ def _live_one_response(
         # naturally occurring paraphrase from the sweep (100% bare fabrication)
         # — answers "necessity shown only in an artificially weakened config".
         mech_prompt = dict(SWEEP_BARE_VARIANTS)["mechanical"]
-        result = investigate_leakage_bound(
-            evidence,
-            client=client,
-            model=model,
-            provider=("openai" if kind == "openai" else "anthropic"),
-            system_prompt=mech_prompt,
-        )
-        return {
-            "columns": list(result["columns_referenced"]),
-            "claims": list(result["claims"]),
-            "verdict": result["verdict"],
-            "omitted": bool(result["omitted_critical_evidence"]),
-            "rejections": int(result["schema_rejections"]),
-        }
+        # Same transient-error policy as the open arms: a 429/timeout must
+        # not kill a multi-cell battery mid-run (in-flight money + all
+        # remaining cells); after two failures record an empty response.
+        for attempt in range(2):
+            try:
+                result = investigate_leakage_bound(
+                    evidence,
+                    client=client,
+                    model=model,
+                    provider=("openai" if kind == "openai" else "anthropic"),
+                    system_prompt=mech_prompt,
+                )
+                return _from_contract_result(result)
+            except Exception:  # noqa: BLE001 — SDK exception types vary
+                if attempt == 0:
+                    continue
+        return _normalize({})
 
     if layer in ("layer3", "layer3_stress"):
         stress = layer == "layer3_stress"
-        result = investigate_leakage_bound(
-            evidence,
-            client=client,
-            model=model,
-            provider=("openai" if kind == "openai" else "anthropic"),
-            system_prompt=(LIVE_SYSTEM_PROMPT_BARE if stress else None),
-            enforce_schema_enum=not stress,
-        )
-        return {
-            "columns": list(result["columns_referenced"]),
-            "claims": list(result["claims"]),
-            "verdict": result["verdict"],
-            "omitted": bool(result["omitted_critical_evidence"]),
-            "rejections": int(result["schema_rejections"]),
-        }
+        for attempt in range(2):
+            try:
+                result = investigate_leakage_bound(
+                    evidence,
+                    client=client,
+                    model=model,
+                    provider=("openai" if kind == "openai" else "anthropic"),
+                    system_prompt=(LIVE_SYSTEM_PROMPT_BARE if stress else None),
+                    enforce_schema_enum=not stress,
+                )
+                return _from_contract_result(result)
+            except Exception:  # noqa: BLE001 — SDK exception types vary
+                if attempt == 0:
+                    continue
+        return _normalize({})
 
     system = LIVE_SYSTEM_PROMPT_BARE if layer == "layer1" else LEAKAGE_BOUND_PROMPT
     for attempt in range(2):
@@ -563,9 +732,12 @@ def _build_live_client(provider: str) -> tuple[str, Any, str]:
     cfg = PROVIDERS[provider]
     key = os.environ.get(cfg["key_env"])
     if not key:
-        raise SystemExit(
-            f"Live mode with provider '{provider}' requires {cfg['key_env']} to be set."
-        )
+        if cfg.get("key_optional"):
+            key = "EMPTY"  # local servers (vLLM) accept any placeholder key
+        else:
+            raise SystemExit(
+                f"Live mode with provider '{provider}' requires {cfg['key_env']} to be set."
+            )
     if cfg["kind"] == "openai":
         try:
             from openai import OpenAI
@@ -585,6 +757,126 @@ def _build_live_client(provider: str) -> tuple[str, Any, str]:
     return cfg["kind"], client, cfg["model"]
 
 
+# --------------------------------------------------------------------------- #
+# Incremental run log — paid responses survive crashes and are resumable      #
+# --------------------------------------------------------------------------- #
+
+
+def _sanitize(part: str) -> str:
+    return "".join(ch if ch.isalnum() or ch in "._-" else "-" for ch in part)
+
+
+def _evidence_hash(evidence: dict[str, Any]) -> str:
+    """Short content hash of the evidence dict — the run cell's true identity."""
+    canonical = json.dumps(evidence, sort_keys=True, default=str)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:8]
+
+
+class RunLog:
+    """Append-only JSONL log of live responses, keyed by the run cell.
+
+    Every paid response is flushed to disk the moment it arrives, so a crash
+    or Ctrl-C never loses money. With ``resume=True`` an existing log is
+    reloaded and the loop continues from where it stopped — the deterministic
+    filename (provider/model/task/arm/n/seed) identifies the cell.
+    """
+
+    def __init__(
+        self,
+        log_dir: str,
+        provider: str,
+        model: str,
+        task_label: str,
+        arm: str,
+        n: int,
+        seed: int,
+        resume: bool,
+        evidence_hash: str = "",
+    ) -> None:
+        os.makedirs(log_dir, exist_ok=True)
+        # The evidence hash ties the cell to the EXACT evidence dict, so a
+        # resume against a renamed/modified CSV (same basename) cannot pool
+        # responses narrated from different evidence into one cell.
+        ev = f"_e{evidence_hash}" if evidence_hash else ""
+        name = (
+            f"{_sanitize(provider)}_{_sanitize(model)}_{_sanitize(task_label)}"
+            f"_{_sanitize(arm)}_n{n}_seed{seed}{ev}.jsonl"
+        )
+        self.path = os.path.join(log_dir, name)
+        self.prior: list[dict[str, Any]] = []
+        if resume and os.path.exists(self.path):
+            bad_tail = False
+            with open(self.path, encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        self.prior.append(json.loads(line))
+                    except json.JSONDecodeError:
+                        bad_tail = True  # truncated tail from a crash
+                        break
+            if bad_tail:
+                # Repair BEFORE the first append: rewrite the good prefix so
+                # the next record cannot fuse onto the partial line (which
+                # would corrupt the log and cause later resumes to re-pay
+                # for every record after the corruption point).
+                with open(self.path, "w", encoding="utf-8") as f:
+                    for record in self.prior:
+                        f.write(json.dumps(record, default=str) + "\n")
+                print(
+                    f"  resume: repaired a truncated tail in {os.path.basename(self.path)}",
+                    file=sys.stderr,
+                )
+            if self.prior:
+                print(
+                    f"  resume: {len(self.prior)} logged responses found in "
+                    f"{os.path.basename(self.path)}",
+                    file=sys.stderr,
+                )
+        elif os.path.exists(self.path):
+            raise SystemExit(
+                f"Run log already exists: {self.path}\n"
+                "Pass --resume to continue it, or move it aside. Refusing to "
+                "silently overwrite paid responses."
+            )
+
+    def append(self, record: dict[str, Any]) -> None:
+        with open(self.path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(record, default=str) + "\n")
+            f.flush()
+
+
+def _run_cell(
+    model: str,
+    n: int,
+    scorer_ctx: tuple[set[str], dict[str, float], str | None],
+    log: RunLog | None,
+    label: str,
+    one: Any,
+) -> list[dict[str, Any]]:
+    """Run one cell (arm or sweep variant) with logging, resume, and latency."""
+    import time
+
+    allowed_set, corr_map, anchor = scorer_ctx
+    responses: list[dict[str, Any]] = list(log.prior) if log else []
+    start = len(responses)
+    if start >= n:
+        print(f"  {label}: already complete ({start}/{n}), skipping", file=sys.stderr)
+        return responses[:n]
+    for i in range(start, n):
+        t0 = time.perf_counter()
+        r = one()
+        r["latency_ms"] = round((time.perf_counter() - t0) * 1000.0, 1)
+        responses.append(r)
+        if log:
+            flags = score_one(r, allowed_set, corr_map, anchor)
+            log.append({"i": i, "arm": label, "model": model, **r, "scored": flags})
+        if (i + 1) % 25 == 0:
+            print(f"  {label}: {i + 1}/{n}", file=sys.stderr)
+    return responses
+
+
 def live_run(
     provider: str,
     n: int,
@@ -592,23 +884,58 @@ def live_run(
     allowed: list[str],
     model: str | None = None,
     arms: tuple[str, ...] = ("layer1", "layer2", "layer3", "layer3_stress"),
+    scorer_ctx: tuple[set[str], dict[str, float], str | None] | None = None,
+    log_dir: str | None = None,
+    task_label: str = "synthetic",
+    seed: int = 0,
+    resume: bool = False,
 ) -> dict[str, list[dict[str, Any]]]:
     kind, client, default_model = _build_live_client(provider)
     use_model = model or default_model
     print(f"  provider={provider} kind={kind} model={use_model}", file=sys.stderr)
+    ctx = scorer_ctx or (set(allowed), evidence_correlation_map(evidence), top_candidate(evidence))
+    ev_hash = _evidence_hash(evidence)
     out: dict[str, list[dict[str, Any]]] = {}
     for layer in arms:
-        responses: list[dict[str, Any]] = []
-        for i in range(n):
-            responses.append(_live_one_response(kind, client, use_model, layer, evidence, allowed))
-            if (i + 1) % 25 == 0:
-                print(f"  {layer}: {i + 1}/{n}", file=sys.stderr)
-        out[layer] = responses
+        log = (
+            RunLog(
+                log_dir,
+                provider,
+                use_model,
+                task_label,
+                layer,
+                n,
+                seed,
+                resume,
+                evidence_hash=ev_hash,
+            )
+            if log_dir
+            else None
+        )
+        out[layer] = _run_cell(
+            use_model,
+            n,
+            ctx,
+            log,
+            layer,
+            lambda layer=layer: _live_one_response(  # type: ignore[misc]
+                kind, client, use_model, layer, evidence, allowed
+            ),
+        )
     return out
 
 
 def sweep_run(
-    provider: str, n: int, evidence: dict[str, Any], allowed: list[str], model: str | None = None
+    provider: str,
+    n: int,
+    evidence: dict[str, Any],
+    allowed: list[str],
+    model: str | None = None,
+    scorer_ctx: tuple[set[str], dict[str, float], str | None] | None = None,
+    log_dir: str | None = None,
+    task_label: str = "synthetic",
+    seed: int = 0,
+    resume: bool = False,
 ) -> dict[str, list[dict[str, Any]]]:
     """Run the bare-prompt paraphrase sweep: same open tool, same evidence,
     same model — only the (rule-free) system prompt varies."""
@@ -618,37 +945,59 @@ def sweep_run(
         f"  sweep: provider={provider} model={use_model}, {len(SWEEP_BARE_VARIANTS)} variants",
         file=sys.stderr,
     )
+    ctx = scorer_ctx or (set(allowed), evidence_correlation_map(evidence), top_candidate(evidence))
+
+    def _one_sweep(prompt: str) -> dict[str, Any]:
+        try:
+            if kind == "openai":
+                response = client.chat.completions.create(
+                    model=use_model,
+                    messages=[
+                        {"role": "system", "content": prompt},
+                        {"role": "user", "content": _user_message(evidence)},
+                    ],
+                    tools=[_open_submit_tool_openai()],
+                    tool_choice="required",
+                )
+                return _input_from_openai(response)
+            response = client.messages.create(
+                model=use_model,
+                max_tokens=1024,
+                system=prompt,
+                tools=[_open_submit_tool_anthropic()],
+                tool_choice={"type": "tool", "name": SUBMIT_TOOL_NAME},
+                messages=[{"role": "user", "content": _user_message(evidence)}],
+            )
+            return _input_from_anthropic(response)
+        except Exception:  # noqa: BLE001
+            return _normalize({})
+
+    ev_hash = _evidence_hash(evidence)
     out: dict[str, list[dict[str, Any]]] = {}
     for name, prompt in SWEEP_BARE_VARIANTS:
-        responses: list[dict[str, Any]] = []
-        for i in range(n):
-            try:
-                if kind == "openai":
-                    response = client.chat.completions.create(
-                        model=use_model,
-                        messages=[
-                            {"role": "system", "content": prompt},
-                            {"role": "user", "content": _user_message(evidence)},
-                        ],
-                        tools=[_open_submit_tool_openai()],
-                        tool_choice="required",
-                    )
-                    responses.append(_input_from_openai(response))
-                else:
-                    response = client.messages.create(
-                        model=use_model,
-                        max_tokens=1024,
-                        system=prompt,
-                        tools=[_open_submit_tool_anthropic()],
-                        tool_choice={"type": "tool", "name": SUBMIT_TOOL_NAME},
-                        messages=[{"role": "user", "content": _user_message(evidence)}],
-                    )
-                    responses.append(_input_from_anthropic(response))
-            except Exception:  # noqa: BLE001
-                responses.append(_normalize({}))
-            if (i + 1) % 25 == 0:
-                print(f"  {name}: {i + 1}/{n}", file=sys.stderr)
-        out[name] = responses
+        log = (
+            RunLog(
+                log_dir,
+                provider,
+                use_model,
+                task_label,
+                f"sweep-{name}",
+                n,
+                seed,
+                resume,
+                evidence_hash=ev_hash,
+            )
+            if log_dir
+            else None
+        )
+        out[name] = _run_cell(
+            use_model,
+            n,
+            ctx,
+            log,
+            name,
+            lambda prompt=prompt: _one_sweep(prompt),  # type: ignore[misc]
+        )
     return out
 
 
@@ -680,6 +1029,46 @@ def _metric(metric: str, k: int, n: int) -> MetricResult:
     )
 
 
+def score_one(
+    response: dict[str, Any],
+    allowed_set: set[str],
+    corr_map: dict[str, float],
+    anchor: str | None,
+) -> dict[str, bool]:
+    """Score a single response on the three contract channels.
+
+    entity — references >= 1 column (in columns_referenced or a claim)
+        outside the evidence set.
+    value  — carries >= 1 claim whose column IS in the evidence but whose
+        value differs from the measured one by > VALUE_TOLERANCE.
+    omission — commits to a verdict other than cannot_determine yet never
+        references the top-ranked candidate column. For contract arms the
+        contract's own flag ("omitted") is authoritative.
+    """
+    cols = list(response.get("columns") or [])
+    claims = [c for c in (response.get("claims") or []) if isinstance(c, dict)]
+    claim_cols = [str(c.get("column", "")) for c in claims]
+    entity = any(c not in allowed_set for c in cols + claim_cols)
+    value = False
+    for c in claims:
+        col = str(c.get("column", ""))
+        val = c.get("value")
+        if col in corr_map and (
+            not isinstance(val, (int, float)) or abs(float(val) - corr_map[col]) > VALUE_TOLERANCE
+        ):
+            value = True
+            break
+    if response.get("omitted") is not None:
+        omission = bool(response["omitted"])
+    else:
+        committed = bool(cols or claims) and response.get("verdict") not in (
+            "",
+            "cannot_determine",
+        )
+        omission = committed and anchor is not None and anchor not in set(cols) | set(claim_cols)
+    return {"entity": entity, "value": value, "omission": omission}
+
+
 def score_responses(
     layer: str,
     responses: list[dict[str, Any]],
@@ -687,40 +1076,14 @@ def score_responses(
     corr_map: dict[str, float],
     anchor: str | None,
 ) -> LayerResult:
-    """Score one layer's responses on the three contract channels.
-
-    entity-fab — response references >= 1 column (in columns_referenced or a
-        claim) outside the evidence set.
-    value-fab  — response carries >= 1 claim whose column IS in the evidence
-        but whose value differs from the measured one by > VALUE_TOLERANCE.
-    omission   — response commits to a verdict other than cannot_determine yet
-        never references the top-ranked candidate column. For layer 3 the
-        contract's own flag is used (the contract retries on omission; the
-        flag marks what survived the budget).
-    """
+    """Aggregate :func:`score_one` over a layer's responses (Wilson CIs)."""
     n = len(responses)
     k_entity = k_value = k_omit = 0
     for r in responses:
-        cols = list(r.get("columns") or [])
-        claims = [c for c in (r.get("claims") or []) if isinstance(c, dict)]
-        claim_cols = [str(c.get("column", "")) for c in claims]
-        if any(c not in allowed_set for c in cols + claim_cols):
-            k_entity += 1
-        for c in claims:
-            col = str(c.get("column", ""))
-            val = c.get("value")
-            if col in corr_map and (
-                not isinstance(val, (int, float))
-                or abs(float(val) - corr_map[col]) > VALUE_TOLERANCE
-            ):
-                k_value += 1
-                break
-        if r.get("omitted") is not None:
-            k_omit += 1 if r["omitted"] else 0
-        else:
-            committed = bool(cols or claims) and r.get("verdict") not in ("", "cannot_determine")
-            if committed and anchor is not None and anchor not in set(cols) | set(claim_cols):
-                k_omit += 1
+        flags = score_one(r, allowed_set, corr_map, anchor)
+        k_entity += 1 if flags["entity"] else 0
+        k_value += 1 if flags["value"] else 0
+        k_omit += 1 if flags["omission"] else 0
     return LayerResult(
         layer=layer,
         metrics={
@@ -766,9 +1129,44 @@ def main() -> int:
         "--provider",
         choices=sorted(PROVIDERS),
         default="anthropic",
-        help="Live provider: 'anthropic', 'deepseek' (OpenAI-compatible), or 'openai'.",
+        help=(
+            "Live provider. All except 'anthropic' use the OpenAI-compatible "
+            "protocol via their base_url; 'vllm' targets a local server."
+        ),
     )
     ap.add_argument("--model", default=None, help="Override the provider's default model.")
+    ap.add_argument(
+        "--check-providers",
+        action="store_true",
+        help="Print key/env/model wiring for every provider and exit (zero API calls).",
+    )
+    ap.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print the run plan and its estimated cost, then exit (zero API calls).",
+    )
+    ap.add_argument(
+        "--smoke",
+        action="store_true",
+        help="Wiring validation: N=5, arms layer1+layer3 only (~10 cheap calls).",
+    )
+    ap.add_argument(
+        "--max-cost-usd",
+        type=float,
+        default=None,
+        help="Abort before any live call if the estimated cost exceeds this budget.",
+    )
+    ap.add_argument(
+        "--log-dir",
+        default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "runs"),
+        help="Directory for incremental JSONL run logs (paid responses survive crashes).",
+    )
+    ap.add_argument("--no-log", action="store_true", help="Disable the JSONL run log.")
+    ap.add_argument(
+        "--resume",
+        action="store_true",
+        help="Continue an interrupted live run from its JSONL log instead of restarting.",
+    )
     ap.add_argument(
         "--task",
         choices=["synthetic", "csv"],
@@ -795,6 +1193,40 @@ def main() -> int:
     ap.add_argument("--json", action="store_true", help="Emit machine-readable JSON.")
     args = ap.parse_args()
 
+    # ---------------- Zero-cost wiring check ------------------------------- #
+    if args.check_providers:
+        print("| provider  | key env             | set | model                        | base_url |")
+        print("| --------- | ------------------- | --- | ---------------------------- | -------- |")
+        for name in sorted(PROVIDERS):
+            cfg = PROVIDERS[name]
+            has_key = (
+                "yes"
+                if os.environ.get(cfg["key_env"])
+                else ("opt" if cfg.get("key_optional") else "NO")
+            )
+            print(
+                f"| {name:<9s} | {cfg['key_env']:<19s} | {has_key:<3s} "
+                f"| {cfg['model']:<28s} | {cfg['base_url'] or '(default)'} |"
+            )
+        print("\nNo API calls were made. 'NO' = export the key before a live run.")
+        return 0
+
+    if (args.dry_run or args.max_cost_usd is not None) and args.mode != "live":
+        raise SystemExit(
+            "--dry-run/--max-cost-usd concern live spending; add --mode live "
+            "(mock mode is already free)."
+        )
+    if args.smoke:
+        if args.resume:
+            raise SystemExit(
+                "--smoke validates CURRENT wiring with fresh calls; --resume "
+                "would replay a stale log and prove nothing. Drop --resume."
+            )
+        args.n = 5
+        args.no_log = True  # repeatable; 5-call smoke logs have no audit value
+
+    use_model = args.model or PROVIDERS[args.provider]["model"]
+
     if args.task == "csv":
         if not args.csv_path or not args.target:
             raise SystemExit("--task csv requires --csv-path and --target.")
@@ -814,11 +1246,53 @@ def main() -> int:
         file=sys.stderr,
     )
 
+    log_dir = None if (args.no_log or args.mode != "live") else args.log_dir
+    scorer_ctx = (allowed_set, corr_map, anchor)
+
+    def _cost_banner(cells: tuple[str, ...], per_cell_n: int) -> None:
+        """Print the cost estimate; enforce --max-cost-usd; exit on --dry-run."""
+        est, calls = estimate_cost_usd(use_model, cells, per_cell_n)
+        est_str = f"~${est:.2f}" if est is not None else "UNKNOWN (model not in PRICING_PER_M)"
+        print(
+            f"  plan: {len(cells)} cell(s) x N={per_cell_n} -> ~{calls} calls, "
+            f"ESTIMATED cost {est_str} (model={use_model}; rough token estimate, "
+            "not a bill)",
+            file=sys.stderr,
+        )
+        if args.dry_run:
+            print("  --dry-run: no API calls were made.", file=sys.stderr)
+            raise SystemExit(0)
+        if args.max_cost_usd is not None:
+            if est is None:
+                raise SystemExit(
+                    "--max-cost-usd set but pricing for this model is unknown; "
+                    "add it to PRICING_PER_M or drop the flag."
+                )
+            if est > args.max_cost_usd:
+                raise SystemExit(
+                    f"Estimated cost ${est:.2f} exceeds --max-cost-usd "
+                    f"{args.max_cost_usd:.2f}; aborting before any live call."
+                )
+
     # ---------------- Sweep mode: bare-prompt paraphrase distribution -------- #
     if args.sweep:
         if args.mode != "live":
             raise SystemExit("--sweep is a live measurement; add --mode live.")
-        sweep = sweep_run(args.provider, args.n, evidence, allowed, model=args.model)
+        if args.smoke:
+            raise SystemExit("--smoke runs the ablation arms; drop --sweep.")
+        _cost_banner(tuple(name for name, _ in SWEEP_BARE_VARIANTS), args.n)
+        sweep = sweep_run(
+            args.provider,
+            args.n,
+            evidence,
+            allowed,
+            model=args.model,
+            scorer_ctx=scorer_ctx,
+            log_dir=log_dir,
+            task_label=task_label,
+            seed=args.seed,
+            resume=args.resume,
+        )
         rows = [
             (name, score_responses(name, sweep[name], allowed_set, corr_map, anchor))
             for name, _ in SWEEP_BARE_VARIANTS
@@ -851,12 +1325,27 @@ def main() -> int:
         if args.mode != "live":
             raise SystemExit("--only-extra is a live measurement; add --mode live.")
         arms = ("tier_a", "stress_mech")
+    if args.smoke:
+        if args.mode != "live":
+            raise SystemExit("--smoke validates live wiring; add --mode live.")
+        arms = ("layer1", "layer3")
 
     if args.mode == "mock":
         responses_by_layer = mock_run(args.n, allowed, corr_map, anchor, seed=args.seed)
     else:
+        _cost_banner(arms, args.n)
         responses_by_layer = live_run(
-            args.provider, args.n, evidence, allowed, model=args.model, arms=arms
+            args.provider,
+            args.n,
+            evidence,
+            allowed,
+            model=args.model,
+            arms=arms,
+            scorer_ctx=scorer_ctx,
+            log_dir=log_dir,
+            task_label=task_label,
+            seed=args.seed,
+            resume=args.resume,
         )
 
     results = [
@@ -873,12 +1362,50 @@ def main() -> int:
             "total_catches": sum(rej),
         }
 
+    if args.smoke:
+        # Wiring summary: did calls succeed, how slow, how many tokens, what
+        # would a real battery cost at these observed sizes?
+        print("\n  smoke wiring summary (NOT a measurement):", file=sys.stderr)
+        for layer in arms:
+            rs = responses_by_layer[layer]
+            lat = [r["latency_ms"] for r in rs if r.get("latency_ms") is not None]
+            uin = [r["usage_in"] for r in rs if r.get("usage_in") is not None]
+            uout = [r["usage_out"] for r in rs if r.get("usage_out") is not None]
+            empty = sum(1 for r in rs if not r.get("columns") and not r.get("claims"))
+            print(
+                f"    {layer}: {len(rs)} calls, {empty} empty responses, "
+                f"avg latency {sum(lat) / len(lat):.0f} ms"
+                if lat
+                else f"    {layer}: {len(rs)} calls, {empty} empty responses",
+                file=sys.stderr,
+            )
+            if uin and uout:
+                pricing = PRICING_PER_M.get(use_model)
+                extra = ""
+                if pricing:
+                    per_call = (
+                        sum(uin) / len(uin) * pricing[0] + sum(uout) / len(uout) * pricing[1]
+                    ) / 1_000_000.0
+                    extra = f", ~${per_call * 1000:.3f}/1k calls"
+                print(
+                    f"      avg tokens in/out: {sum(uin) / len(uin):.0f}/"
+                    f"{sum(uout) / len(uout):.0f}{extra}",
+                    file=sys.stderr,
+                )
+        print(
+            "  smoke OK means: key valid, tool-call path works, responses parse. "
+            "If 'empty responses' is high, inspect the run log before spending "
+            "on a full battery.\n",
+            file=sys.stderr,
+        )
+
     if args.json:
         print(
             json.dumps(
                 {
                     "mode": args.mode,
                     "provider": args.provider if args.mode == "live" else None,
+                    "model": use_model if args.mode == "live" else None,
                     "task": task_label,
                     "n_per_layer": args.n,
                     "seed": args.seed,
