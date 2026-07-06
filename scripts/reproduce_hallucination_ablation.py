@@ -81,6 +81,11 @@ from typing import Any
 # The script measures the SHIPPED contract — import the product code rather
 # than reimplementing it, so the experiment can never drift from the artifact.
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
+# Sibling module (leak injectors); needed when the harness is loaded via
+# importlib (tests) rather than executed as a script.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from fabbench_injectors import list_injectors  # noqa: E402
 
 from mlcompass.agents.leakage_investigator import (  # noqa: E402
     LEAKAGE_BOUND_PROMPT,
@@ -163,17 +168,22 @@ def build_synthetic_evidence(seed: int = 0) -> dict[str, Any]:
     )
 
 
-def build_csv_evidence(csv_path: str, target: str, seed: int = 0) -> dict[str, Any]:
+def build_csv_evidence(
+    csv_path: str, target: str, seed: int = 0, injector: str = "monotone_log"
+) -> dict[str, Any]:
     """Build evidence from a REAL third-party dataset with an injected leak.
 
-    Loads the CSV, injects a monotone log-of-target leak plus near-perfect
-    predictions (the same controlled failure as the synthetic frame), and runs
-    the shipped ``detect_leakage``. The feature distributions, column names,
-    and dataset shape are all external — answering the "everything is
-    self-designed" critique with a real-data replication task.
+    Loads the CSV, plants ONE controlled leakage pattern (``--injector``, see
+    ``fabbench_injectors``) plus near-perfect predictions, and runs the
+    shipped ``detect_leakage``. The default injector is the June 2026
+    ``monotone_log`` pattern, so pre-Phase-2 commands reproduce byte-identical
+    task setups. The feature distributions, column names, and dataset shape
+    are all external — answering the "everything is self-designed" critique
+    with real-data replication tasks.
     """
     import numpy as np
     import pandas as pd
+    from fabbench_injectors import inject
 
     from mlcompass.tools.leakage import detect_leakage
 
@@ -189,8 +199,8 @@ def build_csv_evidence(csv_path: str, target: str, seed: int = 0) -> dict[str, A
     df = df.loc[y.notna()].reset_index(drop=True)
     y_arr = y.dropna().to_numpy(dtype=float)
     n = len(df)
-    df[f"log_{target}_leak"] = np.log(y_arr - y_arr.min() + 1.0) + rng.normal(0, 0.01, n)
     df["y_pred"] = y_arr + rng.normal(0, max(1e-9, 0.001 * y_arr.std()), n)
+    inject(df, y_arr, target, injector, rng)
 
     return detect_leakage(
         df,
@@ -1176,6 +1186,15 @@ def main() -> int:
     ap.add_argument("--csv-path", default=None, help="Real dataset CSV for --task csv.")
     ap.add_argument("--target", default=None, help="Numeric target column for --task csv.")
     ap.add_argument(
+        "--injector",
+        default="monotone_log",
+        choices=list_injectors(),
+        help=(
+            "Leak pattern planted into the CSV task (FabBench, Phase 2). "
+            "Default reproduces the June 2026 log-of-target task."
+        ),
+    )
+    ap.add_argument(
         "--sweep",
         action="store_true",
         help="Run the 6-variant bare-prompt paraphrase sweep (live only).",
@@ -1230,9 +1249,16 @@ def main() -> int:
     if args.task == "csv":
         if not args.csv_path or not args.target:
             raise SystemExit("--task csv requires --csv-path and --target.")
-        evidence = build_csv_evidence(args.csv_path, args.target, seed=args.seed)
-        task_label = f"csv:{os.path.basename(args.csv_path)}/{args.target}"
+        evidence = build_csv_evidence(
+            args.csv_path, args.target, seed=args.seed, injector=args.injector
+        )
+        task_label = f"csv:{os.path.basename(args.csv_path)}/{args.target}/{args.injector}"
     else:
+        if args.injector != "monotone_log":
+            raise SystemExit(
+                "--injector applies to --task csv; the synthetic task is the "
+                "frozen June 2026 configuration."
+            )
         evidence = build_synthetic_evidence(seed=args.seed)
         task_label = "synthetic"
     allowed = evidence_allowed_columns(evidence)

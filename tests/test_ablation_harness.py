@@ -385,6 +385,96 @@ def test_contract_reports_rejection_kinds_and_attempts() -> None:
     assert clean["attempts_made"] == 1
 
 
+# --------------------------------------------------------------------------- #
+# FabBench injectors — every pattern must be detectable by the SHIPPED        #
+# detector at its thresholds (no API calls; this is the Phase-2 instrument)   #
+# --------------------------------------------------------------------------- #
+
+
+def _make_csv(tmp_path: Path, seed: int = 0) -> Path:
+    import numpy as np
+    import pandas as pd
+
+    rng = np.random.default_rng(seed)
+    n = 400
+    y = rng.normal(200.0, 40.0, n)
+    df = pd.DataFrame(
+        {
+            "charges": y,
+            "age": rng.integers(18, 65, n),
+            "bmi": rng.normal(28, 5, n),
+            "children": rng.integers(0, 4, n),
+        }
+    )
+    path = tmp_path / "mini_insurance.csv"
+    df.to_csv(path, index=False)
+    return path
+
+
+COLUMN_INJECTORS = {
+    "exact_copy": "charges_copy_leak",
+    "noisy_proxy": "charges_proxy_leak",
+    "monotone_log": "log_charges_leak",
+    "inverse_target": "inv_charges_leak",
+    "binned_target": "charges_enc_leak",
+}
+
+
+@pytest.mark.parametrize("injector,anchor", sorted(COLUMN_INJECTORS.items()))
+def test_column_injectors_are_detected_as_top_candidate(
+    tmp_path: Path, injector: str, anchor: str
+) -> None:
+    from mlcompass.agents.leakage_investigator import top_candidate
+
+    csv = _make_csv(tmp_path)
+    evidence = harness.build_csv_evidence(str(csv), "charges", seed=0, injector=injector)
+    assert top_candidate(evidence) == anchor, (
+        f"{injector}: detector did not rank the planted column first "
+        f"(candidates: {evidence.get('candidate_leak_columns')})"
+    )
+
+
+def test_contamination_leaks_through_perfect_match_channel(tmp_path: Path) -> None:
+    from mlcompass.agents.leakage_investigator import top_candidate
+
+    csv = _make_csv(tmp_path)
+    evidence = harness.build_csv_evidence(str(csv), "charges", seed=0, injector="contamination")
+    assert evidence["perfect_match_rate"] >= 0.95  # committable under contract rule 4
+    assert top_candidate(evidence) is None  # anchor-free evidence shape
+
+
+def test_injector_registry_matches_roadmap() -> None:
+    from fabbench_injectors import list_injectors
+
+    assert list_injectors() == sorted(
+        [
+            "exact_copy",
+            "noisy_proxy",
+            "monotone_log",
+            "inverse_target",
+            "binned_target",
+            "contamination",
+        ]
+    )
+
+
+def test_unknown_injector_fails_closed() -> None:
+    import numpy as np
+    import pandas as pd
+    from fabbench_injectors import inject
+
+    with pytest.raises(SystemExit):
+        inject(pd.DataFrame(), np.array([]), "y", "no_such_pattern", np.random.default_rng(0))
+
+
+def test_default_injector_reproduces_the_june_task(tmp_path: Path) -> None:
+    """Back-compat: the pre-Phase-2 CSV task (log leak) must be byte-identical."""
+    csv = _make_csv(tmp_path)
+    default = harness.build_csv_evidence(str(csv), "charges", seed=0)
+    explicit = harness.build_csv_evidence(str(csv), "charges", seed=0, injector="monotone_log")
+    assert harness._evidence_hash(default) == harness._evidence_hash(explicit)
+
+
 def test_contract_result_normalizer_carries_kinds() -> None:
     out = harness._from_contract_result(
         {
