@@ -55,14 +55,40 @@ _HEART_COLUMNS = [
     "num",
 ]
 
+_ABALONE_COLUMNS = [
+    "sex",
+    "length",
+    "diameter",
+    "height",
+    "whole_weight",
+    "shucked_weight",
+    "viscera_weight",
+    "shell_weight",
+    "rings",
+]
+
+_AIRFOIL_COLUMNS = [
+    "frequency",
+    "angle_of_attack",
+    "chord_length",
+    "free_stream_velocity",
+    "suction_thickness",
+    "sound_pressure_level",
+]
+
 # Candidate URLs are tried in order; all are long-stable public mirrors.
+# Entries WITHOUT "extended" form the CORE corpus: the frozen Phase-2 paper
+# instances draw only from these (analysis_plan.md §8/A1). Entries WITH
+# "extended": True belong to the FabBench artifact's extended corpus — they
+# widen the released benchmark's domain coverage (biology, chemistry,
+# physics/engineering) without touching the preregistered paper core.
 SOURCES: dict[str, dict[str, Any]] = {
     "insurance": {
         "urls": [
             "https://raw.githubusercontent.com/stedy/Machine-Learning-with-R-datasets/master/insurance.csv",
         ],
         "out": "insurance.csv",
-        "format": "csv",
+        "read_kwargs": {},
         "target": "charges",
     },
     "heart": {
@@ -70,7 +96,7 @@ SOURCES: dict[str, dict[str, Any]] = {
             "https://archive.ics.uci.edu/ml/machine-learning-databases/heart-disease/processed.cleveland.data",
         ],
         "out": "heart_cleveland.csv",
-        "format": "uci_heart",
+        "read_kwargs": {"header": None, "names": _HEART_COLUMNS, "na_values": "?"},
         "target": "chol",
     },
     "telco": {
@@ -78,7 +104,7 @@ SOURCES: dict[str, dict[str, Any]] = {
             "https://raw.githubusercontent.com/IBM/telco-customer-churn-on-icp4d/master/data/Telco-Customer-Churn.csv",
         ],
         "out": "telco_churn.csv",
-        "format": "csv",
+        "read_kwargs": {},
         "target": "MonthlyCharges",
     },
     "ames": {
@@ -87,8 +113,39 @@ SOURCES: dict[str, dict[str, Any]] = {
             "http://jse.amstat.org/v19n3/decock/AmesHousing.txt",
         ],
         "out": "ames_housing.csv",
-        "format": "tsv",
+        "read_kwargs": {"sep": "\t"},
         "target": "SalePrice",
+    },
+    "abalone": {
+        "urls": [
+            "https://archive.ics.uci.edu/ml/machine-learning-databases/abalone/abalone.data",
+        ],
+        "out": "abalone.csv",
+        "read_kwargs": {"header": None, "names": _ABALONE_COLUMNS},
+        "target": "rings",
+        "extended": True,
+    },
+    "wine": {
+        "urls": [
+            "https://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv",
+        ],
+        "out": "wine_quality_red.csv",
+        "read_kwargs": {"sep": ";"},
+        # NOT the 'quality' score: it is discrete with ~6 levels, and heavy
+        # ties push the monotone_log / binned_target correlations below the
+        # 0.99 detector threshold (verified 2026-07-07). 'alcohol' is
+        # continuous, so all six injectors stay reliably detectable.
+        "target": "alcohol",
+        "extended": True,
+    },
+    "airfoil": {
+        "urls": [
+            "https://archive.ics.uci.edu/ml/machine-learning-databases/00291/airfoil_self_noise.dat",
+        ],
+        "out": "airfoil_self_noise.csv",
+        "read_kwargs": {"sep": "\t", "header": None, "names": _AIRFOIL_COLUMNS},
+        "target": "sound_pressure_level",
+        "extended": True,
     },
 }
 
@@ -133,37 +190,32 @@ def _download(urls: list[str]) -> bytes:
     raise SystemExit(f"All mirrors failed: {last_error}")
 
 
-def _normalize(raw: bytes, fmt: str) -> Any:
+def _normalize(raw: bytes, read_kwargs: dict[str, Any]) -> Any:
     import pandas as pd
 
-    if fmt == "csv":
-        return pd.read_csv(io.BytesIO(raw))
-    if fmt == "tsv":
-        return pd.read_csv(io.BytesIO(raw), sep="\t")
-    if fmt == "uci_heart":
-        return pd.read_csv(io.BytesIO(raw), header=None, names=_HEART_COLUMNS, na_values="?")
-    raise SystemExit(f"Unknown format: {fmt}")
+    return pd.read_csv(io.BytesIO(raw), **read_kwargs)
 
 
 def fetch(force: bool = False) -> dict[str, str]:
     os.makedirs(DATA_DIR, exist_ok=True)
     hashes: dict[str, str] = {}
     for name, cfg in SOURCES.items():
+        tier = "extended" if cfg.get("extended") else "core"
         out = os.path.join(DATA_DIR, cfg["out"])
         if os.path.exists(out) and not force:
-            print(f"{name}: exists, skipping ({cfg['out']})", file=sys.stderr)
+            print(f"{name} [{tier}]: exists, skipping ({cfg['out']})", file=sys.stderr)
         else:
-            df = _normalize(_download(cfg["urls"]), cfg["format"])
+            df = _normalize(_download(cfg["urls"]), cfg.get("read_kwargs") or {})
             df.to_csv(out, index=False)
-            print(f"{name}: {len(df)} rows x {len(df.columns)} cols -> {cfg['out']}")
+            print(f"{name} [{tier}]: {len(df)} rows x {len(df.columns)} cols -> {cfg['out']}")
         hashes[name] = _sha256(out)
         print(f"  sha256 {cfg['out']}: {hashes[name]}")
     return hashes
 
 
-def verify() -> int:
-    """Build evidence for every frozen instance; assert the leak is detected."""
-    from fabbench_injectors import INJECTORS
+def _check_instance(dataset: str, injector: str) -> tuple[bool, str, int]:
+    """Build evidence for one (dataset, injector) cell through the shipped
+    detector; return (ok, label, evidence-column count)."""
     from reproduce_hallucination_ablation import build_csv_evidence
 
     from mlcompass.agents.leakage_investigator import (
@@ -171,37 +223,58 @@ def verify() -> int:
         top_candidate,
     )
 
+    cfg = SOURCES[dataset]
+    path = os.path.join(DATA_DIR, cfg["out"])
+    if not os.path.exists(path):
+        return False, "MISSING FILE — run fetch", 0
+    evidence = build_csv_evidence(path, cfg["target"], seed=0, injector=injector)
+    anchor = top_candidate(evidence)
+    n_cols = len(evidence_allowed_columns(evidence))
+    if injector == "contamination":
+        ok = evidence.get("perfect_match_rate", 0) >= 0.95 and anchor is None
+        label = f"perfect-match {evidence.get('perfect_match_rate'):.3f}"
+    else:
+        ok = anchor is not None and anchor.endswith("_leak")
+        label = anchor or "NOT DETECTED"
+    return ok, label, n_cols
+
+
+def _verify_table(instances: list[tuple[str, str]], title: str) -> int:
     failures = 0
-    print("\n| dataset   | injector       | anchor / channel        | evidence cols |")
-    print("| --------- | -------------- | ------------------------ | ------------- |")
-    for dataset, injector in FROZEN_INSTANCES:
-        cfg = SOURCES[dataset]
-        path = os.path.join(DATA_DIR, cfg["out"])
-        if not os.path.exists(path):
-            print(f"| {dataset:<9s} | {injector:<14s} | MISSING FILE — run fetch |")
-            failures += 1
-            continue
-        evidence = build_csv_evidence(path, cfg["target"], seed=0, injector=injector)
-        anchor = top_candidate(evidence)
-        n_cols = len(evidence_allowed_columns(evidence))
-        if injector == "contamination":
-            ok = evidence.get("perfect_match_rate", 0) >= 0.95 and anchor is None
-            label = f"perfect-match {evidence.get('perfect_match_rate'):.3f}"
-        else:
-            ok = anchor is not None and anchor.endswith("_leak")
-            label = anchor or "NOT DETECTED"
+    print(f"\n{title}")
+    print("| dataset   | injector       | anchor / channel          | evidence cols |")
+    print("| --------- | -------------- | ------------------------- | ------------- |")
+    for dataset, injector in instances:
+        ok, label, n_cols = _check_instance(dataset, injector)
         if not ok:
             failures += 1
             label += "  <-- FAIL"
-        print(f"| {dataset:<9s} | {injector:<14s} | {label:<24s} | {n_cols:>13d} |")
+        print(f"| {dataset:<9s} | {injector:<14s} | {label:<25s} | {n_cols:>13d} |")
+    if failures:
+        print(f"\n{failures} instance(s) FAILED verification.")
+    else:
+        print(f"\nAll {len(instances)} instances verified against the shipped detector.")
+    return failures
+
+
+def verify() -> int:
+    """Verify the FROZEN paper instances (analysis_plan.md §8/A1)."""
+    from fabbench_injectors import INJECTORS
+
     assert set(i for _, i in FROZEN_INSTANCES) == set(INJECTORS), (
         "instances must cover all injectors"
     )
-    if failures:
-        print(f"\n{failures} instance(s) FAILED verification.")
-        return 1
-    print(f"\nAll {len(FROZEN_INSTANCES)} frozen instances verified against the shipped detector.")
-    return 0
+    return 1 if _verify_table(FROZEN_INSTANCES, "FROZEN paper instances:") else 0
+
+
+def verify_extended() -> int:
+    """Verify the FabBench extended corpus: every injector on every extended
+    dataset (artifact breadth; NOT part of the preregistered paper core)."""
+    from fabbench_injectors import list_injectors
+
+    extended = [name for name, cfg in SOURCES.items() if cfg.get("extended")]
+    instances = [(d, i) for d in extended for i in list_injectors()]
+    return 1 if _verify_table(instances, "EXTENDED corpus (artifact breadth):") else 0
 
 
 def main() -> int:
@@ -212,9 +285,19 @@ def main() -> int:
         action="store_true",
         help="Build evidence for every frozen instance through the shipped detector.",
     )
+    ap.add_argument(
+        "--verify-extended",
+        action="store_true",
+        help="Verify every injector on every extended-corpus dataset (artifact breadth).",
+    )
     args = ap.parse_args()
-    if args.verify:
-        return verify()
+    if args.verify or args.verify_extended:
+        rc = 0
+        if args.verify:
+            rc |= verify()
+        if args.verify_extended:
+            rc |= verify_extended()
+        return rc
     fetch(force=args.force)
     return 0
 
