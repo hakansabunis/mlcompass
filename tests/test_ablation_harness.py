@@ -411,13 +411,46 @@ def _make_csv(tmp_path: Path, seed: int = 0) -> Path:
     return path
 
 
+# A3.10: neutral anchor names — the injected column must not label itself.
 COLUMN_INJECTORS = {
-    "exact_copy": "charges_copy_leak",
-    "noisy_proxy": "charges_proxy_leak",
-    "monotone_log": "log_charges_leak",
-    "inverse_target": "inv_charges_leak",
-    "binned_target": "charges_enc_leak",
+    "exact_copy": "charges_adj",
+    "noisy_proxy": "charges_est",
+    "monotone_log": "charges_idx",
+    "inverse_target": "charges_norm",
+    "binned_target": "charges_grp",
 }
+
+
+def test_expected_anchor_is_single_source_of_truth() -> None:
+    from fabbench_injectors import expected_anchor
+
+    for injector, anchor in COLUMN_INJECTORS.items():
+        assert expected_anchor("charges", injector) == anchor
+    assert expected_anchor("charges", "contamination") is None
+
+
+def test_anchor_names_do_not_telegraph_the_answer() -> None:
+    from fabbench_injectors import ANCHOR_SUFFIX, expected_anchor
+
+    for injector in ANCHOR_SUFFIX:
+        name = expected_anchor("chol", injector)
+        assert name is not None
+        for tell in ("leak", "copy", "proxy", "target"):
+            assert tell not in name.lower(), f"{injector} anchor '{name}' telegraphs the answer"
+
+
+def test_hash_enforcement_fails_closed() -> None:
+    fetch_spec = importlib.util.spec_from_file_location(
+        "fabbench_fetch_hash", ROOT / "scripts" / "fetch_fabbench_datasets.py"
+    )
+    assert fetch_spec is not None and fetch_spec.loader is not None
+    fm = importlib.util.module_from_spec(fetch_spec)
+    sys.modules["fabbench_fetch_hash"] = fm
+    fetch_spec.loader.exec_module(fm)
+    with pytest.raises(SystemExit):
+        fm._enforce_hash("x.csv", "aaaa", "bbbb", skip=False)
+    fm._enforce_hash("x.csv", "aaaa", "bbbb", skip=True)  # explicit escape
+    fm._enforce_hash("x.csv", "aaaa", None, skip=False)  # unpinned = allowed
 
 
 @pytest.mark.parametrize("injector,anchor", sorted(COLUMN_INJECTORS.items()))

@@ -90,6 +90,7 @@ SOURCES: dict[str, dict[str, Any]] = {
         "out": "insurance.csv",
         "read_kwargs": {},
         "target": "charges",
+        "sha256": "21bf566ec4bba11a0151d2fabdfd01fccb12556f694f214df48488bd6e0ba77c",
     },
     "heart": {
         "urls": [
@@ -98,6 +99,7 @@ SOURCES: dict[str, dict[str, Any]] = {
         "out": "heart_cleveland.csv",
         "read_kwargs": {"header": None, "names": _HEART_COLUMNS, "na_values": "?"},
         "target": "chol",
+        "sha256": "953d45066c221ee00cf8de72cfa4ab2086eb4e231fef6dda8fc3051b17840e61",
     },
     "telco": {
         "urls": [
@@ -106,6 +108,7 @@ SOURCES: dict[str, dict[str, Any]] = {
         "out": "telco_churn.csv",
         "read_kwargs": {},
         "target": "MonthlyCharges",
+        "sha256": "4cd901efab211ccb154051a93a1ab5e9298e37e8fd29bbf2c097da23cee36017",
     },
     "ames": {
         "urls": [
@@ -115,6 +118,7 @@ SOURCES: dict[str, dict[str, Any]] = {
         "out": "ames_housing.csv",
         "read_kwargs": {"sep": "\t"},
         "target": "SalePrice",
+        "sha256": "5d5d25c60c165143749013a89a86c604fd55bac07c2a2e6e0d6c9dacf65e6226",
     },
     "abalone": {
         "urls": [
@@ -124,6 +128,7 @@ SOURCES: dict[str, dict[str, Any]] = {
         "read_kwargs": {"header": None, "names": _ABALONE_COLUMNS},
         "target": "rings",
         "extended": True,
+        "sha256": "e56ba50db5684b117d288f52647987f9fe69d95b040bcda4f55040b2d43bd1da",
     },
     "wine": {
         "urls": [
@@ -137,6 +142,7 @@ SOURCES: dict[str, dict[str, Any]] = {
         # continuous, so all six injectors stay reliably detectable.
         "target": "alcohol",
         "extended": True,
+        "sha256": "d73b81349be9fb18465f19db6b718a9d39322b70695a6cc847c8673da0d4d999",
     },
     "airfoil": {
         "urls": [
@@ -146,6 +152,7 @@ SOURCES: dict[str, dict[str, Any]] = {
         "read_kwargs": {"sep": "\t", "header": None, "names": _AIRFOIL_COLUMNS},
         "target": "sound_pressure_level",
         "extended": True,
+        "sha256": "60da0d7fcc6b96b021232cfa157eb9eb3cc9e66484dca0ae92299ff4148a2016",
     },
 }
 
@@ -174,6 +181,7 @@ CASE_STUDIES: dict[str, dict[str, Any]] = {
         "target": "class",
         "kind": "real_leak",
         "leak_column": "Density",
+        "sha256": "d1399c4efa228b581504362e3006742907eefed44a2b7a4f4c4214f58eed8dc6",
     },
     "sambanis": {
         "urls": [
@@ -183,6 +191,7 @@ CASE_STUDIES: dict[str, dict[str, Any]] = {
         "read_kwargs": {"low_memory": False},
         "target": "warstds",
         "kind": "negative_control",
+        "sha256": "bc2567769993b1da56cf1e2b43258aca2bef3aa0eb57f5bd631a5c7a570a7ce8",
     },
 }
 
@@ -212,6 +221,22 @@ def _sha256(path: str) -> str:
         for chunk in iter(lambda: f.read(65536), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def _enforce_hash(label: str, actual: str, expected: str | None, skip: bool) -> None:
+    """Fail closed on a pinned-hash mismatch (panel P2: print-only pinning is
+    not pinning). ``--skip-hash-check`` exists for legitimate refreshes
+    (upstream update, pandas float-formatting drift) — using it means the new
+    hash must be re-pinned in SOURCES/CASE_STUDIES + README via amendment."""
+    if expected is None or skip:
+        return
+    if actual != expected:
+        raise SystemExit(
+            f"SHA256 mismatch for {label}:\n  expected {expected}\n  actual   {actual}\n"
+            "The bytes differ from the pinned corpus. If this is an intended "
+            "refresh, re-run with --skip-hash-check and re-pin the new hash "
+            "(analysis_plan amendment); otherwise investigate before ANY run."
+        )
 
 
 def _download(urls: list[str]) -> bytes:
@@ -256,7 +281,7 @@ def _read_arff(raw: bytes) -> Any:
     return pd.read_csv(io.StringIO("\n".join(data_lines)), header=None, names=names)
 
 
-def fetch_cases(force: bool = False) -> dict[str, str]:
+def fetch_cases(force: bool = False, skip_hash_check: bool = False) -> dict[str, str]:
     """Fetch the case-study datasets (on demand; intentionally NOT committed)."""
     os.makedirs(DATA_DIR, exist_ok=True)
     hashes: dict[str, str] = {}
@@ -274,6 +299,7 @@ def fetch_cases(force: bool = False) -> dict[str, str]:
             df.to_csv(out, index=False)
             print(f"{name} [case]: {len(df)} rows x {len(df.columns)} cols -> {cfg['out']}")
         hashes[name] = _sha256(out)
+        _enforce_hash(cfg["out"], hashes[name], cfg.get("sha256"), skip_hash_check)
         print(f"  sha256 {cfg['out']}: {hashes[name]}")
     return hashes
 
@@ -306,15 +332,15 @@ def build_case_evidence(name: str) -> dict[str, Any]:
     df = df.loc[y.notna()].reset_index(drop=True)
     y_arr = y.dropna().to_numpy(dtype=float)
 
-    if cfg["kind"] == "real_leak":
-        # Siri (1956): the documented deterministic leak.
-        y_pred = 495.0 / df[cfg["leak_column"]].to_numpy(dtype=float) - 450.0
-    else:
-        features = df.drop(columns=[target]).select_dtypes(include="number")
-        x = np.column_stack([features.to_numpy(dtype=float), np.ones(len(df))])
-        x = np.nan_to_num(x)
-        coef, *_ = np.linalg.lstsq(x, y_arr, rcond=None)
-        y_pred = x @ coef
+    # A3.11 (panel P2): both cases use the SAME honest model — a least-squares
+    # fit on all numeric features. For bodyfat that fit exploits the Density
+    # leak implicitly, the way any trained model would; nothing is hand-coded
+    # from the documented Siri equation. The measured r2 is whatever it is.
+    features = df.drop(columns=[target]).select_dtypes(include="number")
+    x = np.column_stack([features.to_numpy(dtype=float), np.ones(len(df))])
+    x = np.nan_to_num(x)
+    coef, *_ = np.linalg.lstsq(x, y_arr, rcond=None)
+    y_pred = x @ coef
     df["y_pred"] = y_pred
 
     ss_res = float(np.sum((y_arr - y_pred) ** 2))
@@ -355,7 +381,7 @@ def verify_cases() -> int:
     return 1 if failures else 0
 
 
-def fetch(force: bool = False) -> dict[str, str]:
+def fetch(force: bool = False, skip_hash_check: bool = False) -> dict[str, str]:
     os.makedirs(DATA_DIR, exist_ok=True)
     hashes: dict[str, str] = {}
     for name, cfg in SOURCES.items():
@@ -368,6 +394,7 @@ def fetch(force: bool = False) -> dict[str, str]:
             df.to_csv(out, index=False)
             print(f"{name} [{tier}]: {len(df)} rows x {len(df.columns)} cols -> {cfg['out']}")
         hashes[name] = _sha256(out)
+        _enforce_hash(cfg["out"], hashes[name], cfg.get("sha256"), skip_hash_check)
         print(f"  sha256 {cfg['out']}: {hashes[name]}")
     return hashes
 
@@ -375,6 +402,7 @@ def fetch(force: bool = False) -> dict[str, str]:
 def _check_instance(dataset: str, injector: str) -> tuple[bool, str, int]:
     """Build evidence for one (dataset, injector) cell through the shipped
     detector; return (ok, label, evidence-column count)."""
+    from fabbench_injectors import expected_anchor
     from reproduce_hallucination_ablation import build_csv_evidence
 
     from mlcompass.agents.leakage_investigator import (
@@ -393,7 +421,7 @@ def _check_instance(dataset: str, injector: str) -> tuple[bool, str, int]:
         ok = evidence.get("perfect_match_rate", 0) >= 0.95 and anchor is None
         label = f"perfect-match {evidence.get('perfect_match_rate'):.3f}"
     else:
-        ok = anchor is not None and anchor.endswith("_leak")
+        ok = anchor is not None and anchor == expected_anchor(cfg["target"], injector)
         label = anchor or "NOT DETECTED"
     return ok, label, n_cols
 
@@ -459,9 +487,14 @@ def main() -> int:
         action="store_true",
         help="Check the A2 case-study expectations (bodyfat fires; sambanis stays silent).",
     )
+    ap.add_argument(
+        "--skip-hash-check",
+        action="store_true",
+        help="Allow a pinned-SHA256 mismatch (intended refresh only; re-pin afterwards).",
+    )
     args = ap.parse_args()
     if args.fetch_cases:
-        fetch_cases(force=args.force)
+        fetch_cases(force=args.force, skip_hash_check=args.skip_hash_check)
         return 0
     if args.verify or args.verify_extended or args.verify_cases:
         rc = 0
@@ -472,7 +505,7 @@ def main() -> int:
         if args.verify_cases:
             rc |= verify_cases()
         return rc
-    fetch(force=args.force)
+    fetch(force=args.force, skip_hash_check=args.skip_hash_check)
     return 0
 
 

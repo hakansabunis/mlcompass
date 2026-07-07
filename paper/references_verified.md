@@ -138,3 +138,58 @@ manuscript the reference belongs. Compiled from workflow wwypwpj9g.
   - relevance: Complements Sainz et al. in the threats-to-validity discussion by providing a concrete detection method we reference for checking whether benchmark instances were memorized by the models under evaluation.
 
 **Total: 39 verified references** (+19 existing INISTA refs).
+
+# Panel-gap additions (7 Jul 2026, evening wave) — same verification discipline
+
+## data-to-text / table-to-text faithfulness
+
+- **[wiseman2017challenges]** Sam Wiseman, Stuart Shieber, Alexander Rush, "Challenges in Data-to-Document Generation," EMNLP 2017. 10.18653/v1/D17-1239
+  - verified: https://aclanthology.org/D17-1239/
+  - relevance: Introduced the RotoWire benchmark and first systematically named the fidelity problem in neural data-to-text: generated game summaries that read fluently but contradict the source records. Proposed extraction-based evaluation (relation generation, content selection/ordering) — the direct ancestor of evidence-bound narration checks for ML-pipeline outputs.
+- **[dhingra2019parent]** Bhuwan Dhingra, Manaal Faruqui, Ankur Parikh, Ming-Wei Chang, Dipanjan Das, William Cohen, "Handling Divergent Reference Texts when Evaluating Table-to-Text Generation," ACL 2019. 10.18653/v1/P19-1483
+  - verified: https://aclanthology.org/P19-1483/
+  - relevance: Introduced PARENT, the canonical faithfulness-aware metric that scores generated text against both the reference and the source table, showing BLEU rewards hallucination when references diverge from the data. Establishes the principle of grounding evaluation in the structured source — the metric-level analogue of binding narration to pipeline evidence.
+- **[parikh2020totto]** Ankur Parikh, Xuezhi Wang, Sebastian Gehrmann, Manaal Faruqui, Bhuwan Dhingra, Diyi Yang, Dipanjan Das, "ToTTo: A Controlled Table-To-Text Generation Dataset," EMNLP 2020. 10.18653/v1/2020.emnlp-main.89
+  - verified: https://aclanthology.org/2020.emnlp-main.89/
+  - relevance: Introduced controlled generation with highlighted table cells and an iterative reference-revision protocol that strips unsupported content, making the target text faithful by construction. The closest dataset-level precedent for constraining an LLM narrator to a designated evidence subset of a larger data source.
+- **[gardent2017webnlg]** Claire Gardent, Anastasia Shimorina, Shashi Narayan, Laura Perez-Beltrachini, "Creating Training Corpora for NLG Micro-Planners," ACL 2017. 10.18653/v1/P17-1017
+  - verified: https://aclanthology.org/P17-1017/
+  - relevance: The WebNLG resource paper: DBpedia-triple-to-text corpus underpinning the WebNLG challenges, whose human evaluation tracks semantic adequacy/coverage of the input triples. Canonical structured-data-to-text benchmark whose evaluation tradition treats omissions and additions relative to the input as first-class errors.
+- **[chen2020logicnlg]** Wenhu Chen, Jianshu Chen, Yu Su, Zhiyu Chen, William Yang Wang, "Logical Natural Language Generation from Open-Domain Tables," ACL 2020. 10.18653/v1/2020.acl-main.708
+  - verified: https://aclanthology.org/2020.acl-main.708/
+  - relevance: Introduced LogicNLG and the fidelity-vs-diversity tension for logical inference over tables: statements requiring comparison/aggregation are exactly where surface-level generators hallucinate. Proposed parsing-based (NLI/execution) fidelity evaluation — directly relevant to narrating derived quantities (metrics, deltas, thresholds) from ML-pipeline evidence rather than raw cell lookups.
+
+## attribution / grounded generation
+
+- **[rashkin2023ais]** Hannah Rashkin, Vitaly Nikolaev, Matthew Lamm, Lora Aroyo, Michael Collins, Dipanjan Das, Slav Petrov, Gaurav Singh Tomar, Iulia Turc, David Reitter, "Measuring Attribution in Natural Language Generation Models," Computational Linguistics 49(4), 2023. 10.1162/coli_a_00486
+  - verified: https://aclanthology.org/2023.cl-4.2/
+  - relevance: Defines the AIS (Attributable to Identified Sources) framework — the canonical formalization of when generated text is attributable to underlying evidence; provides the conceptual foundation for requiring that every narrated claim about ML-pipeline evidence be bound to an identified source.
+- **[gao2023alce]** Tianyu Gao, Howard Yen, Jiatong Yu, Danqi Chen, "Enabling Large Language Models to Generate Text with Citations," EMNLP 2023. 10.18653/v1/2023.emnlp-main.398
+  - verified: https://aclanthology.org/2023.emnlp-main.398/
+  - relevance: ALCE benchmark for LLM generation with inline citations, with automatic citation-precision/recall metrics; the standard reference for evaluating whether generated statements are supported by their cited evidence, directly analogous to grounding narration in pipeline artifacts.
+- **[gao2023rarr]** Luyu Gao, Zhuyun Dai, Panupong Pasupat, Anthony Chen, Arun Tejasvi Chaganty, Yicheng Fan, Vincent Zhao, Ni Lao, Hongrae Lee, Da-Cheng Juan, Kelvin Guu, "RARR: Researching and Revising What Language Models Say, Using Language Models," ACL 2023. 10.18653/v1/2023.acl-long.910
+  - verified: https://aclanthology.org/2023.acl-long.910/
+  - relevance: Post-hoc attribution-and-revision: automatically finds evidence for arbitrary LM output and edits unsupported content while preserving intent; represents the retrofit-attribution alternative to generating narration bound to evidence from the start.
+- **[bohnet2022attributedqa]** Bernd Bohnet, Vinh Q. Tran, Pat Verga, Roee Aharoni, Daniel Andor, Livio Baldini Soares, Massimiliano Ciaramita, Jacob Eisenstein, Kuzman Ganchev, Jonathan Herzig, Kai Hui, Tom Kwiatkowski, Ji Ma, Jianmo Ni, Lierni Sestorain Saralegui, Tal Schuster, William W. Cohen, Michael Collins, Dipanjan Das, Donald Metzler, Slav Petrov, Kellie Webster, "Attributed Question Answering: Evaluation and Modeling for Attributed Large Language Models," arXiv preprint, 2022. arXiv:2212.08037
+  - verified: https://arxiv.org/abs/2212.08037
+  - relevance: Formulates attributed QA as answer-plus-evidence and evaluates architectures (retrieve-then-read, post-hoc attribution) against human AIS judgments; supplies the task-level template for systems that must return claims together with the evidence that licenses them.
+- **[liu2023verifiability]** Nelson F. Liu, Tianyi Zhang, Percy Liang, "Evaluating Verifiability in Generative Search Engines," Findings of EMNLP 2023. 10.18653/v1/2023.findings-emnlp.467
+  - verified: https://aclanthology.org/2023.findings-emnlp.467/
+  - relevance: Human audit of deployed citation-bearing systems showing frequent unsupported or miscited statements (only ~half of generated sentences fully supported); motivates hard evidence-binding constraints rather than trusting fluent cited narration at face value.
+
+## Self-correction with/without external feedback — placement of the 37.5%→1.3% corrective-retry finding
+
+- **[gou2024critic]** Zhibin Gou, Zhihong Shao, Yeyun Gong, Yelong Shen, Yujiu Yang, Nan Duan, Weizhu Chen, "CRITIC: Large Language Models Can Self-Correct with Tool-Interactive Critiquing," ICLR 2024. arXiv:2305.11738
+  - verified: https://arxiv.org/abs/2305.11738
+  - relevance: Canonical positive result for external-feedback self-correction: LLMs verify and revise outputs using feedback from external tools rather than self-critique alone, and the paper explicitly shows exclusive reliance on intrinsic self-critique can degrade performance. Directly supports framing the corrective retry as tool-grounded (deterministic validator feedback), aligning the 37.5%→1.3% finding with the external-feedback regime.
+- **[madaan2023selfrefine]** Aman Madaan, Niket Tandon, Prakhar Gupta, Skyler Hallinan, Luyu Gao, Sarah Wiegreffe, Uri Alon, Nouha Dziri, Shrimai Prabhumoye, Yiming Yang, Shashank Gupta, Bodhisattwa Prasad Majumder, Katherine Hermann, Sean Welleck, Amir Yazdanbakhsh, Peter Clark, "Self-Refine: Iterative Refinement with Self-Feedback," NeurIPS 2023 (Advances in Neural Information Processing Systems 36). arXiv:2303.17651
+  - verified: https://proceedings.neurips.cc/paper_files/paper/2023/hash/91edff07232fb1b55a505a9e9f6c0ff3-Abstract-Conference.html
+  - relevance: The canonical intrinsic self-correction baseline: the same model generates, critiques, and refines its own output with no external signal. Serves as the contrast class for the paper's design — the corrective retry does not rely on model self-feedback but on programmatic evidence checks, which is why it avoids the known limits of Self-Refine-style loops.
+- **[huang2024cannot]** Jie Huang, Xinyun Chen, Swaroop Mishra, Huaixiu Steven Zheng, Adams Wei Yu, Xinying Song, Denny Zhou, "Large Language Models Cannot Self-Correct Reasoning Yet," ICLR 2024. arXiv:2310.01798
+  - verified: https://arxiv.org/abs/2310.01798
+  - relevance: The canonical negative result: intrinsic self-correction without external feedback fails to improve (and often degrades) LLM reasoning. Load-bearing for the paper's claim that the observed 37.5%→1.3% error reduction is attributable to the external validator signal driving the retry, not to any latent self-correction capability of the narrator model.
+- **[pan2024correcting]** Liangming Pan, Michael Saxon, Wenda Xu, Deepak Nathani, Xinyi Wang, William Yang Wang, "Automatically Correcting Large Language Models: Surveying the Landscape of Diverse Automated Correction Strategies," Transactions of the Association for Computational Linguistics, Vol. 12, 2024. 10.1162/tacl_a_00660
+  - verified: https://aclanthology.org/2024.tacl-1.27/
+  - relevance: Survey that taxonomizes automated correction strategies by feedback source (self-generated vs. external) and timing (training-time, generation-time, post-hoc), giving the paper a standard vocabulary to position its validator-triggered corrective retry as post-hoc correction with external, programmatic feedback.
+
+**Panel-gap additions: 14 verified references.**

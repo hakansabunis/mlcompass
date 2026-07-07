@@ -202,12 +202,19 @@ def build_csv_evidence(
     df["y_pred"] = y_arr + rng.normal(0, max(1e-9, 0.001 * y_arr.std()), n)
     inject(df, y_arr, target, injector, rng)
 
+    # A3.5: the suspicious metric is COMPUTED from these predictions, never
+    # asserted, so the narrator never sees a number nobody measured.
+    y_pred_arr = df["y_pred"].to_numpy(dtype=float)
+    ss_res = float(np.sum((y_arr - y_pred_arr) ** 2))
+    ss_tot = float(np.sum((y_arr - y_arr.mean()) ** 2)) or 1.0
+    r2 = 1.0 - ss_res / ss_tot
+
     return detect_leakage(
         df,
         y_true_col=target,
         y_pred_col="y_pred",
         task="regression",
-        suspicious_metric={"name": "r2", "value": 1.0},
+        suspicious_metric={"name": "r2", "value": round(r2, 4)},
     )
 
 
