@@ -606,3 +606,142 @@ def test_live_arm_returns_error_marker_after_transport_retries() -> None:
     )
     assert client.calls == 2  # one retry, then give up — never a third call
     assert str(out["error"]).startswith("TimeoutError")
+
+
+# --------------------------------------------------------------------------- #
+# Wave-3: crowded instance (A3.4), pseudonymize (A3.10), sampling pins,       #
+# record provenance meta                                                       #
+# --------------------------------------------------------------------------- #
+
+
+def test_crowded_evidence_matches_frozen_spec() -> None:
+    from fabbench_injectors import CROWDED_ANCHOR, CROWDED_ANCHOR_R, CROWDED_BAND
+
+    from mlcompass.agents.leakage_investigator import (
+        evidence_allowed_columns,
+        evidence_correlation_map,
+        top_candidate,
+    )
+
+    ev = harness.build_synthetic_crowded_evidence(seed=0)
+    corr = evidence_correlation_map(ev)
+    # The Gram-Schmidt construction is exact: the measured values sit ON the
+    # frozen grid, not near it.
+    assert abs(corr[CROWDED_ANCHOR] - CROWDED_ANCHOR_R) < 1e-9
+    for i, r in enumerate(CROWDED_BAND):
+        assert abs(corr[f"sensor_{i:02d}"] - r) < 1e-9
+    assert top_candidate(ev) == CROWDED_ANCHOR
+    assert ev["candidate_leak_columns"] == [CROWDED_ANCHOR]
+    assert len(evidence_allowed_columns(ev)) == 10
+    # A3.5 discipline: the suspicious metric is computed, and near-perfect.
+    assert 0.99 <= ev["suspicious_metric"]["value"] <= 1.0
+
+
+def test_crowded_instance_14_verifies_in_fetch_script() -> None:
+    spec = importlib.util.spec_from_file_location(
+        "fabbench_fetch_crowded", ROOT / "scripts" / "fetch_fabbench_datasets.py"
+    )
+    assert spec is not None and spec.loader is not None
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules["fabbench_fetch_crowded"] = mod
+    spec.loader.exec_module(mod)
+    assert mod.verify_crowded() == 0
+
+
+def test_pseudonymize_hashes_every_column_name(tmp_path: Path) -> None:
+    csv = _make_csv(tmp_path)
+    plain = harness.build_csv_evidence(str(csv), "charges", seed=0, injector="exact_copy")
+    pseud = harness.build_csv_evidence(
+        str(csv), "charges", seed=0, injector="exact_copy", pseudonymize=True
+    )
+    from mlcompass.agents.leakage_investigator import evidence_allowed_columns, top_candidate
+
+    pseud_cols = evidence_allowed_columns(pseud)
+    # No original name survives; every visible name is a content hash.
+    for original in evidence_allowed_columns(plain):
+        assert original not in pseud_cols
+    import re as _re
+
+    assert all(_re.fullmatch(r"col_[0-9a-f]{8}", c) for c in pseud_cols)
+    # The leak is still detected, under its hashed name, deterministically.
+    assert top_candidate(pseud) is not None
+    again = harness.build_csv_evidence(
+        str(csv), "charges", seed=0, injector="exact_copy", pseudonymize=True
+    )
+    assert top_candidate(again) == top_candidate(pseud)
+
+
+class _CaptureAnthropic:
+    """Fake anthropic client that records create() kwargs; optionally rejects
+    the temperature parameter on the first call (reasoning-endpoint shape)."""
+
+    def __init__(self, reject_temperature: bool = False) -> None:
+        self.reject_temperature = reject_temperature
+        self.calls: list[dict[str, Any]] = []
+        self.messages = self
+
+    def create(self, **kwargs: Any) -> Any:
+        self.calls.append(kwargs)
+        if self.reject_temperature and "temperature" in kwargs:
+            raise ValueError("Unsupported parameter: 'temperature' is not supported.")
+        return _Resp(
+            {
+                "verdict": "leakage_likely",
+                "confidence": "high",
+                "columns_referenced": ["leak_col"],
+                "narration": "ok",
+            }
+        )
+
+
+def test_temperature_pin_sent_and_recorded() -> None:
+    client = _CaptureAnthropic()
+    out = harness._live_one_response(
+        "anthropic", client, "m", "layer1", EVIDENCE, ["leak_col", "other_col"], temperature=1.0
+    )
+    assert client.calls[0]["temperature"] == 1.0
+    assert out["sampling"] == {"temperature": 1.0}
+
+
+def test_temperature_dropped_and_logged_when_provider_rejects() -> None:
+    client = _CaptureAnthropic(reject_temperature=True)
+    out = harness._live_one_response(
+        "anthropic", client, "m", "layer1", EVIDENCE, ["leak_col", "other_col"], temperature=1.0
+    )
+    assert "temperature" in client.calls[0]  # pinned on the first attempt
+    assert "temperature" not in client.calls[1]  # dropped after the rejection
+    assert out["sampling"] == {"temperature": None}  # the record says so
+    assert not out.get("error")  # the fallback produced data, not an error
+
+
+def test_run_cell_stamps_provenance_meta(tmp_path: Path) -> None:
+    log = harness.RunLog(
+        str(tmp_path),
+        provider="qwen",
+        model="qwen-flash",
+        task_label="synthetic",
+        arm="layer1",
+        n=2,
+        seed=0,
+        resume=False,
+        evidence_hash="cafe1234",
+    )
+    ctx = ({"leak_col"}, {"leak_col": 0.99}, "leak_col")
+    harness._run_cell(
+        "qwen-flash",
+        2,
+        ctx,
+        log,
+        "layer1",
+        lambda: harness._normalize({}),
+        meta={"provider": "qwen", "task": "synthetic", "seed": 0, "evidence_hash": "cafe1234"},
+    )
+    with open(log.path, encoding="utf-8") as f:
+        records = [json.loads(line) for line in f]
+    assert len(records) == 2
+    for r in records:
+        # Cell identity lives in the DATA (table builders never parse names).
+        assert r["provider"] == "qwen"
+        assert r["task"] == "synthetic"
+        assert r["evidence_hash"] == "cafe1234"
+        assert r["arm"] == "layer1"

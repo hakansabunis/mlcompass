@@ -193,6 +193,19 @@ Panel çıktıları paper/review_round_*.md olarak commit'lenir.
 
 ## 7. Panel-onarım kod dalgası (görev #101) — paralı koşuların ÖN ŞARTI
 
+> **DURUM (7 Tem akşamı): 11 kalemin 11'i KOD OLARAK TAMAM — 3 dalgada.**
+> Dalga 1 (116bb6f): madde 4 (anchor rename), 8 (bodyfat lstsq + csv r2),
+> 9 (hash zorlaması), 11'in referans kısmı (+14 doğrulanmış ref).
+> Dalga 2 (c1bc372): madde 2 (hata işaretleyici), 3 (--strict/H4),
+> 5 (jenerik-retry/H5), 6 (STRESS mesaj hizası/A3.11).
+> Dalga 3 (bu commit): madde 1 (independent_scorer.py), 7 (synthetic_crowded
+> #14 + --task synthetic-crowded + fetch --verify), 10 (temperature=1.0 pini
+> + sampling kaydı + make_tables.py) + pseudonymize kolu (A3.10) + evidence
+> dump (evidence_<hash>.json) + kayıt-meta (provider/task/seed/hash her
+> kayıtta). Ön-kayıt eki: analysis_plan.md "A3 implementation addendum".
+> KALAN (manuskript-zamanı, §4 işi): 76-vs-80 ifadesinin netleştirilmesi +
+> iki Haziran L1 ölçümünün raporlanması (A3.12) — kod işi değil.
+
 Kaynak: `paper/review_panel_2026-07-07.md` + analysis_plan A3. Sıra önerisi:
 
 1. **Bağımsız skorlayıcı** (A3.9a): `scripts/independent_scorer.py` — ham

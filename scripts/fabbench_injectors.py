@@ -38,7 +38,19 @@ from __future__ import annotations
 
 from typing import Any, Protocol
 
-__all__ = ["ANCHOR_SUFFIX", "INJECTORS", "expected_anchor", "inject", "list_injectors"]
+__all__ = [
+    "ANCHOR_SUFFIX",
+    "CROWDED_ANCHOR",
+    "CROWDED_ANCHOR_R",
+    "CROWDED_BAND",
+    "CROWDED_N",
+    "CROWDED_SEED",
+    "INJECTORS",
+    "crowded_frame",
+    "expected_anchor",
+    "inject",
+    "list_injectors",
+]
 
 
 class _Injector(Protocol):
@@ -116,6 +128,61 @@ def _contamination(df: Any, y: Any, target: str, rng: Any) -> str | None:
     preds[memorized] = y[memorized]
     df["y_pred"] = preds
     return None
+
+
+# --------------------------------------------------------------------------- #
+# Frozen instance #14 — synthetic_crowded (analysis_plan.md A3.4)             #
+# --------------------------------------------------------------------------- #
+#
+# The value-channel stressor: ten features whose correlations sit in a narrow
+# 0.900-0.924 band spaced exactly 0.003 apart, plus ONE anchor at 0.995. Any
+# specific value restated from prose is easy to garble (neighboring values
+# are nearly identical), while entity fabrication is unaffected — the frame
+# stresses the claims channel without touching the enum domain.
+#
+# Names are dataset-plausible and neutral per A3.10: the anchor does not
+# label itself.
+
+CROWDED_SEED = 0
+CROWDED_N = 1200
+CROWDED_ANCHOR = "sensor_ref"
+CROWDED_ANCHOR_R = 0.995
+CROWDED_BAND: tuple[float, ...] = tuple(round(0.900 + 0.003 * i, 3) for i in range(9))
+
+
+def crowded_frame(seed: int = CROWDED_SEED, n: int = CROWDED_N) -> tuple[Any, str]:
+    """The frozen ``synthetic_crowded`` predictions frame (instance #14).
+
+    Sample Pearson correlations are constructed EXACTLY (Gram-Schmidt: each
+    feature is r*z + sqrt(1-r^2)*u with u orthogonalized against the
+    standardized target in-sample), so the evidence values land on the frozen
+    grid to ~1e-12 — the 0.003 spacing survives with no rounding luck. The
+    rank (Spearman) correlation of such a mix is strictly below its Pearson
+    value, so the shipped detector's max(pearson, spearman) reports the exact
+    constructed numbers.
+
+    Returns (df, target_column); ``df`` already carries ``y_pred``.
+    """
+    import numpy as np
+    import pandas as pd
+
+    rng = np.random.default_rng(seed)
+    y = rng.normal(50.0, 10.0, n)
+    z = (y - y.mean()) / y.std()
+
+    def _unit_orthogonal(e: Any) -> Any:
+        e = e - e.mean()
+        e = e - (e @ z) / (z @ z) * z
+        return e / e.std()
+
+    df = pd.DataFrame({"y_true": y})
+    for name, r in [(CROWDED_ANCHOR, CROWDED_ANCHOR_R)] + [
+        (f"sensor_{i:02d}", r) for i, r in enumerate(CROWDED_BAND)
+    ]:
+        u = _unit_orthogonal(rng.normal(0.0, 1.0, n))
+        df[name] = r * z + float(np.sqrt(1.0 - r * r)) * u
+    df["y_pred"] = y + rng.normal(0.0, 0.001 * y.std(), n)
+    return df, "y_true"
 
 
 INJECTORS: dict[str, _Injector] = {

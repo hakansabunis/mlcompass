@@ -434,9 +434,15 @@ def _extract_tool_input(response: Any, tool_name: str) -> dict[str, Any]:
 
 
 def _emit_anthropic(
-    api: Any, model: str, system: str, user: str, tool: dict[str, Any]
+    api: Any,
+    model: str,
+    system: str,
+    user: str,
+    tool: dict[str, Any],
+    temperature: float | None = None,
 ) -> dict[str, Any]:
     """One forced ``submit_investigation`` call against an Anthropic-style API."""
+    extra: dict[str, Any] = {} if temperature is None else {"temperature": temperature}
     response = api.messages.create(
         model=model,
         max_tokens=1024,
@@ -444,12 +450,18 @@ def _emit_anthropic(
         tools=[tool],
         tool_choice={"type": "tool", "name": SUBMIT_TOOL_NAME},
         messages=[{"role": "user", "content": user}],
+        **extra,
     )
     return _extract_tool_input(response, SUBMIT_TOOL_NAME)
 
 
 def _emit_openai(
-    api: Any, model: str, system: str, user: str, tool: dict[str, Any]
+    api: Any,
+    model: str,
+    system: str,
+    user: str,
+    tool: dict[str, Any],
+    temperature: float | None = None,
 ) -> dict[str, Any]:
     """One forced ``submit_investigation`` call against an OpenAI-compatible API.
 
@@ -457,6 +469,7 @@ def _emit_openai(
     ``choices[0].message.tool_calls[0]``. Returns an empty dict if the model
     declined to call the tool — which Tier B then treats as a non-fabrication.
     """
+    extra: dict[str, Any] = {} if temperature is None else {"temperature": temperature}
     response = api.chat.completions.create(
         model=model,
         messages=[
@@ -465,6 +478,7 @@ def _emit_openai(
         ],
         tools=[tool],
         tool_choice="required",
+        **extra,
     )
     message = response.choices[0].message
     calls = getattr(message, "tool_calls", None) or []
@@ -490,6 +504,7 @@ def investigate_leakage_bound(
     strict_tools: bool = False,
     correction_style: str = "named",
     neutral_user: bool = False,
+    temperature: float | None = None,
 ) -> dict[str, Any]:
     """Narrate the evidence under the evidence-bound runtime-schema contract.
 
@@ -537,6 +552,10 @@ def investigate_leakage_bound(
             with no mention of a contract — aligns stress-arm propensity with
             the bare-prompt baseline (analysis_plan A3.11). Production callers
             leave it False.
+        temperature: Sampling temperature forwarded verbatim to the provider
+            call, or None (default) to omit the parameter entirely and use
+            the provider default. Measurement runs pin this so cross-provider
+            rates are compared at a common decoding setting.
 
     Returns:
         Dict with the renderer-compatible keys (``verdict``, ``confidence``,
@@ -605,9 +624,9 @@ def investigate_leakage_bound(
         attempts_made = attempt + 1
         user = base_user + correction
         if provider == "openai":
-            tool_input = _emit_openai(api, model, system, user, tool)
+            tool_input = _emit_openai(api, model, system, user, tool, temperature=temperature)
         else:
-            tool_input = _emit_anthropic(api, model, system, user, tool)
+            tool_input = _emit_anthropic(api, model, system, user, tool, temperature=temperature)
         cited = [str(c) for c in (tool_input.get("columns_referenced") or [])]
         claims = [c for c in (tool_input.get("claims") or []) if isinstance(c, dict)]
 

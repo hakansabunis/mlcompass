@@ -444,14 +444,58 @@ def _verify_table(instances: list[tuple[str, str]], title: str) -> int:
     return failures
 
 
+def verify_crowded() -> int:
+    """Verify frozen instance #14 — synthetic_crowded (analysis_plan A3.4).
+
+    Checks the construction invariants, not just detection: the anchor is the
+    sole candidate at >= 0.99, and the nine crowd correlations land on the
+    frozen 0.003-spaced grid to 1e-6 (the Gram-Schmidt construction is exact,
+    so any drift here means the frame changed).
+    """
+    from fabbench_injectors import CROWDED_ANCHOR, CROWDED_ANCHOR_R, CROWDED_BAND
+    from reproduce_hallucination_ablation import build_synthetic_crowded_evidence
+
+    from mlcompass.agents.leakage_investigator import (
+        evidence_allowed_columns,
+        evidence_correlation_map,
+        top_candidate,
+    )
+
+    evidence = build_synthetic_crowded_evidence(seed=0)
+    corr = evidence_correlation_map(evidence)
+    problems: list[str] = []
+    if top_candidate(evidence) != CROWDED_ANCHOR:
+        problems.append(f"anchor is {top_candidate(evidence)!r}, expected {CROWDED_ANCHOR!r}")
+    if abs(corr.get(CROWDED_ANCHOR, 0.0) - CROWDED_ANCHOR_R) > 1e-6:
+        problems.append(f"anchor corr {corr.get(CROWDED_ANCHOR)} != {CROWDED_ANCHOR_R}")
+    for i, r in enumerate(CROWDED_BAND):
+        name = f"sensor_{i:02d}"
+        if abs(corr.get(name, 0.0) - r) > 1e-6:
+            problems.append(f"{name} corr {corr.get(name)} != {r}")
+    n_cols = len(evidence_allowed_columns(evidence))
+    if n_cols != 1 + len(CROWDED_BAND):
+        problems.append(f"evidence has {n_cols} columns, expected {1 + len(CROWDED_BAND)}")
+    if len(evidence.get("candidate_leak_columns") or []) != 1:
+        problems.append(f"candidates {evidence.get('candidate_leak_columns')}, expected 1")
+
+    status = "OK" if not problems else "FAIL: " + "; ".join(problems)
+    print(
+        f"\nsynthetic_crowded [#14]     : anchor={CROWDED_ANCHOR} "
+        f"band={CROWDED_BAND[0]:.3f}..{CROWDED_BAND[-1]:.3f} step 0.003 -> {status}"
+    )
+    return 1 if problems else 0
+
+
 def verify() -> int:
-    """Verify the FROZEN paper instances (analysis_plan.md §8/A1)."""
+    """Verify the FROZEN paper instances (analysis_plan.md §8/A1 + A3.4 #14)."""
     from fabbench_injectors import INJECTORS
 
     assert set(i for _, i in FROZEN_INSTANCES) == set(INJECTORS), (
         "instances must cover all injectors"
     )
-    return 1 if _verify_table(FROZEN_INSTANCES, "FROZEN paper instances:") else 0
+    failures = _verify_table(FROZEN_INSTANCES, "FROZEN paper instances:")
+    failures += verify_crowded()
+    return 1 if failures else 0
 
 
 def verify_extended() -> int:

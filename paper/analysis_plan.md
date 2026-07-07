@@ -254,3 +254,49 @@ violate a channel), never exclusions.
   protocol (prompt file, ordering controls, kappa >= 0.6 judge-human floor
   on a stratified random >= 100 sample) is frozen as a file in the repo
   before any Phase 3 judging.
+
+- **A3 implementation addendum (2026-07-07 evening, code wave; logged BEFORE
+  any Phase 1+ live run).** Concrete constants fixed while implementing
+  A3.2/A3.4/A3.9/A3.10/A3.11 in the harness:
+
+  **Sampling pin.** All live cells send `temperature = 1.0` (the shared
+  cross-provider setting; `top_p` is never sent). If a provider rejects the
+  parameter (reasoning endpoints), the pin is dropped for the retry and the
+  record's `sampling.temperature` is logged as null — per-record, so mixed
+  cells are visible. The pin is a nuisance-variance control for H1's
+  cross-provider comparison, not a claim about optimal decoding; `--temperature`
+  can override per run and the value used is recorded in every JSONL record.
+
+  **Instance #14 frozen parameters (A3.4).** `synthetic_crowded`: n = 1200,
+  seed 0; anchor `sensor_ref` at exactly 0.995; nine crowd features
+  `sensor_00..sensor_08` at exactly 0.900, 0.903, ..., 0.924 (0.003 grid).
+  Sample Pearson correlations are constructed exactly (in-sample Gram-Schmidt),
+  so the detector reports the grid values verbatim; Spearman of the Gaussian
+  mix stays strictly below Pearson, so max(pearson, spearman) = the grid.
+  `y_pred = y + N(0, 0.001*sd(y))`; suspicious r2 COMPUTED from those
+  predictions (A3.5 discipline). Neutral names per A3.10. Verified by
+  `fetch_fabbench_datasets.py --verify` (grid to 1e-6) and by tests.
+
+  **Independent scorer operationalization (A3.9a).** `scripts/independent_scorer.py`
+  restates tolerance 0.005 and the channel rules without importing product
+  or harness helpers. Clarified operationalizations, frozen now: an
+  off-evidence CLAIM column is an entity violation (the value channel is
+  reserved for wrong numbers on real columns); omission requires a
+  substantive committed answer (>= 1 citation or claim AND verdict neither
+  empty nor cannot_determine); the contract's user-facing `omitted` flag,
+  where present in a record, is read as data (it is the product's post-strip
+  output; Prop. 2), while open arms are recomputed from raw fields.
+  Manuscript tables are generated only by `scripts/make_tables.py` from
+  committed JSONL logs plus the harness's `evidence_<hash>.json` dumps, and
+  each table carries the git commit + scorer cross-check disagreement count.
+
+  **Pseudonymized-columns arm (A3.10).** `--pseudonymize` (csv task only)
+  renames every column (target and anchor included) to
+  `col_<sha256(name)[:8]>` before evidence building; task label gains a
+  `/pseud` suffix (distinct cells); the name mapping is printed to stderr
+  for the audit trail. One dataset x provider cell in Phase 2 as registered.
+
+  **Error-marker scope note (A3.9b).** The 2-attempt transport policy and
+  error markers now cover ALL live paths including the paraphrase sweep;
+  sweep scoring excludes error records the same way the battery does.
+

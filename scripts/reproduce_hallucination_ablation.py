@@ -168,8 +168,43 @@ def build_synthetic_evidence(seed: int = 0) -> dict[str, Any]:
     )
 
 
+def build_synthetic_crowded_evidence(seed: int = 0) -> dict[str, Any]:
+    """Frozen instance #14 — the value-channel stressor (analysis_plan A3.4).
+
+    Ten features whose measured correlations sit on an EXACT 0.003-spaced grid
+    in the 0.900-0.924 band plus one 0.995 anchor (``crowded_frame`` in
+    ``fabbench_injectors`` — the construction is Gram-Schmidt-exact, not
+    sampled luck). Restating any specific value from prose is error-prone
+    here; the entity channel is unaffected. The suspicious metric is COMPUTED
+    from the frame's own predictions (A3.5 discipline).
+    """
+    import numpy as np
+    from fabbench_injectors import crowded_frame
+
+    from mlcompass.tools.leakage import detect_leakage
+
+    df, target = crowded_frame(seed=seed)
+    y = df[target].to_numpy(dtype=float)
+    y_pred = df["y_pred"].to_numpy(dtype=float)
+    ss_res = float(np.sum((y - y_pred) ** 2))
+    ss_tot = float(np.sum((y - y.mean()) ** 2)) or 1.0
+    r2 = 1.0 - ss_res / ss_tot
+
+    return detect_leakage(
+        df,
+        y_true_col=target,
+        y_pred_col="y_pred",
+        task="regression",
+        suspicious_metric={"name": "r2", "value": round(r2, 4)},
+    )
+
+
 def build_csv_evidence(
-    csv_path: str, target: str, seed: int = 0, injector: str = "monotone_log"
+    csv_path: str,
+    target: str,
+    seed: int = 0,
+    injector: str = "monotone_log",
+    pseudonymize: bool = False,
 ) -> dict[str, Any]:
     """Build evidence from a REAL third-party dataset with an injected leak.
 
@@ -201,6 +236,21 @@ def build_csv_evidence(
     n = len(df)
     df["y_pred"] = y_arr + rng.normal(0, max(1e-9, 0.001 * y_arr.std()), n)
     inject(df, y_arr, target, injector, rng)
+
+    if pseudonymize:
+        # A3.10 dataset-familiarity arm: hash EVERY column name (target and
+        # injected anchor included) so the narrator cannot lean on memorized
+        # public-dataset schemas; only the numbers remain informative. The
+        # mapping is deterministic (content hash of the name) and printed for
+        # the audit trail.
+        mapping = {
+            c: f"col_{hashlib.sha256(str(c).encode('utf-8')).hexdigest()[:8]}"
+            for c in df.columns
+            if c != "y_pred"
+        }
+        df = df.rename(columns=mapping)
+        target = mapping[target]
+        print(f"  pseudonymized columns: {json.dumps(mapping)}", file=sys.stderr)
 
     # A3.5: the suspicious metric is COMPUTED from these predictions, never
     # asserted, so the narrator never sees a number nobody measured.
@@ -640,6 +690,7 @@ def _live_one_response(
     evidence: dict[str, Any],
     allowed: list[str],
     strict: bool = False,
+    temperature: float | None = 1.0,
 ) -> dict[str, Any]:
     """Sample one narrator response for the given layer and provider kind.
 
@@ -652,7 +703,23 @@ def _live_one_response(
     shipped contract but with the BARE prompt and WITHOUT the Tier A enums, so
     the narrator fabricates at its natural rate and every catch is visible in
     ``schema_rejections``.
+
+    ``temperature`` is the sampling pin (default 1.0): sent verbatim where the
+    provider accepts it; on a parameter rejection (reasoning endpoints) the pin
+    is dropped for the retry and the record's ``sampling`` field says so. Every
+    returned record carries ``sampling.temperature`` = what was actually sent.
     """
+    temp = temperature
+
+    def _sampled(r: dict[str, Any]) -> dict[str, Any]:
+        r["sampling"] = {"temperature": temp}
+        return r
+
+    def _param_rejected(e: Exception) -> bool:
+        # e.g. "Unsupported parameter: 'temperature' is not supported with
+        # this model." — deterministic, so retrying WITH the pin cannot work.
+        return temp is not None and "temperature" in str(e).lower()
+
     if layer == "tier_a":
         # Tier A in isolation: the evidence-bound enum is IN the schema, the
         # bare prompt states no rules, and Tier B verification is NOT applied.
@@ -674,8 +741,9 @@ def _live_one_response(
                         ],
                         tools=[tool],
                         tool_choice="required",
+                        **({} if temp is None else {"temperature": temp}),
                     )
-                    return _input_from_openai(response)
+                    return _sampled(_input_from_openai(response))
                 response = client.messages.create(
                     model=model,
                     max_tokens=1024,
@@ -683,11 +751,14 @@ def _live_one_response(
                     tools=[tool],
                     tool_choice={"type": "tool", "name": SUBMIT_TOOL_NAME},
                     messages=[{"role": "user", "content": _user_message(evidence)}],
+                    **({} if temp is None else {"temperature": temp}),
                 )
-                return _input_from_anthropic(response)
+                return _sampled(_input_from_anthropic(response))
             except Exception as e:  # noqa: BLE001
                 last_exc = e
-        return _error_response(last_exc or RuntimeError("unknown"))
+                if _param_rejected(e):
+                    temp = None
+        return _sampled(_error_response(last_exc or RuntimeError("unknown")))
 
     if layer == "stress_mech":
         # The FULL shipped contract (Tier A enums ON + Tier B) under the worst
@@ -708,11 +779,14 @@ def _live_one_response(
                     system_prompt=mech_prompt,
                     strict_tools=strict,
                     neutral_user=True,  # A3.11: sweep-comparable user message
+                    temperature=temp,
                 )
-                return _from_contract_result(result)
+                return _sampled(_from_contract_result(result))
             except Exception as e:  # noqa: BLE001 — SDK exception types vary
                 last_exc = e
-        return _error_response(last_exc or RuntimeError("unknown"))
+                if _param_rejected(e):
+                    temp = None
+        return _sampled(_error_response(last_exc or RuntimeError("unknown")))
 
     if layer in ("layer3", "layer3_stress", "layer3_stress_generic"):
         stress = layer.startswith("layer3_stress")
@@ -731,11 +805,14 @@ def _live_one_response(
                     correction_style=("generic" if layer.endswith("_generic") else "named"),
                     # A3.11: stress arms use the bare (L1-aligned) user message.
                     neutral_user=stress,
+                    temperature=temp,
                 )
-                return _from_contract_result(result)
+                return _sampled(_from_contract_result(result))
             except Exception as e:  # noqa: BLE001 — SDK exception types vary
                 last_exc = e
-        return _error_response(last_exc or RuntimeError("unknown"))
+                if _param_rejected(e):
+                    temp = None
+        return _sampled(_error_response(last_exc or RuntimeError("unknown")))
 
     system = LIVE_SYSTEM_PROMPT_BARE if layer == "layer1" else LEAKAGE_BOUND_PROMPT
     last_exc = None
@@ -750,8 +827,9 @@ def _live_one_response(
                     ],
                     tools=[_open_submit_tool_openai()],
                     tool_choice="required",
+                    **({} if temp is None else {"temperature": temp}),
                 )
-                return _input_from_openai(response)
+                return _sampled(_input_from_openai(response))
             response = client.messages.create(
                 model=model,
                 max_tokens=1024,
@@ -759,11 +837,14 @@ def _live_one_response(
                 tools=[_open_submit_tool_anthropic()],
                 tool_choice={"type": "tool", "name": SUBMIT_TOOL_NAME},
                 messages=[{"role": "user", "content": _user_message(evidence)}],
+                **({} if temp is None else {"temperature": temp}),
             )
-            return _input_from_anthropic(response)
+            return _sampled(_input_from_anthropic(response))
         except Exception as e:  # noqa: BLE001 — SDK exception types vary
             last_exc = e
-    return _error_response(last_exc or RuntimeError("unknown"))
+            if _param_rejected(e):
+                temp = None
+    return _sampled(_error_response(last_exc or RuntimeError("unknown")))
 
 
 def _build_live_client(provider: str) -> tuple[str, Any, str]:
@@ -893,8 +974,14 @@ def _run_cell(
     log: RunLog | None,
     label: str,
     one: Any,
+    meta: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
-    """Run one cell (arm or sweep variant) with logging, resume, and latency."""
+    """Run one cell (arm or sweep variant) with logging, resume, and latency.
+
+    ``meta`` (provider/task/seed/evidence-hash) is stamped into every record
+    so downstream table builders read cell identity from the DATA, not from a
+    parse of the log filename (arm names contain the field separator).
+    """
     import time
 
     allowed_set, corr_map, anchor = scorer_ctx
@@ -910,7 +997,7 @@ def _run_cell(
         responses.append(r)
         if log:
             flags = score_one(r, allowed_set, corr_map, anchor)
-            log.append({"i": i, "arm": label, "model": model, **r, "scored": flags})
+            log.append({**(meta or {}), "i": i, "arm": label, "model": model, **r, "scored": flags})
         if (i + 1) % 25 == 0:
             print(f"  {label}: {i + 1}/{n}", file=sys.stderr)
     return responses
@@ -929,11 +1016,13 @@ def live_run(
     seed: int = 0,
     resume: bool = False,
     strict: bool = False,
+    temperature: float | None = 1.0,
 ) -> dict[str, list[dict[str, Any]]]:
     kind, client, default_model = _build_live_client(provider)
     use_model = model or default_model
     print(
-        f"  provider={provider} kind={kind} model={use_model} strict={strict}",
+        f"  provider={provider} kind={kind} model={use_model} strict={strict} "
+        f"temperature={temperature}",
         file=sys.stderr,
     )
     ctx = scorer_ctx or (set(allowed), evidence_correlation_map(evidence), top_candidate(evidence))
@@ -964,8 +1053,21 @@ def live_run(
             log,
             arm_cell,
             lambda layer=layer: _live_one_response(  # type: ignore[misc]
-                kind, client, use_model, layer, evidence, allowed, strict=strict
+                kind,
+                client,
+                use_model,
+                layer,
+                evidence,
+                allowed,
+                strict=strict,
+                temperature=temperature,
             ),
+            meta={
+                "provider": provider,
+                "task": task_label,
+                "seed": seed,
+                "evidence_hash": ev_hash,
+            },
         )
     return out
 
@@ -981,18 +1083,26 @@ def sweep_run(
     task_label: str = "synthetic",
     seed: int = 0,
     resume: bool = False,
+    temperature: float | None = 1.0,
 ) -> dict[str, list[dict[str, Any]]]:
     """Run the bare-prompt paraphrase sweep: same open tool, same evidence,
     same model — only the (rule-free) system prompt varies."""
     kind, client, default_model = _build_live_client(provider)
     use_model = model or default_model
     print(
-        f"  sweep: provider={provider} model={use_model}, {len(SWEEP_BARE_VARIANTS)} variants",
+        f"  sweep: provider={provider} model={use_model}, {len(SWEEP_BARE_VARIANTS)} variants, "
+        f"temperature={temperature}",
         file=sys.stderr,
     )
     ctx = scorer_ctx or (set(allowed), evidence_correlation_map(evidence), top_candidate(evidence))
 
     def _one_sweep(prompt: str) -> dict[str, Any]:
+        temp = temperature
+
+        def _sampled(r: dict[str, Any]) -> dict[str, Any]:
+            r["sampling"] = {"temperature": temp}
+            return r
+
         last_exc: Exception | None = None
         for _attempt in range(2):
             try:
@@ -1005,8 +1115,9 @@ def sweep_run(
                         ],
                         tools=[_open_submit_tool_openai()],
                         tool_choice="required",
+                        **({} if temp is None else {"temperature": temp}),
                     )
-                    return _input_from_openai(response)
+                    return _sampled(_input_from_openai(response))
                 response = client.messages.create(
                     model=use_model,
                     max_tokens=1024,
@@ -1014,11 +1125,14 @@ def sweep_run(
                     tools=[_open_submit_tool_anthropic()],
                     tool_choice={"type": "tool", "name": SUBMIT_TOOL_NAME},
                     messages=[{"role": "user", "content": _user_message(evidence)}],
+                    **({} if temp is None else {"temperature": temp}),
                 )
-                return _input_from_anthropic(response)
+                return _sampled(_input_from_anthropic(response))
             except Exception as e:  # noqa: BLE001
                 last_exc = e
-        return _error_response(last_exc or RuntimeError("unknown"))
+                if temp is not None and "temperature" in str(e).lower():
+                    temp = None
+        return _sampled(_error_response(last_exc or RuntimeError("unknown")))
 
     ev_hash = _evidence_hash(evidence)
     out: dict[str, list[dict[str, Any]]] = {}
@@ -1045,6 +1159,12 @@ def sweep_run(
             log,
             name,
             lambda prompt=prompt: _one_sweep(prompt),  # type: ignore[misc]
+            meta={
+                "provider": provider,
+                "task": task_label,
+                "seed": seed,
+                "evidence_hash": ev_hash,
+            },
         )
     return out
 
@@ -1208,6 +1328,26 @@ def main() -> int:
         ),
     )
     ap.add_argument(
+        "--temperature",
+        type=float,
+        default=1.0,
+        help=(
+            "Sampling pin sent with every live call (default 1.0, the A3 "
+            "cross-provider setting). If a provider rejects the parameter "
+            "(reasoning endpoints), the pin is dropped for that cell and the "
+            "record's sampling field says so. top_p is never sent."
+        ),
+    )
+    ap.add_argument(
+        "--pseudonymize",
+        action="store_true",
+        help=(
+            "Hash every column name in the CSV task (A3.10 dataset-familiarity "
+            "arm): the narrator sees content-hashed names, so memorized public "
+            "schemas stop helping. Only valid with --task csv."
+        ),
+    )
+    ap.add_argument(
         "--max-cost-usd",
         type=float,
         default=None,
@@ -1226,12 +1366,14 @@ def main() -> int:
     )
     ap.add_argument(
         "--task",
-        choices=["synthetic", "csv", "case"],
+        choices=["synthetic", "synthetic-crowded", "csv", "case"],
         default="synthetic",
         help=(
-            "Evidence source: the synthetic frame, a real CSV with an injected "
-            "leak (--csv-path/--target/--injector), or a real-world case study "
-            "with a NATURAL documented leak (--case; analysis_plan A2)."
+            "Evidence source: the synthetic frame, the crowded value-channel "
+            "stressor (frozen instance #14, analysis_plan A3.4), a real CSV "
+            "with an injected leak (--csv-path/--target/--injector), or a "
+            "real-world case study with a NATURAL documented leak (--case; "
+            "analysis_plan A2)."
         ),
     )
     ap.add_argument(
@@ -1302,13 +1444,21 @@ def main() -> int:
 
     use_model = args.model or PROVIDERS[args.provider]["model"]
 
+    if args.pseudonymize and args.task != "csv":
+        raise SystemExit("--pseudonymize applies to --task csv only (A3.10 arm).")
+
     if args.task == "csv":
         if not args.csv_path or not args.target:
             raise SystemExit("--task csv requires --csv-path and --target.")
         evidence = build_csv_evidence(
-            args.csv_path, args.target, seed=args.seed, injector=args.injector
+            args.csv_path,
+            args.target,
+            seed=args.seed,
+            injector=args.injector,
+            pseudonymize=args.pseudonymize,
         )
-        task_label = f"csv:{os.path.basename(args.csv_path)}/{args.target}/{args.injector}"
+        pseud = "/pseud" if args.pseudonymize else ""
+        task_label = f"csv:{os.path.basename(args.csv_path)}/{args.target}/{args.injector}{pseud}"
     elif args.task == "case":
         if not args.case:
             raise SystemExit("--task case requires --case (bodyfat or sambanis).")
@@ -1318,6 +1468,13 @@ def main() -> int:
 
         evidence = build_case_evidence(args.case)
         task_label = f"case:{args.case}"
+    elif args.task == "synthetic-crowded":
+        if args.injector != "monotone_log":
+            raise SystemExit(
+                "--injector does not apply to synthetic-crowded (frozen instance #14)."
+            )
+        evidence = build_synthetic_crowded_evidence(seed=args.seed)
+        task_label = "synthetic_crowded"
     else:
         if args.injector != "monotone_log":
             raise SystemExit(
@@ -1339,6 +1496,17 @@ def main() -> int:
 
     log_dir = None if (args.no_log or args.mode != "live") else args.log_dir
     scorer_ctx = (allowed_set, corr_map, anchor)
+
+    if log_dir:
+        # The independent scorer (A3.9a) and the table builder (R8) re-derive
+        # every number from raw logs + evidence; the evidence dict is dumped
+        # next to the logs under its own content hash so cells and evidence
+        # pair mechanically (log filenames embed the same hash).
+        os.makedirs(log_dir, exist_ok=True)
+        ev_path = os.path.join(log_dir, f"evidence_{_evidence_hash(evidence)}.json")
+        with open(ev_path, "w", encoding="utf-8") as f:
+            json.dump({"task_label": task_label, "evidence": evidence}, f, indent=2, default=str)
+        print(f"  evidence dumped: {ev_path}", file=sys.stderr)
 
     def _cost_banner(cells: tuple[str, ...], per_cell_n: int) -> None:
         """Print the cost estimate; enforce --max-cost-usd; exit on --dry-run."""
@@ -1383,11 +1551,20 @@ def main() -> int:
             task_label=task_label,
             seed=args.seed,
             resume=args.resume,
+            temperature=args.temperature,
         )
-        rows = [
-            (name, score_responses(name, sweep[name], allowed_set, corr_map, anchor))
-            for name, _ in SWEEP_BARE_VARIANTS
-        ]
+        # A3.9b: transport errors are NOT data — exclude before scoring.
+        rows = []
+        for name, _ in SWEEP_BARE_VARIANTS:
+            rs = sweep[name]
+            valid = [r for r in rs if not r.get("error")]
+            if len(valid) < len(rs):
+                print(
+                    f"  {name}: {len(rs) - len(valid)} transport error(s) excluded "
+                    "per preregistration §7 (see run log for reasons)",
+                    file=sys.stderr,
+                )
+            rows.append((name, score_responses(name, valid, allowed_set, corr_map, anchor)))
         print(f"\n## Bare-prompt paraphrase sweep ({task_label}, N = {args.n} per variant)\n")
         print("| Variant     | Entity-fab | Wilson 95% CI    | k / N      |")
         print("| ----------- | :--------: | :--------------: | :--------: |")
@@ -1445,6 +1622,7 @@ def main() -> int:
             seed=args.seed,
             resume=args.resume,
             strict=args.strict,
+            temperature=args.temperature,
         )
 
     # A3.9b: transport errors are NOT data — exclude from N, report per cell.
