@@ -522,3 +522,101 @@ def test_omission_recheck_after_strip() -> None:
     assert out["claims"] == []  # unsound claim stripped
     assert out["had_unrecoverable_violation"] is True
     assert out["omitted_critical_evidence"] is True  # post-strip recheck fired
+
+
+# --------------------------------------------------------------------------- #
+# Wave-2 measurement parameters: strict tools (H4), generic retry (H5          #
+# control, A3.2), neutral user message (A3.11)                                 #
+# --------------------------------------------------------------------------- #
+
+
+def test_strict_schema_variant_is_all_required_and_closed() -> None:
+    from mlcompass.agents.leakage_investigator import _submit_input_schema
+
+    strict = _submit_input_schema(ALLOWED, strict=True)
+    # Provider strict subsets demand: every property required, closed objects.
+    assert strict["required"] == sorted(strict["properties"])
+    assert strict["additionalProperties"] is False
+    assert strict["properties"]["claims"]["items"]["additionalProperties"] is False
+    # The enum domain is untouched by the strict transform.
+    assert strict["properties"]["columns_referenced"]["items"]["enum"] == ALLOWED
+    # Default stays the permissive variant: recommended_checks optional,
+    # objects open.
+    default = _submit_input_schema(ALLOWED)
+    assert "recommended_checks" not in default["required"]
+    assert "additionalProperties" not in default
+
+
+def test_strict_flag_set_on_both_tool_formats_only_when_asked() -> None:
+    from mlcompass.agents.leakage_investigator import build_submit_investigation_tool_openai
+
+    ant = build_submit_investigation_tool(ALLOWED, strict=True)
+    oai = build_submit_investigation_tool_openai(ALLOWED, strict=True)
+    assert ant["strict"] is True
+    assert oai["function"]["strict"] is True
+    # Off by default the key must be ABSENT — an explicit strict=False is a
+    # different request shape on some providers than no flag at all.
+    assert "strict" not in build_submit_investigation_tool(ALLOWED)
+    assert "strict" not in build_submit_investigation_tool_openai(ALLOWED)["function"]
+
+
+def test_generic_correction_carries_no_violation_information() -> None:
+    # H5 control (A3.2): the generic retry must not name the phantom column,
+    # the allowed list, or which channel fired — only that a rejection
+    # happened. Separates "being corrected" from "being told what was wrong".
+    phantom = tool_use_response(
+        SUBMIT_TOOL_NAME,
+        {
+            "verdict": "leakage_likely",
+            "confidence": "high",
+            "columns_referenced": ["log_target_v2", "revenue"],
+            "narration": "phantom",
+        },
+    )
+    clean = tool_use_response(
+        SUBMIT_TOOL_NAME,
+        {
+            "verdict": "leakage_likely",
+            "confidence": "high",
+            "columns_referenced": ["log_target_v2"],
+            "narration": "clean",
+        },
+    )
+    client = MockClient(responses=[phantom, clean])
+    out = investigate_leakage_bound(EVIDENCE, client=client, correction_style="generic")
+    assert out["schema_rejections"] == 1
+    assert client.create_call_count == 2
+    retry_user = client.last_create_kwargs["messages"][0]["content"]
+    assert "rejected" in retry_user
+    assert "revenue" not in retry_user  # violator never named
+    assert "may cite only" not in retry_user  # allowed list never shown
+    assert "violated the contract" not in retry_user  # channel never named
+
+    # The default (named) style DOES spell out the violation.
+    named_client = MockClient(responses=[_clone(phantom), _clone(clean)])
+    investigate_leakage_bound(EVIDENCE, client=named_client)
+    named_retry = named_client.last_create_kwargs["messages"][0]["content"]
+    assert "revenue" in named_retry
+
+
+def test_neutral_user_message_omits_contract_language() -> None:
+    clean = tool_use_response(
+        SUBMIT_TOOL_NAME,
+        {
+            "verdict": "leakage_likely",
+            "confidence": "high",
+            "columns_referenced": ["log_target_v2"],
+            "narration": "ok",
+        },
+    )
+    client = MockClient(responses=[clean])
+    investigate_leakage_bound(EVIDENCE, client=client, neutral_user=True)
+    user = client.last_create_kwargs["messages"][0]["content"]
+    # A3.11: the stress-arm user turn is the bare evidence prompt — no
+    # contract framing that the L1 baseline never saw.
+    assert user.startswith("Evidence dictionary:")
+    assert "strict contract" not in user
+
+    default_client = MockClient(responses=[_clone(clean)])
+    investigate_leakage_bound(EVIDENCE, client=default_client)
+    assert "strict contract" in default_client.last_create_kwargs["messages"][0]["content"]

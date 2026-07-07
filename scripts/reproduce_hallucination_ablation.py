@@ -467,6 +467,7 @@ ARM_CALL_FACTOR: dict[str, float] = {
     "layer2": 1.0,
     "layer3": 1.05,
     "layer3_stress": 1.45,
+    "layer3_stress_generic": 1.45,
     "tier_a": 1.0,
     "stress_mech": 1.05,
 }
@@ -566,6 +567,16 @@ def _from_contract_result(result: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
+def _error_response(exc: Exception) -> dict[str, Any]:
+    """A transport-failure marker (A3.9b): NOT data. Scoring excludes these
+    (they would otherwise count as clean non-fabricating responses,
+    contradicting preregistration §7); they are logged with their reason and
+    reported per cell."""
+    r = _normalize({})
+    r["error"] = f"{type(exc).__name__}: {exc}"
+    return r
+
+
 def _normalize(tool_input: dict[str, Any]) -> dict[str, Any]:
     cols = tool_input.get("columns_referenced") or []
     claims = [c for c in (tool_input.get("claims") or []) if isinstance(c, dict)]
@@ -622,7 +633,13 @@ def _input_from_openai(response: Any) -> dict[str, Any]:
 
 
 def _live_one_response(
-    kind: str, client: Any, model: str, layer: str, evidence: dict[str, Any], allowed: list[str]
+    kind: str,
+    client: Any,
+    model: str,
+    layer: str,
+    evidence: dict[str, Any],
+    allowed: list[str],
+    strict: bool = False,
 ) -> dict[str, Any]:
     """Sample one narrator response for the given layer and provider kind.
 
@@ -641,11 +658,12 @@ def _live_one_response(
         # bare prompt states no rules, and Tier B verification is NOT applied.
         # Measures how much the runtime enum alone steers this endpoint.
         tool = (
-            build_submit_investigation_tool_openai(allowed)
+            build_submit_investigation_tool_openai(allowed, strict=strict)
             if kind == "openai"
-            else build_submit_investigation_tool(allowed)
+            else build_submit_investigation_tool(allowed, strict=strict)
         )
-        for attempt in range(2):
+        last_exc: Exception | None = None
+        for _attempt in range(2):
             try:
                 if kind == "openai":
                     response = client.chat.completions.create(
@@ -667,11 +685,9 @@ def _live_one_response(
                     messages=[{"role": "user", "content": _user_message(evidence)}],
                 )
                 return _input_from_anthropic(response)
-            except Exception:  # noqa: BLE001
-                if attempt == 0:
-                    continue
-                return _normalize({})
-        return _normalize({})
+            except Exception as e:  # noqa: BLE001
+                last_exc = e
+        return _error_response(last_exc or RuntimeError("unknown"))
 
     if layer == "stress_mech":
         # The FULL shipped contract (Tier A enums ON + Tier B) under the worst
@@ -680,8 +696,9 @@ def _live_one_response(
         mech_prompt = dict(SWEEP_BARE_VARIANTS)["mechanical"]
         # Same transient-error policy as the open arms: a 429/timeout must
         # not kill a multi-cell battery mid-run (in-flight money + all
-        # remaining cells); after two failures record an empty response.
-        for attempt in range(2):
+        # remaining cells); after two failures record an ERROR marker.
+        last_exc = None
+        for _attempt in range(2):
             try:
                 result = investigate_leakage_bound(
                     evidence,
@@ -689,16 +706,18 @@ def _live_one_response(
                     model=model,
                     provider=("openai" if kind == "openai" else "anthropic"),
                     system_prompt=mech_prompt,
+                    strict_tools=strict,
+                    neutral_user=True,  # A3.11: sweep-comparable user message
                 )
                 return _from_contract_result(result)
-            except Exception:  # noqa: BLE001 — SDK exception types vary
-                if attempt == 0:
-                    continue
-        return _normalize({})
+            except Exception as e:  # noqa: BLE001 — SDK exception types vary
+                last_exc = e
+        return _error_response(last_exc or RuntimeError("unknown"))
 
-    if layer in ("layer3", "layer3_stress"):
-        stress = layer == "layer3_stress"
-        for attempt in range(2):
+    if layer in ("layer3", "layer3_stress", "layer3_stress_generic"):
+        stress = layer.startswith("layer3_stress")
+        last_exc = None
+        for _attempt in range(2):
             try:
                 result = investigate_leakage_bound(
                     evidence,
@@ -707,15 +726,20 @@ def _live_one_response(
                     provider=("openai" if kind == "openai" else "anthropic"),
                     system_prompt=(LIVE_SYSTEM_PROMPT_BARE if stress else None),
                     enforce_schema_enum=not stress,
+                    strict_tools=strict,
+                    # A3.2: the generic-retry H5 control names nothing.
+                    correction_style=("generic" if layer.endswith("_generic") else "named"),
+                    # A3.11: stress arms use the bare (L1-aligned) user message.
+                    neutral_user=stress,
                 )
                 return _from_contract_result(result)
-            except Exception:  # noqa: BLE001 — SDK exception types vary
-                if attempt == 0:
-                    continue
-        return _normalize({})
+            except Exception as e:  # noqa: BLE001 — SDK exception types vary
+                last_exc = e
+        return _error_response(last_exc or RuntimeError("unknown"))
 
     system = LIVE_SYSTEM_PROMPT_BARE if layer == "layer1" else LEAKAGE_BOUND_PROMPT
-    for attempt in range(2):
+    last_exc = None
+    for _attempt in range(2):
         try:
             if kind == "openai":
                 response = client.chat.completions.create(
@@ -737,11 +761,9 @@ def _live_one_response(
                 messages=[{"role": "user", "content": _user_message(evidence)}],
             )
             return _input_from_anthropic(response)
-        except Exception:  # noqa: BLE001 — SDK exception types vary
-            if attempt == 0:
-                continue
-            return _normalize({})
-    return _normalize({})
+        except Exception as e:  # noqa: BLE001 — SDK exception types vary
+            last_exc = e
+    return _error_response(last_exc or RuntimeError("unknown"))
 
 
 def _build_live_client(provider: str) -> tuple[str, Any, str]:
@@ -906,21 +928,27 @@ def live_run(
     task_label: str = "synthetic",
     seed: int = 0,
     resume: bool = False,
+    strict: bool = False,
 ) -> dict[str, list[dict[str, Any]]]:
     kind, client, default_model = _build_live_client(provider)
     use_model = model or default_model
-    print(f"  provider={provider} kind={kind} model={use_model}", file=sys.stderr)
+    print(
+        f"  provider={provider} kind={kind} model={use_model} strict={strict}",
+        file=sys.stderr,
+    )
     ctx = scorer_ctx or (set(allowed), evidence_correlation_map(evidence), top_candidate(evidence))
     ev_hash = _evidence_hash(evidence)
     out: dict[str, list[dict[str, Any]]] = {}
     for layer in arms:
+        # Strict cells are DIFFERENT experimental cells (H4): distinct log name.
+        arm_cell = f"{layer}+strict" if strict else layer
         log = (
             RunLog(
                 log_dir,
                 provider,
                 use_model,
                 task_label,
-                layer,
+                arm_cell,
                 n,
                 seed,
                 resume,
@@ -934,9 +962,9 @@ def live_run(
             n,
             ctx,
             log,
-            layer,
+            arm_cell,
             lambda layer=layer: _live_one_response(  # type: ignore[misc]
-                kind, client, use_model, layer, evidence, allowed
+                kind, client, use_model, layer, evidence, allowed, strict=strict
             ),
         )
     return out
@@ -965,29 +993,32 @@ def sweep_run(
     ctx = scorer_ctx or (set(allowed), evidence_correlation_map(evidence), top_candidate(evidence))
 
     def _one_sweep(prompt: str) -> dict[str, Any]:
-        try:
-            if kind == "openai":
-                response = client.chat.completions.create(
+        last_exc: Exception | None = None
+        for _attempt in range(2):
+            try:
+                if kind == "openai":
+                    response = client.chat.completions.create(
+                        model=use_model,
+                        messages=[
+                            {"role": "system", "content": prompt},
+                            {"role": "user", "content": _user_message(evidence)},
+                        ],
+                        tools=[_open_submit_tool_openai()],
+                        tool_choice="required",
+                    )
+                    return _input_from_openai(response)
+                response = client.messages.create(
                     model=use_model,
-                    messages=[
-                        {"role": "system", "content": prompt},
-                        {"role": "user", "content": _user_message(evidence)},
-                    ],
-                    tools=[_open_submit_tool_openai()],
-                    tool_choice="required",
+                    max_tokens=1024,
+                    system=prompt,
+                    tools=[_open_submit_tool_anthropic()],
+                    tool_choice={"type": "tool", "name": SUBMIT_TOOL_NAME},
+                    messages=[{"role": "user", "content": _user_message(evidence)}],
                 )
-                return _input_from_openai(response)
-            response = client.messages.create(
-                model=use_model,
-                max_tokens=1024,
-                system=prompt,
-                tools=[_open_submit_tool_anthropic()],
-                tool_choice={"type": "tool", "name": SUBMIT_TOOL_NAME},
-                messages=[{"role": "user", "content": _user_message(evidence)}],
-            )
-            return _input_from_anthropic(response)
-        except Exception:  # noqa: BLE001
-            return _normalize({})
+                return _input_from_anthropic(response)
+            except Exception as e:  # noqa: BLE001
+                last_exc = e
+        return _error_response(last_exc or RuntimeError("unknown"))
 
     ev_hash = _evidence_hash(evidence)
     out: dict[str, list[dict[str, Any]]] = {}
@@ -1116,6 +1147,7 @@ LAYER_LABELS = {
     "layer2": "L1+2 strict prompt",
     "layer3": "L1+2+3 evidence-bound",
     "layer3_stress": "STRESS bare+TierB only",
+    "layer3_stress_generic": "STRESS generic-retry",
     "tier_a": "TIER-A only (enum, no verify)",
     "stress_mech": "L3 + worst paraphrase",
 }
@@ -1166,6 +1198,14 @@ def main() -> int:
         "--smoke",
         action="store_true",
         help="Wiring validation: N=5, arms layer1+layer3 only (~10 cheap calls).",
+    )
+    ap.add_argument(
+        "--strict",
+        action="store_true",
+        help=(
+            "Emit tools with the provider's strict flag + strict-compatible "
+            "schema (H4 enforcement dichotomy). Distinct experimental cells."
+        ),
     )
     ap.add_argument(
         "--max-cost-usd",
@@ -1369,7 +1409,14 @@ def main() -> int:
         return 0
 
     # ---------------- Layer ablation --------------------------------------- #
-    arms: tuple[str, ...] = ("layer1", "layer2", "layer3", "layer3_stress")
+    # A3.2: STRESS runs BOTH retry variants (named + generic) by default.
+    arms: tuple[str, ...] = (
+        "layer1",
+        "layer2",
+        "layer3",
+        "layer3_stress",
+        "layer3_stress_generic",
+    )
     if args.no_stress or args.mode == "mock":
         arms = ("layer1", "layer2", "layer3")
     if args.only_extra:
@@ -1397,20 +1444,36 @@ def main() -> int:
             task_label=task_label,
             seed=args.seed,
             resume=args.resume,
+            strict=args.strict,
         )
 
+    # A3.9b: transport errors are NOT data — exclude from N, report per cell.
+    valid_by_layer: dict[str, list[dict[str, Any]]] = {}
+    error_counts: dict[str, int] = {}
+    for layer in arms:
+        rs = responses_by_layer[layer]
+        valid_by_layer[layer] = [r for r in rs if not r.get("error")]
+        error_counts[layer] = len(rs) - len(valid_by_layer[layer])
+        if error_counts[layer]:
+            print(
+                f"  {layer}: {error_counts[layer]} transport error(s) excluded "
+                "per preregistration §7 (see run log for reasons)",
+                file=sys.stderr,
+            )
+
     results = [
-        score_responses(layer, responses_by_layer[layer], allowed_set, corr_map, anchor)
+        score_responses(layer, valid_by_layer[layer], allowed_set, corr_map, anchor)
         for layer in arms
     ]
 
     # Tier B catch telemetry — how often the contract demonstrably fired.
     rejection_summary: dict[str, dict[str, int]] = {}
     for layer in arms:
-        rej = [int(r.get("rejections") or 0) for r in responses_by_layer[layer]]
+        rej = [int(r.get("rejections") or 0) for r in valid_by_layer[layer]]
         rejection_summary[layer] = {
             "responses_with_catches": sum(1 for x in rej if x > 0),
             "total_catches": sum(rej),
+            "errors_excluded": error_counts[layer],
         }
 
     if args.smoke:

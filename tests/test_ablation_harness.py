@@ -560,3 +560,49 @@ def test_contract_result_normalizer_carries_kinds() -> None:
     assert out["rejections"] == 2
     assert out["rejection_kinds"] == ["entity", "entity+value"]
     assert json.dumps(out)  # log-serializable
+
+
+# --------------------------------------------------------------------------- #
+# Wave-2: transport-error markers (A3.9b) + generic-retry arm (A3.2)          #
+# --------------------------------------------------------------------------- #
+
+
+def test_error_response_is_marked_and_filterable() -> None:
+    marker = harness._error_response(ValueError("boom"))
+    assert marker["error"] == "ValueError: boom"
+    assert json.dumps(marker)  # log-serializable, reason preserved
+    # The exclusion rule main() applies: an error marker is NOT data — it
+    # must never pass the valid-response filter and get scored as a clean
+    # non-fabricating answer.
+    batch = [marker, harness._normalize({})]
+    valid = [r for r in batch if not r.get("error")]
+    assert len(valid) == 1
+    assert not valid[0].get("error")
+
+
+def test_stress_generic_arm_registered_alongside_named() -> None:
+    # A3.2: both STRESS retry variants are first-class arms with identical
+    # per-response call budgets (same retry ceiling, different message).
+    assert "layer3_stress_generic" in harness.ARM_CALL_FACTOR
+    assert (
+        harness.ARM_CALL_FACTOR["layer3_stress_generic"] == harness.ARM_CALL_FACTOR["layer3_stress"]
+    )
+    assert "layer3_stress_generic" in harness.LAYER_LABELS
+
+
+def test_live_arm_returns_error_marker_after_transport_retries() -> None:
+    class _AlwaysDown:
+        def __init__(self) -> None:
+            self.calls = 0
+            self.messages = self
+
+        def create(self, **_: Any) -> Any:
+            self.calls += 1
+            raise TimeoutError("socket timeout")
+
+    client = _AlwaysDown()
+    out = harness._live_one_response(
+        "anthropic", client, "m", "layer1", EVIDENCE, ["leak_col", "other_col"]
+    )
+    assert client.calls == 2  # one retry, then give up — never a third call
+    assert str(out["error"]).startswith("TimeoutError")

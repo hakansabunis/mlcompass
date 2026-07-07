@@ -324,7 +324,7 @@ _SUBMIT_DESCRIPTION = (
 
 
 def _submit_input_schema(
-    allowed_columns: list[str], *, enforce_enum: bool = True
+    allowed_columns: list[str], *, enforce_enum: bool = True, strict: bool = False
 ) -> dict[str, Any]:
     """The JSON schema for the submit tool, with the runtime enum domain.
 
@@ -339,48 +339,67 @@ def _submit_input_schema(
     keeping the field structure — used by the stress configuration of the
     measurement harness to demonstrate Tier B catching live violations on its
     own. Production callers leave it True.
+
+    ``strict=True`` emits the provider-strict-compatible variant (every
+    property required, ``additionalProperties: false`` on all objects) so the
+    schema can be decode-enforced by providers that document strict tool use
+    (H4 enforcement-dichotomy measurements). Semantics are unchanged; Tier B
+    still never relies on provider enforcement.
     """
     col_schema: dict[str, Any] = {"type": "string"}
     if enforce_enum:
         col_schema = {"type": "string", "enum": list(allowed_columns)}
-    return {
+    claim_schema: dict[str, Any] = {
+        "type": "object",
+        "properties": {
+            "column": dict(col_schema),
+            "statistic": {"type": "string", "enum": ["correlation"]},
+            "value": {"type": "number"},
+        },
+        "required": ["column", "statistic", "value"],
+    }
+    schema: dict[str, Any] = {
         "type": "object",
         "properties": {
             "verdict": {"type": "string", "enum": sorted(_VERDICT_VALUES)},
             "confidence": {"type": "string", "enum": sorted(_CONFIDENCE_VALUES)},
             "columns_referenced": {"type": "array", "items": dict(col_schema)},
-            "claims": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "column": dict(col_schema),
-                        "statistic": {"type": "string", "enum": ["correlation"]},
-                        "value": {"type": "number"},
-                    },
-                    "required": ["column", "statistic", "value"],
-                },
-            },
+            "claims": {"type": "array", "items": claim_schema},
             "narration": {"type": "string"},
             "recommended_checks": {"type": "array", "items": {"type": "string"}},
         },
         "required": ["verdict", "confidence", "columns_referenced", "claims", "narration"],
     }
+    if strict:
+        schema["required"] = sorted(schema["properties"])
+        schema["additionalProperties"] = False
+        claim_schema["additionalProperties"] = False
+    return schema
 
 
 def build_submit_investigation_tool(
-    allowed_columns: list[str], *, enforce_enum: bool = True
+    allowed_columns: list[str], *, enforce_enum: bool = True, strict: bool = False
 ) -> dict[str, Any]:
-    """Anthropic-format ``submit_investigation`` tool with the runtime enum."""
-    return {
+    """Anthropic-format ``submit_investigation`` tool with the runtime enum.
+
+    ``strict=True`` sets the Messages API's documented strict flag so the
+    provider decode-enforces the schema (constrained decoding); the schema
+    switches to its strict-compatible variant automatically.
+    """
+    tool: dict[str, Any] = {
         "name": SUBMIT_TOOL_NAME,
         "description": _SUBMIT_DESCRIPTION,
-        "input_schema": _submit_input_schema(allowed_columns, enforce_enum=enforce_enum),
+        "input_schema": _submit_input_schema(
+            allowed_columns, enforce_enum=enforce_enum, strict=strict
+        ),
     }
+    if strict:
+        tool["strict"] = True
+    return tool
 
 
 def build_submit_investigation_tool_openai(
-    allowed_columns: list[str], *, enforce_enum: bool = True
+    allowed_columns: list[str], *, enforce_enum: bool = True, strict: bool = False
 ) -> dict[str, Any]:
     """OpenAI-compatible (function) ``submit_investigation`` tool with the enum.
 
@@ -388,15 +407,21 @@ def build_submit_investigation_tool_openai(
     OpenAI-compatible endpoints such as DeepSeek (`base_url=
     https://api.deepseek.com`). The same inner schema is reused, so the runtime
     enum domain is identical across providers.
+
+    ``strict=True`` sets the documented ``function.strict`` flag (decode-time
+    schema enforcement on providers that support it) and switches to the
+    strict-compatible schema variant.
     """
-    return {
-        "type": "function",
-        "function": {
-            "name": SUBMIT_TOOL_NAME,
-            "description": _SUBMIT_DESCRIPTION,
-            "parameters": _submit_input_schema(allowed_columns, enforce_enum=enforce_enum),
-        },
+    function: dict[str, Any] = {
+        "name": SUBMIT_TOOL_NAME,
+        "description": _SUBMIT_DESCRIPTION,
+        "parameters": _submit_input_schema(
+            allowed_columns, enforce_enum=enforce_enum, strict=strict
+        ),
     }
+    if strict:
+        function["strict"] = True
+    return {"type": "function", "function": function}
 
 
 def _extract_tool_input(response: Any, tool_name: str) -> dict[str, Any]:
@@ -462,6 +487,9 @@ def investigate_leakage_bound(
     provider: str = "anthropic",
     system_prompt: str | None = None,
     enforce_schema_enum: bool = True,
+    strict_tools: bool = False,
+    correction_style: str = "named",
+    neutral_user: bool = False,
 ) -> dict[str, Any]:
     """Narrate the evidence under the evidence-bound runtime-schema contract.
 
@@ -496,6 +524,19 @@ def investigate_leakage_bound(
             from the tool schema (field structure kept) so Tier B's catches are
             observable in isolation. Diagnostic use only; production callers
             leave it True.
+        strict_tools: When True, the tool is emitted with the provider's
+            documented strict flag and a strict-compatible schema variant, so
+            capable providers decode-enforce it (H4 enforcement-dichotomy
+            measurements). Tier B behaves identically either way.
+        correction_style: ``"named"`` (default) sends the corrective retry
+            with the offending items spelled out; ``"generic"`` sends a
+            content-free rejection ("your previous answer was rejected") — the
+            preregistered H5 control that separates the effect of NAMING the
+            violation from the effect of merely getting a second attempt.
+        neutral_user: When True, the user message is the bare evidence prompt
+            with no mention of a contract — aligns stress-arm propensity with
+            the bare-prompt baseline (analysis_plan A3.11). Production callers
+            leave it False.
 
     Returns:
         Dict with the renderer-compatible keys (``verdict``, ``confidence``,
@@ -512,9 +553,13 @@ def investigate_leakage_bound(
     allowed_set = set(allowed)
     system = system_prompt if system_prompt is not None else LEAKAGE_BOUND_PROMPT
     if provider == "openai":
-        tool = build_submit_investigation_tool_openai(allowed, enforce_enum=enforce_schema_enum)
+        tool = build_submit_investigation_tool_openai(
+            allowed, enforce_enum=enforce_schema_enum, strict=strict_tools
+        )
     else:
-        tool = build_submit_investigation_tool(allowed, enforce_enum=enforce_schema_enum)
+        tool = build_submit_investigation_tool(
+            allowed, enforce_enum=enforce_schema_enum, strict=strict_tools
+        )
 
     # Keep the client untyped (Any) — the same discipline the agentlite path
     # uses. We pass raw dict tool/tool_choice params, which the provider's
@@ -530,12 +575,19 @@ def investigate_leakage_bound(
 
             api = anthropic.Anthropic()
 
-    base_user = (
-        "Here is the leakage evidence from mlcompass.tools.leakage. Investigate "
-        "it under the strict contract in your system prompt and submit your "
-        "answer through the submit_investigation tool.\n\n"
-        f"```json\n{json.dumps(_compact(evidence), default=str)}\n```"
-    )
+    if neutral_user:
+        base_user = (
+            "Evidence dictionary:\n\n"
+            f"{json.dumps(_compact(evidence), indent=2, default=str)}\n\n"
+            "Investigate the suspicious metric."
+        )
+    else:
+        base_user = (
+            "Here is the leakage evidence from mlcompass.tools.leakage. Investigate "
+            "it under the strict contract in your system prompt and submit your "
+            "answer through the submit_investigation tool.\n\n"
+            f"```json\n{json.dumps(_compact(evidence), default=str)}\n```"
+        )
 
     corr_map = evidence_correlation_map(evidence)
     anchor = top_candidate(evidence)
@@ -599,6 +651,14 @@ def investigate_leakage_bound(
             kinds.append("omission")
         rejection_kinds.append("+".join(kinds))
         if attempt < max_retries:
+            if correction_style == "generic":
+                # H5 control (analysis_plan A3.2): a rejection carrying NO
+                # information about what was wrong.
+                correction = (
+                    "\n\nYour previous answer was rejected. Answer again "
+                    "through submit_investigation."
+                )
+                continue
             parts: list[str] = []
             if entity_violations:
                 parts.append(
