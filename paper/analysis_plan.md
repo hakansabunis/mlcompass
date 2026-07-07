@@ -148,3 +148,109 @@ violate a channel), never exclusions.
   Severson/Geslin (protocol-proxy, needs feature engineering). Case datasets
   are fetched on demand and not committed (bodyfat: no explicit license;
   sambanis: 12 MB); SHA256 pinned in the fetch output.
+- **A3 (2026-07-07, BEFORE any Phase 1+ live run) — panel-repair package.**
+  Adopted in full from the pre-campaign 3-reviewer panel
+  (`paper/review_panel_2026-07-07.md`); every item below supersedes the
+  corresponding earlier text.
+
+  **A3.1 — H2 reframed (analytic vs empirical cells).** On the entity and
+  value channels, L3/STRESS user-facing zeros are ANALYTIC: Tier B strip
+  semantics make them true by construction, so they are evidence of verifier
+  correctness (backed by the e2e test suite + an independent re-scorer,
+  A3.9), not of model behavior. The preregistered Fisher test of L1 vs L3 is
+  WITHDRAWN as vacuous. H2's falsifiable content is re-scoped to: (a) the
+  omission channel (flag-only, not strippable per Prop. 2); (b) Tier B catch
+  behavior (first-attempt violation rates, retry dynamics); (c) abstention
+  rates. The empirically meaningful contrast is L1 vs STRESS first-attempt
+  catch rate. All results tables will label analytic cells as such.
+
+  **A3.2 — H5 gains a generic-retry control.** STRESS arms run TWO retry
+  variants: (i) named corrective message (existing), (ii) generic rejection
+  ("your previous answer was rejected; answer again through the tool")
+  carrying no violation details. H5's claim becomes comparative: the named
+  variant's conditional repeat rate is lower than the generic variant's
+  (one-sided Fisher). Without (ii), only "retry reduces repeats" may be
+  claimed. Harness support lands before Phase 1 (code wave).
+
+  **A3.3 — Channel-activation predictions per instance (R2 repair).**
+  Predictions frozen now: entity channel = every instance; omission channel
+  = all column-anchor instances (contamination + sambanis: UNDEFINED, anchor
+  is None — excluded from omission denominators, stated in the paper);
+  value channel = primarily the NEW crowded-evidence stressor (A3.4), with
+  inverse_target a secondary candidate (a narrator restating the sign it
+  reads in prose against the max-abs evidence encoding mismatches the map).
+  If the value channel still never fires after A3.4, that outcome is
+  reported as a boundary finding and R2 is DOWNGRADED accordingly (decided
+  now, so the DoD cannot fail on a hope).
+
+  **A3.4 — New frozen instance: `synthetic_crowded` (value-channel
+  stressor).** A synthetic frame (seed 0, spec frozen here) whose evidence
+  carries ~10 features with NEAR-IDENTICAL correlations (0.90-0.93 band,
+  spaced ~0.003 apart, below/around the candidate threshold except one
+  anchor at >= 0.99), so restating any specific value from prose is
+  error-prone while entity fabrication is unaffected. Builder lands in the
+  code wave; the instance joins the frozen list as #14 BEFORE Phase 2 runs.
+
+  **A3.5 — Sambanis negative-control outcomes registered.** Primary:
+  committed-verdict rate (verdict != cannot_determine) — the false-positive
+  commitment rate on innocent evidence (contract rule 4 prescribes
+  abstention). Secondary: entity-fabrication within its ~10-column evidence
+  set; Tier B catches. Omission: undefined (no anchor). The narrator sees
+  the COMPUTED r2 of the lstsq fit (honest, non-suspicious) in
+  suspicious_metric; the user message is the standard one. The csv-task
+  builder will likewise compute r2 from its own y_pred instead of asserting
+  1.0 (code wave).
+
+  **A3.6 — Zero-safe ratio rules.** H1 supported iff (largest per-provider
+  L1 Wilson LOWER bound) >= 5 x (smallest per-provider L1 Wilson UPPER
+  bound), synthetic task, P0/P1 N per §3. H3 supported per provider iff
+  (largest variant Wilson lower) >= 10 x (smallest variant Wilson upper);
+  sweep providers for H3 are NAMED now: {deepseek, openai, gemini}; "2 of
+  3" refers to exactly this set.
+
+  **A3.7 — Precision/power statement.** 0/200 leaves a 1.88% Wilson upper
+  bound; 0/100 leaves 3.70%. H4's hint-only ">0 under at least one
+  paraphrase" has ~63% per-paraphrase power at a true 1% rate and N=100;
+  therefore the two H4-critical tier_a cells (strict-capable provider,
+  hint-only mode vs enforced mode) run at N=200. Fisher MDE at N=100 vs
+  N=100 (alpha .05, power .8) is roughly 3% vs 15%; provider-difference
+  inferential claims are therefore reserved for N=200 cells, N=100 cells
+  are descriptive.
+
+  **A3.8 — Holm families fixed now, independent of manuscript placement:**
+  F1 = per-provider H2-omission tests; F2 = H4 ON/OFF contrasts; F3 =
+  per-provider H5 named-vs-generic contrasts. H5 replication is reported as
+  a FRACTION over all STRESS-capable providers run, not as existence.
+
+  **A3.9 — Independent scorer + error semantics.** (a) A separately
+  implemented scorer recomputes all three channels from raw JSONL + the
+  evidence dict WITHOUT importing the product's corr-map/anchor/tolerance
+  helpers; manuscript tables come from it (code wave). (b) Transport
+  failures stop scoring as clean data: double-failure responses carry an
+  explicit error marker, are excluded per §7 with logged reasons, and
+  per-cell error/empty counts appear in every results table.
+
+  **A3.10 — Anchor names stop telegraphing the answer.** Injected columns
+  are renamed to dataset-plausible neutral names BEFORE Phase 2:
+  exact_copy -> {target}_adj, noisy_proxy -> {target}_est, monotone_log ->
+  {target}_idx, inverse_target -> {target}_norm, binned_target ->
+  {target}_grp. June's `*_leak` naming is disclosed in Threats to Validity
+  as a historical salience confound. A pseudonymized-columns arm (hashed
+  names, one dataset x provider cell) is added to measure the
+  dataset-familiarity confound directly.
+
+  **A3.11 — STRESS message aligned.** Phase 1+ STRESS arms use the L1 user
+  message (no contract mention); the June variant's confound is historical
+  and stays disclosed. bodyfat's y_pred moves from the hand-coded Siri
+  formula to a least-squares model on all numeric features, with its
+  measured r2 reported and the trigger-path caveat kept regardless.
+
+  **A3.12 — Reporting rules.** Headline zero claims are quoted per-cell
+  with Wilson upper bounds; pooled 0/N bounds may be reported additionally,
+  never as the headline. Both June L1 synthetic measurements (15.0% on
+  06-11, 11.5% on 06-12) are reported in the journal version. Abstention is
+  operationalized as verdict == cannot_determine from the JSONL logs; a
+  >= 80% abstention cell is "unevaluable" for omission claims. The H6 judge
+  protocol (prompt file, ordering controls, kappa >= 0.6 judge-human floor
+  on a stratified random >= 100 sample) is frozen as a file in the repo
+  before any Phase 3 judging.

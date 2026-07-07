@@ -128,18 +128,23 @@ beyanı (KULLANICI yönetir — sorulmadan ekleme; 12 Haz'da açıkça istendi).
 
 Çekirdek metin `paper/INISTA_Paper.md`'den genişler. Bölümler:
 
-1. **Introduction** — INISTA girişinin genişletilmişi + YENİ çerçeve (R11):
-   "decode-time enforcement kapalı API'lerde yok" İDDİASINI KULLANMA — artık
-   yanlış. Doğru argüman (Fable 5'in bıraktığı çekirdek muhakeme):
+1. **Introduction** — INISTA girişinin genişletilmişi + YENİ çerçeve (R11,
+   PANEL-DÜZELTMELİ hali — eski "hiçbir şema dili ifade edemez" cümlesini
+   KULLANMA, panel çürüttü). Doğru argüman:
    *2026 manzarasında enforcement üç sınıfa ayrılıyor: E (xAI: daima),
    O (OpenAI/Anthropic/DeepSeek-beta: opt-in strict), H (Qwen-API, Mistral
    tool-call, Gemini default: ipucu). Enforcement parçalı, opt-in ve
    YÜZEYE BAĞIMLI (Anthropic'in OpenAI-uyumlu katmanı strict'i yok sayar).
-   Ve zorlandığı yerde bile: enum'lar yalnızca VARLIK bağlar; bir şema dili
-   alıntılanan değerin ölçülene eşitliğini ya da kritik kanıtın ele
-   alındığını İFADE EDEMEZ. Entity-binding giderek decode-enforced olurken
-   doğrulanamayan kalıntı claim'ler ve kapsamdır; Tier B tam orayı
-   sertifikalar. Kontrat eskimedi; işbölümü netleşti.*
+   İfade edilebilirlik ile zorlanabilirliği AYIR: tam JSON Schema,
+   value-tolerans pencerelerini çağrı-anında oneOf/const dallarıyla,
+   anchor kapsamasını contains ile ifade EDEBİLİR; ama sağlayıcıların
+   fiilen zorladığı strict alt-kümeler tam bu anahtar kelimeleri dışlar ve
+   "committed verdict ⇒ anchor adreslenmiş" koşullu tamlığı hiçbir
+   belgelenmiş strict alt-kümesi taşıyamaz. Sağlayıcı × anahtar-kelime
+   destek tablosu ekle (Q1_ROADMAP R11'deki veriler). Sonuç: ifade
+   edilebilenin bile zorlanmadığı ve zorlananın sertifiye edilemediği
+   yerde, deterministik post-verification tek sertifiye edilebilir
+   katmandır. Kontrat eskimedi; işbölümü netleşti.*
 2. **Related Work** — mevcut 5 paragraf + references_verified.md'den
    genişletme (faithfulness-eval, constrained-decoding yenileri, tool-use
    reliability, leakage/repro, benchmark metodolojisi). Her yeni ref'in
@@ -175,11 +180,51 @@ Panel çıktıları paper/review_round_*.md olarak commit'lenir.
 
 ## 6. Opus'a ilk gün önerilen sıra
 
-1. Bu dosyayı + Q1_ROADMAP + analysis_plan'ı oku. Görevler #94-#100.
-2. Anahtar YOKSA: Faz 3 adapter'larını yaz (spec §3-Faz3; mock test);
-   harness'a --strict bayrağı ekle (R4); manuskript iskeletini aç
-   (paper/eswa/ dizini, elsarticle, §4 planına göre placeholder'lı).
-3. Anahtar VARSA: §3-Faz1 sırası aynen. Her bloktan sonra kayıt + commit.
-4. Kullanıcı temposu: hızlıdır, uzun koşuları kendi terminalinden koşturup
+1. Bu dosyayı + Q1_ROADMAP + analysis_plan'ı (ÖZELLİKLE A3) +
+   review_panel_2026-07-07.md'yi oku. Görevler #94-#101.
+2. **İLK İŞ: §7 Panel-onarım kod dalgası** (görev #101) — A3 amendment'ları
+   yürütülebilir kılan kod. Paralı koşu bunlar bitmeden BAŞLAMAZ.
+3. Anahtar YOKSA devamında: Faz 3 adapter'ları (spec §3-Faz3; mock test);
+   manuskript iskeleti (paper/eswa/, elsarticle, §4 planı).
+4. Anahtar VARSA: §3-Faz1 sırası. Her bloktan sonra kayıt + commit.
+5. Kullanıcı temposu: hızlıdır, uzun koşuları kendi terminalinden koşturup
    çıktıyı yapıştırmayı sever; token israfına duyarlıdır; net tablolarla
    konuş; Türkçe yaz.
+
+## 7. Panel-onarım kod dalgası (görev #101) — paralı koşuların ÖN ŞARTI
+
+Kaynak: `paper/review_panel_2026-07-07.md` + analysis_plan A3. Sıra önerisi:
+
+1. **Bağımsız skorlayıcı** (A3.9a): `scripts/independent_scorer.py` — ham
+   JSONL + evidence dict'ten üç kanalı, ürün modülünden HİÇBİR yardımcıyı
+   (evidence_correlation_map/top_candidate/VALUE_TOLERANCE) import etmeden
+   yeniden hesaplar; harness skorlarıyla çapraz-doğrulama testi.
+2. **Hata işaretleyici** (A3.9b): çift-başarısız yanıtlar `_normalize({})`
+   yerine `{"error": "..."}` işaretli kayıt; skor dışı, §7 loglu; sweep
+   yolundaki tek-denemeli bare-except de düzeltilir; hücre başına
+   error/empty sayacı çıktı tablolarına.
+3. **`--strict` bayrağı** (R4/H4): tool tanımına sağlayıcıya-uygun strict
+   parametresi (OpenAI: function.strict=true; Anthropic: tool.strict=true);
+   iki formatta mock test.
+4. **Anchor rename** (A3.10): fabbench_injectors'ta `*_leak` →
+   {_adj,_est,_idx,_norm,_grp} haritası; fetch --verify beklenen-ad
+   registry'si (endswith('_leak') kontrolü kalkar); testler güncellenir.
+5. **Jenerik-retry kolu** (A3.2): investigate_leakage_bound'a
+   `correction_style="named"|"generic"` parametresi + harness arm'ı
+   (`layer3_stress_generic`); mock test.
+6. **STRESS mesaj hizalaması** (A3.11): stress kolunda L1 user mesajı.
+7. **synthetic_crowded üretici** (A3.4): spec analysis_plan'da; harness
+   `--task synthetic-crowded`; --verify entegrasyonu.
+8. **bodyfat modeli** (A3.11): Siri el-kodu yerine tüm sayısal özelliklerde
+   lstsq; ölçülen r2 raporda. **csv-task r2'si** de hesaplanır (assert 1.0
+   kalkar).
+9. **Hash zorlaması** (panel P2): fetch script beklenen SHA256'ları gömer,
+   uyuşmazlıkta fail; vaka hash'leri README'ye.
+10. **Sampling pinleri**: temperature/top_p mümkün olan yerde sabitlenir ve
+    JSONL'e yazılır. **make_tables.py** iskeleti (R8: her tablo commit'li
+    JSONL'den).
+11. **Related-work ekleri** (alan hakemi P1): ToTTo/PARENT/RotoWire (data-
+    to-text), AIS/ALCE/RARR (attribution), CRITIC/Self-Refine/Huang-2024
+    (self-correction) — HEPSİ web-doğrulamalı olarak references_verified.md
+    'ye eklenir (uydurma-ref sıfır toleransı). Manuskriptte 76-vs-80
+    ifadesi netleştirilir; iki Haziran L1 ölçümü de raporlanır.

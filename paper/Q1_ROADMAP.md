@@ -86,15 +86,24 @@ Gönderim ancak HEPSİ sağlandığında yapılır:
   taslağının ortak yazarlarına gönderim öncesi kısa bir nezaket bildirimi önerilir, özellikle
   taslaktan metin/sonuç taşınıyorsa); (b) Q1-kalibre iç 5-hakem paneli iki ardışık turda
   ≥ "minor revision" bandı; (c) cross-model dış denetim 0 P1 bulgu.
-- **R11 — 2026 enforcement manzarasına göre yeniden çerçeveleme:** INISTA taslağındaki
-  "decoding-time enforcement is unavailable behind commercial APIs" iddiası mid-2026'da
-  ARTIK DOĞRU DEĞİL (OpenAI/Anthropic/xAI strict dokümante ediyor; §2b). Journal sürümü
-  şu üç ayak üzerine yeniden konumlanır: (a) enforcement parçalı, opt-in ve yüzeye bağımlı
-  (default'lar ipucu; compat-layer'lar strict'i yok sayar; Qwen/Mistral tool-call'da hiç yok);
-  (b) zorlanan yerde bile refusal/truncation istisnaları var; (c) **enum'lar varlık bağlar
-  ama value-soundness ve completeness HİÇBİR şema diliyle ifade edilemez** — "entity binding
-  giderek decode-enforced olurken, doğrulanamayan kalıntı claim'ler ve kapsamdır; Tier B tam
-  orayı sertifikalar." Bu çerçeve paper'ı eskitmez, günceller.
+- **R11 — 2026 enforcement manzarasına göre yeniden çerçeveleme (panel-düzeltmeli, 7 Tem):**
+  INISTA taslağındaki "decoding-time enforcement is unavailable behind commercial APIs"
+  iddiası mid-2026'da ARTIK DOĞRU DEĞİL (OpenAI/Anthropic/xAI strict dokümante ediyor; §2b).
+  Journal sürümünün üç ayağı — DİKKAT, (c) panelin düzelttiği haliyle:
+  (a) enforcement parçalı, opt-in ve yüzeye bağımlı (default'lar ipucu; compat-layer'lar
+  strict'i yok sayar; Qwen/Mistral tool-call'da hiç yok);
+  (b) zorlanan yerde bile refusal/truncation istisnaları var ve API arkasında sertifiye
+  edilemez;
+  (c) **İfade edilebilirlik ≠ zorlanabilirlik.** Tam JSON Schema, value-soundness'ı
+  çağrı-anında hesaplanan oneOf/const/min-max dallarıyla ve anchor kapsamasını `contains`
+  ile İFADE EDEBİLİR (bunu dürüstçe söylüyoruz). Kalıcı boşluk şu: sağlayıcıların fiilen
+  ZORLADIĞI strict alt-kümeler bu anahtar kelimeleri dışlar (OpenAI strict: koşullu/if-then
+  ve sayısal sınırlar kısıtlı; Anthropic strict: min/max ve koşullular yok; xAI: not/if-then
+  "accepted but not enforced") ve "verdict ≠ cannot_determine ⇒ anchor adreslenmiş" koşullu
+  tamlık kuralı belgelenmiş HİÇBİR strict alt-kümeye sığmaz. Manuskripte sağlayıcı ×
+  anahtar-kelime destek tablosu konur; tez böylece zayıflamaz, sağlamlaşır: "ifade
+  edilebilenin bile zorlanamadığı ve zorlananın da sertifiye edilemediği yerde, deterministik
+  post-verification tek sertifiye edilebilir katmandır."
 
 ---
 
