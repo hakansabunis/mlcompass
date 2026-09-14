@@ -268,10 +268,33 @@ mlcompass agent "Init a new churn project here" --auto-approve
 mlcompass agent "Diagnose this run" --max-turns 10 --model claude-sonnet-4-5
 ```
 
-The agent will **ask before mutating** by default — the only mutating
-tool is `mlcompass_init`. Read/compute tools (`advise`, `audit`,
-`watch`, `compare`, `evaluate`, `deploy`, `status`) auto-allow. Add
-`--auto-approve` to skip the prompt for headless runs.
+> ⚠️ **The permission model does not currently do what this section
+> used to claim.** Two defects, both confirmed by execution and both
+> open as of this writing:
+>
+> - `mlcompass_init` is declared as the one tool needing approval, but
+>   the `claude-code` backend passes every tool — that one included —
+>   in the SDK's `allowed_tools`, which auto-approves them and skips
+>   the permission callback entirely. On that backend the prompt never
+>   appears, with or without `--auto-approve`.
+> - Six tools declared read-only (`advise`, `audit`, `watch`,
+>   `compare`, `evaluate`, `deploy`) do write: each appends to
+>   `advice.log` and `context.json`. Because they are declared
+>   non-mutating, the permission callback is never consulted for them.
+>   The write target is resolved from the *path argument*, not from the
+>   agent's project, so passing a dataset that lives inside a different
+>   mlcompass project writes into that project instead of this one.
+>
+> Treat `mlcompass agent` as able to write into any mlcompass project
+> reachable from a path you hand it, without asking. Nothing outside a
+> `.mlcompass/` directory is written, and `--max-turns` does correctly
+> bound provider calls on both backends.
+
+The intended design is that the agent **asks before mutating**, with
+`mlcompass_init` as the only mutating tool and the read/compute tools
+auto-allowing. `--auto-approve` is meant to skip the prompt for
+headless runs; it widens nothing beyond its help text, because the
+boundary is already wider than intended without it.
 
 ## Five-minute tour
 
@@ -535,7 +558,7 @@ the pipeline, and none of them advise:
 | Watches training in real time   |        ❌        |    dashboard      |       ❌       |       ✅       |
 | Diagnoses problems proactively  |        ❌        |         ❌        |     reactive   |       ✅       |
 | Persistent project memory       |        ❌        |    per-run        |       ❌       |       ✅       |
-| Permission-gated actions        |        ❌        |         ❌        |     partial    |   first-class  |
+| Permission-gated actions        |        ❌        |         ❌        |     partial    |  see caveat ⚠️  |
 
 mlcompass is the **advisor that sits next to all of these tools** —
 not a replacement for any.

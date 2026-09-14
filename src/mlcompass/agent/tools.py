@@ -18,6 +18,7 @@ unless ``--auto-approve`` is set).
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
@@ -32,6 +33,8 @@ from ..mcp_server import (
     mlcompass_status,
     mlcompass_watch,
 )
+
+_LOG = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -195,8 +198,10 @@ TOOL_REGISTRY: tuple[ToolSpec, ...] = (
         name="mlcompass_compare",
         description=(
             "Side-by-side comparison of two training runs: config diff, "
-            "final-metric winner, and an overall verdict (A wins / B "
-            "wins / mixed / tie). Each run identifier is either a path "
+            "final-metric winner, and an overall verdict — one of "
+            "'a_better', 'b_better', 'mixed', or 'inconclusive' (the "
+            "last means neither run had a metric whose direction "
+            "mlcompass recognises). Each run identifier is either a path "
             "to a run directory or a run name under <project>/runs/<name>."
         ),
         input_schema={
@@ -296,9 +301,17 @@ BY_NAME: dict[str, ToolSpec] = {spec.name: spec for spec in TOOL_REGISTRY}
 def call_tool(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
     """Dispatch a tool call by name, returning a JSON-safe dict.
 
-    Falls through to a uniform error envelope on unknown tool name or
-    bad argument shape, matching the MCP layer's convention so the
-    calling LLM sees consistent failure signals.
+    Falls through to a uniform error envelope on unknown tool name, bad
+    argument shape, or any dispatcher-raised exception, matching the MCP
+    layer's convention so the calling LLM sees consistent failure
+    signals.
+
+    The catch-all matters: neither backend wraps its dispatch loop in a
+    handler, so an exception escaping here aborts the whole agent run
+    mid-flight and the orchestrator never reaches ``write_summary`` —
+    the user loses the run's ``summary.md`` because one tool call hit,
+    say, a corrupt ``context.json``. Returning an envelope instead lets
+    the model see the failure and adapt.
     """
     spec = BY_NAME.get(name)
     if spec is None:
@@ -311,6 +324,9 @@ def call_tool(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         return spec.dispatcher(**arguments)
     except TypeError as e:
         return {"ok": False, "error": "BadArguments", "message": str(e)}
+    except Exception as e:  # noqa: BLE001 — uniform envelope beats killing the run.
+        _LOG.exception("Tool %s raised during dispatch", name)
+        return {"ok": False, "error": type(e).__name__, "message": str(e)}
 
 
 def anthropic_tool_specs() -> list[dict[str, Any]]:
