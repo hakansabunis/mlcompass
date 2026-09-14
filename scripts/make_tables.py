@@ -8,6 +8,12 @@ and emits one Markdown table per (task, provider, model) group plus a
 combined file. Each output carries the git commit of the working tree and a
 dirty flag, so a table can always be traced back to the exact logs.
 
+Since the Round-2 baseline block (analysis_plan_2026-09 §2) it also emits an
+arm-by-channel enforcement-mechanism comparison, ordered by enforcement
+strength, carrying the composite user-facing violation rate the plan's primary
+contrast uses plus the withheld-answer and calls-per-response columns §2.3
+requires beside the rates. That file appears only when baseline cells exist.
+
 Usage:
     python scripts/make_tables.py --runs-dir scripts/runs
     python scripts/make_tables.py --runs-dir scripts/runs --out-dir paper/tables --latex
@@ -67,20 +73,188 @@ def _slug(text: str) -> str:
     return re.sub(r"[^A-Za-z0-9._-]+", "-", text).strip("-") or "unknown"
 
 
+# --------------------------------------------------------------------------- #
+# Baseline comparison (analysis_plan_2026-09 §2) — arm by channel              #
+# --------------------------------------------------------------------------- #
+
+# The enforcement ladder, weakest first. Rows are ordered by this rather than
+# alphabetically so a reader walks mechanisms, not arm-name spellings. Arms not
+# listed sort after these, alphabetically.
+ARM_ORDER: tuple[str, ...] = (
+    "layer1",
+    "guardrails_stock",
+    "static_schema",
+    "layer1+strict",
+    "tier_a",
+    "tier_a+strict",
+    "guardrails_tierb",
+    "layer3_stress",
+    "layer3_stress_generic",
+    "layer3_bare",
+    "layer3",
+)
+
+# Arms that carry a baseline mechanism. A run directory holding none of these
+# has nothing to compare, and the comparison table is skipped rather than
+# emitted empty.
+BASELINE_ARM_NAMES: frozenset[str] = frozenset(
+    {"guardrails_stock", "guardrails_tierb", "static_schema"}
+)
+
+# Which cells are ANALYTIC rather than empirical on the entity/value channels:
+# Tier B strips, so a zero there is a consistency check on an invariant that
+# holds by construction, not an estimated rate (analysis_plan_2026-09 §1.2,
+# §1.3). The plan requires this label in the table itself, not in a footnote.
+TIER_B_ARMS: frozenset[str] = frozenset(
+    {"layer3", "layer3_bare", "layer3_stress", "layer3_stress_generic", "stress_mech"}
+)
+
+
+def _arm_rank(arm: str) -> tuple[int, str]:
+    base = arm.removesuffix("+strict")
+    for index, known in enumerate(ARM_ORDER):
+        if arm == known:
+            return (index, arm)
+    for index, known in enumerate(ARM_ORDER):
+        if base == known:
+            return (index, arm)
+    return (len(ARM_ORDER), arm)
+
+
+def _label(cell: dict[str, Any]) -> str:
+    """Analytic-or-empirical label, required on every row by §1.3."""
+    return (
+        "analytic"
+        if cell["identity"]["arm"].removesuffix("+strict") in TIER_B_ARMS
+        else "empirical"
+    )
+
+
+def _calls(cell: dict[str, Any]) -> str:
+    value = cell.get("calls_per_response")
+    return f"{value:.2f}" if isinstance(value, (int, float)) else "n/a"
+
+
+def build_baseline_comparison(groups: dict[tuple[str, str, str], list[dict[str, Any]]]) -> str:
+    """Arm-by-channel comparison, one block per (task, provider, model) cell.
+
+    Every number here is recomputed by the independent scorer from the cell's
+    own records; nothing is transcribed. Groups without a baseline arm are
+    skipped, so this file reports comparisons that actually ran.
+    """
+    blocks: list[str] = [
+        "# Baseline comparison -- enforcement mechanisms",
+        "",
+        "Arms differ only in the enforcement mechanism: same task, same evidence",
+        "hash, same model pin, same sampling pin, same scorer. Rows are ordered by",
+        "enforcement strength, not alphabetically. `composite` is any user-facing",
+        "violation (entity OR value OR flagged omission) -- the outcome measure the",
+        "Round-2 plan fixes for its primary contrast (analysis_plan_2026-09 section 2.2).",
+        "",
+        "`label` marks whether a cell's entity/value zeros are ANALYTIC (Tier B",
+        "strips, so the zero is a consistency check on an invariant that holds by",
+        "construction) or EMPIRICAL (sections 1.2, 1.3). `no answer` is the share of",
+        "responses where a validate-and-reask toolkit withheld the answer instead",
+        "of repairing it: withholding is not fabricating, so it is reported beside",
+        "the channels rather than folded into them. `calls/rsp` is provider calls",
+        "spent per response reaching the user (section 2.3 requires cost beside rates).",
+        "",
+    ]
+
+    emitted = 0
+    for key, cells in sorted(groups.items()):
+        if not any(
+            c["identity"]["arm"].removesuffix("+strict") in BASELINE_ARM_NAMES for c in cells
+        ):
+            continue
+        emitted += 1
+        task, provider, model = key
+        evidence_files = sorted({c["evidence_file"] for c in cells})
+        blocks += [
+            f"### {task} -- {provider} / {model}",
+            "",
+            f"Evidence: {', '.join(evidence_files)}",
+            "",
+            "| arm | mechanism | label | N | err | composite | entity | value "
+            "| omission | abstained | no answer | calls/rsp | catches |",
+            "| --- | --- | --- | --: | --: | --- | --- | --- | --- | --- | --- | --: | --: |",
+        ]
+        for cell in sorted(cells, key=lambda c: _arm_rank(c["identity"]["arm"])):
+            blocks.append(
+                f"| {cell['identity']['arm']} | {cell.get('mechanism') or '-'} "
+                f"| {_label(cell)} | {cell['n']} | {cell['errors_excluded']} "
+                f"| {_fmt(cell['composite'])} | {_fmt(cell['entity'])} "
+                f"| {_fmt(cell['value'])} | {_fmt(cell['omission'])} "
+                f"| {_fmt(cell['abstained'])} | {_fmt(cell.get('no_output'))} "
+                f"| {_calls(cell)} | {cell['tier_b']['total_catches']} |"
+            )
+        blocks.append("")
+
+    if not emitted:
+        return ""
+    return "\n".join(blocks)
+
+
+def build_baseline_comparison_latex(
+    groups: dict[tuple[str, str, str], list[dict[str, Any]]],
+) -> str:
+    def _tex(ch: dict[str, Any] | None) -> str:
+        if ch is None:
+            return "n/a"
+        lo, hi = ch["ci95"]
+        return f"{ch['k']}/{ch['n']} ({ch['rate'] * 100:.1f}\\%, [{lo * 100:.2f}, {hi * 100:.2f}])"
+
+    out: list[str] = []
+    for key, cells in sorted(groups.items()):
+        if not any(
+            c["identity"]["arm"].removesuffix("+strict") in BASELINE_ARM_NAMES for c in cells
+        ):
+            continue
+        task, provider, model = key
+        rows = [
+            f"    {cell['identity']['arm'].replace('_', chr(92) + '_')} & {_label(cell)} "
+            f"& {cell['n']} & {_tex(cell['composite'])} & {_tex(cell['entity'])} "
+            f"& {_tex(cell['value'])} & {_tex(cell['omission'])} "
+            f"& {_tex(cell.get('no_output'))} & {_calls(cell)} \\\\"
+            for cell in sorted(cells, key=lambda c: _arm_rank(c["identity"]["arm"]))
+        ]
+        caption = f"Enforcement-mechanism comparison, {task}: {provider} / {model}".replace(
+            "_", "\\_"
+        )
+        out += [
+            "\\begin{table}[t]",
+            "  \\centering",
+            f"  \\caption{{{caption}}}",
+            "  \\small",
+            "  \\begin{tabular}{llrlllllr}",
+            "    \\toprule",
+            "    arm & label & $N$ & composite & entity & value & omission "
+            "& no answer & calls \\\\",
+            "    \\midrule",
+            *rows,
+            "    \\bottomrule",
+            "  \\end{tabular}",
+            "\\end{table}",
+            "",
+        ]
+    return "\n".join(out)
+
+
 def build_group_markdown(key: tuple[str, str, str], cells: list[dict[str, Any]]) -> str:
     task, provider, model = key
     lines = [
         f"### {task} -- {provider} / {model}",
         "",
-        "| arm | N | err | entity | value | omission | abstained | Tier B catches |",
-        "| --- | --: | --: | --- | --- | --- | --- | --: |",
+        "| arm | label | N | err | composite | entity | value | omission "
+        "| abstained | Tier B catches |",
+        "| --- | --- | --: | --: | --- | --- | --- | --- | --- | --: |",
     ]
-    for cell in sorted(cells, key=lambda c: c["identity"]["arm"]):
+    for cell in sorted(cells, key=lambda c: _arm_rank(c["identity"]["arm"])):
         ident = cell["identity"]
         tb = cell["tier_b"]
         lines.append(
-            f"| {ident['arm']} | {cell['n']} | {cell['errors_excluded']} "
-            f"| {_fmt(cell['entity'])} | {_fmt(cell['value'])} "
+            f"| {ident['arm']} | {_label(cell)} | {cell['n']} | {cell['errors_excluded']} "
+            f"| {_fmt(cell['composite'])} | {_fmt(cell['entity'])} | {_fmt(cell['value'])} "
             f"| {_fmt(cell['omission'])} | {_fmt(cell['abstained'])} "
             f"| {tb['total_catches']} |"
         )
@@ -183,6 +357,28 @@ def main() -> int:
     with open(os.path.join(args.out_dir, "ALL_TABLES.md"), "w", encoding="utf-8") as f:
         f.write("\n".join(combined) + footer)
     print(f"  wrote ALL_TABLES.md ({len(groups)} group(s))", file=sys.stderr)
+
+    # Baseline comparison — emitted only when baseline cells exist, so a runs
+    # directory that predates them produces no empty or misleading table.
+    comparison = build_baseline_comparison(groups)
+    if comparison:
+        with open(os.path.join(args.out_dir, "BASELINE_COMPARISON.md"), "w", encoding="utf-8") as f:
+            f.write(comparison + footer)
+        print("  wrote BASELINE_COMPARISON.md", file=sys.stderr)
+        if args.latex:
+            with open(
+                os.path.join(args.out_dir, "BASELINE_COMPARISON.tex"), "w", encoding="utf-8"
+            ) as f:
+                f.write(build_baseline_comparison_latex(groups) + f"% {stamp}\n")
+            print("  wrote BASELINE_COMPARISON.tex", file=sys.stderr)
+    else:
+        print(
+            "  no baseline comparison table: none of the cells in "
+            f"{args.runs_dir} is a baseline arm "
+            f"({', '.join(sorted(BASELINE_ARM_NAMES))}). Run the harness with "
+            "--only-baselines to produce them.",
+            file=sys.stderr,
+        )
     return 0
 
 

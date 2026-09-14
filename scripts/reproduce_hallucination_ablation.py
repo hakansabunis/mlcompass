@@ -14,6 +14,26 @@ narration contract on a controlled synthetic data-leakage task:
     against the evidence set and out-of-evidence columns are rejected/stripped,
     so the rate of a phantom reaching the user is structurally bounded.
 
+Baseline comparison arms (``--only-baselines``; analysis_plan.md §6). The
+ablation above shows what each LAYER of the contract buys; the baselines show
+what the contract buys over the alternatives a reviewer will name. All of them
+run the same task, the same evidence, the same model and the same three-channel
+scoring, and differ only in the enforcement mechanism:
+
+  * ``layer1`` — the no-enforcement control. Already exactly that (bare prompt,
+    open enum-free schema, no validation, no retry), and the baselines are
+    built on that same call, so it is reused rather than duplicated.
+  * ``guardrails_stock`` — Guardrails AI with structural validation and reask
+    only: what a validate-and-reask toolkit gives you out of the box.
+  * ``guardrails_tierb`` — Guardrails AI running custom validators that encode
+    the Tier B checks. Our validator, their loop; the comparison is loops.
+  * ``static_schema`` — the same product tool builder in the provider's strict
+    structured-output mode, but with a column enum declared once at author
+    time instead of generated from the evidence at call time.
+
+See ``scripts/baseline_guardrails.py`` for the toolkit configuration and the
+reasons behind each choice.
+
 Two modes:
 
   --mode live   — fires real API calls. Builds a synthetic predictions frame,
@@ -58,6 +78,14 @@ Usage::
     # continue an interrupted battery without re-paying for finished calls
     python scripts/reproduce_hallucination_ablation.py --mode live --n 200 --resume
 
+    # zero-cost: what would the baseline comparison battery cost?
+    python scripts/reproduce_hallucination_ablation.py --mode live \
+        --only-baselines --n 200 --dry-run
+
+    # pennies: validate every baseline arm end to end
+    python scripts/reproduce_hallucination_ablation.py --mode live \
+        --only-baselines --smoke
+
     # no-API illustrative demo (clearly labelled as such)
     python scripts/reproduce_hallucination_ablation.py --mode mock
 
@@ -85,6 +113,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 # importlib (tests) rather than executed as a script.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+from baseline_guardrails import GUARDRAILS_ARMS  # noqa: E402
 from fabbench_injectors import list_injectors  # noqa: E402
 
 from mlcompass.agents.leakage_investigator import (  # noqa: E402
@@ -512,6 +541,14 @@ EST_OUT_TOKENS_PER_CALL = 300
 # Expected provider calls per response, by arm: contract arms may issue up to
 # two corrective retries. Factors follow the measured June rates (production
 # ~1.0; stress on the hard task ~1.45).
+#
+# Baseline arms (analysis_plan §6): guardrails_stock reasks only on a
+# STRUCTURAL failure, which a forced tool call makes rare (~1.05).
+# guardrails_tierb reasks on any faithfulness violation under the bare prompt
+# and additionally requires the anchor unconditionally, so it is budgeted at
+# the STRESS-like 1.5 — deliberately an OVER-estimate, because an
+# under-estimated baseline is the one that blows a budget. static_schema is a
+# single call with no retry loop.
 ARM_CALL_FACTOR: dict[str, float] = {
     "layer1": 1.0,
     "layer2": 1.0,
@@ -520,17 +557,99 @@ ARM_CALL_FACTOR: dict[str, float] = {
     "layer3_stress_generic": 1.45,
     "tier_a": 1.0,
     "stress_mech": 1.05,
+    "guardrails_stock": 1.05,
+    "guardrails_tierb": 1.5,
+    "static_schema": 1.0,
 }
+
+# Guardrails prepends its JSON-schema scaffolding to every REASK prompt, so a
+# reask costs meaningfully more input tokens than a first attempt. The
+# --dry-run estimator is deliberately rough (see EST_IN_TOKENS_PER_CALL); this
+# multiplier keeps the Guardrails estimate from reading too low. Replace the
+# estimate with the observed per-call token counts from --smoke before
+# committing to a battery.
+ARM_INPUT_TOKEN_FACTOR: dict[str, float] = {
+    "guardrails_stock": 1.6,
+    "guardrails_tierb": 1.6,
+}
+
+# --------------------------------------------------------------------------- #
+# Static (author-time) column domain — the provider-strict baseline            #
+# --------------------------------------------------------------------------- #
+
+# The `static_schema` arm answers "what does binding the enum to the evidence
+# AT CALL TIME buy over declaring the schema once?". It is the SAME product
+# code path as the `tier_a` arm (build_submit_investigation_tool*, strict
+# variant) with one difference: the enum domain is this frozen list instead of
+# `evidence_allowed_columns(evidence)`.
+#
+# The list is the evidence column set of the FROZEN REFERENCE TASK (the June
+# 2026 synthetic monotone_log instance, seed 0) — i.e. exactly what a careful
+# engineer would hard-code after looking at the dataset the application was
+# authored against. Choosing it this way is what keeps the comparison fair:
+#
+#   * On the reference task the static and dynamic domains are IDENTICAL, so
+#     the arm is degenerate there by construction (any difference would be
+#     noise, not mechanism). The harness says so out loud at run time.
+#   * On every other task instance the static domain is stale, which is the
+#     real deployment condition the dynamic binding exists to handle.
+#
+# Picking an arbitrary or deliberately wrong list instead would manufacture a
+# 100% fabrication rate and would be a rigged comparison. Every cell records
+# its own coverage numbers (see `_static_schema_coverage`) so a reader can
+# check the degree of mismatch that produced the rate, per cell.
+STATIC_SCHEMA_COLUMNS: tuple[str, ...] = (
+    "feature_10",
+    "feature_12",
+    "feature_4",
+    "feature_5",
+    "feature_6",
+    "feature_7",
+    "feature_8",
+    "feature_9",
+    "log_target_v2",
+    "near_target_proxy",
+)
+
+
+def _static_schema_coverage(
+    static_columns: list[str], evidence_columns: list[str], anchor: str | None
+) -> dict[str, Any]:
+    """Per-cell diagnostic for how well the frozen domain fits this evidence.
+
+    Recorded on every `static_schema` response so a rate can never be read
+    without the domain mismatch that produced it.
+    """
+    static_set, evidence_set = set(static_columns), set(evidence_columns)
+    overlap = sorted(static_set & evidence_set)
+    return {
+        "n_static": len(static_set),
+        "n_evidence": len(evidence_set),
+        "overlap": len(overlap),
+        "coverage": (len(overlap) / len(evidence_set)) if evidence_set else 0.0,
+        "anchor_in_static": (anchor in static_set) if anchor is not None else None,
+        "evidence_not_in_static": sorted(evidence_set - static_set),
+        "static_not_in_evidence": sorted(static_set - evidence_set),
+    }
 
 
 def estimate_cost_usd(model: str, arms: tuple[str, ...], n: int) -> tuple[float | None, int]:
-    """Return (estimated USD or None if pricing unknown, estimated call count)."""
-    calls = sum(int(math.ceil(n * ARM_CALL_FACTOR.get(arm, 1.0))) for arm in arms)
+    """Return (estimated USD or None if pricing unknown, estimated call count).
+
+    Arms that inflate the prompt on retry (the Guardrails baselines, which
+    prepend their JSON-schema scaffolding to every reask) are costed with
+    ARM_INPUT_TOKEN_FACTOR so the estimate does not read low.
+    """
+    per_arm_calls = {arm: int(math.ceil(n * ARM_CALL_FACTOR.get(arm, 1.0))) for arm in arms}
+    calls = sum(per_arm_calls.values())
     pricing = PRICING_PER_M.get(model)
     if pricing is None:
         return None, calls
     p_in, p_out = pricing
-    usd = calls * (EST_IN_TOKENS_PER_CALL * p_in + EST_OUT_TOKENS_PER_CALL * p_out) / 1_000_000.0
+    usd = 0.0
+    for arm, arm_calls in per_arm_calls.items():
+        tokens_in = EST_IN_TOKENS_PER_CALL * ARM_INPUT_TOKEN_FACTOR.get(arm, 1.0)
+        usd += arm_calls * (tokens_in * p_in + EST_OUT_TOKENS_PER_CALL * p_out) / 1_000_000.0
     return usd, calls
 
 
@@ -612,6 +731,7 @@ def _from_contract_result(result: dict[str, Any]) -> dict[str, Any]:
             "omitted": bool(result["omitted_critical_evidence"]),
             "rejections": int(result["schema_rejections"]),
             "rejection_kinds": list(result.get("rejection_kinds") or []),
+            "provider_calls": int(result.get("attempts_made") or 1),
         }
     )
     return out
@@ -640,6 +760,14 @@ def _normalize(tool_input: dict[str, Any]) -> dict[str, Any]:
         "usage_in": None,  # prompt tokens, when the provider reports them
         "usage_out": None,  # completion tokens, when the provider reports them
         "latency_ms": None,  # wall-clock per response; set by the run loop
+        # Provider calls this response cost. 1 for every single-shot arm; the
+        # contract path overrides it with attempts_made and the Guardrails
+        # arms with the toolkit's own call count, so "calls per response" is
+        # comparable across mechanisms (analysis_plan §6 requires calls/cost
+        # alongside the three channels). ADDITIVE record field: cells logged
+        # before it existed simply lack it and stay comparable, because no
+        # channel definition changed.
+        "provider_calls": 1,
     }
 
 
@@ -657,6 +785,56 @@ def _attach_usage_openai(normalized: dict[str, Any], response: Any) -> dict[str,
         normalized["usage_in"] = getattr(usage, "prompt_tokens", None)
         normalized["usage_out"] = getattr(usage, "completion_tokens", None)
     return normalized
+
+
+def _split_system(messages: list[dict[str, Any]]) -> tuple[str, list[dict[str, Any]]]:
+    """Split an OpenAI-style message list into (system text, chat turns).
+
+    Guardrails hands the transport one flat message list; the Anthropic
+    Messages API takes the system prompt as its own parameter. Multiple system
+    turns (Guardrails adds its own on a reask) are concatenated in order.
+    """
+    system = "\n\n".join(str(m.get("content", "")) for m in messages if m.get("role") == "system")
+    turns = [
+        {"role": str(m.get("role")), "content": str(m.get("content", ""))}
+        for m in messages
+        if m.get("role") != "system"
+    ]
+    return system, turns or [{"role": "user", "content": ""}]
+
+
+def _raw_tool_input(kind: str, response: Any) -> tuple[dict[str, Any], int | None, int | None]:
+    """The tool call's RAW argument dict plus token usage.
+
+    The baseline arms hand the model's payload to an external toolkit, which
+    parses it against its own schema, so the payload must reach it verbatim —
+    :func:`_normalize` would drop ``narration``/``confidence`` and the toolkit
+    would then reask about fields the model actually supplied, manufacturing
+    reasks that never happened.
+    """
+    if kind == "openai":
+        usage = getattr(response, "usage", None)
+        tokens = (
+            getattr(usage, "prompt_tokens", None),
+            getattr(usage, "completion_tokens", None),
+        )
+        calls = getattr(response.choices[0].message, "tool_calls", None) or []
+        if not calls:
+            return {}, tokens[0], tokens[1]
+        args = calls[0].function.arguments
+        try:
+            parsed = json.loads(args) if isinstance(args, str) else args
+        except (json.JSONDecodeError, TypeError):
+            return {}, tokens[0], tokens[1]
+        return (dict(parsed) if isinstance(parsed, dict) else {}), tokens[0], tokens[1]
+
+    usage = getattr(response, "usage", None)
+    tokens = (getattr(usage, "input_tokens", None), getattr(usage, "output_tokens", None))
+    for block in getattr(response, "content", []) or []:
+        if getattr(block, "type", None) == "tool_use":
+            raw = getattr(block, "input", {})
+            return (dict(raw) if isinstance(raw, dict) else {}), tokens[0], tokens[1]
+    return {}, tokens[0], tokens[1]
 
 
 def _input_from_anthropic(response: Any) -> dict[str, Any]:
@@ -691,6 +869,8 @@ def _live_one_response(
     allowed: list[str],
     strict: bool = False,
     temperature: float | None = 1.0,
+    guardrails_reasks: int = 2,
+    static_columns: tuple[str, ...] = STATIC_SCHEMA_COLUMNS,
 ) -> dict[str, Any]:
     """Sample one narrator response for the given layer and provider kind.
 
@@ -719,6 +899,152 @@ def _live_one_response(
         # e.g. "Unsupported parameter: 'temperature' is not supported with
         # this model." — deterministic, so retrying WITH the pin cannot work.
         return temp is not None and "temperature" in str(e).lower()
+
+    def _strict_rejected(e: Exception) -> bool:
+        # A provider that does not implement strict structured outputs rejects
+        # the flag (or the strict-compatible schema) deterministically. The
+        # static_schema arm degrades to non-strict and SAYS SO in the record
+        # rather than dropping the cell.
+        text = str(e).lower()
+        return "strict" in text or "additionalproperties" in text
+
+    if layer in GUARDRAILS_ARMS:
+        # BASELINE (analysis_plan §6) — validate-and-reask toolkit. Same bare
+        # prompt, same evidence, same OPEN tool schema, same sampling pin as
+        # L1: the ONLY difference is that the toolkit's loop sits around the
+        # call. `guardrails_stock` validates structure only (what the toolkit
+        # gives you out of the box); `guardrails_tierb` adds validators that
+        # encode the Tier B checks, so the comparison is loops, not checkers.
+        import baseline_guardrails
+
+        tool = _open_submit_tool_openai() if kind == "openai" else _open_submit_tool_anthropic()
+
+        def _transport(
+            messages: list[dict[str, Any]],
+        ) -> tuple[dict[str, Any], int | None, int | None]:
+            """One provider call on Guardrails' behalf. Raises on persistent
+            transport failure so the arm records an error marker (A3.9b)
+            rather than scoring a dropped call as a clean response."""
+            nonlocal temp
+            last: Exception | None = None
+            for _attempt in range(2):
+                try:
+                    if kind == "openai":
+                        response = client.chat.completions.create(
+                            model=model,
+                            messages=messages,
+                            tools=[tool],
+                            tool_choice="required",
+                            **({} if temp is None else {"temperature": temp}),
+                        )
+                    else:
+                        system_text, turns = _split_system(messages)
+                        response = client.messages.create(
+                            model=model,
+                            max_tokens=1024,
+                            system=system_text,
+                            tools=[tool],
+                            tool_choice={"type": "tool", "name": SUBMIT_TOOL_NAME},
+                            messages=turns,
+                            **({} if temp is None else {"temperature": temp}),
+                        )
+                    return _raw_tool_input(kind, response)
+                except Exception as e:  # noqa: BLE001 — SDK exception types vary
+                    last = e
+                    if _param_rejected(e):
+                        temp = None
+            raise last or RuntimeError("unknown transport failure")
+
+        try:
+            result = baseline_guardrails.run_guardrails_once(
+                _transport,
+                system_prompt=LIVE_SYSTEM_PROMPT_BARE,
+                user_message=_user_message(evidence),
+                allowed_columns=list(allowed),
+                corr_map=evidence_correlation_map(evidence),
+                anchor=top_candidate(evidence),
+                tolerance=VALUE_TOLERANCE,
+                with_validators=(layer == "guardrails_tierb"),
+                num_reasks=guardrails_reasks,
+            )
+        except Exception as e:  # noqa: BLE001
+            return _sampled(_error_response(e))
+        record = _normalize({})
+        record.update(result)
+        return _sampled(record)
+
+    if layer == "static_schema":
+        # BASELINE — provider strict mode over an AUTHOR-TIME schema. Same
+        # product tool builder as `tier_a` and the same bare prompt; the only
+        # difference is that the enum domain is the frozen STATIC_SCHEMA_COLUMNS
+        # instead of this evidence's columns. That one-variable difference is
+        # what isolates the value of binding the domain at call time.
+        static_list = list(static_columns)
+        tool = (
+            build_submit_investigation_tool_openai(static_list, strict=True)
+            if kind == "openai"
+            else build_submit_investigation_tool(static_list, strict=True)
+        )
+        coverage = _static_schema_coverage(static_list, list(allowed), top_candidate(evidence))
+        use_strict = True
+        static_exc: Exception | None = None
+        degraded: str | None = None
+        for _attempt in range(3):
+            try:
+                if kind == "openai":
+                    response = client.chat.completions.create(
+                        model=model,
+                        messages=[
+                            {"role": "system", "content": LIVE_SYSTEM_PROMPT_BARE},
+                            {"role": "user", "content": _user_message(evidence)},
+                        ],
+                        tools=[tool],
+                        tool_choice="required",
+                        **({} if temp is None else {"temperature": temp}),
+                    )
+                    record = _input_from_openai(response)
+                else:
+                    response = client.messages.create(
+                        model=model,
+                        max_tokens=1024,
+                        system=LIVE_SYSTEM_PROMPT_BARE,
+                        tools=[tool],
+                        tool_choice={"type": "tool", "name": SUBMIT_TOOL_NAME},
+                        messages=[{"role": "user", "content": _user_message(evidence)}],
+                        **({} if temp is None else {"temperature": temp}),
+                    )
+                    record = _input_from_anthropic(response)
+                record["baseline"] = {
+                    "mechanism": "provider-strict static schema",
+                    "strict_requested": True,
+                    "strict_applied": use_strict,
+                    "degraded": degraded,
+                    "static_columns": static_list,
+                    "coverage": coverage,
+                }
+                return _sampled(record)
+            except Exception as e:  # noqa: BLE001 — SDK exception types vary
+                static_exc = e
+                if _param_rejected(e):
+                    temp = None
+                elif use_strict and _strict_rejected(e):
+                    # Report the degradation instead of silently dropping the
+                    # response: the cell is no longer a strict-mode cell and
+                    # every record says so.
+                    use_strict = False
+                    degraded = f"strict_unsupported: {type(e).__name__}: {e}"
+                    print(
+                        f"  static_schema: provider rejected strict tools; "
+                        f"retrying WITHOUT strict and flagging the record "
+                        f"({type(e).__name__}: {str(e)[:160]})",
+                        file=sys.stderr,
+                    )
+                    tool = (
+                        build_submit_investigation_tool_openai(static_list, strict=False)
+                        if kind == "openai"
+                        else build_submit_investigation_tool(static_list, strict=False)
+                    )
+        return _sampled(_error_response(static_exc or RuntimeError("unknown")))
 
     if layer == "tier_a":
         # Tier A in isolation: the evidence-bound enum is IN the schema, the
@@ -1017,6 +1343,8 @@ def live_run(
     resume: bool = False,
     strict: bool = False,
     temperature: float | None = 1.0,
+    guardrails_reasks: int = 2,
+    static_columns: tuple[str, ...] = STATIC_SCHEMA_COLUMNS,
 ) -> dict[str, list[dict[str, Any]]]:
     kind, client, default_model = _build_live_client(provider)
     use_model = model or default_model
@@ -1025,6 +1353,33 @@ def live_run(
         f"temperature={temperature}",
         file=sys.stderr,
     )
+    if "static_schema" in arms:
+        coverage = _static_schema_coverage(
+            list(static_columns), list(allowed), top_candidate(evidence)
+        )
+        print(
+            f"  static_schema domain: {coverage['overlap']}/{coverage['n_evidence']} "
+            f"of this task's evidence columns are in the frozen author-time list "
+            f"(coverage {coverage['coverage'] * 100:.0f}%, anchor in list: "
+            f"{coverage['anchor_in_static']})",
+            file=sys.stderr,
+        )
+        if coverage["coverage"] >= 1.0:
+            print(
+                "  NOTE: the static domain covers this task exactly, so "
+                "static_schema is IDENTICAL to tier_a+strict here by "
+                "construction. It is a degenerate cell — the informative "
+                "cells are the task instances the author-time list predates.",
+                file=sys.stderr,
+            )
+        elif coverage["overlap"] == 0:
+            print(
+                "  WARNING: the static domain and this evidence are disjoint. "
+                "Any fabrication rate this produces is a property of the "
+                "mismatch, not of the mechanism — do not report it as a "
+                "head-to-head result.",
+                file=sys.stderr,
+            )
     ctx = scorer_ctx or (set(allowed), evidence_correlation_map(evidence), top_candidate(evidence))
     ev_hash = _evidence_hash(evidence)
     out: dict[str, list[dict[str, Any]]] = {}
@@ -1061,6 +1416,8 @@ def live_run(
                 allowed,
                 strict=strict,
                 temperature=temperature,
+                guardrails_reasks=guardrails_reasks,
+                static_columns=static_columns,
             ),
             meta={
                 "provider": provider,
@@ -1270,7 +1627,27 @@ LAYER_LABELS = {
     "layer3_stress_generic": "STRESS generic-retry",
     "tier_a": "TIER-A only (enum, no verify)",
     "stress_mech": "L3 + worst paraphrase",
+    # Baseline comparison arms (analysis_plan §6).
+    "guardrails_stock": "BASE Guardrails (stock)",
+    "guardrails_tierb": "BASE Guardrails (+TierB)",
+    "static_schema": "BASE static schema+strict",
 }
+
+# The no-enforcement control for the baseline comparison. `layer1` already IS
+# that control — bare prompt, open (enum-free) schema, no validation and no
+# retry loop — and the baseline arms are built on exactly that call, so a
+# separate control arm would duplicate it and pay twice for the same number.
+NO_ENFORCEMENT_CONTROL_ARM = "layer1"
+
+# The baseline battery: the no-enforcement control plus the three mechanisms
+# it is contrasted against. Same task, same evidence, same model, same three
+# channels — only the enforcement mechanism differs.
+BASELINE_ARMS: tuple[str, ...] = (
+    NO_ENFORCEMENT_CONTROL_ARM,
+    "guardrails_stock",
+    "guardrails_tierb",
+    "static_schema",
+)
 
 METRIC_LABELS = {"entity": "Entity-fab", "value": "Value-fab", "omission": "Omission"}
 
@@ -1406,6 +1783,35 @@ def main() -> int:
         "--only-extra",
         action="store_true",
         help="Run ONLY the diagnostic arms tier_a and stress_mech (live only).",
+    )
+    ap.add_argument(
+        "--only-baselines",
+        action="store_true",
+        help=(
+            "Run ONLY the baseline comparison battery (analysis_plan §6): the "
+            f"no-enforcement control ({NO_ENFORCEMENT_CONTROL_ARM}) plus "
+            "guardrails_stock, guardrails_tierb and static_schema. Live only."
+        ),
+    )
+    ap.add_argument(
+        "--guardrails-reasks",
+        type=int,
+        default=2,
+        help=(
+            "Reask budget for the Guardrails baseline arms (default 2, which "
+            "is parity with the shipped contract's max_retries=2 — change it "
+            "only for a deliberately registered loop-budget comparison)."
+        ),
+    )
+    ap.add_argument(
+        "--static-columns",
+        default=None,
+        help=(
+            "Comma-separated override for the static_schema arm's author-time "
+            "column domain. Default is the frozen STATIC_SCHEMA_COLUMNS (the "
+            "reference task's evidence columns). Whatever is used is recorded "
+            "in every response."
+        ),
     )
     ap.add_argument("--json", action="store_true", help="Emit machine-readable JSON.")
     args = ap.parse_args()
@@ -1600,12 +2006,46 @@ def main() -> int:
         if args.mode != "live":
             raise SystemExit("--only-extra is a live measurement; add --mode live.")
         arms = ("tier_a", "stress_mech")
+    if args.only_baselines:
+        if args.mode != "live":
+            raise SystemExit("--only-baselines is a live measurement; add --mode live.")
+        if args.only_extra:
+            raise SystemExit("--only-baselines and --only-extra select different batteries.")
+        arms = BASELINE_ARMS
     if args.smoke:
         if args.mode != "live":
             raise SystemExit("--smoke validates live wiring; add --mode live.")
-        arms = ("layer1", "layer3")
+        # A baseline smoke has to exercise the BASELINE code paths, otherwise
+        # it proves the wiring of arms the run is not going to use.
+        arms = BASELINE_ARMS if args.only_baselines else ("layer1", "layer3")
 
+    # Baseline preflight — everything here is free and happens BEFORE the
+    # cost banner, so a missing toolkit or a malformed domain list can never
+    # abort a run that has already spent money.
+    static_columns = STATIC_SCHEMA_COLUMNS
+    if args.static_columns is not None:
+        static_columns = tuple(c.strip() for c in args.static_columns.split(",") if c.strip())
+        if not static_columns:
+            raise SystemExit("--static-columns was given but parsed to an empty domain.")
+    if any(arm in GUARDRAILS_ARMS for arm in arms):
+        import baseline_guardrails
+
+        if not baseline_guardrails.guardrails_available():
+            raise SystemExit(
+                "The selected arms include a Guardrails baseline but the "
+                "toolkit is not installed:\n"
+                "    pip install 'guardrails-ai==0.11.0'\n"
+                "(the 'baselines' extra in pyproject.toml). No API calls made."
+            )
+        print(
+            f"  baseline toolkit: guardrails-ai "
+            f"{baseline_guardrails.guardrails_version()}, reask budget "
+            f"{args.guardrails_reasks} (contract parity: max_retries=2)",
+            file=sys.stderr,
+        )
     if args.mode == "mock":
+        if any(arm in BASELINE_ARMS[1:] for arm in arms):
+            raise SystemExit("The baseline arms are live measurements; add --mode live.")
         responses_by_layer = mock_run(args.n, allowed, corr_map, anchor, seed=args.seed)
     else:
         _cost_banner(arms, args.n)
@@ -1623,6 +2063,8 @@ def main() -> int:
             resume=args.resume,
             strict=args.strict,
             temperature=args.temperature,
+            guardrails_reasks=args.guardrails_reasks,
+            static_columns=static_columns,
         )
 
     # A3.9b: transport errors are NOT data — exclude from N, report per cell.

@@ -33,6 +33,23 @@ Scoring rules (restated from analysis_plan.md §5, frozen):
 - transport errors = records with a truthy ``error`` field are NOT data:
   excluded from every denominator, counted per cell (A3.9b).
 
+Baseline-arm additions (analysis_plan §6). These are ADDITIVE: no channel
+definition changed, so every cell logged before they existed stays directly
+comparable and simply reports them as unavailable.
+
+- no_output    = the share of responses where a validate-and-reask toolkit
+  ended the call with no validated output — the answer was withheld rather
+  than repaired. Reported separately from the channels, because withholding
+  is not fabricating; a mechanism that answers nothing scores 0 on all three
+  channels and that fact has to be visible next to the zeros. Only cells
+  whose records carry a ``baseline`` block report it.
+- calls_per_response = mean provider calls spent per response (the loop-cost
+  axis §6 requires alongside the channels), read from each record's
+  ``provider_calls``.
+- mechanism    = what the cell recorded about its own enforcement mechanism
+  (toolkit and version, or strict-mode and static-domain coverage), read from
+  the records rather than inferred from the arm's name.
+
 Usage:
     python scripts/independent_scorer.py --runs-dir scripts/runs
     python scripts/independent_scorer.py --log runs/x.jsonl --evidence runs/evidence_ab12cd34.json
@@ -177,6 +194,23 @@ def score_cell(
         lo, hi = wilson(k, m)
         return {"k": k, "n": m, "rate": (k / m if m else 0.0), "ci95": [lo, hi]}
 
+    def _composite() -> dict[str, Any]:
+        """Any user-facing violation: entity OR value OR flagged omission.
+
+        This is the outcome measure the Round-2 plan fixes for its primary
+        confirmatory contrast (analysis_plan_2026-09 §2.2 X1). Omission is
+        undefined on anchor-free evidence (A3.3) and contributes nothing
+        there; the denominator stays the full valid set either way, so the
+        composite is never computed over a different N than its parts.
+        """
+        k = sum(
+            1
+            for s in valid
+            if bool(s.get("entity")) or bool(s.get("value")) or bool(s.get("omission"))
+        )
+        lo, hi = wilson(k, n)
+        return {"k": k, "n": n, "rate": (k / n if n else 0.0), "ci95": [lo, hi]}
+
     # Cross-check: where the harness stored its own inline flags, count
     # disagreements per channel (scorer-agreement statistic for the paper).
     agreement = {"compared": 0, "disagreements": {"entity": 0, "value": 0, "omission": 0}}
@@ -195,26 +229,85 @@ def score_cell(
         ):
             agreement["disagreements"]["omission"] += 1
 
-    rejections = [
-        int(r.get("rejections") or 0)
-        for r, s in zip(records, scored, strict=True)
-        if not s["excluded_error"]
+    valid_records = [r for r, s in zip(records, scored, strict=True) if not s["excluded_error"]]
+    rejections = [int(r.get("rejections") or 0) for r in valid_records]
+
+    # ---- Baseline-arm reporting (additive; see module docstring) ----------- #
+    # A validate-and-reask toolkit can end a call with NO validated output:
+    # the answer is withheld rather than repaired. That is a mechanism
+    # difference, not a fabrication, so it gets its own rate instead of being
+    # folded into a channel. Arms whose records carry no `baseline` block
+    # (every pre-baseline cell) report None here and are unaffected.
+    outcomes = [
+        str((r.get("baseline") or {}).get("outcome") or "")
+        for r in valid_records
+        if isinstance(r.get("baseline"), dict) and (r.get("baseline") or {}).get("outcome")
     ]
+    no_output: dict[str, Any] | None = None
+    if outcomes:
+        k = sum(1 for o in outcomes if o == "no_output")
+        lo, hi = wilson(k, len(outcomes))
+        no_output = {
+            "k": k,
+            "n": len(outcomes),
+            "rate": k / len(outcomes),
+            "ci95": [lo, hi],
+        }
+
+    # Loop cost: provider calls spent per response reaching the user.
+    call_counts = [
+        int(r["provider_calls"])
+        for r in valid_records
+        if isinstance(r.get("provider_calls"), (int, float))
+    ]
+    calls_per_response = (sum(call_counts) / len(call_counts)) if call_counts else None
+
     return {
         "n_total": len(records),
         "errors_excluded": len(records) - n,
         "n": n,
         "anchor": anchor,
+        "composite": _composite(),
         "entity": _channel("entity"),
         "value": _channel("value"),
         "omission": (_channel("omission") if anchor is not None else None),
         "abstained": _channel("abstained"),
+        "no_output": no_output,
+        "calls_per_response": calls_per_response,
+        "mechanism": _mechanism(valid_records),
         "tier_b": {
             "responses_with_catches": sum(1 for x in rejections if x > 0),
             "total_catches": sum(rejections),
         },
         "agreement": agreement,
     }
+
+
+def _mechanism(records: list[dict[str, Any]]) -> str | None:
+    """The enforcement mechanism a baseline cell recorded about itself.
+
+    Read from the records, never inferred from the arm name, so a table can
+    state what a cell actually ran (toolkit + version, or strict-mode
+    coverage) rather than what its label suggests.
+    """
+    for record in records:
+        baseline = record.get("baseline")
+        if not isinstance(baseline, dict):
+            continue
+        toolkit = baseline.get("toolkit")
+        if toolkit:
+            validators = baseline.get("validators") or []
+            suffix = "+TierB validators" if validators else "structural only"
+            return f"{toolkit} {baseline.get('version', '?')} ({suffix})"
+        if baseline.get("mechanism"):
+            coverage = baseline.get("coverage") or {}
+            strict = "strict" if baseline.get("strict_applied") else "strict UNAVAILABLE"
+            share = coverage.get("coverage")
+            share_text = (
+                f", domain covers {share * 100:.0f}% of evidence" if share is not None else ""
+            )
+            return f"{baseline['mechanism']} ({strict}{share_text})"
+    return None
 
 
 # --------------------------------------------------------------------------- #
@@ -327,10 +420,17 @@ def main() -> int:
         print(
             f"   N={cell['n']} (of {cell['n_total']}, {cell['errors_excluded']} error(s) excluded)"
         )
+        print(f"   composite: {_fmt_channel(cell['composite'])}")
         print(f"   entity   : {_fmt_channel(cell['entity'])}")
         print(f"   value    : {_fmt_channel(cell['value'])}")
         print(f"   omission : {_fmt_channel(cell['omission'])}")
         print(f"   abstained: {_fmt_channel(cell['abstained'])}")
+        if cell.get("no_output") is not None:
+            print(f"   no answer: {_fmt_channel(cell['no_output'])}")
+        if cell.get("calls_per_response") is not None:
+            print(f"   calls/rsp: {cell['calls_per_response']:.2f}")
+        if cell.get("mechanism"):
+            print(f"   mechanism: {cell['mechanism']}")
         tb = cell["tier_b"]
         print(
             f"   tier B   : {tb['responses_with_catches']} response(s) with catches, "
