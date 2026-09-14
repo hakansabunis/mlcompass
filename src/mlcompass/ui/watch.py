@@ -32,9 +32,22 @@ def render_watch_report(
         console.print(_findings_table(findings))
         console.print()
         _print_top_suggestions(console, findings)
-    else:
+    elif snapshots:
         console.print()
         console.print("[green]✓ No anomalies detected by the watch rules.[/green]")
+    else:
+        # Nothing parsed is not the same as nothing wrong. A nanoGPT-style
+        # log (``iter 0: loss 4.0000, time 12.30ms``) yields no snapshots
+        # at all, and reporting "no anomalies" for it hands the user a
+        # clean bill of health for a file that was never read.
+        console.print()
+        console.print("[yellow]⚠ Could not read any metrics from this file.[/yellow]")
+        console.print(
+            "[dim]  The parser needs ':' or '=' between a metric and its "
+            "value — 'loss: 0.41' or 'loss=0.41'.\n"
+            "  Whitespace-separated pairs ('loss 0.41') are not "
+            "recognised.[/dim]"
+        )
 
 
 def render_watch_diagnosis(console: Console, diagnosis: dict[str, Any]) -> None:

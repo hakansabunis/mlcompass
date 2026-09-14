@@ -110,6 +110,47 @@ def test_watch_shows_overview_panel(clean_log: Path, tmp_path: Path) -> None:
 # --------------------------------------------------------------------------- #
 
 
+def test_watch_reports_an_unparsable_log_as_unparsable(tmp_path: Path) -> None:
+    # nanoGPT-style whitespace-separated pairs. The parser cannot read a
+    # single one of them, so watch has nothing to judge — and must not
+    # report a clean bill of health for a file it never understood.
+    log = tmp_path / "nanogpt.log"
+    log.write_text(
+        "\n".join(f"iter {i}: loss {4.0 - i * 0.1:.4f}, time 12.30ms" for i in range(20)) + "\n",
+        encoding="utf-8",
+    )
+
+    runner = CliRunner()
+    with runner.isolated_filesystem(temp_dir=tmp_path):
+        result = runner.invoke(cli, ["watch", str(log)])
+
+    assert result.exit_code == 0, result.output
+    output = result.output.lower()
+    assert "no anomalies" not in output, "claimed a clean run for an unreadable file"
+    assert "could not" in output or "no metrics" in output
+
+
+def test_watch_empty_log_is_also_reported_as_unparsable(tmp_path: Path) -> None:
+    log = tmp_path / "empty.log"
+    log.write_text("", encoding="utf-8")
+
+    runner = CliRunner()
+    with runner.isolated_filesystem(temp_dir=tmp_path):
+        result = runner.invoke(cli, ["watch", str(log)])
+
+    assert result.exit_code == 0, result.output
+    assert "no anomalies" not in result.output.lower()
+
+
+def test_watch_clean_log_still_reports_no_anomalies(clean_log: Path, tmp_path: Path) -> None:
+    # Guard: the unparsable path must not swallow the genuinely-clean one.
+    runner = CliRunner()
+    with runner.isolated_filesystem(temp_dir=tmp_path):
+        result = runner.invoke(cli, ["watch", str(clean_log)])
+    assert result.exit_code == 0
+    assert "no anomalies" in result.output.lower()
+
+
 def test_watch_missing_log_exits_nonzero(tmp_path: Path) -> None:
     runner = CliRunner()
     result = runner.invoke(cli, ["watch", str(tmp_path / "nope.log")])
