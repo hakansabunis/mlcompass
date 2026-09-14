@@ -1,0 +1,1 @@
+run_id,experiment_id,protocol_version,dataset_id,case_id,configuration_id,repeat_index,seed,started_at_utc,mlcompass_commit,provider,model,status,known_issues,correct_detections,missed_issues,false_positives,unverified_findings,hallucinations,runtime_seconds,input_tokens,output_tokens,total_tokens,estimated_llm_cost_usd,artifacts_path,notes
