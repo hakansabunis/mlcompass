@@ -60,30 +60,62 @@ def render_evaluation_interpretation(
     console: Console,
     interpretation: dict[str, Any],
 ) -> None:
-    """Render the evaluate interpreter (LLM layer) output."""
+    """Render the evaluate interpreter (LLM layer) output.
+
+    This narrator is **not** the contract narrator. It is a pure prose
+    reasoner: no evidence-bound enum, no post-validation, only a shape check
+    on the keys it returns — and it is handed the whole evaluation result,
+    which includes the leakage evidence. The CLI prints it directly above the
+    contract panel, so without a marker the reader meets unverified commentary
+    on the evidence first and the verified findings second, in the same
+    register.
+
+    The guarantee covers the contract panel's citation and claim channels and
+    nothing else. Since this panel cannot be deleted (it is a shipped
+    feature), the renderer's job is to make the partition legible: caution
+    colour rather than the success colour, and the verification status stated
+    in words rather than implied by styling.
+    """
     assessment = interpretation.get("assessment")
     if assessment:
         console.print()
-        console.print(Panel.fit(assessment, title="🧠 Assessment", border_style="green"))
+        console.print(
+            Panel.fit(
+                assessment,
+                title="🧠 Assessment [dim](model prose — NOT verified)[/dim]",
+                border_style="yellow",
+            )
+        )
+
+    # One plain sentence, because styling alone does not survive a colour-blind
+    # reader, a piped terminal, or a screenshot pasted into a bug report.
+    if any(
+        interpretation.get(key) for key in ("assessment", "strengths", "weaknesses", "next_steps")
+    ):
+        console.print(
+            "[dim yellow]  No contract governs this section: it is not verified against the "
+            "deterministic evidence, and any column or number in it may be invented. The "
+            "verified findings are in the leakage-investigator panel below.[/dim yellow]"
+        )
 
     strengths = interpretation.get("strengths") or []
     if strengths:
         console.print()
-        console.print("[green]✓ Strengths[/green]")
+        console.print("[bold]✓ Strengths[/bold] [dim](not verified)[/dim]")
         for item in strengths:
             console.print(f"  • {item}")
 
     weaknesses = interpretation.get("weaknesses") or []
     if weaknesses:
         console.print()
-        console.print("[red]✗ Weaknesses[/red]")
+        console.print("[red]✗ Weaknesses[/red] [dim](not verified)[/dim]")
         for item in weaknesses:
             console.print(f"  • {item}")
 
     next_steps = interpretation.get("next_steps") or []
     if next_steps:
         console.print()
-        console.print("[cyan]🚀 Next steps[/cyan]")
+        console.print("[cyan]🚀 Next steps[/cyan] [dim](not verified)[/dim]")
         for item in next_steps:
             console.print(f"  • {item}")
 
@@ -368,6 +400,37 @@ def render_leakage_narration(
         f"[bold]Verdict:[/bold] [{verdict_colour}]{verdict}[/{verdict_colour}]   "
         f"[dim]confidence: {confidence}[/dim]"
     )
+
+    # Contract status, before the findings, because both flags qualify
+    # everything below them.
+    #
+    # These are deterministic facts from the verifier, not model output, and
+    # until now they reached a dict key and stopped. The omission flag in
+    # particular is the entire user-facing consequence of the repair
+    # asymmetry: an unsound entity or value can be deleted, so the response
+    # is repaired silently and correctly; an omission cannot be repaired by
+    # deletion, because the repair would have to *add* a reference the
+    # narrator did not produce. Flagging is the only admissible remedy, and a
+    # flag nobody renders is not a remedy.
+    if narration.get("omitted_critical_evidence"):
+        lines.append(
+            "\n[bold yellow]⚠ Incomplete[/bold yellow] [dim yellow](contract: completeness "
+            "violation)[/dim yellow]\n"
+            "[yellow]  The narrator committed to a verdict without addressing the "
+            "top-ranked candidate leak column. This cannot be repaired by deletion, so it "
+            "is flagged rather than fixed: read the evidence panel above in full — the "
+            "findings below are incomplete.[/yellow]"
+        )
+    if narration.get("had_unrecoverable_violation"):
+        lines.append(
+            "\n[bold yellow]⚠ Content stripped[/bold yellow] [dim yellow](contract: soundness "
+            "violation)[/dim yellow]\n"
+            "[yellow]  The narrator cited a column or quoted a value that the evidence does "
+            "not contain, and it did not survive the corrective retry. Those items were "
+            "stripped from this panel. What remains is sound, but this response required "
+            "repair.[/yellow]"
+        )
+
     # Verified content first. The contract checks the cited columns and
     # the structured claims; it does not check the narrator's prose or
     # its suggested checks, which are passed through as written. Leading
