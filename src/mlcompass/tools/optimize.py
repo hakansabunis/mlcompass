@@ -244,11 +244,19 @@ def _sensitivity(
             if v is None:
                 numeric_values.append(None)
                 continue
-            if isinstance(v, (int, float)) and not _is_bad_number(v):
+            if isinstance(v, (int, float)) and not isinstance(v, bool) and not _is_bad_number(v):
                 numeric_values.append(float(v))
             else:
                 # Categorical hyperparameter — record presence but skip
                 # rank correlation; we still want to report it exists.
+                #
+                # ``bool`` is excluded explicitly because it subclasses
+                # ``int``: without the guard a flag like ``use_amp=True``
+                # is ranked as a numeric knob and then handed to
+                # ``_perturb``, which emits a float. The suggester would
+                # tell the user to run ``use_amp=1.5``. A boolean has no
+                # interpolable interior, so it belongs on the categorical
+                # side alongside optimizer / scheduler names.
                 numeric_values.append(None)
 
         present = [(i, v) for i, v in enumerate(numeric_values) if v is not None]

@@ -46,11 +46,14 @@ of the narrator's answer are generated from the deterministic evidence
 at call time, and every entity and number it returns is then
 re-verified in plain Python — entity soundness, claim-value soundness
 within a rounding tolerance, and completeness against the top-ranked
-candidate. Violations trigger a corrective retry; what survives cannot
-contain a column or a figure the evidence does not have. Enforcement
-never leaves our own code, so the guarantee does not depend on any
-provider honouring the schema (`anthropic` and `openai`-compatible
-providers both supported).
+candidate. Violations trigger a corrective retry; the cited-column and
+structured-claim channels that survive cannot carry a column or a
+figure the evidence does not have. The guarantee is scoped to those
+channels — the narrator's free-text sentence is **not** verified, and
+nothing stops a fabricated name or number from appearing there.
+Enforcement never leaves our own code, so within that scope the
+guarantee does not depend on any provider honouring the schema
+(`anthropic` and `openai`-compatible providers both supported).
 
 v0.8 added **eleven ready-made Claude Code slash commands** so the same
 eleven tools become one-keystroke calls inside Claude Code — one

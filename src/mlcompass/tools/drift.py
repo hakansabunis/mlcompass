@@ -336,14 +336,48 @@ def _ks_two_sample(a: np.ndarray, b: np.ndarray) -> tuple[float, float]:
     return d_stat, p_value
 
 
+# Crossover between the two series representations of the Kolmogorov
+# survival function. The alternating series converges geometrically in
+# exp(-2λ²) and is fast for large λ; the theta-transformed series
+# converges in exp(-π²/(8λ²)) and is fast for small λ. At λ = 1 both
+# need only a handful of terms, so either side of the split is exact to
+# machine precision.
+_KOLMOGOROV_SERIES_CROSSOVER = 1.0
+
+
 def _kolmogorov_p(lam: float) -> float:
     """Survival function of the Kolmogorov distribution.
 
-    ``Q(λ) = 2 * Σ (-1)^(k-1) exp(-2 k^2 λ^2)``. Truncate after the
-    series converges; for typical λ ≥ 0.3 the first 5-10 terms suffice.
+    Two series, split at :data:`_KOLMOGOROV_SERIES_CROSSOVER`:
+
+    - λ ≥ crossover: ``Q(λ) = 2 Σ (-1)^(k-1) exp(-2 k² λ²)``.
+    - λ < crossover: ``Q(λ) = 1 - (√(2π)/λ) Σ exp(-(2k-1)² π² / (8 λ²))``.
+
+    The small-λ branch is required, not an optimisation. The alternating
+    series is only *asymptotic* as λ → 0: its terms decay like
+    exp(-2k²λ²), which for λ = 0.001 is still ≈ 1 at k = 100, so
+    truncating it returns a near-arbitrary partial sum instead of the
+    true value of 1. Before the split, ``_kolmogorov_p(0.001)`` returned
+    0.02 — a two-sample KS test on a million rows differing in a single
+    value reported p = 0.01 rather than p = 1.
     """
     if lam <= 0:
         return 1.0
+
+    if lam < _KOLMOGOROV_SERIES_CROSSOVER:
+        # Theta-transformed series: converges faster the smaller λ gets.
+        c = math.pi**2 / (8.0 * lam * lam)
+        s = 0.0
+        for k in range(1, 101):
+            exponent = -((2 * k - 1) ** 2) * c
+            if exponent < -745.0:  # exp underflows to 0.0 from here on
+                break
+            term = math.exp(exponent)
+            s += term
+            if term < abs(s) * 1e-16:
+                break
+        return max(0.0, min(1.0, 1.0 - math.sqrt(2.0 * math.pi) / lam * s))
+
     s = 0.0
     sign = 1.0
     for k in range(1, 101):
