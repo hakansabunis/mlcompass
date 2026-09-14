@@ -5,6 +5,11 @@ containing them) into the same :class:`MetricSnapshot` shape the plain-text
 log parser produces. This lets ``watch`` consume either source without the
 detection rules needing to care which one is in play.
 
+Scalars are read in ``tbparse``'s long (un-pivoted) form, one row per
+scalar actually written, because that is the only shape in which a loss
+whose *value* is NaN can be told apart from a metric that was simply not
+logged at that step. See the comment in :func:`parse_tb_events`.
+
 The ``tbparse`` dependency is loaded lazily so users who never touch
 TensorBoard don't pay the import cost.
 """
@@ -47,45 +52,50 @@ def parse_tb_events(path: Path | str) -> list[MetricSnapshot]:
             "Install with: pip install mlcompass[tensorboard]"
         ) from exc
 
-    reader = SummaryReader(str(path), pivot=True)
+    # ``pivot=False`` is load-bearing, not a style choice. The pivoted frame
+    # has one column per tag and fills every (step, tag) at which nothing was
+    # written with NaN — so a loss that *became* NaN and a metric that was
+    # simply not logged at that step are the same cell, and no amount of
+    # inspection downstream can tell them apart. Dropping NaN cells therefore
+    # dropped real NaN losses, and ``detect_nan`` (the only error-severity
+    # watch rule) could never fire on a TensorBoard source. The long form
+    # carries one row per scalar actually written: a NaN loss is a row whose
+    # value is NaN, and an unlogged metric has no row at all.
+    reader = SummaryReader(str(path), pivot=False)
     df = reader.scalars
 
     if df is None or len(df) == 0:
         return []
 
-    snapshots: list[MetricSnapshot] = []
-    columns = list(df.columns)
-    for _, row in df.iterrows():
-        epoch_value: int | None = None
-        step_value: int | None = None
-        metrics: dict[str, float] = {}
+    metrics_by_step: dict[int | None, dict[str, float]] = {}
+    epoch_by_step: dict[int | None, int | None] = {}
 
-        for col in columns:
-            raw = row[col]
-            if raw is None or _is_missing(raw):
-                continue
-            if col == "step":
-                step_value = _as_int(raw)
-            elif col == "epoch":
-                epoch_value = _as_int(raw)
-            else:
-                numeric = _as_float(raw)
-                if numeric is not None:
-                    metrics[col] = numeric
+    steps = df["step"] if "step" in df.columns else [None] * len(df)
+    for raw_step, raw_tag, raw_value in zip(steps, df["tag"], df["value"], strict=True):
+        step_value = _as_int(raw_step)
+        # Every written row materialises its step, so a step whose scalars
+        # are all unusable still becomes a snapshot, as it did pre-pivot.
+        metrics_by_step.setdefault(step_value, {})
+        epoch_by_step.setdefault(step_value, None)
 
-        if not metrics and epoch_value is None and step_value is None:
+        tag = str(raw_tag)
+        if tag == "epoch":
+            epoch_by_step[step_value] = _as_int(raw_value)
             continue
 
-        snapshots.append(
-            MetricSnapshot(
-                epoch=epoch_value,
-                step=step_value,
-                metrics=metrics,
-                source_line=f"tensorboard step={step_value}",
-            )
-        )
+        numeric = _as_float(raw_value)
+        if numeric is not None:
+            metrics_by_step[step_value][tag] = numeric
 
-    return snapshots
+    return [
+        MetricSnapshot(
+            epoch=epoch_by_step[step_value],
+            step=step_value,
+            metrics=metrics_by_step[step_value],
+            source_line=f"tensorboard step={step_value}",
+        )
+        for step_value in sorted(metrics_by_step, key=_step_sort_key)
+    ]
 
 
 # --------------------------------------------------------------------------- #
@@ -93,24 +103,31 @@ def parse_tb_events(path: Path | str) -> list[MetricSnapshot]:
 # --------------------------------------------------------------------------- #
 
 
-def _is_missing(value: Any) -> bool:
-    """True if a pandas cell is NaN/None — without importing pandas eagerly."""
-    if value is None:
-        return True
-    try:
-        return bool(math.isnan(value))
-    except (TypeError, ValueError):
-        return False
+def _step_sort_key(step: int | None) -> tuple[int, int]:
+    """Order snapshots by step, with an unknown step sorting first."""
+    return (0, 0) if step is None else (1, step)
 
 
 def _as_int(value: Any) -> int | None:
     try:
-        return int(value)
+        as_float = float(value)
     except (TypeError, ValueError):
         return None
+    # int(nan) raises and int(inf) raises; neither is a usable step/epoch.
+    if math.isnan(as_float) or math.isinf(as_float):
+        return None
+    return int(as_float)
 
 
 def _as_float(value: Any) -> float | None:
+    """Coerce a scalar cell to float, *keeping* NaN and ±Inf.
+
+    A NaN or Inf here is a real measurement — the loss blew up — and is the
+    signal ``detect_nan`` exists to report. It must not be filtered out on
+    the way in.
+    """
+    if isinstance(value, bool):
+        return None
     if not isinstance(value, (int, float)):
         return None
     return float(value)

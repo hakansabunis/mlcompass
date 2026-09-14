@@ -11,10 +11,9 @@ Lines that don't contain anything metric-shaped are ignored.
 
 A separator is required: ``_KV_RE`` below matches only ``[:=]``, so
 whitespace-separated ``key value`` pairs (``loss 0.41``, the nanoGPT
-style) yield no metrics. Values must also be plain Python float
-literals — ``nan``/``NaN``/``inf``/``Inf`` are recognised, ``NAN`` and
-``-Infinity`` are not, and a value carrying a thousands separator
-(``1,000.0``) is truncated at the separator.
+style) yield no metrics. Values may be float literals in any case
+(``nan``, ``NAN``, ``inf``, ``-Infinity``) and may carry thousands
+separators (``1,000.0``), which ``f"{loss:,.2f}"`` produces.
 
 TensorBoard event files and W&B local caches are handled by
 :func:`load_snapshots` below, which dispatches to ``tools.tensorboard``
@@ -66,14 +65,55 @@ _STEP_RE = re.compile(
     re.IGNORECASE,
 )
 
-# Captures ``key=value``, ``key: value``, ``key  value`` pairs where
-# value is a Python-style float literal (including ``nan`` / ``inf``).
-# We require the key to be at least 2 characters to avoid catching
-# single-letter loop variables.
-_KV_RE = re.compile(
-    r"([A-Za-z_][A-Za-z0-9_]{1,40})\s*[:=]\s*"
-    r"(-?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?|nan|inf|-inf|NaN|Inf)",
+# A metric key: a word of at least 2 characters, optionally continued
+# across ``/``, ``.`` or ``-`` separators — ``train/loss``, ``Loss/train``,
+# ``val.loss``, ``elapsed-time``. A key that stopped at the separator made
+# ``train/loss: 0.42 val/loss: 0.55`` parse as the single pair
+# ``{"loss": 0.55}``: both names collapsed to ``loss`` and the train value
+# was silently replaced by the val value, after which ``_train_loss``
+# returned the val loss to every detector downstream.
+#
+# Each separator must be followed immediately by another word character,
+# so file paths (``/tmp/model.pt``, ``./runs/exp-1``) and the ``-`` used
+# as a Keras field delimiter (``loss: 0.4 - val_loss: 0.5``) are not
+# swallowed into a key.
+_KEY_PATTERN = r"[A-Za-z_][A-Za-z0-9_]{1,40}(?:[/.\-][A-Za-z0-9_]{1,40})*"
+
+
+def _any_case(word: str) -> str:
+    """Regex source matching ``word`` in any mix of cases.
+
+    Spelled out rather than using a scoped ``(?i:...)`` flag group, which
+    needs Python 3.11 — this package supports 3.10.
+    """
+    return "".join(f"[{char.lower()}{char.upper()}]" for char in word)
+
+
+# The integer part of a number, with or without thousands separators.
+# ``f"{loss:,.2f}"`` is an ordinary format string, and a pattern that
+# stopped at the comma read ``1,000.0`` as ``1.0`` and ``12,345.67`` as
+# ``12.0`` — wrong by three orders of magnitude, silently, feeding every
+# threshold downstream. A separator only counts when followed by exactly
+# three digits, so a comma used as a field delimiter
+# (``train_loss=0.42, val_loss=0.55``) still ends the value.
+_INT_PART = r"\d{1,3}(?:,\d{3})+|\d+"
+
+_NUMBER = rf"-?(?:(?:{_INT_PART})(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?"
+
+# ``NAN`` and ``-Infinity`` are what NumPy and several loggers print;
+# matching only ``nan``/``NaN``/``inf``/``Inf`` dropped those pairs
+# entirely, so the NaN rule never even saw the metric. The trailing
+# boundary stops ``status: infeasible`` from parsing as positive infinity
+# — which the bare ``inf`` alternative did. Longest spelling first, so
+# ``Infinity`` is not matched as ``Inf`` with a dangling ``inity``.
+_NON_FINITE = (
+    rf"[-+]?(?:{_any_case('nan')}|{_any_case('infinity')}|{_any_case('inf')})"
+    r"(?![A-Za-z0-9_])"
 )
+
+# Captures ``key=value`` and ``key: value`` pairs. A separator is
+# required: whitespace-only ``key value`` pairs are not matched.
+_KV_RE = re.compile(rf"({_KEY_PATTERN})\s*[:=]\s*({_NUMBER}|{_NON_FINITE})")
 
 
 # Tokens we never treat as metric keys (epoch markers, indices, etc.).
@@ -109,25 +149,36 @@ def parse_log_line(line: str) -> MetricSnapshot | None:
     metrics: dict[str, float] = {}
     for match in _KV_RE.finditer(line):
         key = match.group(1)
-        if key.lower() in _NON_METRIC_KEYS:
+        # Through the shared normaliser, so ``global/step`` is recognised
+        # as the step marker it is rather than kept as a metric.
+        if normalise_metric_key(key) in _NON_METRIC_KEYS:
             continue
         raw_value = match.group(2)
         try:
-            value = float(raw_value)
+            # Thousands separators are matched above but are not part of
+            # the literal float() accepts.
+            value = float(raw_value.replace(",", ""))
         except ValueError:
             continue
         metrics[key] = value
 
-    if not metrics and epoch_match is None and step_match is None:
+    # The decision, in one place: a line is a snapshot if it carries a
+    # measurement, or an epoch marker (which the report uses as context).
+    # A step marker alone is neither — ``iter 4000`` gives the detectors
+    # nothing to judge — so it is not a snapshot.
+    #
+    # This used to be two guards. The first admitted step-only lines and
+    # the second dropped them, so the first one's step term was dead code
+    # and neither guard stated the rule on its own.
+    if not metrics and epoch_match is None:
         return None
 
-    snapshot = MetricSnapshot(
+    return MetricSnapshot(
         epoch=int(epoch_match.group(1)) if epoch_match else None,
         step=int(step_match.group(1)) if step_match else None,
         metrics=metrics,
         source_line=line,
     )
-    return snapshot if (snapshot.has_signal or snapshot.epoch is not None) else None
 
 
 def parse_log_text(text: str) -> list[MetricSnapshot]:
@@ -230,10 +281,61 @@ def load_snapshots(path: Path | str) -> tuple[str, list[MetricSnapshot]]:
     return source, parse_log_file(path)
 
 
+# The same metric arrives under different separators and cases depending on
+# what wrote it: ``train_loss`` from plain-text logs, ``train/loss`` (the
+# W&B default), ``Loss/train`` (PyTorch's own TensorBoard tutorial),
+# ``train-loss``, ``Train Loss``. Every comparison of a metric name against
+# a known vocabulary goes through here, so the anomaly detectors' key
+# tuples and :func:`has_invalid_loss` cannot drift apart again — they did,
+# and the substring test saw names the exact-match tuples could not.
+_KEY_SEPARATOR_RE = re.compile(r"[\s_/.\-]+")
+
+
+def normalise_metric_key(key: str) -> str:
+    """Fold separator and case variants of a metric name onto one spelling.
+
+    ``Loss/train``, ``Loss.train``, ``loss-train`` and ``Loss Train`` all
+    become ``loss_train``. Word *order* is preserved: matching
+    ``Loss/train`` to ``train_loss`` is the caller's vocabulary decision,
+    not this function's — see :func:`metric_key_tokens`.
+    """
+    return _KEY_SEPARATOR_RE.sub("_", key.strip().lower()).strip("_")
+
+
+def metric_key_tokens(key: str) -> frozenset[str]:
+    """The words in a metric name, separator-, case- and order-insensitive.
+
+    ``Loss/train`` and ``train_loss`` both yield ``{"train", "loss"}``,
+    which is what lets one vocabulary entry cover both conventions.
+    """
+    return frozenset(normalise_metric_key(key).split("_")) - {""}
+
+
+def is_loss_key(key: str) -> bool:
+    """True if ``key`` names a loss-like metric.
+
+    Deliberately a substring test over the normalised name, so plural and
+    suffixed spellings (``total_losses``, ``mse_loss_value``) keep
+    counting as they always have.
+    """
+    return "loss" in normalise_metric_key(key)
+
+
+def has_loss_metric(snapshot: MetricSnapshot) -> bool:
+    """True if the snapshot carries any loss-like metric at all.
+
+    Distinct from :func:`has_invalid_loss`: this asks whether the snapshot
+    says anything about the loss, not whether what it says is bad. A
+    trailing ``Total time: 412.30`` summary line parses to a snapshot with
+    a metric but no loss, and is not evidence about the loss either way.
+    """
+    return any(is_loss_key(key) for key in snapshot.metrics)
+
+
 def has_invalid_loss(snapshot: MetricSnapshot) -> bool:
     """True if any *loss-like* metric in the snapshot is NaN or ±Inf."""
     for key, value in snapshot.metrics.items():
-        if "loss" not in key.lower():
+        if not is_loss_key(key):
             continue
         if math.isnan(value) or math.isinf(value):
             return True

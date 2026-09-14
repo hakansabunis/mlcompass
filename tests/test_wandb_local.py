@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 
 import pytest
 from click.testing import CliRunner
 
 from mlcompass.cli import cli
-from mlcompass.tools.logs import detect_source, load_snapshots
+from mlcompass.tools.anomaly import detect_nan
+from mlcompass.tools.logs import detect_source, has_invalid_loss, load_snapshots
 from mlcompass.tools.wandb_local import (
     WandbRunNotFoundError,
     parse_wandb_run,
@@ -121,6 +123,41 @@ def test_parse_wandb_run_drops_non_numeric_values(tmp_path: Path) -> None:
     )
     snap = parse_wandb_run(history)[0]
     assert snap.metrics == {"train_loss": 0.5}
+
+
+def test_parse_wandb_run_keeps_nan_and_inf_loss_values(tmp_path: Path) -> None:
+    # The W&B SDK writes a NaN loss as a bare ``NaN`` token, which
+    # json.loads turns into float('nan'). Dropping it leaves detect_nan
+    # with an empty metrics dict, so the only error-severity watch rule
+    # cannot fire on a W&B source at all.
+    history = tmp_path / "wandb-history.jsonl"
+    history.write_text(
+        '{"_step": 0, "train_loss": 0.8}\n'
+        '{"_step": 1, "train_loss": NaN}\n'
+        '{"_step": 2, "train_loss": Infinity}\n',
+        encoding="utf-8",
+    )
+    snaps = parse_wandb_run(history)
+
+    assert len(snaps) == 3
+    assert math.isnan(snaps[1].metrics["train_loss"])
+    assert math.isinf(snaps[2].metrics["train_loss"])
+    assert has_invalid_loss(snaps[1])
+    assert [f.rule_id for f in detect_nan(snaps[:2])] == ["nan"]
+    assert [f.rule_id for f in detect_nan(snaps)] == ["nan"]
+
+
+def test_parse_wandb_run_omitted_key_is_still_missing(tmp_path: Path) -> None:
+    # Regression guard for the fix above: a key the row simply does not
+    # carry must stay absent, not become NaN.
+    history = _write_history(
+        tmp_path,
+        [{"_step": 0, "train_loss": 0.8}, {"_step": 1, "val_loss": 0.6}],
+    )
+    snaps = parse_wandb_run(history)
+    assert snaps[0].metrics == {"train_loss": 0.8}
+    assert snaps[1].metrics == {"val_loss": 0.6}
+    assert detect_nan(snaps) == []
 
 
 def test_parse_wandb_run_skips_invalid_json_lines(tmp_path: Path) -> None:

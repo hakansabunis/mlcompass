@@ -136,12 +136,18 @@ def _as_int(value: Any) -> int | None:
 
 
 def _as_float(value: Any) -> float | None:
+    """Coerce a history value to float, *keeping* NaN and ±Inf.
+
+    A row that does not carry a metric simply omits the key, so there is
+    no missing-cell case to disambiguate here: a NaN or Inf in the JSONL
+    is a real measurement — the loss blew up — and is precisely what
+    ``detect_nan`` exists to report. Filtering it out on the way in left
+    the detector an empty metrics dict and silenced the only
+    error-severity watch rule on W&B sources.
+    """
     if isinstance(value, bool):
         # bools survive the isinstance(int) check below; we don't want them.
         return None
     if isinstance(value, (int, float)):
-        as_float = float(value)
-        if math.isnan(as_float) or math.isinf(as_float):
-            return None
-        return as_float
+        return float(value)
     return None
