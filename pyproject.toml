@@ -132,7 +132,14 @@ select = ["E", "F", "I", "W", "UP", "B", "SIM"]
 "src/mlcompass/agents/*.py" = ["E501"]
 
 [tool.mypy]
-python_version = "3.10"
+# 3.12, not the 3.10 runtime floor. numpy 2.5's stubs use PEP 695 `type`
+# statements, which mypy refuses to parse under an older target — and it
+# refuses by aborting the whole run ("errors prevented further checking"),
+# so the gate produced no signal at all rather than a partial one. The
+# runtime matrix already covers 3.10 through 3.13 on two operating
+# systems; what this setting gives up is 3.10-specific *typing* checks,
+# which the runtime cells catch in the cases that matter.
+python_version = "3.12"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
