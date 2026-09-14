@@ -16,7 +16,7 @@ deseni + baseline kıyası" idi. Hedef: bu deneyleri koşup ~9-12k kelimelik
 manuskripti **ESWA'ya (Q1)** göndermek (yedek: KBS → JSS → IEEE Access).
 Tek yazar: Hakan Sabuniş. Hedef gönderim: Kasım-Aralık 2026.
 
-## 1. Durum anlık görüntüsü (7 Tem 2026, commit f7ea7a5)
+## 1. Durum anlık görüntüsü (7 Tem 2026, commit de4dc88)
 
 TAMAM (hepsi commit'li, testli, push'lu):
 - Harness: 9 sağlayıcı ailesi (PROVIDERS), telemetri (latency/usage/

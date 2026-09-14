@@ -2,7 +2,9 @@
 
 - **Date:** 2026-06-12
 - **Provider / model:** DeepSeek OpenAI-compatible endpoint, `deepseek-chat`, provider-default sampling
-- **Harness:** `scripts/reproduce_hallucination_ablation.py` @ commit 17a2766 (stress arm + sweep + csv task)
+- **Harness:** `scripts/reproduce_hallucination_ablation.py` @ commit c379c98 (stress arm + sweep + csv task) (originally recorded as 17a2766; all commit SHAs changed on 2026-09-14 when the
+  history was rewritten to drop co-author trailers — trees are unchanged, and
+  `scripts/sha_map_pre_rewrite.json` maps every old SHA to its new one)
 - **Value tolerance:** 0.005. Layer 3 / STRESS route through the shipped `investigate_leakage_bound`.
 
 ## Run A — synthetic task, 4 arms, N=200/arm
