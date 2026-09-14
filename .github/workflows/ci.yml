@@ -1,0 +1,193 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: test · ${{ matrix.os }} · py${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # One red cell should not hide the state of the other seven. The
+      # whole point of the matrix is to tell an OS problem apart from an
+      # interpreter problem, and fail-fast destroys that signal.
+      fail-fast: false
+      matrix:
+        # The project is developed on Windows. ubuntu-latest is here so a
+        # POSIX-only assumption (path separators, case-sensitive imports,
+        # tmpdir semantics) cannot slip in unnoticed, and windows-latest is
+        # here so the development platform stays a tested platform.
+        os: [ubuntu-latest, windows-latest]
+        # Exactly the versions pyproject.toml claims: requires-python
+        # ">=3.10" plus classifiers through 3.13.
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Report resolved versions
+        # Printed so a failure three months from now can be attributed to a
+        # dependency that moved rather than to the commit under test.
+        run: |
+          python -c "import sys; print('python', sys.version)"
+          python -c "import pandas; print('pandas', pandas.__version__)"
+          python -c "import numpy; print('numpy', numpy.__version__)"
+          pip list
+
+      - name: Verify the package actually imports
+        # Not redundant with the test run. tests/test_ablation_harness.py
+        # does sys.path.insert(0, ROOT/"src") at module scope, and because
+        # it collects first alphabetically it puts src/ on the path for
+        # every later test module. A completely broken install therefore
+        # still produces a green `pytest tests/`. This step is the one that
+        # fails when the install is broken.
+        run: python -c "import mlcompass; print(mlcompass.__version__, mlcompass.__file__)"
+
+      - name: Test
+        run: python -m pytest tests/ -q
+
+  lint:
+    name: lint + types
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: ruff check
+        run: python -m ruff check src/ tests/
+
+      - name: ruff format --check
+        run: python -m ruff format --check src/ tests/
+
+      - name: mypy
+        # Configured strict in pyproject.toml. Kept blocking on purpose: a
+        # type gate that is allowed to fail is not a gate.
+        #
+        # KNOWN TO FAIL on a fresh install as of 2026-09-14. Both failures
+        # predate this workflow; neither is caused by it, and neither was
+        # papered over here because both fixes are dependency-surface
+        # decisions for the maintainer to make:
+        #
+        #   1. src/mlcompass/agents/leakage_investigator.py:589 imports
+        #      `openai`, which pyproject.toml declares nowhere -- not as a
+        #      runtime dep, not as an extra, not in the mypy override list.
+        #      Fix: add an `agent-openai` extra (and put it in `dev` if the
+        #      OpenAI branch should be type-checked at all).
+        #
+        #   2. numpy >= 2.5 ships PEP 695 `type` statements in its stubs,
+        #      and [tool.mypy] python_version = "3.10" makes mypy parse
+        #      those stubs as 3.10 -> a hard syntax error that aborts the
+        #      run before any source file is checked ("errors prevented
+        #      further checking"). Measured: numpy 2.4.6 checks all 51
+        #      files; numpy 2.5.3 checks none. Raising python_version to
+        #      >= 3.12 clears it but gives up the 3.10 compatibility
+        #      check; `follow_imports = "skip"` on numpy does NOT help.
+        run: python -m mypy src/
+
+  pandas-floor:
+    # pyproject.toml declares pandas>=2.0.0 while development happens on
+    # pandas 3.x. Nothing else in this workflow would ever exercise the
+    # floor, so an incompatibility introduced against 3.x would ship
+    # silently to anyone whose resolver picked an older pandas.
+    #
+    # Pinned to Python 3.11: pandas 2.0.0 predates CPython 3.12 and
+    # publishes no cp312/cp313 wheel, so this cell cannot be folded into
+    # the matrix above. numpy<2 is required because pandas 2.0.0 is built
+    # against the numpy 1.x ABI.
+    name: pandas floor (2.0.0)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install at the declared floor
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+          pip install "pandas==2.0.0" "numpy<2"
+
+      - name: Report resolved versions
+        run: python -c "import pandas, numpy; print('pandas', pandas.__version__, '/ numpy', numpy.__version__)"
+
+      - name: Test
+        run: python -m pytest tests/ -q
+
+  package:
+    # An artifact reviewer installs from a built distribution, not from a
+    # git checkout. This job checks that the sdist and wheel build, that
+    # twine accepts the metadata, and that the slash-command .md files
+    # named in [tool.setuptools.package-data] are genuinely inside the
+    # wheel -- if they are not, `mlcompass install-slash-commands` fails
+    # for every pip user while passing every test in this repo.
+    name: build + metadata
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Build sdist and wheel
+        run: |
+          python -m pip install --upgrade pip build twine
+          python -m build
+
+      - name: Check metadata
+        run: python -m twine check dist/*
+
+      - name: Verify slash-command data files ship in the wheel
+        run: |
+          python - <<'PY'
+          import pathlib, zipfile, sys
+
+          wheel = next(iter(sorted(pathlib.Path("dist").glob("*.whl"))))
+          names = zipfile.ZipFile(wheel).namelist()
+          shipped = [n for n in names if n.startswith("mlcompass/slash_commands/") and n.endswith(".md")]
+          print(f"{wheel.name}: {len(shipped)} slash-command .md file(s)")
+          for n in shipped:
+              print("  ", n)
+          if not shipped:
+              sys.exit("no slash-command .md files in the wheel -- check [tool.setuptools.package-data]")
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/

@@ -1,0 +1,67 @@
+cff-version: 1.2.0
+message: >-
+  If you use mlcompass in academic work, please cite the software. If you
+  refer to the evidence-bound runtime schema it implements, please also
+  cite the manuscript under `preferred-citation`.
+title: mlcompass
+abstract: >-
+  An LLM agent that accompanies a machine-learning pipeline from data
+  through training to deployment, and the reference implementation of an
+  evidence-bound runtime schema that holds the narrator's citations and
+  numeric claims to the deterministic evidence a tool actually measured.
+type: software
+version: 0.9.0
+date-released: "2026-06-11"
+license: MIT
+repository-code: "https://github.com/hakansabunis/mlcompass"
+url: "https://github.com/hakansabunis/mlcompass"
+keywords:
+  - machine-learning
+  - large-language-models
+  - agentic-ai
+  - hallucination-mitigation
+  - constrained-generation
+  - claim-verification
+  - tool-use
+  - data-leakage
+  - mlops
+authors:
+  - family-names: "Sabuniş"
+    given-names: "Hakan"
+    affiliation: "Istanbul Medipol University"
+    email: "hakan.sabunis@std.medipol.edu.tr"
+  - family-names: "Ünlü"
+    given-names: "Yusuf"
+    affiliation: "Istanbul Medipol University"
+    email: "yusuf.unlu@std.medipol.edu.tr"
+  - family-names: "Akyokuş"
+    given-names: "Selim"
+    affiliation: "Istanbul Medipol University"
+    email: "sakyokus@medipol.edu.tr"
+
+# The manuscript is unpublished. It has no DOI, no venue and no year of
+# publication, so none is recorded here; `type: unpublished` is the
+# accurate CFF type. Add `doi`, `collection-title`/`conference` and `year`
+# only once the paper is actually accepted somewhere.
+preferred-citation:
+  type: unpublished
+  title: >-
+    An Evidence-Bound Runtime Schema for Claim-Faithful LLM Narration of
+    Machine-Learning Pipeline Evidence
+  authors:
+    - family-names: "Sabuniş"
+      given-names: "Hakan"
+      affiliation: "Istanbul Medipol University"
+    - family-names: "Ünlü"
+      given-names: "Yusuf"
+      affiliation: "Istanbul Medipol University"
+    - family-names: "Akyokuş"
+      given-names: "Selim"
+      affiliation: "Istanbul Medipol University"
+  institution:
+    name: "School of Engineering and Natural Sciences, Istanbul Medipol University"
+    city: "Istanbul"
+    country: "TR"
+  notes: >-
+    Unpublished manuscript. The source is in this repository at
+    paper/INISTA_Paper.md.

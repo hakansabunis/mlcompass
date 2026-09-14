@@ -52,7 +52,12 @@ dependencies = [
 [project.optional-dependencies]
 tensorboard = ["tbparse>=0.0.7", "tensorboard>=2.10.0"]
 wandb = ["wandb>=0.16.0"]
-mcp = ["mcp>=1.2.0"]
+# Ceiling is load-bearing, not caution. mcp 2.x removed
+# ``mcp.server.fastmcp`` (FastMCP was renamed to MCPServer), which
+# src/mlcompass/mcp_server.py:42 imports, so an unbounded ``mcp>=1.2.0``
+# resolves to a version this code cannot import. Lift it only together
+# with a migration of mcp_server.py to the v2 API.
+mcp = ["mcp>=1.2.0,<2"]
 agent = ["anthropic>=0.50.0"]
 agent-claude-code = ["claude-agent-sdk>=0.2.0"]
 dev = [
@@ -63,7 +68,7 @@ dev = [
     "mypy>=1.0.0",
     "tbparse>=0.0.7",
     "tensorboard>=2.10.0",
-    "mcp>=1.2.0",
+    "mcp>=1.2.0,<2",  # see the [mcp] extra above
     "anthropic>=0.50.0",
     "claude-agent-sdk>=0.2.0",
 ]
