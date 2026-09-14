@@ -368,21 +368,40 @@ def render_leakage_narration(
         f"[bold]Verdict:[/bold] [{verdict_colour}]{verdict}[/{verdict_colour}]   "
         f"[dim]confidence: {confidence}[/dim]"
     )
-    hypothesis = narration.get("primary_hypothesis", "").strip()
-    if hypothesis:
-        lines.append(f"\n[bold]Hypothesis:[/bold] {hypothesis}")
-
+    # Verified content first. The contract checks the cited columns and
+    # the structured claims; it does not check the narrator's prose or
+    # its suggested checks, which are passed through as written. Leading
+    # with the prose put the one unverified sentence at the top of the
+    # panel and the verified findings below it, which is the opposite of
+    # what the guarantee supports.
     cited = narration.get("evidence_cited") or []
     if cited:
-        lines.append("\n[bold]Evidence cited:[/bold]")
+        lines.append("\n[bold]Evidence cited[/bold] [dim](verified against the evidence)[/dim]")
         for e in cited:
             lines.append(f"  • {e}")
 
+    claims = narration.get("claims") or []
+    if claims:
+        lines.append("\n[bold]Claims[/bold] [dim](values verified against the evidence)[/dim]")
+        for c in claims:
+            col = c.get("column", "—")
+            stat = c.get("statistic", "—")
+            val = c.get("value", "—")
+            lines.append(f"  • {col}: {stat} = {val}")
+
+    hypothesis = narration.get("primary_hypothesis", "").strip()
+    if hypothesis:
+        lines.append(
+            "\n[bold]Hypothesis[/bold] [dim yellow](model prose — NOT verified; "
+            "names and numbers here may not be in the evidence)[/dim yellow]"
+        )
+        lines.append(f"[dim]{hypothesis}[/dim]")
+
     checks = narration.get("recommended_checks") or []
     if checks:
-        lines.append("\n[bold]Recommended manual checks:[/bold]")
+        lines.append("\n[bold]Recommended manual checks[/bold] [dim](not verified)[/dim]")
         for i, c in enumerate(checks, 1):
-            lines.append(f"  {i}. {c}")
+            lines.append(f"  [dim]{i}. {c}[/dim]")
 
     console.print(
         Panel(

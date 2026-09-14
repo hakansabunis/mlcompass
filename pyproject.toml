@@ -58,8 +58,19 @@ wandb = ["wandb>=0.16.0"]
 # resolves to a version this code cannot import. Lift it only together
 # with a migration of mcp_server.py to the v2 API.
 mcp = ["mcp>=1.2.0,<2"]
-agent = ["anthropic>=0.50.0"]
+# Both providers, because the contract claims provider independence and
+# leakage_investigator.py imports ``openai`` on the provider="openai"
+# path. Shipping only one of them makes an advertised capability
+# uninstallable, which an artifact reviewer would hit immediately.
+agent = ["anthropic>=0.50.0", "openai>=1.40.0"]
 agent-claude-code = ["claude-agent-sdk>=0.2.0"]
+# Baseline comparison arms for the measurement harness
+# (scripts/baseline_guardrails.py; analysis_plan_2026-09 section 2). Pinned
+# exactly on purpose: the arm's configuration depends on version-specific
+# Guardrails behaviour (0.11.0 cannot reask on a whole-output validator), so
+# an unpinned resolve would silently change what the baseline measures.
+# Not needed to run or test mlcompass itself, only to run the baseline arms.
+baselines = ["guardrails-ai==0.11.0", "openai>=2.0.0"]
 dev = [
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
@@ -70,6 +81,7 @@ dev = [
     "tensorboard>=2.10.0",
     "mcp>=1.2.0,<2",  # see the [mcp] extra above
     "anthropic>=0.50.0",
+    "openai>=1.40.0",
     "claude-agent-sdk>=0.2.0",
 ]
 

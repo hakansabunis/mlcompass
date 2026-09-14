@@ -182,9 +182,14 @@ def init(name: str, parent_dir: Path, default_model: str) -> None:
     help="Limit analysis to the first N rows (useful for very large files).",
 )
 @click.option(
+    "--llm",
+    is_flag=True,
+    help="Add the LLM advisor step on top of the deterministic analysis.",
+)
+@click.option(
     "--no-llm",
     is_flag=True,
-    help="Skip the LLM advisor step; show only the deterministic analysis.",
+    help="Deprecated and now redundant: the advisor is opt-in via --llm.",
 )
 @click.option(
     "--model",
@@ -197,6 +202,7 @@ def advise(
     dataset_path: Path,
     target_column: str | None,
     sample_rows: int | None,
+    llm: bool,
     no_llm: bool,
     advisor_model: str,
 ) -> None:
@@ -214,8 +220,15 @@ def advise(
 
     recommendation: dict[str, Any] | None = None
 
-    if no_llm:
-        console.print("\n[dim](--no-llm specified; skipping advisor)[/dim]")
+    # Opt-in, like every other LLM-capable command. It used to be the one
+    # exception: the advisor ran by default, so a bare ``advise`` on a
+    # machine with ANTHROPIC_API_KEY exported made a paid call without
+    # being asked. ``--no-llm`` still parses so existing scripts keep
+    # working, but it no longer does anything the default does not.
+    if no_llm and not llm:
+        console.print("\n[dim](--no-llm is redundant now; the advisor is opt-in via --llm)[/dim]")
+    elif not llm:
+        console.print("\n[dim](deterministic analysis only; pass --llm to add the advisor)[/dim]")
     elif not _has_api_key():
         console.print(
             "\n[yellow]⚠ ANTHROPIC_API_KEY not set; "

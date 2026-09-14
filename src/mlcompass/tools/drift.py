@@ -34,6 +34,11 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+# One date detector for the whole package. The analyzer and the drift
+# monitor read the same CSV and disagreed about what a date column is
+# until this import existed.
+from .dataset import _looks_like_datetime_strings
+
 SUPPORTED_FORMATS = (".csv", ".parquet", ".xlsx", ".xls", ".jsonl", ".json")
 
 # PSI severity buckets — finance-industry rules of thumb.
@@ -211,12 +216,16 @@ def _analyze_numeric(
     psi = _psi_from_edges(ref_arr, cur_arr, edges=edges)
     ks_stat, ks_p = _ks_two_sample(ref_arr, cur_arr)
 
-    severity = _severity_from_psi(psi)
+    psi_null = _psi_null_expectation(len(edges) - 1, len(ref_arr), len(cur_arr))
+    psi_excess = max(0.0, psi - psi_null)
+    severity = _severity_from_psi(psi_excess)
     warning = _size_warning(name, len(ref_arr), len(cur_arr))
     return {
         "feature": name,
         "kind": "numeric",
         "psi": float(psi),
+        "psi_null_expected": float(psi_null),
+        "psi_excess": float(psi_excess),
         "ks_stat": float(ks_stat),
         "ks_pvalue": float(ks_p),
         "chi2_stat": None,
@@ -242,12 +251,16 @@ def _analyze_categorical(
 
     psi = _psi_from_counts(ref_freq, cur_freq)
     chi2_stat, chi2_p = _chi_square_two_sample(ref_freq, cur_freq)
-    severity = _severity_from_psi(psi)
+    psi_null = _psi_null_expectation(len(all_levels), int(ref_freq.sum()), int(cur_freq.sum()))
+    psi_excess = max(0.0, psi - psi_null)
+    severity = _severity_from_psi(psi_excess)
     warning = _size_warning(name, int(ref_freq.sum()), int(cur_freq.sum()))
     return {
         "feature": name,
         "kind": "categorical",
         "psi": float(psi),
+        "psi_null_expected": float(psi_null),
+        "psi_excess": float(psi_excess),
         "ks_stat": None,
         "ks_pvalue": None,
         "chi2_stat": float(chi2_stat),
@@ -314,6 +327,28 @@ def _psi_from_counts(ref_counts: np.ndarray, cur_counts: np.ndarray) -> float:
     # PSI is non-negative in expectation; round small negatives caused
     # by smoothing artifacts to zero.
     return max(psi, 0.0)
+
+
+def _psi_null_expectation(bins: int, n_ref: int, n_cur: int) -> float:
+    """Expected PSI when both samples come from the same distribution.
+
+    PSI is an estimate, and its sampling noise is not small. Under the
+    null, ``E[PSI] ~= (k - 1) * (1/n_ref + 1/n_cur)``: it grows with the
+    number of bins and shrinks with sample size, so bin count alone can
+    push a column past a fixed threshold. The published 0.10 / 0.20
+    bands are population-level rules of thumb and say nothing about
+    finite samples.
+
+    What that cost in practice, before this correction: two 250-row
+    halves of the *same* frame produced "retraining is recommended" 78%
+    of the time, and on the project's own example data a random split
+    of identical rows was labelled "major" in 74% of draws. Severity is
+    now read off the excess over this expectation, so a column has to
+    drift more than sampling noise would to be called drifted.
+    """
+    if n_ref <= 0 or n_cur <= 0 or bins <= 1:
+        return 0.0
+    return float((bins - 1) * (1.0 / n_ref + 1.0 / n_cur))
 
 
 def _ks_two_sample(a: np.ndarray, b: np.ndarray) -> tuple[float, float]:
@@ -393,22 +428,53 @@ def _chi_square_two_sample(
     ref_counts: np.ndarray,
     cur_counts: np.ndarray,
 ) -> tuple[float, float]:
-    """Chi-square goodness-of-fit comparing two count vectors.
+    """Chi-square test of homogeneity between two count vectors.
 
-    Treats reference proportions as the null hypothesis. Returns the
-    statistic and an asymptotic p-value (using a small-table
-    chi-squared survival approximation).
+    This is a 2xk contingency test, not a goodness-of-fit test. The
+    distinction is the whole correctness of the function. Treating the
+    reference proportions as a known null pretends the reference was
+    measured without error, when it is a finite sample like the current
+    window; at equal sample sizes that roughly doubles the statistic.
+    Measured against two samples drawn from the *same* 4-category
+    uniform, the goodness-of-fit form rejected at about 28% for a
+    nominal 5% test, at every sample size tried.
+
+    The old implementation compounded that with ``expected =
+    where(expected < 1, 1.0, expected)``, which its own comment
+    described as merging small cells into "other". It did not merge
+    anything: a category absent from the reference got an expected
+    count of 1 regardless of how many rows it held in the current
+    window, so a genuinely new category threw its entire count into a
+    single term. Here, categories empty on both sides are dropped
+    (they carry no information and no degrees of freedom); every other
+    cell keeps its real expectation.
     """
-    ref_total = max(ref_counts.sum(), 1)
-    cur_total = max(cur_counts.sum(), 1)
-    expected = (ref_counts / ref_total) * cur_total
-    # Cells with expected count < 1 dominate the statistic and tend
-    # to be unreliable; merge them into "other" by smoothing.
-    expected = np.where(expected < 1, 1.0, expected)
-    stat = float(np.sum((cur_counts - expected) ** 2 / expected))
-    dof = max(int(len(ref_counts) - 1), 1)
-    p_value = _chi2_sf(stat, dof)
-    return stat, p_value
+    ref_counts = np.asarray(ref_counts, dtype=float)
+    cur_counts = np.asarray(cur_counts, dtype=float)
+
+    col_totals = ref_counts + cur_counts
+    keep = col_totals > 0
+    ref_counts, cur_counts, col_totals = ref_counts[keep], cur_counts[keep], col_totals[keep]
+
+    grand = float(col_totals.sum())
+    k = int(len(col_totals))
+    if grand <= 0 or k < 2:
+        return 0.0, 1.0
+
+    ref_total = float(ref_counts.sum())
+    cur_total = float(cur_counts.sum())
+    if ref_total <= 0 or cur_total <= 0:
+        return 0.0, 1.0
+
+    exp_ref = ref_total * col_totals / grand
+    exp_cur = cur_total * col_totals / grand
+
+    stat = float(
+        np.sum((ref_counts - exp_ref) ** 2 / exp_ref)
+        + np.sum((cur_counts - exp_cur) ** 2 / exp_cur)
+    )
+    dof = k - 1  # (2 - 1) * (k - 1)
+    return stat, _chi2_sf(stat, dof)
 
 
 def _chi2_sf(stat: float, dof: int) -> float:
@@ -492,6 +558,20 @@ def _classify(ref: pd.Series, cur: pd.Series) -> str:
         if ref.nunique(dropna=True) <= 10 and pd.api.types.is_integer_dtype(dtype):
             return "categorical"
         return "numeric"
+    if pd.api.types.is_datetime64_any_dtype(dtype):
+        return "datetime"
+
+    # Dates arriving as strings must be caught before the categorical
+    # branch, and for the same reason the analyzer has to catch them:
+    # no reader this project uses parses dates, so a date column shows
+    # up here as text. Left to the branch below, a column like
+    # ``signup_date`` becomes a categorical with one level per row,
+    # which gives it a structurally guaranteed PSI — dates moving
+    # forward in time, the defining behaviour of a date, then read as
+    # catastrophic drift and dominate the verdict.
+    if _looks_like_datetime_strings(ref):
+        return "datetime"
+
     # pandas 2.x ships StringDtype as a separate dtype that
     # is_object_dtype does NOT match; is_string_dtype catches both
     # legacy object-strings and the new nullable string dtype.
@@ -502,8 +582,6 @@ def _classify(ref: pd.Series, cur: pd.Series) -> str:
         or pd.api.types.is_string_dtype(dtype)
     ):
         return "categorical"
-    if pd.api.types.is_datetime64_any_dtype(dtype):
-        return "datetime"
     return "unsupported"
 
 

@@ -111,7 +111,7 @@ def test_advise_runs_standalone_without_project(
     """advise should work without a .mlcompass/ project; it just warns."""
     runner = CliRunner()
     with runner.isolated_filesystem(temp_dir=tmp_path):
-        result = runner.invoke(cli, ["advise", str(sample_csv)])
+        result = runner.invoke(cli, ["advise", str(sample_csv), "--llm"])
 
     assert result.exit_code == 0, result.output
     assert "no .mlcompass" in result.output.lower() or "standalone" in result.output.lower()
@@ -126,25 +126,47 @@ def test_advise_skips_llm_when_api_key_missing(
 ) -> None:
     runner = CliRunner()
     with runner.isolated_filesystem(temp_dir=tmp_path):
-        result = runner.invoke(cli, ["advise", str(sample_csv)])
+        result = runner.invoke(cli, ["advise", str(sample_csv), "--llm"])
 
     assert result.exit_code == 0
     assert "anthropic_api_key" in result.output.lower()
 
 
-def test_advise_skips_llm_with_no_llm_flag(
+def test_advise_does_not_call_the_advisor_by_default(
     sample_csv: Path,
     with_api_key: None,
     fake_advisor: dict[str, Any],
     tmp_path: Path,
 ) -> None:
+    """A bare ``advise`` must not make a paid call, even with a key set.
+
+    This was the one LLM-capable command that ran its advisor by
+    default, so exporting ANTHROPIC_API_KEY was enough to turn a plain
+    ``mlcompass advise data.csv`` into a billed request the user never
+    asked for. It is opt-in like every other command now.
+    """
+    runner = CliRunner()
+    with runner.isolated_filesystem(temp_dir=tmp_path):
+        result = runner.invoke(cli, ["advise", str(sample_csv)])
+
+    assert result.exit_code == 0
+    assert not fake_advisor["called"], "advisor must not run without --llm"
+    assert "--llm" in result.output
+
+
+def test_advise_still_accepts_the_retired_no_llm_flag(
+    sample_csv: Path,
+    with_api_key: None,
+    fake_advisor: dict[str, Any],
+    tmp_path: Path,
+) -> None:
+    """``--no-llm`` keeps parsing so existing scripts do not break."""
     runner = CliRunner()
     with runner.isolated_filesystem(temp_dir=tmp_path):
         result = runner.invoke(cli, ["advise", str(sample_csv), "--no-llm"])
 
     assert result.exit_code == 0
-    assert not fake_advisor["called"], "advisor should be skipped when --no-llm"
-    assert "skipping advisor" in result.output.lower()
+    assert not fake_advisor["called"]
 
 
 # --------------------------------------------------------------------------- #
@@ -167,7 +189,7 @@ def test_advise_persists_to_project_context(
     cwd = os.getcwd()
     os.chdir(project_root)
     try:
-        result = runner.invoke(cli, ["advise", str(sample_csv)])
+        result = runner.invoke(cli, ["advise", str(sample_csv), "--llm"])
     finally:
         os.chdir(cwd)
 
@@ -205,7 +227,7 @@ def test_advise_passes_target_override_to_analysis(
     with runner.isolated_filesystem(temp_dir=tmp_path):
         result = runner.invoke(
             cli,
-            ["advise", str(sample_csv), "--target", "income"],
+            ["advise", str(sample_csv), "--llm", "--target", "income"],
         )
 
     assert result.exit_code == 0
@@ -225,7 +247,7 @@ def test_advise_passes_sample_rows(
     with runner.isolated_filesystem(temp_dir=tmp_path):
         result = runner.invoke(
             cli,
-            ["advise", str(sample_csv), "--sample-rows", "10"],
+            ["advise", str(sample_csv), "--llm", "--sample-rows", "10"],
         )
 
     assert result.exit_code == 0
@@ -243,7 +265,7 @@ def test_advise_passes_advisor_model(
     with runner.isolated_filesystem(temp_dir=tmp_path):
         result = runner.invoke(
             cli,
-            ["advise", str(sample_csv), "--model", "claude-haiku-4-5"],
+            ["advise", str(sample_csv), "--llm", "--model", "claude-haiku-4-5"],
         )
 
     assert result.exit_code == 0
@@ -268,7 +290,7 @@ def test_advise_handles_advisor_parse_error_gracefully(
 
     runner = CliRunner()
     with runner.isolated_filesystem(temp_dir=tmp_path):
-        result = runner.invoke(cli, ["advise", str(sample_csv)])
+        result = runner.invoke(cli, ["advise", str(sample_csv), "--llm"])
 
     # Should exit zero (analysis still rendered) but report the error
     assert result.exit_code == 0

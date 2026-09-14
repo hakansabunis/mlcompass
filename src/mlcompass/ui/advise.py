@@ -110,13 +110,11 @@ def _models_table(models: list[dict[str, Any]]) -> Table:
         title_justify="left",
     )
     table.add_column("Model", style="bold")
-    table.add_column("Expected metric")
     table.add_column("Why")
 
     for model in models:
         table.add_row(
             model.get("name", "—"),
-            model.get("expected_metric", "—"),
             model.get("reason", "—"),
         )
     return table

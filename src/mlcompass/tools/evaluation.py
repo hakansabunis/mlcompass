@@ -22,6 +22,12 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+# Average-tie ranking, shared rather than reimplemented. The same loop
+# was already written correctly in two other modules while the one
+# place it fed a headline metric went without it, so there is now a
+# single definition to be wrong in.
+from .leakage import _rankdata
+
 # --------------------------------------------------------------------------- #
 # Public surface                                                              #
 # --------------------------------------------------------------------------- #
@@ -368,12 +374,20 @@ def _confusion_matrix_binary(y_true: np.ndarray, y_pred: np.ndarray) -> dict[str
 
 
 def _binary_auc(y_true: np.ndarray, y_prob: np.ndarray) -> float:
-    """ROC AUC via rank-based formula (Wilcoxon–Mann–Whitney statistic)."""
+    """ROC AUC via rank-based formula (Wilcoxon–Mann–Whitney statistic).
+
+    Tied scores take the average of the ranks they span. Without that,
+    the identity between the rank sum and the AUC breaks and the result
+    becomes a function of row order: a model emitting one constant
+    probability scores 1.0 when the negatives happen to sort first and
+    0.0 when the positives do, where the correct answer is 0.5 either
+    way. That is not a corner case — hard 0/1 "probabilities" and
+    rounded scores both produce heavy ties, and a spurious 1.0 here
+    trips the automatic leakage investigation downstream.
+    """
     if np.all(y_true == 0) or np.all(y_true == 1):
         return float("nan")
-    order = np.argsort(y_prob)
-    ranks = np.empty_like(order, dtype=float)
-    ranks[order] = np.arange(1, len(y_prob) + 1)
+    ranks = _rankdata(y_prob)
     n_pos = int(y_true.sum())
     n_neg = int(len(y_true) - n_pos)
     sum_ranks_pos = float(ranks[y_true == 1].sum())
