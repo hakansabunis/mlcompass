@@ -1,0 +1,1818 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>mlcompass — Capstone Presentation (v2)</title>
+
+    <!-- reveal.js core -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reset.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reveal.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/theme/white.css" id="theme" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/plugin/highlight/monokai.css" />
+
+    <!-- Web fonts: Inter + JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      :root {
+        --ink: #0a0e27;
+        --muted: #64748b;
+        --soft: #94a3b8;
+        --hi: #0f172a;
+        --accent: #4f46e5;
+        --accent-2: #8b5cf6;
+        --accent-3: #ec4899;
+        --accent-4: #10b981;
+        --warn: #f59e0b;
+        --bg: #fafbff;
+        --panel: #ffffff;
+        --border: #e2e8f0;
+        --code-bg: #0a0e27;
+        --code-fg: #e2e8f0;
+        --gradient-1: linear-gradient(135deg, #4f46e5 0%, #8b5cf6 100%);
+        --gradient-2: linear-gradient(135deg, #ec4899 0%, #f59e0b 100%);
+        --gradient-3: linear-gradient(135deg, #10b981 0%, #4f46e5 100%);
+        --gradient-soft: linear-gradient(135deg, #eef2ff 0%, #f5f3ff 100%);
+        --gradient-warm: linear-gradient(135deg, #fef3c7 0%, #fee2e2 100%);
+        --shadow-soft: 0 4px 24px rgba(15, 23, 42, 0.06);
+        --shadow-strong: 0 12px 48px rgba(15, 23, 42, 0.12);
+        --shadow-glow: 0 0 48px rgba(139, 92, 246, 0.18);
+      }
+
+      body { background: var(--bg); }
+
+      .reveal {
+        font-family: "Inter", sans-serif;
+        font-size: 22px;
+        color: var(--ink);
+      }
+      .reveal h1, .reveal h2, .reveal h3 {
+        font-family: "Inter", sans-serif;
+        text-transform: none;
+        color: var(--ink);
+        letter-spacing: -0.02em;
+      }
+      .reveal section { text-align: left; }
+
+      /* ============================================================ */
+      /* HEADER / FOOTER                                               */
+      /* ============================================================ */
+      .reveal .slide-header {
+        position: absolute;
+        top: 28px; left: 56px; right: 56px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .reveal .slide-header .badge-num {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.55em;
+        color: var(--muted);
+        background: white;
+        padding: 6px 14px;
+        border-radius: 20px;
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow-soft);
+        font-weight: 600;
+      }
+      .reveal .slide-header .badge-num span { color: var(--accent); font-weight: 700; }
+      .reveal .slide-header h2 {
+        font-size: 1.4em;
+        margin: 0;
+        font-weight: 700;
+        color: var(--hi);
+      }
+      .reveal .slide-header h2::before {
+        content: "";
+        display: inline-block;
+        width: 8px; height: 8px;
+        background: var(--gradient-1);
+        border-radius: 50%;
+        margin-right: 12px;
+        vertical-align: middle;
+        box-shadow: 0 0 8px rgba(139, 92, 246, 0.6);
+      }
+
+      .reveal .slide-body {
+        position: absolute;
+        top: 110px; bottom: 70px;
+        left: 56px; right: 56px;
+      }
+      .reveal .footer-band {
+        position: absolute;
+        bottom: 22px;
+        left: 56px; right: 56px;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.42em;
+        color: var(--soft);
+        text-align: center;
+        letter-spacing: 0.05em;
+      }
+
+      /* ============================================================ */
+      /* TITLE SLIDE — Animated gradient orb background                */
+      /* ============================================================ */
+      .title-slide {
+        background:
+          radial-gradient(circle at 20% 30%, rgba(139, 92, 246, 0.25), transparent 50%),
+          radial-gradient(circle at 80% 70%, rgba(236, 72, 153, 0.20), transparent 50%),
+          radial-gradient(circle at 50% 50%, rgba(79, 70, 229, 0.10), transparent 70%),
+          linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+        text-align: left !important;
+        padding: 80px;
+        overflow: hidden;
+        position: relative;
+      }
+      .title-slide::before, .title-slide::after {
+        content: "";
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(80px);
+        opacity: 0.5;
+        animation: orb-float 12s ease-in-out infinite;
+      }
+      .title-slide::before {
+        width: 400px; height: 400px;
+        background: var(--accent-2);
+        top: -100px; right: -100px;
+      }
+      .title-slide::after {
+        width: 350px; height: 350px;
+        background: var(--accent-3);
+        bottom: -80px; left: -80px;
+        animation-delay: -6s;
+      }
+      @keyframes orb-float {
+        0%, 100% { transform: translate(0, 0) scale(1); }
+        50% { transform: translate(40px, -30px) scale(1.1); }
+      }
+      .title-slide .micro-tag {
+        display: inline-block;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.5em;
+        color: var(--accent);
+        letter-spacing: 0.2em;
+        background: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow-soft);
+        margin-bottom: 24px;
+        text-transform: uppercase;
+        font-weight: 600;
+        position: relative;
+        z-index: 10;
+      }
+      .title-slide h1 {
+        font-size: 8em !important;
+        line-height: 1;
+        font-weight: 900;
+        letter-spacing: -0.05em;
+        background: var(--gradient-1);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin: 0;
+        position: relative;
+        z-index: 10;
+      }
+      .title-slide .subtitle {
+        font-size: 1.3em;
+        color: var(--ink);
+        font-weight: 500;
+        margin: 24px 0 60px 0;
+        max-width: 900px;
+        line-height: 1.4;
+        position: relative;
+        z-index: 10;
+      }
+      .title-slide .authors {
+        font-size: 1.1em;
+        color: var(--ink);
+        font-weight: 600;
+        margin-top: 80px;
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        position: relative;
+        z-index: 10;
+      }
+      .title-slide .authors::before {
+        content: "";
+        width: 48px; height: 4px;
+        background: var(--gradient-1);
+        border-radius: 2px;
+      }
+      .title-slide .uni {
+        font-size: 0.7em;
+        color: var(--muted);
+        margin-top: 8px;
+        margin-left: 66px;
+        position: relative;
+        z-index: 10;
+      }
+      .title-slide .links {
+        margin-top: 60px;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.55em;
+        color: var(--soft);
+        position: relative;
+        z-index: 10;
+        display: flex;
+        gap: 24px;
+        flex-wrap: wrap;
+      }
+      .title-slide .links .link-item {
+        background: white;
+        padding: 8px 16px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow-soft);
+      }
+
+      /* ============================================================ */
+      /* HERO LEDE TEXT                                                */
+      /* ============================================================ */
+      .lede {
+        font-size: 1.4em;
+        font-weight: 700;
+        background: var(--gradient-1);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        line-height: 1.3;
+        margin-bottom: 36px;
+      }
+      .lede-soft {
+        font-size: 1em;
+        font-weight: 500;
+        color: var(--muted);
+        font-style: normal;
+        margin-bottom: 28px;
+        line-height: 1.5;
+      }
+
+      /* ============================================================ */
+      /* PROBLEM SLIDE — VS Cards with icons                            */
+      /* ============================================================ */
+      .vs-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-top: 24px;
+      }
+      .vs-card {
+        background: white;
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 20px 24px;
+        box-shadow: var(--shadow-soft);
+        display: flex;
+        gap: 16px;
+        align-items: flex-start;
+        transition: all 0.3s;
+      }
+      .vs-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-strong);
+        border-color: var(--accent-2);
+      }
+      .vs-card .icon {
+        width: 48px; height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        flex-shrink: 0;
+        background: var(--gradient-soft);
+      }
+      .vs-card .content {
+        flex: 1;
+      }
+      .vs-card .title {
+        font-weight: 700;
+        font-size: 0.85em;
+        color: var(--ink);
+        margin-bottom: 4px;
+      }
+      .vs-card .desc {
+        font-size: 0.7em;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+      .stat-banner {
+        margin-top: 32px;
+        background: var(--gradient-warm);
+        border-radius: 16px;
+        padding: 20px 28px;
+        display: flex;
+        gap: 18px;
+        align-items: center;
+        border-left: 4px solid var(--accent-3);
+      }
+      .stat-banner .stat-number {
+        font-size: 2.2em;
+        font-weight: 900;
+        color: var(--accent-3);
+        font-family: "JetBrains Mono", monospace;
+        line-height: 1;
+      }
+      .stat-banner .stat-label {
+        font-size: 0.7em;
+        color: var(--ink);
+        line-height: 1.4;
+      }
+
+      /* ============================================================ */
+      /* PITCH SLIDE — Pipeline visualizer                              */
+      /* ============================================================ */
+      .pipeline-viz {
+        background: var(--gradient-soft);
+        border-radius: 20px;
+        padding: 36px;
+        margin-top: 16px;
+        text-align: center;
+      }
+      .pipeline-viz .pipeline-row {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+      }
+      .pipeline-viz .verb-chip {
+        background: white;
+        padding: 10px 20px;
+        border-radius: 30px;
+        font-family: "JetBrains Mono", monospace;
+        font-weight: 600;
+        font-size: 0.75em;
+        color: var(--accent);
+        box-shadow: var(--shadow-soft);
+        border: 1px solid var(--border);
+      }
+      .pipeline-viz .arrow {
+        color: var(--accent-2);
+        font-weight: 700;
+        font-size: 0.7em;
+      }
+      .pipeline-viz .extras {
+        color: var(--muted);
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.7em;
+        margin-top: 12px;
+        opacity: 0.8;
+      }
+      .surfaces-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px;
+        margin-top: 28px;
+      }
+      .surface-card {
+        background: white;
+        border: 2px solid var(--border);
+        border-radius: 14px;
+        padding: 18px 14px;
+        text-align: center;
+        box-shadow: var(--shadow-soft);
+        transition: all 0.3s;
+      }
+      .surface-card:hover {
+        border-color: var(--accent);
+        transform: translateY(-4px) scale(1.02);
+        box-shadow: var(--shadow-glow);
+      }
+      .surface-card .surface-icon {
+        font-size: 1.8em;
+        margin-bottom: 6px;
+      }
+      .surface-card .surface-name {
+        font-weight: 700;
+        font-size: 0.75em;
+        color: var(--ink);
+      }
+      .surface-card .surface-desc {
+        font-size: 0.55em;
+        color: var(--muted);
+        margin-top: 4px;
+        line-height: 1.4;
+      }
+
+      /* ============================================================ */
+      /* ARCHITECTURE                                                   */
+      /* ============================================================ */
+      .arch-frame {
+        background: white;
+        border-radius: 20px;
+        padding: 28px;
+        box-shadow: var(--shadow-soft);
+        text-align: center;
+        margin: 20px auto 0;
+        max-width: 1000px;
+        border: 1px solid var(--border);
+      }
+      .arch-frame img {
+        max-width: 100%;
+        max-height: 460px;
+        border-radius: 12px;
+      }
+      .arch-caption {
+        font-size: 0.55em;
+        color: var(--muted);
+        font-style: italic;
+        margin-top: 16px;
+      }
+
+      /* ============================================================ */
+      /* TWO-LAYER BRAIN                                                */
+      /* ============================================================ */
+      .brain-split {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 28px;
+        margin-top: 24px;
+      }
+      .brain-panel {
+        background: white;
+        border-radius: 20px;
+        padding: 28px;
+        box-shadow: var(--shadow-soft);
+        border-top: 5px solid;
+        transition: all 0.3s;
+      }
+      .brain-panel:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-strong);
+      }
+      .brain-panel.deterministic { border-top-color: var(--accent-4); }
+      .brain-panel.narrator { border-top-color: var(--accent-2); }
+      .brain-panel h3 {
+        font-size: 1.0em;
+        margin: 0 0 4px 0;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .brain-panel.deterministic h3 { color: var(--accent-4); }
+      .brain-panel.narrator h3 { color: var(--accent-2); }
+      .brain-panel .subtitle {
+        font-size: 0.65em;
+        color: var(--muted);
+        font-style: italic;
+        margin-bottom: 16px;
+        display: block;
+      }
+      .brain-panel ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+      .brain-panel ul li {
+        font-size: 0.75em;
+        padding: 8px 0 8px 24px;
+        position: relative;
+        line-height: 1.5;
+        color: var(--ink);
+      }
+      .brain-panel ul li::before {
+        content: "✓";
+        position: absolute;
+        left: 0;
+        font-weight: 700;
+      }
+      .brain-panel.deterministic ul li::before { color: var(--accent-4); }
+      .brain-panel.narrator ul li::before { color: var(--accent-2); }
+      .brain-panel .code-ref {
+        margin-top: 16px;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.6em;
+        color: var(--muted);
+        background: var(--bg);
+        padding: 8px 12px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        display: inline-block;
+      }
+      .brain-panel.deterministic { background: linear-gradient(135deg, #ffffff, #f0fdf4); }
+      .brain-panel.narrator { background: linear-gradient(135deg, #ffffff, #faf5ff); }
+
+      /* ============================================================ */
+      /* CONTRACT 3-LAYER CARDS                                         */
+      /* ============================================================ */
+      .contract-cards {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 18px;
+        margin-top: 28px;
+      }
+      .contract-card {
+        background: white;
+        border-radius: 20px;
+        padding: 24px;
+        box-shadow: var(--shadow-soft);
+        position: relative;
+        transition: all 0.3s;
+        overflow: hidden;
+      }
+      .contract-card:hover {
+        transform: translateY(-6px);
+        box-shadow: var(--shadow-strong);
+      }
+      .contract-card .layer-badge {
+        position: absolute;
+        top: -14px; left: 24px;
+        background: var(--gradient-1);
+        color: white;
+        font-size: 0.6em;
+        font-weight: 700;
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-family: "JetBrains Mono", monospace;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+      }
+      .contract-card.l2 .layer-badge { background: var(--gradient-2); }
+      .contract-card.l3 .layer-badge { background: var(--gradient-3); }
+      .contract-card h3 {
+        font-size: 0.95em;
+        margin: 12px 0 12px 0;
+        font-weight: 700;
+        color: var(--ink);
+      }
+      .contract-card ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+      .contract-card ul li {
+        font-size: 0.7em;
+        padding: 6px 0 6px 20px;
+        position: relative;
+        line-height: 1.5;
+        color: var(--ink);
+      }
+      .contract-card ul li::before {
+        content: "▸";
+        position: absolute;
+        left: 0;
+        color: var(--accent);
+        font-weight: 700;
+      }
+      .contract-card .strength-bar {
+        margin-top: 16px;
+        background: var(--border);
+        height: 6px;
+        border-radius: 3px;
+        overflow: hidden;
+      }
+      .contract-card .strength-bar .fill {
+        height: 100%;
+        background: var(--accent);
+        border-radius: 3px;
+      }
+      .contract-card.l1 .fill { width: 30%; background: var(--accent); }
+      .contract-card.l2 .fill { width: 65%; background: var(--accent-2); }
+      .contract-card.l3 .fill { width: 100%; background: var(--accent-3); }
+      .contract-card .strength-label {
+        font-size: 0.55em;
+        color: var(--muted);
+        margin-top: 6px;
+        font-family: "JetBrains Mono", monospace;
+      }
+      .contract-mantra {
+        margin-top: 24px;
+        text-align: center;
+        font-size: 1.0em;
+        font-weight: 700;
+        color: var(--ink);
+        padding: 16px 28px;
+        background: var(--gradient-soft);
+        border-radius: 16px;
+      }
+      .contract-mantra .accent {
+        background: var(--gradient-1);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      /* ============================================================ */
+      /* WORKED EXAMPLE                                                 */
+      /* ============================================================ */
+      .example-cards {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        margin-top: 20px;
+      }
+      .example-row {
+        background: white;
+        border-radius: 16px;
+        padding: 18px 24px;
+        display: grid;
+        grid-template-columns: 160px 1fr;
+        gap: 20px;
+        align-items: center;
+        box-shadow: var(--shadow-soft);
+        border-left: 5px solid var(--accent);
+      }
+      .example-row.l2 { border-left-color: var(--accent-2); }
+      .example-row.l3 { border-left-color: var(--accent-3); }
+      .example-row .row-label {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.65em;
+        font-weight: 700;
+        color: var(--accent);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .example-row.l2 .row-label { color: var(--accent-2); }
+      .example-row.l3 .row-label { color: var(--accent-3); }
+      .example-row .row-content {
+        font-size: 0.72em;
+        line-height: 1.5;
+      }
+      .example-row .data {
+        font-family: "JetBrains Mono", monospace;
+        background: var(--bg);
+        padding: 6px 10px;
+        border-radius: 6px;
+        font-size: 0.85em;
+        display: inline-block;
+        margin-right: 8px;
+        color: var(--hi);
+      }
+      .example-row .quote {
+        font-style: italic;
+        color: var(--muted);
+      }
+
+      /* ============================================================ */
+      /* RESULTS — Bar chart visualization                              */
+      /* ============================================================ */
+      .results-chart {
+        margin-top: 20px;
+        background: white;
+        border-radius: 20px;
+        padding: 32px;
+        box-shadow: var(--shadow-soft);
+      }
+      .chart-bar {
+        margin-bottom: 24px;
+      }
+      .chart-bar:last-child { margin-bottom: 0; }
+      .chart-bar .bar-label {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 6px;
+      }
+      .chart-bar .bar-name {
+        font-size: 0.75em;
+        font-weight: 600;
+        color: var(--ink);
+      }
+      .chart-bar .bar-name .config {
+        font-size: 0.8em;
+        color: var(--muted);
+        font-weight: 400;
+        margin-left: 8px;
+      }
+      .chart-bar .bar-rate {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 1.0em;
+        font-weight: 700;
+        color: var(--ink);
+      }
+      .chart-bar .bar-rate .ci {
+        font-size: 0.55em;
+        color: var(--muted);
+        margin-left: 8px;
+        font-weight: 400;
+      }
+      .chart-bar .bar-track {
+        height: 24px;
+        background: var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+        position: relative;
+      }
+      .chart-bar .bar-fill {
+        height: 100%;
+        border-radius: 12px;
+        transition: width 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        position: relative;
+        overflow: hidden;
+      }
+      .chart-bar .bar-fill::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        animation: shimmer 3s infinite;
+      }
+      @keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+      }
+      .chart-bar.l1 .bar-fill { background: var(--gradient-1); width: 80%; }
+      .chart-bar.l2 .bar-fill { background: var(--gradient-2); width: 10%; }
+      .chart-bar.l3 .bar-fill { background: var(--gradient-3); width: 0%; min-width: 4px; }
+      .chart-bar.l3 { position: relative; }
+      .chart-bar.l3::after {
+        content: "✓ Worst-case guaranteed";
+        display: block;
+        text-align: right;
+        font-size: 0.55em;
+        color: var(--accent-3);
+        font-weight: 700;
+        margin-top: 6px;
+        font-family: "JetBrains Mono", monospace;
+      }
+      .results-takeaway {
+        margin-top: 24px;
+        background: var(--gradient-soft);
+        border-radius: 16px;
+        padding: 20px 28px;
+        border-left: 4px solid var(--accent);
+      }
+      .results-takeaway .label {
+        font-size: 0.55em;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--accent);
+        margin-bottom: 6px;
+      }
+      .results-takeaway .body {
+        font-size: 0.75em;
+        line-height: 1.5;
+      }
+      .results-takeaway .body b {
+        background: var(--gradient-1);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 800;
+      }
+
+      /* ============================================================ */
+      /* FIELD TESTS — Cards in a row                                   */
+      /* ============================================================ */
+      .test-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 12px;
+        margin-top: 24px;
+      }
+      .test-card {
+        background: white;
+        border-radius: 14px;
+        padding: 16px 14px;
+        box-shadow: var(--shadow-soft);
+        text-align: center;
+        transition: all 0.3s;
+        position: relative;
+      }
+      .test-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-strong);
+      }
+      .test-card .test-num {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.5em;
+        color: var(--muted);
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
+      .test-card .test-bugs {
+        font-size: 2.0em;
+        font-weight: 900;
+        line-height: 1;
+        background: var(--gradient-1);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .test-card.baseline .test-bugs {
+        background: linear-gradient(135deg, var(--muted), var(--soft));
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .test-card .test-bugs-label {
+        font-size: 0.5em;
+        color: var(--muted);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-top: 4px;
+      }
+      .test-card .test-dataset {
+        font-size: 0.7em;
+        font-weight: 700;
+        color: var(--ink);
+        margin-top: 12px;
+      }
+      .test-card .test-patch {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.5em;
+        color: var(--accent);
+        background: var(--bg);
+        padding: 3px 8px;
+        border-radius: 6px;
+        margin-top: 6px;
+        display: inline-block;
+      }
+      .test-total {
+        margin-top: 24px;
+        background: white;
+        border-radius: 16px;
+        padding: 18px 28px;
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        border-left: 5px solid var(--accent-3);
+        box-shadow: var(--shadow-soft);
+      }
+      .test-total .total-num {
+        font-size: 2.4em;
+        font-weight: 900;
+        background: var(--gradient-2);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-family: "JetBrains Mono", monospace;
+        line-height: 1;
+      }
+      .test-total .total-text {
+        font-size: 0.75em;
+        line-height: 1.5;
+      }
+
+      /* ============================================================ */
+      /* SLASH COMMANDS GRID — 11 chips                                 */
+      /* ============================================================ */
+      .slash-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+        margin: 14px 0;
+      }
+      .slash-card {
+        background: white;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px 12px;
+        box-shadow: var(--shadow-soft);
+        transition: all 0.2s;
+      }
+      .slash-card:hover {
+        transform: translateY(-2px);
+        border-color: var(--accent);
+        box-shadow: var(--shadow-strong);
+      }
+      .slash-card code {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.7em;
+        color: var(--accent);
+        font-weight: 700;
+        display: block;
+        margin-bottom: 2px;
+        background: transparent;
+        padding: 0;
+      }
+      .slash-card .desc {
+        font-size: 0.52em;
+        color: var(--muted);
+        line-height: 1.35;
+      }
+      .slash-card.fallback {
+        background: var(--bg);
+        border-style: dashed;
+      }
+      .slash-card.fallback code { color: var(--muted); }
+      .slash-card.highlight {
+        background: linear-gradient(135deg, #eef2ff, #f5f3ff);
+        border-color: var(--accent);
+        box-shadow: 0 4px 16px rgba(79, 70, 229, 0.15);
+      }
+      .slash-card.highlight code {
+        background: var(--gradient-1);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .install-hint {
+        background: var(--code-bg);
+        color: var(--code-fg);
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.6em;
+        margin: 8px 0 14px 0;
+        display: inline-block;
+      }
+      .install-hint .prompt { color: var(--code-green); font-weight: 700; }
+
+      /* ============================================================ */
+      /* DEMO — Animated terminal                                       */
+      /* ============================================================ */
+      .terminal-window {
+        background: var(--code-bg);
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: var(--shadow-strong);
+        margin-top: 16px;
+      }
+      .terminal-bar {
+        background: #1a1f3a;
+        padding: 12px 18px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .terminal-bar .dot {
+        width: 12px; height: 12px;
+        border-radius: 50%;
+      }
+      .terminal-bar .dot.red { background: #ff5f56; }
+      .terminal-bar .dot.yellow { background: #ffbd2e; }
+      .terminal-bar .dot.green { background: #27c93f; }
+      .terminal-bar .title {
+        color: var(--muted);
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.55em;
+        margin-left: 12px;
+      }
+      .terminal-body {
+        padding: 24px 28px;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.72em;
+        color: var(--code-fg);
+        line-height: 1.9;
+        min-height: 380px;
+      }
+      .terminal-body .prompt {
+        color: var(--accent-4);
+        font-weight: 700;
+      }
+      .terminal-body .cmd { color: var(--code-fg); }
+      .terminal-body .comment {
+        color: var(--soft);
+        font-style: italic;
+        margin-left: 24px;
+        display: block;
+        font-size: 0.85em;
+        margin-bottom: 14px;
+      }
+      .terminal-body .blink::after {
+        content: "▊";
+        color: var(--accent-4);
+        margin-left: 4px;
+        animation: blink 1s infinite;
+      }
+      @keyframes blink {
+        0%, 50% { opacity: 1; }
+        51%, 100% { opacity: 0; }
+      }
+
+      /* ============================================================ */
+      /* CHALLENGES — Numbered cards                                    */
+      /* ============================================================ */
+      .challenge-list {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+        margin-top: 16px;
+      }
+      .challenge-card {
+        background: white;
+        border-radius: 16px;
+        padding: 22px 24px;
+        box-shadow: var(--shadow-soft);
+        border-top: 4px solid var(--accent);
+        transition: all 0.3s;
+      }
+      .challenge-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-strong);
+      }
+      .challenge-card:nth-child(2) { border-top-color: var(--accent-2); }
+      .challenge-card:nth-child(3) { border-top-color: var(--accent-3); }
+      .challenge-card:nth-child(4) { border-top-color: var(--accent-4); }
+      .challenge-card .num {
+        font-size: 2.5em;
+        font-weight: 900;
+        font-family: "JetBrains Mono", monospace;
+        background: var(--gradient-1);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        line-height: 1;
+        margin-bottom: 10px;
+        display: block;
+      }
+      .challenge-card:nth-child(2) .num { background: var(--gradient-2); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+      .challenge-card:nth-child(3) .num { background: var(--gradient-3); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+      .challenge-card:nth-child(4) .num { background: linear-gradient(135deg, #10b981, #4f46e5); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+      .challenge-card h3 {
+        font-size: 0.85em;
+        margin: 0 0 8px 0;
+        font-weight: 700;
+        color: var(--ink);
+      }
+      .challenge-card .body {
+        font-size: 0.65em;
+        line-height: 1.5;
+        color: var(--muted);
+      }
+
+      /* ============================================================ */
+      /* LIMITATIONS / FUTURE                                           */
+      /* ============================================================ */
+      .twocol {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+        margin-top: 24px;
+      }
+      .twocol-panel {
+        background: white;
+        border-radius: 18px;
+        padding: 28px;
+        box-shadow: var(--shadow-soft);
+      }
+      .twocol-panel.limit {
+        background: linear-gradient(135deg, #fff7ed, #fef3c7);
+        border-left: 4px solid var(--warn);
+      }
+      .twocol-panel.future {
+        background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+        border-left: 4px solid var(--accent-4);
+      }
+      .twocol-panel h3 {
+        font-size: 0.95em;
+        font-weight: 700;
+        margin: 0 0 16px 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .twocol-panel.limit h3 { color: var(--warn); }
+      .twocol-panel.future h3 { color: var(--accent-4); }
+      .twocol-panel ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+      .twocol-panel ul li {
+        font-size: 0.7em;
+        padding: 10px 0 10px 24px;
+        position: relative;
+        line-height: 1.5;
+      }
+      .twocol-panel.limit ul li::before {
+        content: "⚠";
+        position: absolute;
+        left: 0;
+        color: var(--warn);
+      }
+      .twocol-panel.future ul li::before {
+        content: "→";
+        position: absolute;
+        left: 0;
+        color: var(--accent-4);
+        font-weight: 700;
+      }
+      .twocol-panel ul li b {
+        color: var(--ink);
+        display: block;
+        margin-bottom: 2px;
+      }
+      .twocol-panel ul li .sub {
+        font-size: 0.85em;
+        color: var(--muted);
+        font-style: italic;
+      }
+
+      /* ============================================================ */
+      /* THANK YOU                                                      */
+      /* ============================================================ */
+      .closing {
+        text-align: center;
+        background:
+          radial-gradient(circle at 20% 80%, rgba(139, 92, 246, 0.20), transparent 50%),
+          radial-gradient(circle at 80% 20%, rgba(236, 72, 153, 0.20), transparent 50%),
+          linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+        padding: 60px;
+        height: 100%;
+        position: relative;
+        overflow: hidden;
+      }
+      .closing::before {
+        content: "";
+        position: absolute;
+        width: 500px; height: 500px;
+        background: var(--accent-2);
+        border-radius: 50%;
+        filter: blur(120px);
+        opacity: 0.3;
+        top: -200px; right: -150px;
+        animation: orb-float 10s ease-in-out infinite;
+      }
+      .closing h1 {
+        font-size: 7em;
+        font-weight: 900;
+        background: var(--gradient-1);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin: 40px 0 0 0;
+        letter-spacing: -0.04em;
+      }
+      .closing .q {
+        font-size: 1.6em;
+        font-weight: 500;
+        color: var(--muted);
+        margin-top: 12px;
+        font-style: italic;
+      }
+      .closing .resources {
+        margin-top: 60px;
+        background: white;
+        border-radius: 20px;
+        padding: 28px;
+        max-width: 720px;
+        margin-left: auto;
+        margin-right: auto;
+        box-shadow: var(--shadow-soft);
+        text-align: left;
+        position: relative;
+        z-index: 5;
+      }
+      .closing .resource-row {
+        display: grid;
+        grid-template-columns: 100px 1fr;
+        gap: 16px;
+        padding: 10px 0;
+        align-items: center;
+        font-size: 0.7em;
+      }
+      .closing .resource-row:not(:last-child) {
+        border-bottom: 1px solid var(--border);
+      }
+      .closing .resource-label {
+        font-size: 0.65em;
+        font-weight: 700;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+      }
+      .closing .resource-value {
+        font-family: "JetBrains Mono", monospace;
+        color: var(--accent);
+        font-weight: 600;
+      }
+      .closing .resource-value.no-mono {
+        font-family: "Inter", sans-serif;
+        color: var(--ink);
+      }
+      .closing .authors-pill {
+        display: inline-block;
+        margin-top: 32px;
+        padding: 10px 24px;
+        background: white;
+        border: 1px solid var(--border);
+        border-radius: 30px;
+        box-shadow: var(--shadow-soft);
+        font-weight: 600;
+        font-size: 0.8em;
+        color: var(--ink);
+      }
+
+      /* Inline code */
+      .reveal code:not([class]) {
+        font-family: "JetBrains Mono", monospace;
+        background: rgba(79, 70, 229, 0.08);
+        color: var(--accent);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 0.9em;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="reveal">
+      <div class="slides">
+        <!-- ========================================================= -->
+        <!-- 1. TITLE                                                    -->
+        <!-- ========================================================= -->
+        <section class="title-slide">
+          <div class="micro-tag">Capstone Project · 2026</div>
+          <h1>mlcompass</h1>
+          <div class="subtitle">
+            A Schema-Bounded LLM Narrator for<br />Machine-Learning Pipeline Diagnosis
+          </div>
+          <div class="authors">Hakan Sabuniş &nbsp;·&nbsp; Yusuf Ünlü</div>
+          <div class="uni">Istanbul Medipol University · School of Engineering and Natural Sciences</div>
+          <div class="links">
+            <span class="link-item">github.com/hakansabunis/mlcompass</span>
+            <span class="link-item">pypi · v0.8.1</span>
+            <span class="link-item">MIT License</span>
+          </div>
+        </section>
+
+        <!-- ========================================================= -->
+        <!-- 2. THE PROBLEM                                              -->
+        <!-- ========================================================= -->
+        <section>
+          <div class="slide-header">
+            <h2>The problem</h2>
+            <span class="badge-num"><span>02</span> / 13</span>
+          </div>
+          <div class="slide-body">
+            <div class="lede">ML engineering is a chain of single-purpose tools — and none of them advise.</div>
+            <div class="vs-grid">
+              <div class="vs-card">
+                <div class="icon" style="background: linear-gradient(135deg, #dbeafe, #bfdbfe);">📊</div>
+                <div class="content">
+                  <div class="title">pandas-profiling</div>
+                  <div class="desc">Shows the data — but doesn't know which column you're trying to predict.</div>
+                </div>
+              </div>
+              <div class="vs-card fragment">
+                <div class="icon" style="background: linear-gradient(135deg, #fce7f3, #fbcfe8);">📈</div>
+                <div class="content">
+                  <div class="title">Weights &amp; Biases</div>
+                  <div class="desc">Tracks runs — but never says "this loss curve looks like overfitting".</div>
+                </div>
+              </div>
+              <div class="vs-card fragment">
+                <div class="icon" style="background: linear-gradient(135deg, #e9d5ff, #d8b4fe);">⌨️</div>
+                <div class="content">
+                  <div class="title">Copilot &amp; Cursor</div>
+                  <div class="desc">Complete code — happily generate <code>Adam(momentum=0.9)</code> which is invalid.</div>
+                </div>
+              </div>
+              <div class="vs-card fragment">
+                <div class="icon" style="background: linear-gradient(135deg, #fed7aa, #fdba74);">🤖</div>
+                <div class="content">
+                  <div class="title">LLM assistants</div>
+                  <div class="desc">Hallucinate. Invent column names that don't exist. Propose fixes for non-real problems.</div>
+                </div>
+              </div>
+            </div>
+            <div class="stat-banner fragment">
+              <div class="stat-number">146,932</div>
+              <div class="stat-label">
+                hallucinated citations observed across <b>arXiv, bioRxiv &amp; SSRN</b> in 2025 alone.<br />
+                <span style="font-size: 0.85em; color: var(--muted);">[Zhao et al., 2026]</span>
+              </div>
+            </div>
+          </div>
+          <div class="footer-band">mlcompass · Capstone · Sabuniş &amp; Ünlü</div>
+        </section>
+
+        <!-- ========================================================= -->
+        <!-- 3. PITCH                                                    -->
+        <!-- ========================================================= -->
+        <section>
+          <div class="slide-header">
+            <h2>mlcompass in 30 seconds</h2>
+            <span class="badge-num"><span>03</span> / 13</span>
+          </div>
+          <div class="slide-body">
+            <div class="lede">An open-source CLI that follows you through the whole pipeline — allowed to <i>explain</i> but never to <i>invent</i>.</div>
+            <div class="pipeline-viz">
+              <div style="font-weight: 700; font-size: 0.6em; color: var(--muted); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.15em;">
+                Eleven commands · every pipeline stage
+              </div>
+              <div class="pipeline-row">
+                <span class="verb-chip">init</span>
+                <span class="arrow">→</span>
+                <span class="verb-chip">advise</span>
+                <span class="arrow">→</span>
+                <span class="verb-chip">audit</span>
+                <span class="arrow">→</span>
+                <span class="verb-chip">watch</span>
+                <span class="arrow">→</span>
+                <span class="verb-chip">compare</span>
+                <span class="arrow">→</span>
+                <span class="verb-chip">evaluate</span>
+                <span class="arrow">→</span>
+                <span class="verb-chip">deploy</span>
+              </div>
+              <div class="extras">+ status · monitor · optimize · agent</div>
+            </div>
+            <div class="surfaces-grid fragment">
+              <div class="surface-card">
+                <div class="surface-icon">⌨️</div>
+                <div class="surface-name">CLI</div>
+                <div class="surface-desc">Terminal &amp; CI scripts</div>
+              </div>
+              <div class="surface-card">
+                <div class="surface-icon">💬</div>
+                <div class="surface-name">MCP Server</div>
+                <div class="surface-desc">Claude Desktop · Cursor · Code</div>
+              </div>
+              <div class="surface-card">
+                <div class="surface-icon">🤖</div>
+                <div class="surface-name">Agent</div>
+                <div class="surface-desc">Autonomous pipeline driver</div>
+              </div>
+              <div class="surface-card">
+                <div class="surface-icon">⚡</div>
+                <div class="surface-name">Slash</div>
+                <div class="surface-desc">11 one-key commands</div>
+              </div>
+            </div>
+          </div>
+          <div class="footer-band">Shared on-disk project context <code>.mlcompass/</code> · remembers yesterday's decisions</div>
+        </section>
+
+        <!-- ========================================================= -->
+        <!-- 4. ARCHITECTURE                                             -->
+        <!-- ========================================================= -->
+        <section>
+          <div class="slide-header">
+            <h2>System architecture</h2>
+            <span class="badge-num"><span>04</span> / 13</span>
+          </div>
+          <div class="slide-body">
+            <div class="lede-soft" style="text-align: center; max-width: 880px; margin-left: auto; margin-right: auto;">
+              Three user-facing surfaces sit on top of a two-layer brain over a persistent project-context folder.
+            </div>
+            <div class="arch-frame">
+              <img src="architecture.webp" alt="mlcompass system architecture: three user-facing surfaces (CLI, MCP server, self-driving agent) on top of a two-layer brain (deterministic tool layer + optional Claude narrator) over a persistent project-context folder." />
+              <div class="arch-caption">Fig. 1. mlcompass system architecture (also Fig. 1 in the paper).</div>
+            </div>
+          </div>
+          <div class="footer-band">mlcompass · Capstone · Sabuniş &amp; Ünlü</div>
+        </section>
+
+        <!-- ========================================================= -->
+        <!-- 5. TWO-LAYER BRAIN                                          -->
+        <!-- ========================================================= -->
+        <section>
+          <div class="slide-header">
+            <h2>The two-layer brain</h2>
+            <span class="badge-num"><span>05</span> / 13</span>
+          </div>
+          <div class="slide-body">
+            <div class="lede">Facts come from pure code. Narration comes from a Claude agent on top — never the other way around.</div>
+            <div class="brain-split">
+              <div class="brain-panel deterministic">
+                <h3>🧮 Deterministic Tool Layer</h3>
+                <span class="subtitle">pure Python · always offline · same input ⇒ same output</span>
+                <ul>
+                  <li>Reads CSVs with <code>pandas</code></li>
+                  <li>Parses scripts with <code>ast</code></li>
+                  <li>Computes Pearson + Spearman + perfect-match</li>
+                  <li>Returns structured dict — never free text</li>
+                  <li><b>Cannot hallucinate by construction</b></li>
+                </ul>
+                <span class="code-ref">src/mlcompass/tools/</span>
+              </div>
+              <div class="brain-panel narrator fragment">
+                <h3>🎙️ Optional Claude Narrator</h3>
+                <span class="subtitle">opt-in via <code>--llm</code> · strict prompt + runtime schema</span>
+                <ul>
+                  <li>Receives the dict from below</li>
+                  <li>Explains it in natural language</li>
+                  <li>Runs under a <b>3-layer contract</b> (next slide)</li>
+                  <li>Bound at call time to the evidence's columns</li>
+                  <li>Skipped entirely with <code>--no-llm</code></li>
+                </ul>
+                <span class="code-ref">src/mlcompass/agents/</span>
+              </div>
+            </div>
+          </div>
+          <div class="footer-band">mlcompass · Capstone · Sabuniş &amp; Ünlü</div>
+        </section>
+
+        <!-- ========================================================= -->
+        <!-- 6. THE CONTRACT                                             -->
+        <!-- ========================================================= -->
+        <section>
+          <div class="slide-header">
+            <h2>The anti-hallucination contract</h2>
+            <span class="badge-num"><span>06</span> / 13</span>
+          </div>
+          <div class="slide-body">
+            <div class="lede" style="text-align: center;">Three layers. Each alone is weak. Together they are strict.</div>
+            <div class="contract-cards">
+              <div class="contract-card l1">
+                <span class="layer-badge">Layer 1</span>
+                <h3>Deterministic evidence</h3>
+                <ul>
+                  <li>Pure Python, no LLM</li>
+                  <li>Computes <code>max(|ρ_P|, |ρ_S|)</code></li>
+                  <li>Emits a dict <i>E</i> of candidates</li>
+                </ul>
+                <div class="strength-bar"><div class="fill"></div></div>
+                <div class="strength-label">strength: foundation</div>
+              </div>
+              <div class="contract-card l2 fragment">
+                <span class="layer-badge">Layer 2</span>
+                <h3>Strict prompt</h3>
+                <ul>
+                  <li>Cite only items in <i>E</i></li>
+                  <li>Say <code>cannot_determine</code> if unsure</li>
+                  <li>No code patches, manual checks</li>
+                </ul>
+                <div class="strength-bar"><div class="fill"></div></div>
+                <div class="strength-label">strength: advisory</div>
+              </div>
+              <div class="contract-card l3 fragment">
+                <span class="layer-badge">Layer 3</span>
+                <h3>Runtime schema boundary</h3>
+                <ul>
+                  <li>Tool-input enum built from <i>E</i></li>
+                  <li>SDK rejects out-of-evidence columns</li>
+                  <li><b>Worst-case guarantee</b></li>
+                </ul>
+                <div class="strength-bar"><div class="fill"></div></div>
+                <div class="strength-label">strength: enforcement</div>
+              </div>
+            </div>
+            <div class="contract-mantra fragment">
+              Prompts are <span class="accent">advisory</span>. Schemas are <span class="accent">enforcement</span>.
+            </div>
+          </div>
+          <div class="footer-band">mlcompass · Capstone · Sabuniş &amp; Ünlü</div>
+        </section>
+
+        <!-- ========================================================= -->
+        <!-- 7. WORKED EXAMPLE                                           -->
+        <!-- ========================================================= -->
+        <section>
+          <div class="slide-header">
+            <h2>Worked example — Ames House Prices</h2>
+            <span class="badge-num"><span>07</span> / 13</span>
+          </div>
+          <div class="slide-body">
+            <div class="lede-soft">
+              A user accidentally includes <code>log_price</code> when training to predict <code>saleprice</code>. R² = 1.000.
+            </div>
+            <div class="example-cards">
+              <div class="example-row">
+                <div class="row-label">Layer 1<br />Evidence</div>
+                <div class="row-content">
+                  <span class="data">Pearson ρ_P ≈ 0.94</span>
+                  <span class="data">Spearman ρ_S = 1.00</span>
+                  <span class="data">perfect-match 98.7%</span>
+                  <div class="quote" style="margin-top: 6px;">→ <code>log_price</code> flagged as candidate (max correlation ≥ threshold 0.97)</div>
+                </div>
+              </div>
+              <div class="example-row l2 fragment">
+                <div class="row-label">Layer 2<br />Narrator</div>
+                <div class="row-content">
+                  <div class="quote">
+                    "<code>log_price</code> has Spearman = 1.00 with the target — almost certainly a transformed leak.<br />
+                    Recommend manually checking the feature pipeline for any column derived from the target."
+                  </div>
+                </div>
+              </div>
+              <div class="example-row l3 fragment">
+                <div class="row-label">Layer 3<br />Boundary</div>
+                <div class="row-content">
+                  <span class="data">columns_referenced enum = { log_price, feature_3, …, feature_12 }</span>
+                  <div class="quote" style="margin-top: 6px;">
+                    <code>log_price</code> ∈ enum → response ships.<br />
+                    If LLM had emitted <code>revenue</code>, SDK would reject and retry.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="footer-band">mlcompass · Capstone · Sabuniş &amp; Ünlü</div>
+        </section>
+
+        <!-- ========================================================= -->
+        <!-- 8. RESULTS                                                  -->
+        <!-- ========================================================= -->
+        <section>
+          <div class="slide-header">
+            <h2>Results — phantom-column fabrication rate</h2>
+            <span class="badge-num"><span>08</span> / 13</span>
+          </div>
+          <div class="slide-body">
+            <div class="lede-soft">
+              N = 200 narrator responses per configuration · Claude 3.5 Sonnet · Wilson 95% CIs
+            </div>
+            <div class="results-chart">
+              <div class="chart-bar l1">
+                <div class="bar-label">
+                  <div class="bar-name">Layer 1 only <span class="config">(no prompt, no schema)</span></div>
+                  <div class="bar-rate">8.0%<span class="ci">CI [4.93 , 12.66]</span></div>
+                </div>
+                <div class="bar-track"><div class="bar-fill"></div></div>
+              </div>
+              <div class="chart-bar l2 fragment">
+                <div class="bar-label">
+                  <div class="bar-name">Layer 1 + 2 <span class="config">(strict prompt)</span></div>
+                  <div class="bar-rate">1.0%<span class="ci">CI [0.27 , 3.56]</span></div>
+                </div>
+                <div class="bar-track"><div class="bar-fill"></div></div>
+              </div>
+              <div class="chart-bar l3 fragment">
+                <div class="bar-label">
+                  <div class="bar-name">Layer 1 + 2 + 3 <span class="config">(schema-enforced)</span></div>
+                  <div class="bar-rate">0.0%<span class="ci">CI [0.00 , 1.83]</span></div>
+                </div>
+                <div class="bar-track"><div class="bar-fill"></div></div>
+              </div>
+            </div>
+            <div class="results-takeaway fragment">
+              <div class="label">Takeaway</div>
+              <div class="body">
+                Prompt engineering reduces fabrication <b>8× (8% → 1%)</b> — but does not eliminate it.
+                The runtime schema boundary brings the observed rate to <b>0</b> — a <b>worst-case guarantee</b>, not just an average.
+              </div>
+            </div>
+          </div>
+          <div class="footer-band">mlcompass · Capstone · Sabuniş &amp; Ünlü</div>
+        </section>
+
+        <!-- ========================================================= -->
+        <!-- 9. FIELD TESTS                                              -->
+        <!-- ========================================================= -->
+        <section>
+          <div class="slide-header">
+            <h2>Field tests — 5 Kaggle datasets, 11 real bugs</h2>
+            <span class="badge-num"><span>09</span> / 13</span>
+          </div>
+          <div class="slide-body">
+            <div class="lede-soft">Every release dry-ran on a real Kaggle dataset before shipping. Each bug locked in by a regression test.</div>
+            <div class="test-grid">
+              <div class="test-card baseline">
+                <div class="test-num">Test 1</div>
+                <div class="test-bugs">0</div>
+                <div class="test-bugs-label">bugs</div>
+                <div class="test-dataset">Telco<br />Churn</div>
+                <div class="test-patch">baseline</div>
+              </div>
+              <div class="test-card">
+                <div class="test-num">Test 2</div>
+                <div class="test-bugs">3</div>
+                <div class="test-bugs-label">bugs</div>
+                <div class="test-dataset">Ames<br />Prices</div>
+                <div class="test-patch">v0.7.0</div>
+              </div>
+              <div class="test-card">
+                <div class="test-num">Test 3</div>
+                <div class="test-bugs">1</div>
+                <div class="test-bugs-label">bug</div>
+                <div class="test-dataset">Titanic</div>
+                <div class="test-patch">v0.7.1</div>
+              </div>
+              <div class="test-card">
+                <div class="test-num">Test 4</div>
+                <div class="test-bugs">3</div>
+                <div class="test-bugs-label">bugs</div>
+                <div class="test-dataset">Penguins</div>
+                <div class="test-patch">v0.7.2</div>
+              </div>
+              <div class="test-card">
+                <div class="test-num">Test 5</div>
+                <div class="test-bugs">4</div>
+                <div class="test-bugs-label">bugs</div>
+                <div class="test-dataset">Insurance<br />Charges</div>
+                <div class="test-patch">v0.7.3</div>
+              </div>
+            </div>
+            <div class="test-total fragment">
+              <div class="total-num">11</div>
+              <div class="total-text">
+                <b>real bugs caught</b> — <i>zero</i> predicted by our pre-existing unit-test suite.<br />
+                Real datasets find bugs synthetic ones don't.
+              </div>
+            </div>
+          </div>
+          <div class="footer-band">mlcompass · Capstone · Sabuniş &amp; Ünlü</div>
+        </section>
+
+        <!-- ========================================================= -->
+        <!-- 10. SLASH COMMANDS + LIVE DEMO                              -->
+        <!-- ========================================================= -->
+        <section>
+          <div class="slide-header">
+            <h2>The 11 slash commands &amp; live demo</h2>
+            <span class="badge-num"><span>10</span> / 13</span>
+          </div>
+          <div class="slide-body">
+            <div class="lede-soft">
+              Eleven Claude Code slash commands — each maps to one mlcompass tool. One install command, no JSON config.
+            </div>
+            <div class="install-hint">
+              <span class="prompt">$</span> mlcompass install-slash-commands --scope user
+            </div>
+
+            <div class="slash-grid">
+              <div class="slash-card highlight">
+                <code>/mlc-init</code>
+                <span class="desc">Start a new mlcompass project</span>
+              </div>
+              <div class="slash-card highlight">
+                <code>/mlc-advise</code>
+                <span class="desc">Analyze CSV → target, warnings, model suggestions</span>
+              </div>
+              <div class="slash-card">
+                <code>/mlc-audit</code>
+                <span class="desc">Static analysis of a training script (8 rules)</span>
+              </div>
+              <div class="slash-card">
+                <code>/mlc-watch</code>
+                <span class="desc">Scan training log for NaN / divergence / overfit</span>
+              </div>
+              <div class="slash-card">
+                <code>/mlc-compare</code>
+                <span class="desc">Side-by-side diff of two training runs</span>
+              </div>
+              <div class="slash-card highlight">
+                <code>/mlc-evaluate</code>
+                <span class="desc">Metrics + auto leakage panel on suspicious R²</span>
+              </div>
+              <div class="slash-card">
+                <code>/mlc-leak</code>
+                <span class="desc">Focused leakage check on a predictions table</span>
+              </div>
+              <div class="slash-card">
+                <code>/mlc-deploy</code>
+                <span class="desc">Production-readiness check (Lambda / Docker / SM)</span>
+              </div>
+              <div class="slash-card highlight">
+                <code>/mlc-status</code>
+                <span class="desc">Show project history + current state</span>
+              </div>
+              <div class="slash-card fallback">
+                <code>/mlc-monitor</code>
+                <span class="desc">PSI / KS / chi² drift detection (CLI fallback)</span>
+              </div>
+              <div class="slash-card fallback">
+                <code>/mlc-optimize</code>
+                <span class="desc">HPO recommender from run history (CLI fallback)</span>
+              </div>
+            </div>
+
+            <div class="terminal-window">
+              <div class="terminal-bar">
+                <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+                <span class="title">Claude Code — live demo</span>
+              </div>
+              <div class="terminal-body" style="min-height: 180px; padding: 18px 24px; font-size: 0.7em;">
+                <span class="prompt">›</span> <span class="cmd">/mlc-init insurance-demo</span>
+                <span class="comment"># → .mlcompass/ project folder created</span>
+
+                <span class="prompt">›</span> <span class="cmd">/mlc-advise demo-data/insurance.csv</span>
+                <span class="comment"># → target = 'charges', regression, recommends XGBoost</span>
+
+                <span class="prompt">›</span> <span class="cmd">/mlc-evaluate demo-data/predictions_with_leak.csv</span>
+                <span class="comment"># → R² = 1.000 → automatic leakage panel fires 🔬</span>
+
+                <span class="prompt">›</span> <span class="cmd blink">/mlc-status</span>
+              </div>
+            </div>
+          </div>
+          <div class="footer-band">
+            Highlighted = used in today's demo · Dashed = CLI fallback · Backup: pre-recorded MP4 on USB
+          </div>
+        </section>
+
+        <!-- ========================================================= -->
+        <!-- 11. CHALLENGES                                              -->
+        <!-- ========================================================= -->
+        <section>
+          <div class="slide-header">
+            <h2>Challenges we faced</h2>
+            <span class="badge-num"><span>11</span> / 13</span>
+          </div>
+          <div class="slide-body">
+            <div class="lede-soft">Four problems we hit, and the lesson from each.</div>
+            <div class="challenge-list">
+              <div class="challenge-card">
+                <span class="num">01</span>
+                <h3>Prompt engineering wasn't enough</h3>
+                <div class="body">A week of prompt iteration: 8% → 1%. Still wrong 1% of the time. Lesson: enforce at the <b>schema</b>, not the prompt.</div>
+              </div>
+              <div class="challenge-card">
+                <span class="num">02</span>
+                <h3>CLI and MCP drifted apart</h3>
+                <div class="body">Same Python, different behavior. CLI was writing to ledger, MCP wasn't. Shipped <code>_persist_to_ledger</code> + parity tests.</div>
+              </div>
+              <div class="challenge-card">
+                <span class="num">03</span>
+                <h3>Synthetic tests missed bugs</h3>
+                <div class="body">11 Kaggle bugs surfaced — zero predicted by our test suite. Moved to a <b>field-test-then-patch</b> release cadence.</div>
+              </div>
+              <div class="challenge-card">
+                <span class="num">04</span>
+                <h3>Reviewer feedback</h3>
+                <div class="body">3 peer reviewers found weak stats, missing baselines, implicit threat model. Released v0.8.1 with Wilson CIs + threat model doc.</div>
+              </div>
+            </div>
+          </div>
+          <div class="footer-band">mlcompass · Capstone · Sabuniş &amp; Ünlü</div>
+        </section>
+
+        <!-- ========================================================= -->
+        <!-- 12. LIMITATIONS / FUTURE                                    -->
+        <!-- ========================================================= -->
+        <section>
+          <div class="slide-header">
+            <h2>Limitations &amp; future work</h2>
+            <span class="badge-num"><span>12</span> / 13</span>
+          </div>
+          <div class="slide-body">
+            <div class="twocol">
+              <div class="twocol-panel limit">
+                <h3>⚠️ What we did NOT measure</h3>
+                <ul>
+                  <li><b>Cross-model generalization</b><span class="sub">All experiments use Claude 3.5 Sonnet only.</span></li>
+                  <li><b>Constrained-generation baseline</b><span class="sub">No direct benchmark against Outlines or OpenAI strict mode.</span></li>
+                  <li><b>External user study</b><span class="sub">Used by authors + classmates only. No third-party eval.</span></li>
+                  <li><b>Other hallucination types</b><span class="sub">Miscalibrated confidence, prompt injection — out of scope.</span></li>
+                </ul>
+              </div>
+              <div class="twocol-panel future">
+                <h3>→ Planned for v0.9 / v1.0</h3>
+                <ul>
+                  <li><b>OpenAI backend</b><span class="sub">Repeat Table I on GPT-4 + strict mode.</span></li>
+                  <li><b>Outlines benchmark</b><span class="sub">Same task on Llama-3-8B. Side-by-side fabrication rates.</span></li>
+                  <li><b>N = 2000 live run</b><span class="sub">Tightens Wilson CIs. Reproducible via shipped scripts.</span></li>
+                  <li><b>Plug-in system</b><span class="sub">HuggingFace + PyTorch Lightning analyzers.</span></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="footer-band">mlcompass · Capstone · Sabuniş &amp; Ünlü</div>
+        </section>
+
+        <!-- ========================================================= -->
+        <!-- 13. THANK YOU                                               -->
+        <!-- ========================================================= -->
+        <section>
+          <div class="closing">
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.5em; color: var(--accent); letter-spacing: 0.2em; text-transform: uppercase; font-weight: 600;">— end of presentation —</div>
+            <h1>Thank you</h1>
+            <div class="q">Questions?</div>
+
+            <div class="resources">
+              <div class="resource-row">
+                <div class="resource-label">Project</div>
+                <div class="resource-value">github.com/hakansabunis/mlcompass</div>
+              </div>
+              <div class="resource-row">
+                <div class="resource-label">Install</div>
+                <div class="resource-value">pip install mlcompass</div>
+              </div>
+              <div class="resource-row">
+                <div class="resource-label">Paper</div>
+                <div class="resource-value">paper/Capstone_Report.pdf</div>
+              </div>
+              <div class="resource-row">
+                <div class="resource-label">License</div>
+                <div class="resource-value">MIT · v0.8.1 · 539 passing tests</div>
+              </div>
+            </div>
+
+            <div class="authors-pill">Hakan Sabuniş &nbsp;·&nbsp; Yusuf Ünlü</div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reveal.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/plugin/highlight/highlight.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/plugin/notes/notes.js"></script>
+
+    <script>
+      Reveal.initialize({
+        width: 1366,
+        height: 800,
+        margin: 0.04,
+        hash: true,
+        transition: "slide",
+        transitionSpeed: "default",
+        backgroundTransition: "fade",
+        slideNumber: false,
+        controls: true,
+        progress: true,
+        center: false,
+        plugins: [RevealHighlight, RevealNotes],
+      });
+    </script>
+  </body>
+</html>

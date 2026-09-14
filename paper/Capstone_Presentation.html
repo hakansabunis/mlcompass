@@ -1,0 +1,1104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>mlcompass — Capstone Presentation</title>
+
+    <!--
+      Self-contained reveal.js presentation.
+      Open this file in any modern browser (Chrome, Firefox, Edge, Safari).
+
+      Keyboard:
+        N / Space / →   next slide
+        P / ←           previous slide
+        F               full-screen
+        ESC             slide overview
+        S               speaker notes (separate window)
+        Ctrl/Cmd + P    print to PDF
+
+      To insert the architecture diagram:
+        Find the slide tagged 'data-slide="architecture"'.
+        Replace the placeholder <div> with an <img> pointing at diagram.png:
+
+          <img src="diagram.png" alt="mlcompass architecture" class="arch-image" />
+    -->
+
+    <!-- reveal.js core CSS via CDN -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reset.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reveal.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/theme/white.css" id="theme" />
+
+    <!-- Syntax highlighting for code blocks -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/plugin/highlight/monokai.css" />
+
+    <!-- Custom theme overrides -->
+    <style>
+      :root {
+        --ink: #0f172a;
+        --muted: #475569;
+        --soft: #94a3b8;
+        --accent: #1e40af;
+        --accent-2: #7c3aed;
+        --accent-3: #c0366e;
+        --panel: #f8fafc;
+        --border: #e2e8f0;
+        --code-bg: #0f172a;
+        --code-fg: #e2e8f0;
+        --code-green: #86efac;
+      }
+
+      .reveal {
+        font-family: "Inter", "Segoe UI", "Helvetica Neue", sans-serif;
+        font-size: 22px;
+        color: var(--ink);
+      }
+
+      .reveal h1,
+      .reveal h2,
+      .reveal h3,
+      .reveal h4 {
+        font-family: "Inter", "Segoe UI", sans-serif;
+        letter-spacing: -0.01em;
+        text-transform: none;
+        color: var(--ink);
+        font-weight: 700;
+      }
+
+      .reveal h1 { font-size: 3.4em; }
+      .reveal h2 { font-size: 2.0em; }
+      .reveal h3 { font-size: 1.4em; }
+
+      /* Slide header band on inner slides. */
+      .reveal .slide-header {
+        position: absolute;
+        top: 32px;
+        left: 48px;
+        right: 48px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid var(--accent);
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+      }
+      .reveal .slide-header h2 {
+        margin: 0;
+        font-size: 1.6em;
+        font-weight: 700;
+      }
+      .reveal .slide-header .slide-num {
+        font-size: 0.7em;
+        color: var(--muted);
+        font-weight: 400;
+      }
+
+      .reveal .footer-band {
+        position: absolute;
+        bottom: 24px;
+        left: 48px;
+        right: 48px;
+        font-size: 0.55em;
+        color: var(--soft);
+        font-style: italic;
+        text-align: center;
+      }
+
+      .reveal .slide-body {
+        position: absolute;
+        top: 120px;
+        bottom: 80px;
+        left: 48px;
+        right: 48px;
+        text-align: left;
+      }
+
+      .reveal .lede {
+        font-size: 1.2em;
+        font-style: italic;
+        color: var(--accent);
+        margin-bottom: 24px;
+        line-height: 1.4;
+      }
+
+      .reveal ul,
+      .reveal ol {
+        line-height: 1.5;
+      }
+
+      .reveal ul li {
+        margin: 12px 0;
+      }
+
+      .reveal ul li .sub {
+        display: block;
+        font-size: 0.7em;
+        font-style: italic;
+        color: var(--muted);
+        margin-top: 4px;
+      }
+
+      /* The big three-card contract layout */
+      .cards {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 24px;
+        margin-top: 32px;
+      }
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 24px;
+        position: relative;
+      }
+      .card.layer-1 { border-top: 4px solid var(--accent); }
+      .card.layer-2 { border-top: 4px solid var(--accent-2); }
+      .card.layer-3 { border-top: 4px solid var(--accent-3); }
+      .card h3 {
+        font-size: 1.1em;
+        margin-top: 0;
+      }
+      .card .layer-tag {
+        font-size: 0.6em;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+        font-weight: 600;
+        display: block;
+        margin-bottom: 8px;
+      }
+      .card ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+      .card ul li {
+        position: relative;
+        padding-left: 18px;
+        font-size: 0.75em;
+        line-height: 1.5;
+        margin: 8px 0;
+      }
+      .card ul li::before {
+        content: "▸";
+        position: absolute;
+        left: 0;
+        color: var(--accent);
+        font-weight: 700;
+      }
+
+      /* Two-column layout (for the two-layer-brain slide) */
+      .split {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 32px;
+        margin-top: 24px;
+      }
+      .split .panel {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 28px;
+      }
+      .split .panel.deterministic {
+        background: #eff6ff;
+        border-color: #93c5fd;
+      }
+      .split .panel.narrator {
+        background: #f5f3ff;
+        border-color: #c4b5fd;
+      }
+      .split .panel h3 {
+        margin-top: 0;
+        font-size: 1.2em;
+      }
+      .split .panel.deterministic h3 { color: var(--accent); }
+      .split .panel.narrator h3 { color: var(--accent-2); }
+      .split .panel ul {
+        list-style: none;
+        padding: 0;
+      }
+      .split .panel ul li {
+        font-size: 0.8em;
+        padding-left: 20px;
+        position: relative;
+        margin: 10px 0;
+        line-height: 1.5;
+      }
+      .split .panel ul li::before {
+        content: "•";
+        position: absolute;
+        left: 0;
+        font-weight: 700;
+      }
+      .split .panel .code-ref {
+        margin-top: 16px;
+        font-family: "JetBrains Mono", "Consolas", monospace;
+        font-size: 0.65em;
+        color: var(--muted);
+        font-style: italic;
+      }
+
+      /* Architecture image placeholder */
+      .arch-placeholder {
+        border: 3px dashed var(--soft);
+        background: var(--panel);
+        border-radius: 12px;
+        padding: 80px 40px;
+        text-align: center;
+        margin: 0 auto;
+        max-width: 1000px;
+      }
+      .arch-placeholder .badge {
+        display: inline-block;
+        font-size: 1.4em;
+        font-weight: 700;
+        font-style: italic;
+        color: var(--muted);
+        margin-bottom: 12px;
+      }
+      .arch-placeholder .hint {
+        font-size: 0.8em;
+        color: var(--soft);
+        font-style: italic;
+      }
+      .arch-image {
+        max-width: 100%;
+        max-height: 480px;
+        display: block;
+        margin: 0 auto;
+        border-radius: 8px;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+      }
+
+      /* Inline code */
+      .reveal code {
+        font-family: "JetBrains Mono", "Fira Code", "Consolas", monospace;
+        background: rgba(30, 64, 175, 0.08);
+        color: var(--accent);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 0.9em;
+      }
+
+      /* Terminal block on the demo slide */
+      .terminal {
+        background: var(--code-bg);
+        color: var(--code-fg);
+        padding: 32px;
+        border-radius: 12px;
+        font-family: "JetBrains Mono", "Consolas", monospace;
+        font-size: 0.85em;
+        line-height: 1.8;
+        text-align: left;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+      }
+      .terminal .prompt {
+        color: var(--code-green);
+        font-weight: 700;
+      }
+      .terminal .comment {
+        color: #94a3b8;
+        font-style: italic;
+        display: block;
+        margin-left: 20px;
+        margin-bottom: 12px;
+        font-size: 0.85em;
+      }
+      .terminal .cmd {
+        color: var(--code-fg);
+      }
+
+      /* Results table */
+      .results-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 24px 0;
+        font-size: 0.85em;
+      }
+      .results-table th {
+        background: var(--panel);
+        color: var(--ink);
+        font-weight: 700;
+        padding: 14px;
+        border-top: 2px solid var(--ink);
+        border-bottom: 1px solid var(--muted);
+        text-align: left;
+      }
+      .results-table th:not(:first-child) { text-align: center; }
+      .results-table td {
+        padding: 14px;
+        border-bottom: 1px solid var(--border);
+      }
+      .results-table td:not(:first-child) { text-align: center; }
+      .results-table tr:last-child td {
+        border-bottom: 2px solid var(--ink);
+      }
+      .results-table .rate {
+        font-weight: 700;
+        color: var(--accent);
+        font-family: "JetBrains Mono", "Consolas", monospace;
+      }
+      .results-table .ci {
+        font-family: "JetBrains Mono", "Consolas", monospace;
+        color: var(--muted);
+      }
+      .results-table tr.zero .rate { color: var(--accent-3); font-size: 1.1em; }
+
+      /* Takeaway callout */
+      .callout {
+        background: linear-gradient(135deg, #eef2ff, #f5f3ff);
+        border-left: 4px solid var(--accent);
+        padding: 20px 28px;
+        border-radius: 8px;
+        margin-top: 32px;
+        font-size: 0.85em;
+        line-height: 1.6;
+      }
+      .callout .label {
+        display: block;
+        font-size: 0.85em;
+        font-weight: 700;
+        color: var(--accent);
+        margin-bottom: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      /* Field tests table */
+      .fieldtests {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.78em;
+      }
+      .fieldtests th {
+        background: var(--panel);
+        padding: 12px;
+        border-top: 2px solid var(--ink);
+        border-bottom: 1px solid var(--muted);
+        text-align: left;
+        font-weight: 700;
+      }
+      .fieldtests td {
+        padding: 12px;
+        border-bottom: 1px solid var(--border);
+      }
+      .fieldtests td.center { text-align: center; }
+      .fieldtests tr:last-child td {
+        border-bottom: 2px solid var(--ink);
+      }
+      .fieldtests td:first-child {
+        font-weight: 700;
+        color: var(--accent);
+        font-family: "JetBrains Mono", "Consolas", monospace;
+        text-align: center;
+      }
+
+      /* Title slide */
+      .title-slide {
+        text-align: left !important;
+      }
+      .title-slide h1 {
+        font-size: 6em !important;
+        color: var(--ink);
+        margin-bottom: 0;
+        letter-spacing: -0.03em;
+      }
+      .title-slide .subtitle {
+        font-size: 1.4em;
+        color: var(--accent);
+        font-style: italic;
+        margin: 16px 0 60px 0;
+        max-width: 900px;
+      }
+      .title-slide .authors {
+        font-size: 1.2em;
+        color: var(--ink);
+        margin-top: 60px;
+      }
+      .title-slide .uni {
+        font-size: 0.9em;
+        color: var(--muted);
+        font-style: italic;
+        margin-top: 8px;
+      }
+      .title-slide .links {
+        margin-top: 60px;
+        font-size: 0.7em;
+        color: var(--soft);
+        font-family: "JetBrains Mono", "Consolas", monospace;
+      }
+      .title-slide .accent-bar {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 8px;
+        background: var(--accent);
+      }
+
+      /* Closing thank-you slide */
+      .closing {
+        text-align: center;
+      }
+      .closing h1 {
+        font-size: 6em;
+        color: var(--accent);
+        margin-bottom: 0;
+      }
+      .closing .q {
+        font-size: 2em;
+        font-style: italic;
+        color: var(--muted);
+        margin-top: 16px;
+      }
+      .closing .links-panel {
+        margin-top: 48px;
+        background: var(--panel);
+        border-radius: 12px;
+        padding: 28px;
+        max-width: 720px;
+        margin-left: auto;
+        margin-right: auto;
+        text-align: left;
+      }
+      .closing .links-panel .row {
+        display: grid;
+        grid-template-columns: 120px 1fr;
+        gap: 16px;
+        padding: 8px 0;
+        font-size: 0.7em;
+        align-items: baseline;
+      }
+      .closing .links-panel .label {
+        color: var(--muted);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        font-size: 0.8em;
+      }
+      .closing .links-panel .value {
+        font-family: "JetBrains Mono", "Consolas", monospace;
+        color: var(--accent);
+      }
+
+      /* Two-column layout for limitations */
+      .two-col {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 32px;
+      }
+      .two-col h3 {
+        font-size: 1.1em;
+        margin-top: 0;
+        padding-bottom: 8px;
+        border-bottom: 2px solid var(--border);
+      }
+      .two-col .col-left h3 { color: var(--accent-3); }
+      .two-col .col-right h3 { color: var(--accent-2); }
+      .two-col ul {
+        list-style: none;
+        padding: 0;
+      }
+      .two-col ul li {
+        padding-left: 20px;
+        position: relative;
+        font-size: 0.78em;
+        margin: 12px 0;
+        line-height: 1.5;
+      }
+      .two-col ul li::before {
+        content: "▸";
+        position: absolute;
+        left: 0;
+        color: var(--accent);
+        font-weight: 700;
+      }
+      .two-col ul li b {
+        color: var(--ink);
+      }
+      .two-col ul li .sub {
+        display: block;
+        font-size: 0.85em;
+        font-style: italic;
+        color: var(--muted);
+        margin-top: 2px;
+      }
+
+      /* Worked example row layout */
+      .example-row {
+        display: grid;
+        grid-template-columns: 200px 1fr;
+        gap: 24px;
+        padding: 20px;
+        border-bottom: 1px solid var(--border);
+      }
+      .example-row:last-child { border-bottom: none; }
+      .example-row .row-label {
+        font-weight: 700;
+        font-size: 0.95em;
+      }
+      .example-row .row-label.layer-1 { color: var(--accent); }
+      .example-row .row-label.layer-2 { color: var(--accent-2); }
+      .example-row .row-label.layer-3 { color: var(--accent-3); }
+      .example-row .row-content {
+        font-size: 0.78em;
+      }
+      .example-row .row-content .data {
+        font-family: "JetBrains Mono", "Consolas", monospace;
+        background: var(--panel);
+        padding: 8px 12px;
+        border-radius: 6px;
+        margin-bottom: 8px;
+        display: block;
+        font-size: 0.95em;
+      }
+      .example-row .row-content .quote {
+        font-style: italic;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+
+      /* Pitch slide pipeline */
+      .pipeline {
+        text-align: center;
+        margin: 40px 0;
+      }
+      .pipeline .verbs {
+        font-family: "JetBrains Mono", "Consolas", monospace;
+        font-size: 1.2em;
+        color: var(--accent);
+        font-weight: 700;
+        letter-spacing: 0.02em;
+      }
+      .pipeline .extras {
+        font-family: "JetBrains Mono", "Consolas", monospace;
+        font-size: 0.9em;
+        color: var(--muted);
+        margin-top: 16px;
+      }
+      .pipeline .surfaces {
+        margin-top: 40px;
+        font-size: 0.85em;
+        line-height: 1.8;
+      }
+      .pipeline .surfaces b {
+        color: var(--accent);
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="reveal">
+      <div class="slides">
+        <!-- ========================================================== -->
+        <!-- 1. Title -->
+        <!-- ========================================================== -->
+        <section class="title-slide">
+          <div class="accent-bar"></div>
+          <h1>mlcompass</h1>
+          <div class="subtitle">
+            A Schema-Bounded LLM Narrator for Machine-Learning Pipeline Diagnosis
+          </div>
+          <div class="authors">Hakan Sabuniş &nbsp;·&nbsp; Yusuf Ünlü</div>
+          <div class="uni">Istanbul Medipol University · School of Engineering and Natural Sciences</div>
+          <div class="links">
+            github.com/hakansabunis/mlcompass &nbsp; · &nbsp;
+            pypi.org/project/mlcompass &nbsp; · &nbsp;
+            v0.8.1 · MIT
+          </div>
+        </section>
+
+        <!-- ========================================================== -->
+        <!-- 2. The problem -->
+        <!-- ========================================================== -->
+        <section>
+          <div class="slide-header">
+            <h2>The problem</h2>
+            <span class="slide-num">2 / 13</span>
+          </div>
+          <div class="slide-body">
+            <p class="lede">
+              ML engineering is a chain of single-purpose tools — and none of them advise.
+            </p>
+            <ul>
+              <li>
+                <b>pandas-profiling</b> shows you the data.
+                <span class="sub">It doesn't know which column you're trying to predict.</span>
+              </li>
+              <li class="fragment">
+                <b>Weights &amp; Biases</b> tracks your runs.
+                <span class="sub">It doesn't tell you the loss curve looks like overfitting.</span>
+              </li>
+              <li class="fragment">
+                <b>Copilot, Cursor, Devin</b> complete your code.
+                <span class="sub">They'll happily generate <code>Adam(momentum=0.9)</code> — which is invalid.</span>
+              </li>
+              <li class="fragment">
+                <b>Existing LLM assistants hallucinate.</b>
+                <span class="sub">They invent column names that don't exist and propose fixes for problems that aren't real.</span>
+              </li>
+            </ul>
+          </div>
+          <div class="footer-band">
+            146,932 hallucinated citations were observed across arXiv, bioRxiv, and SSRN in 2025 alone [Zhao et al., 2026].
+          </div>
+        </section>
+
+        <!-- ========================================================== -->
+        <!-- 3. mlcompass in 30 seconds -->
+        <!-- ========================================================== -->
+        <section>
+          <div class="slide-header">
+            <h2>mlcompass in 30 seconds</h2>
+            <span class="slide-num">3 / 13</span>
+          </div>
+          <div class="slide-body">
+            <p class="lede">
+              An open-source CLI that follows you through the whole pipeline — and is allowed to explain but not to invent.
+            </p>
+            <div class="pipeline">
+              <div style="font-weight: 700; font-size: 0.9em; color: var(--muted); margin-bottom: 12px;">
+                Eleven commands covering every pipeline stage
+              </div>
+              <div class="verbs">
+                init &nbsp;→&nbsp; advise &nbsp;→&nbsp; audit &nbsp;→&nbsp; watch &nbsp;→&nbsp; compare &nbsp;→&nbsp; evaluate &nbsp;→&nbsp; deploy
+              </div>
+              <div class="extras">+ &nbsp; status &nbsp; · &nbsp; monitor &nbsp; · &nbsp; optimize &nbsp; · &nbsp; agent</div>
+              <div class="surfaces fragment">
+                <div style="font-weight: 700; color: var(--muted); margin-bottom: 12px;">
+                  Four user-facing surfaces, one tool layer
+                </div>
+                <b>CLI</b> &nbsp;·&nbsp; <b>MCP server</b> (Claude Desktop, Cursor, Claude Code) &nbsp;·&nbsp;
+                <b>Self-driving agent</b> &nbsp;·&nbsp; <b>Slash commands</b>
+              </div>
+            </div>
+          </div>
+          <div class="footer-band">
+            Shared on-disk project context <code>.mlcompass/</code> — remembers what was decided yesterday.
+          </div>
+        </section>
+
+        <!-- ========================================================== -->
+        <!-- 4. System architecture -->
+        <!-- ========================================================== -->
+        <section data-slide="architecture">
+          <div class="slide-header">
+            <h2>System architecture</h2>
+            <span class="slide-num">4 / 13</span>
+          </div>
+          <div class="slide-body">
+            <p class="lede" style="text-align: center;">
+              Three user-facing surfaces sit on top of a two-layer brain over a persistent project-context folder.
+            </p>
+
+            <img src="architecture.webp" alt="mlcompass system architecture: three user-facing surfaces (CLI, MCP server, self-driving agent) on top of a two-layer brain (deterministic tool layer + optional Claude narrator) over a persistent project-context folder." class="arch-image" />
+            <div style="text-align: center; font-size: 0.7em; font-style: italic; color: var(--muted); margin-top: 16px;">
+              Fig. 1.&nbsp; mlcompass system architecture (also Fig. 1 in the paper).
+            </div>
+          </div>
+        </section>
+
+        <!-- ========================================================== -->
+        <!-- 5. The two-layer brain -->
+        <!-- ========================================================== -->
+        <section>
+          <div class="slide-header">
+            <h2>The two-layer brain</h2>
+            <span class="slide-num">5 / 13</span>
+          </div>
+          <div class="slide-body">
+            <p class="lede">
+              Facts come from pure code.&nbsp; Narration comes from a Claude agent on top — never the other way around.
+            </p>
+            <div class="split">
+              <div class="panel deterministic">
+                <h3>Deterministic Tool Layer (pure Python)</h3>
+                <ul>
+                  <li>Reads CSVs with <code>pandas</code></li>
+                  <li>Parses training scripts with <code>ast</code></li>
+                  <li>Computes Pearson + Spearman + perfect-match</li>
+                  <li>Returns structured dict — never free text</li>
+                  <li>Cannot hallucinate by construction</li>
+                </ul>
+                <div class="code-ref">src/mlcompass/tools/</div>
+              </div>
+              <div class="panel narrator fragment">
+                <h3>Optional Claude Narrator (--llm)</h3>
+                <ul>
+                  <li>Receives the dict from below</li>
+                  <li>Explains it in natural language</li>
+                  <li>Runs under a 3-layer contract (next slide)</li>
+                  <li>Bound at call time to the evidence's columns</li>
+                  <li>Skipped entirely with <code>--no-llm</code> (offline path)</li>
+                </ul>
+                <div class="code-ref">src/mlcompass/agents/</div>
+              </div>
+            </div>
+          </div>
+          <div class="footer-band">mlcompass — Capstone Project — Sabuniş &amp; Ünlü</div>
+        </section>
+
+        <!-- ========================================================== -->
+        <!-- 6. The anti-hallucination contract -->
+        <!-- ========================================================== -->
+        <section>
+          <div class="slide-header">
+            <h2>The anti-hallucination contract</h2>
+            <span class="slide-num">6 / 13</span>
+          </div>
+          <div class="slide-body">
+            <p class="lede" style="text-align: center;">
+              Three layers.&nbsp; Each one alone is weak.&nbsp; Together they are strict.
+            </p>
+            <div class="cards">
+              <div class="card layer-1">
+                <span class="layer-tag">Layer 1</span>
+                <h3>Deterministic evidence</h3>
+                <ul>
+                  <li>Pure Python. No LLM.</li>
+                  <li>Computes <code>max(|ρ_P|, |ρ_S|)</code>.</li>
+                  <li>Emits a dict <i>E</i> of candidate leak columns.</li>
+                </ul>
+              </div>
+              <div class="card layer-2 fragment">
+                <span class="layer-tag">Layer 2</span>
+                <h3>Strict prompt</h3>
+                <ul>
+                  <li>Cite only items in <i>E</i>.</li>
+                  <li>Say <code>cannot_determine</code> when unsure.</li>
+                  <li>No code patches — manual checks only.</li>
+                </ul>
+              </div>
+              <div class="card layer-3 fragment">
+                <span class="layer-tag">Layer 3</span>
+                <h3>Runtime schema boundary</h3>
+                <ul>
+                  <li>Tool-input enum is generated from <i>E</i>.</li>
+                  <li>SDK rejects any out-of-evidence column.</li>
+                  <li>Worst-case guarantee, not just guidance.</li>
+                </ul>
+              </div>
+            </div>
+            <div class="callout fragment">
+              <span class="label">Lesson</span>
+              Prompts are <i>advisory</i>.&nbsp; Schemas are <i>enforcement</i>.
+            </div>
+          </div>
+          <div class="footer-band">mlcompass — Capstone Project — Sabuniş &amp; Ünlü</div>
+        </section>
+
+        <!-- ========================================================== -->
+        <!-- 7. Worked example -->
+        <!-- ========================================================== -->
+        <section>
+          <div class="slide-header">
+            <h2>Worked example — Ames House Prices</h2>
+            <span class="slide-num">7 / 13</span>
+          </div>
+          <div class="slide-body">
+            <p class="lede">
+              A user accidentally includes <code>log_price</code> when training a model to predict <code>saleprice</code>.&nbsp; R² = 1.000.
+            </p>
+            <div style="background: var(--panel); border-radius: 12px; padding: 8px 24px;">
+              <div class="example-row">
+                <div class="row-label layer-1">Layer 1 — Evidence</div>
+                <div class="row-content">
+                  <span class="data">Pearson ρ_P(log_price, y) ≈ 0.94 &nbsp;·&nbsp; Spearman ρ_S = 1.00 &nbsp;·&nbsp; perfect-match 98.7 %</span>
+                  <span class="quote">→ <code>log_price</code> flagged as candidate (max correlation = 1.00 ≥ threshold 0.97).</span>
+                </div>
+              </div>
+              <div class="example-row fragment">
+                <div class="row-label layer-2">Layer 2 — Narrator</div>
+                <div class="row-content">
+                  <span class="quote">
+                    "<code>log_price</code> has Spearman = 1.00 with the target — almost certainly a transformed leak.<br />
+                    Recommend manually checking the feature pipeline for any column derived from the target."
+                  </span>
+                </div>
+              </div>
+              <div class="example-row fragment">
+                <div class="row-label layer-3">Layer 3 — Boundary</div>
+                <div class="row-content">
+                  <span class="data">columns_referenced enum = {log_price, feature_3, …, feature_12}</span>
+                  <span class="quote">
+                    <code>log_price</code> ∈ enum → response ships.&nbsp;
+                    If the LLM had emitted <code>revenue</code>, SDK would reject and retry.
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="footer-band">mlcompass — Capstone Project — Sabuniş &amp; Ünlü</div>
+        </section>
+
+        <!-- ========================================================== -->
+        <!-- 8. Results — Table I -->
+        <!-- ========================================================== -->
+        <section>
+          <div class="slide-header">
+            <h2>Results — phantom-column fabrication rate</h2>
+            <span class="slide-num">8 / 13</span>
+          </div>
+          <div class="slide-body">
+            <p class="lede">
+              Synthetic regression test set.&nbsp; N = 200 narrator responses per configuration.&nbsp; Claude 3.5 Sonnet.
+            </p>
+            <table class="results-table">
+              <thead>
+                <tr>
+                  <th>Configuration</th>
+                  <th>Rate</th>
+                  <th>Wilson 95% CI</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Layer 1 only &nbsp; <span style="color: var(--muted); font-size: 0.85em;">(no prompt, no schema)</span></td>
+                  <td class="rate">8.0 %</td>
+                  <td class="ci">[ 4.93 , 12.66 ]</td>
+                </tr>
+                <tr class="fragment">
+                  <td>Layer 1 + 2 &nbsp; <span style="color: var(--muted); font-size: 0.85em;">(strict prompt)</span></td>
+                  <td class="rate">1.0 %</td>
+                  <td class="ci">[ 0.27 , 3.56 ]</td>
+                </tr>
+                <tr class="fragment zero">
+                  <td>Layer 1 + 2 + 3 &nbsp; <span style="color: var(--muted); font-size: 0.85em;">(schema-enforced)</span></td>
+                  <td class="rate">0.0 %</td>
+                  <td class="ci">[ 0.00 , 1.83 ]</td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="callout fragment">
+              <span class="label">Takeaway</span>
+              Prompt engineering reduces fabrication 8× (8.0 % → 1.0 %), but does not eliminate it.&nbsp;
+              The runtime schema boundary brings the observed rate to 0 — a <b>worst-case guarantee</b>, not just an average.
+            </div>
+          </div>
+          <div class="footer-band">mlcompass — Capstone Project — Sabuniş &amp; Ünlü</div>
+        </section>
+
+        <!-- ========================================================== -->
+        <!-- 9. Field tests -->
+        <!-- ========================================================== -->
+        <section>
+          <div class="slide-header">
+            <h2>Field tests — 5 Kaggle datasets, 11 real bugs</h2>
+            <span class="slide-num">9 / 13</span>
+          </div>
+          <div class="slide-body">
+            <p class="lede">
+              Every release dry-ran on a real Kaggle dataset before shipping.&nbsp; Each bug locked in by a regression test.
+            </p>
+            <table class="fieldtests">
+              <thead>
+                <tr>
+                  <th class="center" style="width: 60px;">Test</th>
+                  <th>Dataset</th>
+                  <th class="center" style="width: 100px;">Patch</th>
+                  <th>Bugs caught</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>1</td><td>Telco Churn</td><td class="center">—</td><td><i>baseline — pipeline runs end-to-end</i></td></tr>
+                <tr class="fragment"><td>2</td><td>Ames House Prices</td><td class="center">v0.7.0</td><td>missing target name &nbsp;·&nbsp; year column &nbsp;·&nbsp; sparse-column crash</td></tr>
+                <tr class="fragment"><td>3</td><td>Titanic</td><td class="center">v0.7.1</td><td>missing 'survived' target name</td></tr>
+                <tr class="fragment"><td>4</td><td>Penguins</td><td class="center">v0.7.2</td><td>multiclass mis-detected &nbsp;·&nbsp; MCP ledger gap</td></tr>
+                <tr class="fragment"><td>5</td><td>Insurance Charges</td><td class="center">v0.7.3</td><td>missing 'charges' target &nbsp;·&nbsp; MCP active-state gap</td></tr>
+              </tbody>
+            </table>
+            <div class="callout fragment">
+              <span class="label">Lesson</span>
+              Real datasets find bugs synthetic ones don't — none of the 11 bugs had been anticipated by our unit-test suite.
+            </div>
+          </div>
+          <div class="footer-band">mlcompass — Capstone Project — Sabuniş &amp; Ünlü</div>
+        </section>
+
+        <!-- ========================================================== -->
+        <!-- 10. Live demo -->
+        <!-- ========================================================== -->
+        <section>
+          <div class="slide-header">
+            <h2>Live demo</h2>
+            <span class="slide-num">10 / 13</span>
+          </div>
+          <div class="slide-body">
+            <p class="lede">
+              Switch to a terminal.&nbsp; Run the following four commands on the Insurance Charges Kaggle dataset.
+            </p>
+            <div class="terminal">
+              <span class="prompt">$</span> <span class="cmd">mlcompass init insurance-demo</span>
+              <span class="comment"># → creates .mlcompass/ project folder</span>
+
+              <span class="prompt">$</span> <span class="cmd">mlcompass advise data/insurance.csv</span>
+              <span class="comment"># → infers target = 'charges', warns about smoker imbalance</span>
+
+              <span class="prompt">$</span> <span class="cmd">mlcompass evaluate predictions.csv</span>
+              <span class="comment"># → R² = 1.000 detected → automatic leakage panel fires</span>
+
+              <span class="prompt">$</span> <span class="cmd">mlcompass status</span>
+              <span class="comment"># → summarizes every decision so far across CLI + MCP</span>
+            </div>
+          </div>
+          <div class="footer-band">
+            If terminal access fails: show a screen recording of the same run, saved beforehand.
+          </div>
+        </section>
+
+        <!-- ========================================================== -->
+        <!-- 11. Challenges -->
+        <!-- ========================================================== -->
+        <section>
+          <div class="slide-header">
+            <h2>Challenges we faced</h2>
+            <span class="slide-num">11 / 13</span>
+          </div>
+          <div class="slide-body">
+            <p class="lede">Four problems we hit, and what we learned from each one.</p>
+            <ul>
+              <li>
+                <b>Prompt engineering wasn't enough.</b>
+                <span class="sub">
+                  We spent a week trying to make the LLM stop fabricating columns through prompts alone.&nbsp;
+                  Got from 8 % to 1 %.&nbsp; Still wrong 1 % of the time.&nbsp;
+                  Fix: enforce at the schema layer, not the prompt layer.
+                </span>
+              </li>
+              <li class="fragment">
+                <b>CLI and MCP server drifted apart.</b>
+                <span class="sub">
+                  Same underlying functions, different behavior.&nbsp;
+                  CLI was writing to the ledger, MCP wasn't.&nbsp;
+                  Shipped a shared <code>_persist_to_ledger</code> helper + parity regression tests in v0.7.2 and v0.7.3.
+                </span>
+              </li>
+              <li class="fragment">
+                <b>Synthetic unit tests missed real bugs.</b>
+                <span class="sub">
+                  Eleven bugs surfaced from five Kaggle datasets — zero predicted from our pre-existing test suite.&nbsp;
+                  Moved to a field-test-then-patch release cadence.
+                </span>
+              </li>
+              <li class="fragment">
+                <b>Reviewer feedback on the paper.</b>
+                <span class="sub">
+                  Three peer reviewers identified weak statistical claims, missing baselines, implicit threat model.&nbsp;
+                  Released v0.8.1 with Wilson 95 % CIs, reproducibility scripts, threat model doc, limitations doc.
+                </span>
+              </li>
+            </ul>
+          </div>
+          <div class="footer-band">mlcompass — Capstone Project — Sabuniş &amp; Ünlü</div>
+        </section>
+
+        <!-- ========================================================== -->
+        <!-- 12. Limitations + Future Work -->
+        <!-- ========================================================== -->
+        <section>
+          <div class="slide-header">
+            <h2>Limitations &nbsp;+&nbsp; future work</h2>
+            <span class="slide-num">12 / 13</span>
+          </div>
+          <div class="slide-body">
+            <div class="two-col">
+              <div class="col-left">
+                <h3>What we did NOT measure</h3>
+                <ul>
+                  <li>
+                    <b>Cross-model generalization</b>
+                    <span class="sub">All experiments use Claude 3.5 Sonnet.&nbsp; GPT-4, Llama-3, Gemini unverified.</span>
+                  </li>
+                  <li>
+                    <b>Constrained-generation baseline</b>
+                    <span class="sub">No direct benchmark against Outlines or OpenAI <code>strict: true</code>.</span>
+                  </li>
+                  <li>
+                    <b>External user study</b>
+                    <span class="sub">Used by authors + classmates only.&nbsp; No third-party evaluation.</span>
+                  </li>
+                  <li>
+                    <b>Other hallucination types</b>
+                    <span class="sub">Miscalibrated confidence, prompt injection — out of scope.</span>
+                  </li>
+                </ul>
+              </div>
+              <div class="col-right">
+                <h3>Planned for v0.9 / v1.0</h3>
+                <ul>
+                  <li>
+                    <b>OpenAI backend</b>
+                    <span class="sub">Repeat Table I on GPT-4 + <code>strict: true</code>.&nbsp; Report cross-provider rates.</span>
+                  </li>
+                  <li>
+                    <b>Outlines benchmark</b>
+                    <span class="sub">Same task through Outlines on Llama-3-8B.&nbsp; Side-by-side fabrication rates.</span>
+                  </li>
+                  <li>
+                    <b>N = 2000 live run</b>
+                    <span class="sub">Tightens Wilson CIs.&nbsp; Reproducible via <code>scripts/reproduce_hallucination_ablation.py</code>.</span>
+                  </li>
+                  <li>
+                    <b>Plug-in system</b>
+                    <span class="sub">Domain-specific analyzers (HuggingFace, PyTorch Lightning) without modifying core.</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="footer-band">mlcompass — Capstone Project — Sabuniş &amp; Ünlü</div>
+        </section>
+
+        <!-- ========================================================== -->
+        <!-- 13. Thank you -->
+        <!-- ========================================================== -->
+        <section>
+          <div class="closing">
+            <h1>Thank you</h1>
+            <div class="q">Questions?</div>
+            <div class="links-panel">
+              <div class="row">
+                <div class="label">Project</div>
+                <div class="value">github.com/hakansabunis/mlcompass</div>
+              </div>
+              <div class="row">
+                <div class="label">Install</div>
+                <div class="value">pip install mlcompass</div>
+              </div>
+              <div class="row">
+                <div class="label">Paper</div>
+                <div class="value">paper/Capstone_Report.pdf</div>
+              </div>
+              <div class="row">
+                <div class="label">Authors</div>
+                <div class="value" style="font-family: inherit;">Hakan Sabuniş &nbsp;·&nbsp; Yusuf Ünlü</div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reveal.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/plugin/highlight/highlight.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/plugin/notes/notes.js"></script>
+
+    <script>
+      Reveal.initialize({
+        width: 1280,
+        height: 800,
+        margin: 0.04,
+        hash: true,
+        transition: "slide",
+        transitionSpeed: "default",
+        backgroundTransition: "fade",
+        slideNumber: false,
+        controls: true,
+        progress: true,
+        center: false,
+        plugins: [RevealHighlight, RevealNotes],
+      });
+    </script>
+  </body>
+</html>

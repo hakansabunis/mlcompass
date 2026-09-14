@@ -1,0 +1,112 @@
+--------------------------------------------------------  Call for papers ---------------------------------------------------------------
+           The 20th International Conference on INnovation in Intelligent SysTems and Applications (INISTA 2025)
+                                                    17-19 September 2026
+                                                    Guimarães, Portugal
+				                     https://inista.org
+                          Technically co-sponsored by IEEE Computational Intelligence Portugal Chapter and LASI
+
+
+
+The International Conference on Innovations in Intelligent Systems and Applications (INISTA) has been organized since 2005. It aims to bring 
+together researchers from the entire spectrum of the multi-disciplinary fields of intelligent systems and to establish effective means of 
+communication between them. In particular, it focuses on all aspects of intelligent systems and the related applications, from the points of
+ view of both theory and practice.
+
+Apart from the main track, it includes workshops, tutorials, special tracks, and plenary talks by invited speakers.
+
+Topics
+----------
+The topics of interest cover the entire spectrum of the multi-disciplinary fields of intelligent systems and related applications. 
+The topics of interest include, but are not limited to:
+
+o	Agentic AI
+o	Artificial Intelligence Algorithms
+o	Artificial Intelligence Applications
+o	Artificial Neural Networks
+o	Autonomous systems
+o	Bioinformatics
+o	Big Data Applications, Algorithms, and Systems
+o	Cloud / Edge / Fog Computing
+o	Computational and Data Science
+o	Data Mining
+o	Data Hiding
+o	Deep Learning
+o	Distributed Intelligence
+o	Ensemble Learning
+o	Evolutionary Computation
+o	Expert Systems
+o	Fuzzy Logic
+o	Generative AI
+o	Genetic Algorithms
+o	Hardware Implementations
+o	Human-Computer Interaction
+o	Humanoid Robotics
+o	Hybrid Intelligence
+o	Intelligent Agents
+o	Intelligent Healthcare
+o	Intelligent and Smart Education
+o	Internet of Things (IoT)
+o	Machine Learning
+o	Multiagent Systems
+o	Natural Language Processing
+o	Swarm Intelligence
+o	Virtual, Augmented and Mixed Reality
+o	Smart Wearables
+o	Swarm Intelligence
+o	Text Mining
+o	Virtual, Augmented, and Mixed Reality
+
+
+
+Guidelines 
+---------------------
+Template: Papers must be prepared using IEEE templates for conference proceedings.
+Papers have a maximum page limit of 6 pages including references and graphs. 
+INISTA will offer the option to buy a limited number of extra pages for submission.
+The official language for the conference is English. Less than satisfactory English usage may form the sole basis for rejection of a paper and omission of any such final paper version from the conference proceedings. Authors whose native language is not English are encouraged to check their papers for proper English spelling and grammar using tools such as English grammar checkers available with most word processing application software. Alternatively, proofreading support from a native English-speaking colleague or technical editor may suffice. Some authors may be interested in the paid service available at the following link: http://www.prof-editing.com/ieee/ for the final version of the paper.
+All papers should be submitted via Easychair: https://easychair.org/conferences/?conf=inista2026
+
+
+
+Important Dates for Main Conference:
+---------------------------------------
+- Regular paper submission deadline : 15th June, 2026
+- Notification to authors: 10th July, 2026
+- Camera-ready and copyright submission deadline : 25th July, 2026
+- Authors registration deadline: 25th July, 2026
+
+Important Dates for Special Tracks
+-----------------------------------
+- Special Tracks Submission: 1st May, 2026
+- Special Tracks Notification of Acceptance: 15th May, 2026
+
+Important Dates for Phd Workshops
+------------------------------------
+- Paper proposals due: 20th May, 2026
+- Notification of acceptance: 31st May, 2026
+
+
+Publication 
+---------------------
+Accepted papers will appear in the conference proceedings (IEEE XPlore), and be indexed in the Web of Science Core Collection databases. 
+The authors of selected best papers will be invited to extend their contributions for special issues.
+
+General chairs
+-------------------
+Dalila Durães, University of Minho, Portugal
+Manuel Rodrigues, University of Minho, Portugal
+Tulay Yildirim, Yildiz Technical University, Turkey
+
+Program chairs
+-------------------
+Fernando De La Prieta, University of Salamanca, Spain
+Gianni Vercelli, University of Genoa, Italy
+Pedro Oliveira, University of Minho, Portugal
+
+Organization chairs
+-------------------
+David Camacho, Universidad Politécnica de Madrid, Spain 
+Richard Chbeir, IUT de Bayonne et du Pays Basque, France
+Costin Badica, University of Craiova, Romania
+Paulo Novais, University of Minho, Portugal
+José Machado, University of Minho, Portugal
