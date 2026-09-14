@@ -5,13 +5,26 @@ history and returns a list of :class:`Finding` for the *current end of
 history* — i.e., they are stateless and idempotent, designed to be
 re-called whenever a new snapshot arrives during ``watch --follow``.
 
-The four v0.2 detectors:
+The four v0.2 detectors. Note that every window below counts *snapshots*
+(parsed log records), not epochs — a script that logs per step and one
+that logs per epoch present the same run to these rules at very
+different resolutions:
 
-* :func:`detect_nan` — any loss-like metric is NaN or ±Inf
-* :func:`detect_divergence` — train loss grows >10× between consecutive epochs
-* :func:`detect_plateau` — primary metric flat across the last N epochs
+* :func:`detect_nan` — any loss-like metric is NaN or ±Inf, in the
+  final snapshot only; an earlier NaN that is followed by any snapshot
+  without a NaN loss (including a trailing summary line such as
+  ``Total time: 412.30``) is not reported
+* :func:`detect_divergence` — train loss grows >= ratio_threshold×
+  between the last two snapshots that carry a train loss; earlier jumps
+  in the history are not examined, and non-positive losses are skipped
+* :func:`detect_plateau` — primary loss flat across the last ``window``
+  snapshots, which must *each* carry the value (a single interleaved
+  snapshot without it disables the rule for that window)
 * :func:`detect_overfitting` — train loss falling while val loss rising,
-  with a meaningful train/val gap
+  with a meaningful train/val gap. The two series are windowed
+  independently, so when val is logged less often than train the two
+  windows span different numbers of epochs, and ``gap_threshold`` is an
+  absolute loss value, not a relative one
 """
 
 from __future__ import annotations

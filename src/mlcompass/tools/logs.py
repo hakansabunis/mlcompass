@@ -5,12 +5,20 @@ format the great majority of pyTorch / TensorFlow training scripts emit
 out of the box — and turns it into ``MetricSnapshot`` records that the
 anomaly detectors can consume.
 
-The parser is intentionally lenient: it accepts ``key=value``,
-``key: value``, and ``key value`` pairs, with or without commas, and
-recognises the most common epoch / step markers. Lines that don't
-contain anything metric-shaped are ignored.
+The parser accepts ``key=value`` and ``key: value`` pairs, with or
+without commas, and recognises the most common epoch / step markers.
+Lines that don't contain anything metric-shaped are ignored.
 
-TensorBoard event files and W&B local caches are scheduled for v0.2.1.
+A separator is required: ``_KV_RE`` below matches only ``[:=]``, so
+whitespace-separated ``key value`` pairs (``loss 0.41``, the nanoGPT
+style) yield no metrics. Values must also be plain Python float
+literals — ``nan``/``NaN``/``inf``/``Inf`` are recognised, ``NAN`` and
+``-Infinity`` are not, and a value carrying a thousands separator
+(``1,000.0``) is truncated at the separator.
+
+TensorBoard event files and W&B local caches are handled by
+:func:`load_snapshots` below, which dispatches to ``tools.tensorboard``
+and ``tools.wandb_local``.
 """
 
 from __future__ import annotations
