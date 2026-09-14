@@ -14,6 +14,12 @@ The registry intentionally classifies each tool as ``mutates`` or not.
 The orchestrator's permission gate consults this flag to decide whether
 to ask the user before dispatch (mutating tools require confirmation
 unless ``--auto-approve`` is set).
+
+``mutates=False`` means the tool does not touch your data. It does not
+mean the tool writes nothing: every tool appends to the active
+project's audit ledger. That write is confined to the active project —
+never to one a path argument names — by the boundary in
+:mod:`mlcompass.mcp_server`.
 """
 
 from __future__ import annotations

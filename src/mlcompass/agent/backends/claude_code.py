@@ -77,8 +77,10 @@ class ClaudeCodeBackend:
             _context: Any,
         ) -> Any:
             spec = BY_NAME.get(_strip_namespace(tool_name))
-            # Read-only tools auto-allow; the SDK still calls us so we
-            # can record the event, but we never block them.
+            # Read-only tools are in ``allowed_tools`` below, so the SDK
+            # runs them without ever calling us. If one arrives anyway
+            # (unknown name, SDK change), allow it — the gate is for
+            # mutation, not for reads.
             if spec is None or not spec.mutates:
                 return sdk.PermissionResultAllow()
             allowed = on_permission(_strip_namespace(tool_name), tool_input)
@@ -89,9 +91,17 @@ class ClaudeCodeBackend:
                 interrupt=False,
             )
 
+        # Only the read-only tools go in ``allowed_tools``. Per the SDK's
+        # own contract, a tool listed there is "auto-allowed without
+        # prompting for permission" and ``can_use_tool`` is NOT invoked
+        # for it — so listing the mutating tool would make the callback
+        # above dead code for the one tool it exists to gate. Withholding
+        # ``mlcompass_init`` is what routes it through the callback.
         options = sdk.ClaudeAgentOptions(
             mcp_servers={"mlcompass": mcp_server},
-            allowed_tools=[f"mcp__mlcompass__{spec.name}" for spec in TOOL_REGISTRY],
+            allowed_tools=[
+                f"mcp__mlcompass__{spec.name}" for spec in TOOL_REGISTRY if not spec.mutates
+            ],
             system_prompt=system_prompt or SYSTEM_PROMPT,
             model=model,
             max_turns=max_turns,

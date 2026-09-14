@@ -22,8 +22,14 @@ Design notes:
       surface; the calling LLM (Claude) is the interpreter, and asking
       it to call a tool that in turn calls Claude would be both wasteful
       and confusing.
-    - All tools are read- or compute-only with one deliberate exception:
-      ``mlcompass_init`` creates a ``.mlcompass/`` directory.
+    - All tools are read- or compute-only on *your* data. The one
+      exception is ``mlcompass_init``, which creates a ``.mlcompass/``
+      directory.
+    - Every tool does append to the project's audit ledger (decisions,
+      ``advice.log``, active-state fields). Those writes go only to the
+      **active** project — the one found by walking up from this
+      process's working root. A path argument never chooses the write
+      target; see "The write boundary" below.
     - ``watch --apply`` is intentionally not exposed. Config-mutating
       operations need a confirm channel that MCP doesn't standardise;
       use the CLI for those.
@@ -35,6 +41,9 @@ import contextlib
 import json
 import math
 from collections import Counter
+from collections.abc import Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from pathlib import Path
 from typing import Any, cast
 
@@ -119,23 +128,116 @@ def _error(exc: BaseException) -> dict[str, Any]:
 # server, which broke the parity contract between the CLI and MCP
 # surfaces.
 #
-# Fix: a small helper that locates the active project (walks up from
-# the supplied path) and, if one is found, appends both a decision
-# entry and an advice.log line. Missing project ⇒ silent skip — we
-# don't want the MCP tool to fail just because the user hasn't run
-# ``mlcompass_init`` yet.
+# Fix: a small helper that locates the active project and, if one is
+# found, appends both a decision entry and an advice.log line. Missing
+# project ⇒ silent skip — we don't want the MCP tool to fail just
+# because the user hasn't run ``mlcompass_init`` yet.
+#
+# --------------------------------------------------------------------- #
+# The write boundary                                                    #
+# --------------------------------------------------------------------- #
+#
+# Until this was fixed, the ledger target was resolved by walking up
+# from whatever *path argument* the caller passed. Six tools declared
+# ``mutates=False`` — advise, audit, watch, compare, evaluate, deploy —
+# so the permission gate was never consulted for them, yet a single
+# ``advise`` naming a file inside another mlcompass project wrote into
+# that project. No ``..`` required; just a path.
+#
+# The rule now:
+#
+#   Ledger writes always target the ACTIVE project — the one found by
+#   walking up from this process's own working root (``--project-path``
+#   for ``mlcompass agent``, the process CWD for ``mlcompass-mcp``). A
+#   path argument never selects a write target. If a path argument
+#   resolves to a *different* project, the write is refused and the
+#   tool result carries a ``ledger`` note saying so.
+#
+# Refusing rather than prompting is deliberate: ``_persist_to_ledger``
+# runs deep inside the tool body, below the permission callback, with
+# no confirm channel reachable from there. A refusal the caller can see
+# beats a prompt that cannot be asked.
+
+_LEDGER_ROOT: ContextVar[str | None] = ContextVar("mlcompass_ledger_root", default=None)
+
+
+def set_ledger_root(path: str | Path | None) -> Any:
+    """Bind the active-project root for ledger writes. Returns a reset token."""
+    return _LEDGER_ROOT.set(str(path) if path is not None else None)
+
+
+@contextmanager
+def ledger_root(path: str | Path) -> Iterator[None]:
+    """Scope ledger writes to the project containing ``path``."""
+    token = set_ledger_root(path)
+    try:
+        yield
+    finally:
+        _LEDGER_ROOT.reset(token)
+
+
+def _load_project(search_from: str | Path) -> ProjectContext | None:
+    """Walk up from ``search_from`` for a project; ``None`` if there is none."""
+    try:
+        return ProjectContext.load(search_from=search_from)
+    except ProjectNotFoundError:
+        return None
+    except Exception:  # noqa: BLE001 — defensive
+        return None
+
+
+def active_project() -> ProjectContext | None:
+    """The one project this process is allowed to write to, if any."""
+    root = _LEDGER_ROOT.get()
+    return _load_project(root if root is not None else Path.cwd())
+
+
+def _resolve_ledger_target(
+    argument_path: str | None,
+) -> tuple[ProjectContext | None, dict[str, Any] | None]:
+    """Pick the write target, or explain why there isn't one.
+
+    Returns ``(project, note)``. ``note`` is non-``None`` only when a
+    write was *refused* because the caller's path argument pointed into
+    a different project — the case worth telling the caller about.
+    """
+    active = active_project()
+
+    if argument_path is not None:
+        named = _load_project(_path_dir(argument_path))
+        if named is not None and (active is None or named.path != active.path):
+            return None, {
+                "written": False,
+                "reason": "cross-project",
+                "active_project": str(active.path.parent) if active else None,
+                "argument_project": str(named.path.parent),
+                "message": (
+                    "Refused to write the ledger into a project chosen by a "
+                    "path argument. mlcompass records activity only in the "
+                    "active project (the one containing this agent's "
+                    "--project-path, or the server's working directory). "
+                    "Run mlcompass from that project if you meant to record "
+                    "this there."
+                ),
+            }
+
+    return active, None
 
 
 def _persist_to_ledger(
     *,
-    search_from: str,
+    argument_path: str | None,
     command: str,
     summary: str,
     reasoning: str = "",
     log_extra: dict[str, Any] | None = None,
     state_updates: dict[str, Any] | None = None,
-) -> None:
+) -> dict[str, Any] | None:
     """Append a decision + advice.log entry to the active project, if any.
+
+    ``argument_path`` is the user-supplied path this call was about. It
+    is used **only** to detect a cross-project attempt — never to choose
+    the write target. Pass ``None`` when the call carries no path.
 
     Optional ``state_updates`` writes through ``ProjectContext.write_context``
     so the MCP layer keeps the same active-state fields (``project_type``,
@@ -144,15 +246,13 @@ def _persist_to_ledger(
     tools left these fields ``null`` even after a full ``advise`` →
     ``evaluate`` pass, breaking parity between the CLI and MCP surfaces.
 
+    Returns a ``ledger`` note when the write was refused, else ``None``.
     All writes are best-effort. The ledger is a "nice to have" — never
     the reason a tool fails.
     """
-    try:
-        project = ProjectContext.load(search_from=search_from)
-    except ProjectNotFoundError:
-        return
-    except Exception:  # noqa: BLE001 — defensive
-        return
+    project, note = _resolve_ledger_target(argument_path)
+    if project is None:
+        return note
 
     with contextlib.suppress(Exception):
         project.append_decision(
@@ -181,6 +281,8 @@ def _persist_to_ledger(
             if cleaned:
                 project.write_context(cleaned)
 
+    return None
+
 
 def _path_dir(path: str) -> str:
     """Return the parent directory of ``path`` (or ``path`` itself if it's a dir)."""
@@ -188,6 +290,21 @@ def _path_dir(path: str) -> str:
     if p.is_dir():
         return str(p)
     return str(p.parent or Path("."))
+
+
+def _with_ledger_note(
+    result: dict[str, Any],
+    note: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Attach a refusal note to a tool result, if there was one.
+
+    The happy path keeps its existing shape — the key appears only when
+    a write was refused, so the caller can tell a recorded run from an
+    unrecorded one instead of wondering why ``status`` is empty.
+    """
+    if note is not None:
+        result["ledger"] = note
+    return result
 
 
 # --------------------------------------------------------------------------- #
@@ -374,21 +491,24 @@ def mlcompass_advise(
         f"({shape.get('rows', '?')}×{shape.get('cols', '?')})"
     )
     # v0.7.3: persist active-state fields so `mlcompass_status` lines
-    # up with what the CLI shows.
+    # up with what the CLI shows. The dataset record is a ledger write
+    # like any other, so it goes to the active project — never to one
+    # the dataset path happens to sit inside.
     dataset_fingerprint: str | None = None
-    with contextlib.suppress(Exception):
-        proj = ProjectContext.load(search_from=_path_dir(dataset_path))
-        dataset_fingerprint = proj.register_dataset(
-            dataset_path,
-            {
-                "target": target_hint.get("column"),
-                "task": task_hint.get("type"),
-                "shape": shape,
-            },
-        )
+    target_project, _ = _resolve_ledger_target(dataset_path)
+    if target_project is not None:
+        with contextlib.suppress(Exception):
+            dataset_fingerprint = target_project.register_dataset(
+                dataset_path,
+                {
+                    "target": target_hint.get("column"),
+                    "task": task_hint.get("type"),
+                    "shape": shape,
+                },
+            )
 
-    _persist_to_ledger(
-        search_from=_path_dir(dataset_path),
+    note = _persist_to_ledger(
+        argument_path=dataset_path,
         command="advise",
         summary=summary,
         reasoning=f"dataset={dataset_path}; via=mcp",
@@ -406,7 +526,7 @@ def mlcompass_advise(
             ),
         },
     )
-    return cast(dict[str, Any], _json_safe(result))
+    return _with_ledger_note(cast(dict[str, Any], _json_safe(result)), note)
 
 
 @mcp.tool()
@@ -442,14 +562,14 @@ def mlcompass_audit(
         f"{counts.get('warning', 0)} warning, "
         f"{counts.get('info', 0)} info"
     )
-    _persist_to_ledger(
-        search_from=_path_dir(script_path),
+    note = _persist_to_ledger(
+        argument_path=script_path,
         command="audit",
         summary=summary,
         reasoning=f"script={script_path}; via=mcp",
         log_extra={"script": script_path, "findings": len(findings), "via": "mcp"},
     )
-    return result
+    return _with_ledger_note(result, note)
 
 
 @mcp.tool()
@@ -490,8 +610,8 @@ def mlcompass_watch(log_path: str) -> dict[str, Any]:
         f"Watch ({source}): {len(findings)} finding(s) "
         f"[{counts.get('error', 0)}e/{counts.get('warning', 0)}w]"
     )
-    _persist_to_ledger(
-        search_from=_path_dir(log_path),
+    note = _persist_to_ledger(
+        argument_path=log_path,
         command="watch",
         summary=summary,
         reasoning=f"log={log_path}; source={source}; via=mcp",
@@ -504,14 +624,19 @@ def mlcompass_watch(log_path: str) -> dict[str, Any]:
         },
     )
 
-    return {
-        "ok": True,
-        "source": source,
-        "snapshot_count": len(snapshots),
-        "last_epoch": last_epoch,
-        "metrics": [_json_safe({"epoch": s.epoch, "step": s.step, **s.metrics}) for s in snapshots],
-        "findings": [f.to_dict() for f in findings],
-    }
+    return _with_ledger_note(
+        {
+            "ok": True,
+            "source": source,
+            "snapshot_count": len(snapshots),
+            "last_epoch": last_epoch,
+            "metrics": [
+                _json_safe({"epoch": s.epoch, "step": s.step, **s.metrics}) for s in snapshots
+            ],
+            "findings": [f.to_dict() for f in findings],
+        },
+        note,
+    )
 
 
 @mcp.tool()
@@ -564,15 +689,15 @@ def mlcompass_compare(
             winning_run = run_a
         elif verdict.get("winner") == "B":
             winning_run = run_b
-    _persist_to_ledger(
-        search_from=project_path or ".",
+    note = _persist_to_ledger(
+        argument_path=project_path,
         command="compare",
         summary=summary,
         reasoning=f"run_a={run_a}; run_b={run_b}; via=mcp",
         log_extra={"run_a": run_a, "run_b": run_b, "via": "mcp"},
         state_updates={"current_run": winning_run} if winning_run else None,
     )
-    return cast(dict[str, Any], _json_safe(comparison))
+    return _with_ledger_note(cast(dict[str, Any], _json_safe(comparison)), note)
 
 
 @mcp.tool()
@@ -624,8 +749,8 @@ def mlcompass_evaluate(
     headline = ", ".join(f"{k}={v}" for k, v in list(metrics.items())[:3]) or "no metrics"
     smell = " [LEAKAGE-SMELL]" if leakage else ""
     summary = f"Evaluate ({inferred_task}): {headline}{smell}"
-    _persist_to_ledger(
-        search_from=_path_dir(results_path),
+    note = _persist_to_ledger(
+        argument_path=results_path,
         command="evaluate",
         summary=summary,
         reasoning=f"results={results_path}; via=mcp",
@@ -637,7 +762,7 @@ def mlcompass_evaluate(
             "via": "mcp",
         },
     )
-    return cast(dict[str, Any], _json_safe(result))
+    return _with_ledger_note(cast(dict[str, Any], _json_safe(result)), note)
 
 
 @mcp.tool()
@@ -682,8 +807,8 @@ def mlcompass_deploy(
         f"{model_info.get('size_class', '')}, "
         f"{len(warnings)} warning(s)"
     )
-    _persist_to_ledger(
-        search_from=_path_dir(model_path),
+    note = _persist_to_ledger(
+        argument_path=model_path,
         command="deploy",
         summary=summary,
         reasoning=f"model={model_path}; target={target}; via=mcp",
@@ -694,7 +819,7 @@ def mlcompass_deploy(
             "via": "mcp",
         },
     )
-    return cast(dict[str, Any], _json_safe(result))
+    return _with_ledger_note(cast(dict[str, Any], _json_safe(result)), note)
 
 
 # --------------------------------------------------------------------------- #

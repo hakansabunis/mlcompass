@@ -17,6 +17,7 @@ from typing import Any
 from rich.console import Console
 
 from ..context import ProjectContext, ProjectNotFoundError
+from ..mcp_server import ledger_root
 from .backends import AgentBackend, AgentResult, AgentStep, PermissionCallback
 from .backends.anthropic_api import AnthropicAPIBackend
 from .backends.claude_code import ClaudeCodeBackend
@@ -140,14 +141,20 @@ def run_agent(
             if extra_on_step is not None:
                 extra_on_step(step)
 
-        result = backend_impl.run(
-            task=enriched_task,
-            project_path=str(project_path),
-            max_turns=max_turns,
-            model=model,
-            on_permission=permission,
-            on_step=on_step,
-        )
+        # Bind the ledger write boundary to *this* agent's project for
+        # the duration of the run. Without it the boundary falls back to
+        # the process CWD, which is incidental — and before this existed
+        # at all, each tool wrote into whatever project its path argument
+        # happened to name.
+        with ledger_root(project_path):
+            result = backend_impl.run(
+                task=enriched_task,
+                project_path=str(project_path),
+                max_turns=max_turns,
+                model=model,
+                on_permission=permission,
+                on_step=on_step,
+            )
 
     summary_path = write_summary(
         run_dir,

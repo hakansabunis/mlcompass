@@ -268,33 +268,43 @@ mlcompass agent "Init a new churn project here" --auto-approve
 mlcompass agent "Diagnose this run" --max-turns 10 --model claude-sonnet-4-5
 ```
 
-> ⚠️ **The permission model does not currently do what this section
-> used to claim.** Two defects, both confirmed by execution and both
-> open as of this writing:
->
-> - `mlcompass_init` is declared as the one tool needing approval, but
->   the `claude-code` backend passes every tool — that one included —
->   in the SDK's `allowed_tools`, which auto-approves them and skips
->   the permission callback entirely. On that backend the prompt never
->   appears, with or without `--auto-approve`.
-> - Six tools declared read-only (`advise`, `audit`, `watch`,
->   `compare`, `evaluate`, `deploy`) do write: each appends to
->   `advice.log` and `context.json`. Because they are declared
->   non-mutating, the permission callback is never consulted for them.
->   The write target is resolved from the *path argument*, not from the
->   agent's project, so passing a dataset that lives inside a different
->   mlcompass project writes into that project instead of this one.
->
-> Treat `mlcompass agent` as able to write into any mlcompass project
-> reachable from a path you hand it, without asking. Nothing outside a
-> `.mlcompass/` directory is written, and `--max-turns` does correctly
-> bound provider calls on both backends.
+### What the agent may write, and when it asks
 
-The intended design is that the agent **asks before mutating**, with
-`mlcompass_init` as the only mutating tool and the read/compute tools
-auto-allowing. `--auto-approve` is meant to skip the prompt for
-headless runs; it widens nothing beyond its help text, because the
-boundary is already wider than intended without it.
+The agent **asks before mutating**. `mlcompass_init` is the only
+mutating tool, and it is the only one that triggers the y/N prompt; the
+read/compute tools auto-allow. `--auto-approve` skips that prompt for
+headless runs and widens nothing else. This holds on both backends: the
+`claude-code` backend withholds `mlcompass_init` from the Agent SDK's
+`allowed_tools` precisely so the SDK routes it through the permission
+callback instead of running it unprompted.
+
+Separately from your data, every tool appends to an **audit ledger** —
+`decisions` and the active-state fields in `.mlcompass/context.json`,
+a line in `.mlcompass/advice.log`, and for `advise` a record under
+`.mlcompass/datasets/`. That is a deliberate write, not a mutation of
+your work, so it is not prompted. It is bounded by one rule:
+
+> **The ledger is only ever written to the active project** — the one
+> found by walking up from `--project-path` for `mlcompass agent`, or
+> from the working directory for `mlcompass-mcp`. A path you pass as an
+> argument never selects the write target. If you name a file that
+> lives inside a *different* mlcompass project, the ledger write is
+> refused and the tool result carries a `ledger` block saying which
+> project it declined to write to. The analysis itself still runs and
+> returns normally.
+
+So `mlcompass agent --project-path A "advise B/data.csv"` analyses the
+file in B and records nothing anywhere: A is not the file's project, and
+B is not the agent's. Analysing a file that belongs to no project is
+recorded in A, where the run happened. Nothing outside a `.mlcompass/`
+directory is ever written, and `--max-turns` bounds provider calls on
+both backends.
+
+Ledger writes are atomic (write-temp-then-rename) and serialised within
+a process, so a concurrent reader never sees a half-written
+`context.json`. Two *separate* `mlcompass` processes writing the same
+project can still lose an update to each other — the file stays valid,
+but the later write wins. Single-agent use is unaffected.
 
 ## Five-minute tour
 

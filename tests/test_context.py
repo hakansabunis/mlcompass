@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -131,3 +133,79 @@ def test_register_dataset_creates_metadata_file(tmp_path: Path) -> None:
     assert saved["cols"] == 2
     assert saved["path"] == str(fake_csv.resolve())
     assert "registered_at" in saved
+
+
+# --------------------------------------------------------------------------- #
+# Concurrent writes                                                           #
+# --------------------------------------------------------------------------- #
+#
+# ``append_decision`` and ``write_context`` are read-modify-write cycles
+# over a whole file. Without serialisation two writers interleave as
+# read-A / read-B / write-A / write-B and B silently discards A's entry.
+# Without atomicity a reader can observe a half-written file, because
+# ``write_text`` truncates before it fills.
+
+
+def test_concurrent_appends_all_survive(tmp_path: Path) -> None:
+    """80 threads appending 1 decision each must leave 80 decisions."""
+    ctx = ProjectContext.init("race", parent_dir=tmp_path)
+
+    workers = 80
+    start = threading.Barrier(workers)
+
+    def _append(i: int) -> None:
+        start.wait()
+        ctx.append_decision(command="advise", summary=f"decision-{i}")
+
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        list(pool.map(_append, range(workers)))
+
+    decisions = ctx.read_context()["decisions"]
+    summaries = {d["summary"] for d in decisions}
+    missing = sorted({f"decision-{i}" for i in range(workers)} - summaries)
+    assert len(decisions) == workers, f"{workers - len(decisions)} appends lost; missing={missing}"
+
+
+def test_concurrent_reader_never_observes_a_torn_file(tmp_path: Path) -> None:
+    """A reader polling context.json during writes must never see bad JSON.
+
+    ``write_text`` truncates the file and then writes, so any read landing
+    in that window gets a prefix of the new content — invalid JSON, or
+    valid JSON missing entries. The fix is write-temp-then-replace, which
+    makes every observable state either the old file or the new one.
+    """
+    ctx = ProjectContext.init("torn", parent_dir=tmp_path)
+    target = ctx.path / "context.json"
+
+    stop = threading.Event()
+    torn: list[str] = []
+    reads = [0]
+
+    def _read() -> None:
+        while not stop.is_set():
+            try:
+                raw = target.read_text(encoding="utf-8")
+            except OSError:
+                # A transient sharing conflict during os.replace is not a
+                # torn read — the file was never observed in a bad state.
+                continue
+            reads[0] += 1
+            try:
+                payload = json.loads(raw)
+            except ValueError:
+                torn.append(raw[:200])
+                continue
+            if not isinstance(payload.get("decisions"), list):
+                torn.append(raw[:200])
+
+    reader = threading.Thread(target=_read, daemon=True)
+    reader.start()
+    try:
+        for i in range(120):
+            ctx.append_decision(command="advise", summary=f"d-{i}")
+    finally:
+        stop.set()
+        reader.join(timeout=5)
+
+    assert reads[0] > 0, "reader never managed a read; the test proved nothing"
+    assert torn == [], f"reader observed {len(torn)} torn file(s); first: {torn[0]!r}"

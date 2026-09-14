@@ -398,16 +398,25 @@ def test_deploy_rejects_unknown_target(tmp_path: Path) -> None:
 # --------------------------------------------------------------------------- #
 
 
-def test_field_ft4_mcp_advise_persists_to_project_ledger(tmp_path: Path) -> None:
+def test_field_ft4_mcp_advise_persists_to_project_ledger(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Field Test #4: MCP tools used to be stateless; they now write to
     .mlcompass/context.json + advice.log when a project is active.
+
+    "Active" means the project containing the server's working root — the
+    chdir below is what makes tmp_path active. It used to be enough that
+    the *dataset path* sat inside a project, which is the cross-project
+    write defect; see ``tests/test_agent_ledger_boundary.py``.
     """
     import json as _json
 
     import pandas as pd
 
-    # 1. Create a project at tmp_path.
+    # 1. Create a project at tmp_path and make it the active one.
     mlcompass_init("ft4-demo", parent_dir=str(tmp_path))
+    monkeypatch.chdir(tmp_path)
 
     # 2. Run advise on a dataset under the project root.
     csv = tmp_path / "data.csv"
@@ -447,12 +456,16 @@ def test_field_ft4_mcp_advise_without_project_doesnt_crash(tmp_path: Path) -> No
     # just a clean analysis result.
 
 
-def test_field_ft4_full_pipeline_status_reflects_all_tools(tmp_path: Path) -> None:
+def test_field_ft4_full_pipeline_status_reflects_all_tools(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """The big integration test: run advise + audit + status and watch the
     ledger fill up the way Field Test #4 expected it to."""
     import pandas as pd
 
     mlcompass_init("ft4-pipeline", parent_dir=str(tmp_path))
+    monkeypatch.chdir(tmp_path)
 
     # advise
     csv = tmp_path / "preds.csv"
@@ -480,7 +493,10 @@ def test_field_ft4_full_pipeline_status_reflects_all_tools(tmp_path: Path) -> No
 # --------------------------------------------------------------------------- #
 
 
-def test_field_ft5_advise_writes_state_fields(tmp_path: Path) -> None:
+def test_field_ft5_advise_writes_state_fields(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """v0.7.3 #FT5-3: MCP advise must populate project_type / target_column /
     active_dataset, not just decisions[]. Pre-v0.7.3 these stayed null,
     which Field Test #5 surfaced as a CLI vs MCP parity gap.
@@ -488,6 +504,7 @@ def test_field_ft5_advise_writes_state_fields(tmp_path: Path) -> None:
     import pandas as pd
 
     mlcompass_init("ft5-state-check", parent_dir=str(tmp_path))
+    monkeypatch.chdir(tmp_path)
 
     csv = tmp_path / "data.csv"
     pd.DataFrame({"age": list(range(50)), "churn": [0, 1] * 25}).to_csv(csv, index=False)
@@ -515,11 +532,15 @@ def test_field_ft5_pre_init_hint_fires_when_only_init_is_logged(tmp_path: Path) 
     assert any("before running mlcompass_init" in h.lower() for h in hints), hints
 
 
-def test_field_ft5_pre_init_hint_silent_after_other_decisions(tmp_path: Path) -> None:
+def test_field_ft5_pre_init_hint_silent_after_other_decisions(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """The hint must NOT fire once any non-init decision is on the ledger."""
     import pandas as pd
 
     mlcompass_init("ft5-hint-silent", parent_dir=str(tmp_path))
+    monkeypatch.chdir(tmp_path)
 
     csv = tmp_path / "data.csv"
     pd.DataFrame({"x": [1, 2, 3, 4], "churn": [0, 1, 0, 1]}).to_csv(csv, index=False)

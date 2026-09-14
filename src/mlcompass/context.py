@@ -7,6 +7,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import tempfile
+import threading
+import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -17,6 +21,84 @@ import yaml
 from . import __version__
 
 DEFAULT_PROJECT_DIR = ".mlcompass"
+
+
+# --------------------------------------------------------------------------- #
+# Durable writes                                                              #
+# --------------------------------------------------------------------------- #
+#
+# ``context.json`` is updated by read-modify-write over the whole file.
+# Two problems that used to be live:
+#
+# 1. No serialisation. Two writers interleave as read-A / read-B /
+#    write-A / write-B and B silently drops A's entry. Measured: 80
+#    concurrent appends left 40 decisions on disk.
+# 2. No atomicity. ``Path.write_text`` truncates the file and *then*
+#    fills it, so any concurrent reader landing in that window sees an
+#    empty or partial file. Measured: a reader observed a torn file
+#    mid-write.
+#
+# The fix is the standard pair: one lock per file for writers in this
+# process, and write-temp-then-``os.replace`` so every state a reader
+# can observe is either the whole old file or the whole new one.
+#
+# Scope, stated plainly: the lock is per-process. Two separate
+# ``mlcompass`` processes writing the same project still race, and one
+# update can overwrite the other. What they can no longer do is corrupt
+# the file — ``os.replace`` is atomic, so a torn read is impossible
+# either way. In-process is where the demonstrated loss happened: the
+# agent and its tools share one interpreter.
+
+_LOCKS: dict[str, threading.RLock] = {}
+_LOCKS_GUARD = threading.Lock()
+
+# Windows refuses os.replace while another handle has the destination
+# open. That window is microseconds wide; a short retry closes it.
+_REPLACE_ATTEMPTS = 20
+_REPLACE_BACKOFF_S = 0.005
+
+
+def _lock_for(path: Path) -> threading.RLock:
+    """One reentrant lock per file, shared across all ProjectContext instances."""
+    key = str(path.resolve())
+    with _LOCKS_GUARD:
+        lock = _LOCKS.get(key)
+        if lock is None:
+            lock = threading.RLock()
+            _LOCKS[key] = lock
+        return lock
+
+
+def _atomic_write_text(path: Path, text: str) -> None:
+    """Replace ``path`` with ``text`` in one indivisible step.
+
+    The temp file is created in the destination directory so the rename
+    stays on one filesystem, which is what makes it atomic.
+    """
+    fd, tmp_name = tempfile.mkstemp(
+        dir=str(path.parent),
+        prefix=f".{path.name}.",
+        suffix=".tmp",
+    )
+    tmp_path = Path(tmp_name)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="") as fh:
+            fh.write(text)
+            fh.flush()
+            os.fsync(fh.fileno())
+
+        last: OSError | None = None
+        for attempt in range(_REPLACE_ATTEMPTS):
+            try:
+                os.replace(tmp_name, path)
+                return
+            except PermissionError as e:  # pragma: no cover — Windows-only window
+                last = e
+                time.sleep(_REPLACE_BACKOFF_S * (attempt + 1))
+        raise last if last is not None else OSError(f"could not replace {path}")
+    except BaseException:
+        tmp_path.unlink(missing_ok=True)
+        raise
 
 
 class ProjectExistsError(FileExistsError):
@@ -146,9 +228,14 @@ class ProjectContext:
         )
         return data
 
+    @property
+    def _context_path(self) -> Path:
+        return self.path / "context.json"
+
     def read_context(self) -> dict[str, Any]:
         """Read the dynamic context (``context.json``)."""
-        data: dict[str, Any] = json.loads((self.path / "context.json").read_text(encoding="utf-8"))
+        with _lock_for(self._context_path):
+            data: dict[str, Any] = json.loads(self._context_path.read_text(encoding="utf-8"))
         return data
 
     def write_context(self, updates: dict[str, Any]) -> None:
@@ -156,13 +243,15 @@ class ProjectContext:
 
         Top-level keys are replaced. For lists like ``decisions`` prefer
         ``append_decision`` so timestamps are added automatically.
+
+        The read and the write happen under one lock: without that, a
+        concurrent writer's update lands between them and is lost when
+        this one writes back its stale copy.
         """
-        current = self.read_context()
-        current.update(updates)
-        (self.path / "context.json").write_text(
-            json.dumps(current, indent=2),
-            encoding="utf-8",
-        )
+        with _lock_for(self._context_path):
+            current = self.read_context()
+            current.update(updates)
+            _atomic_write_text(self._context_path, json.dumps(current, indent=2))
 
     def append_decision(
         self,
@@ -172,19 +261,17 @@ class ProjectContext:
         reasoning: str = "",
     ) -> None:
         """Append a timestamped decision entry to ``decisions``."""
-        ctx = self.read_context()
-        ctx.setdefault("decisions", []).append(
-            {
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "command": command,
-                "summary": summary,
-                "reasoning": reasoning,
-            }
-        )
-        (self.path / "context.json").write_text(
-            json.dumps(ctx, indent=2),
-            encoding="utf-8",
-        )
+        with _lock_for(self._context_path):
+            ctx = self.read_context()
+            ctx.setdefault("decisions", []).append(
+                {
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "command": command,
+                    "summary": summary,
+                    "reasoning": reasoning,
+                }
+            )
+            _atomic_write_text(self._context_path, json.dumps(ctx, indent=2))
 
     # ---------------------- Dataset registry ----------------------
 
@@ -209,10 +296,9 @@ class ProjectContext:
             "registered_at": datetime.now(timezone.utc).isoformat(),
             **meta,
         }
-        (self.path / "datasets" / f"{fingerprint}.json").write_text(
-            json.dumps(record, indent=2),
-            encoding="utf-8",
-        )
+        record_path = self.path / "datasets" / f"{fingerprint}.json"
+        with _lock_for(record_path):
+            _atomic_write_text(record_path, json.dumps(record, indent=2))
         return fingerprint
 
     @staticmethod
