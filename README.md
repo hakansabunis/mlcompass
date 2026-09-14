@@ -7,9 +7,18 @@
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-🚧 **Alpha (v0.8.0)** — under active development. APIs may change before v1.0.
+🚧 **Alpha (v0.9.0)** — under active development. APIs may change before v1.0.
 
-📄 **Paper:** mlcompass is described in [our paper](Capstone_Report.pdf) — *"mlcompass: A Schema-Bounded LLM Narrator for Machine-Learning Pipeline Diagnosis"*. The paper's anti-hallucination ablation (Table I) is reproducible end-to-end via the scripts in [`scripts/`](scripts/). See [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md) for what the contract does and does not protect against, and [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md) for what we have not yet evaluated.
+📄 **Paper (manuscript, not yet published):** the contract that guards
+mlcompass's leakage narrator is written up in
+[`paper/INISTA_Paper.md`](paper/INISTA_Paper.md) — *"An Evidence-Bound
+Runtime Schema for Claim-Faithful LLM Narration of Machine-Learning
+Pipeline Evidence"*. Every measurement in it is reproducible end-to-end
+via the scripts in [`scripts/`](scripts/). See
+[`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md) for what the contract
+does and does not protect against, and
+[`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md) for what we
+have not yet evaluated.
 
 ## What it does
 
@@ -29,11 +38,22 @@ Each command writes to and reads from a shared project context
 knows your dataset, your model choice, your training history, and your
 evaluation results.
 
-## What's in v0.8
+## What's in v0.9
 
-Eleven commands cover every stage of the ML pipeline. **v0.8 ships
-eleven ready-made Claude Code slash commands** so the same eleven
-tools become one-keystroke calls inside Claude Code — one
+Eleven commands cover every stage of the ML pipeline. **v0.9 ships the
+evidence-bound contract in the leakage narrator**: the `enum` domains
+of the narrator's answer are generated from the deterministic evidence
+at call time, and every entity and number it returns is then
+re-verified in plain Python — entity soundness, claim-value soundness
+within a rounding tolerance, and completeness against the top-ranked
+candidate. Violations trigger a corrective retry; what survives cannot
+contain a column or a figure the evidence does not have. Enforcement
+never leaves our own code, so the guarantee does not depend on any
+provider honouring the schema (`anthropic` and `openai`-compatible
+providers both supported).
+
+v0.8 added **eleven ready-made Claude Code slash commands** so the same
+eleven tools become one-keystroke calls inside Claude Code — one
 `mlcompass install-slash-commands` and you get `/mlc-advise`,
 `/mlc-evaluate`, `/mlc-leak`, … as first-class slash entries.
 
@@ -469,10 +489,11 @@ What gets caught:
 - **Perfect-match predictions** — when `y_pred == y_true` ≥ 95% on a
   non-trivial task, that's a smoking gun for train/test contamination.
 
-## Reproducing the paper's anti-hallucination ablation
+## Reproducing the manuscript's fabrication measurements
 
-The paper's Table I (phantom-column fabrication rate under three
-contract configurations) is reproducible end-to-end via two scripts
+The manuscript's fabrication rates (phantom-entity rate under three
+contract configurations, with Wilson 95% CIs) are reproducible
+end-to-end via two scripts
 under [`scripts/`](scripts/). The default mode runs deterministically
 and requires no API key:
 
@@ -494,7 +515,7 @@ machine-readable summary suitable for CI consumption.
 See [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md) for what the
 contract protects against and what it does not.
 See [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md) for the
-limitations that the v0.8.0 release has not yet addressed.
+limitations the current release has not yet addressed.
 See [`docs/FIELD_TEST_BUGS.md`](docs/FIELD_TEST_BUGS.md) for per-bug
 detail on the eleven field-test findings categorized in Table II.
 
@@ -575,6 +596,7 @@ run `deploy`, every earlier decision is still in memory.
 | **Faz 9 (v0.7)**     | Automatic leakage investigation + anti-hallucination contract | ✅ Shipped |
 | **v0.7.1 — v0.7.3**  | Field-test patches (Titanic + Penguins + Insurance) | ✅ Shipped |
 | **Faz 10 (v0.8)**    | Claude Code slash commands — `mlcompass install-slash-commands` + 11 `/mlc-*` entries | ✅ Shipped |
+| **Faz 11 (v0.9)**    | Evidence-bound runtime schema in the leakage narrator (Tier A enums + Tier B verification) | ✅ Shipped |
 
 See [CHANGELOG.md](CHANGELOG.md) for the detailed log and
 [ARCHITECTURE.md](ARCHITECTURE.md) for the design.

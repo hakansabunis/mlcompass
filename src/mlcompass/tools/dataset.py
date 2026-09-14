@@ -10,6 +10,7 @@ be made deliberately and reflected in ARCHITECTURE.md.
 
 from __future__ import annotations
 
+import warnings
 from pathlib import Path
 from typing import Any
 
@@ -219,6 +220,15 @@ _YEAR_NAME_HINTS = ("year", "yr", "_yr_", "_year_")
 # but caught later by the data-quality warning.
 _YEAR_VALID_RANGE = (1800.0, 2200.0)
 
+# Date-string detection (see ``_looks_like_datetime_strings``).
+# ``2024-01-01`` is 10 characters and the shortest common form we want
+# to accept is ``01/02/24`` at 8, so 8 is the floor. The separator set
+# covers ISO dates, slash dates, and bare times.
+_DATETIME_MIN_LENGTH = 8
+_DATETIME_SEPARATOR_PATTERN = r"[-/:]"
+_DATETIME_PARSE_THRESHOLD = 0.95
+_DATETIME_SAMPLE_SIZE = 1000
+
 
 def _looks_like_year_column(name: str, series: pd.Series) -> bool:
     """True if the column's NAME suggests a year AND its values look year-shaped.
@@ -273,7 +283,16 @@ def _classify_column(series: pd.Series, *, name: str = "") -> str:
             return "categorical"
         return "numeric"
 
-    # Object dtype: distinguish text from categorical by cardinality.
+    # Object dtype. Dates come first: ``pd.read_csv`` has no reason to
+    # parse them, so every date column in a CSV / Excel / JSON file
+    # arrives here as strings. Without this branch the cardinality
+    # heuristic below files a column like ``signup_date`` (443 distinct
+    # values in 500 rows) under ``text``, and the datetime summariser
+    # is reachable only for Parquet, which carries its own dtypes.
+    if _looks_like_datetime_strings(series):
+        return "datetime"
+
+    # Otherwise: distinguish text from categorical by cardinality.
     #
     # Heuristic, applied in order:
     #   - Empty → call it categorical (best-effort guess, no signal to use).
@@ -320,6 +339,76 @@ def _looks_numeric_with_dirty_strings(series: pd.Series) -> bool:
     if parsed == 0:
         return False
     return float(parsed) / float(len(non_null)) >= 0.95
+
+
+def _looks_like_datetime_strings(series: pd.Series) -> bool:
+    """True if an ``object`` column holds date / timestamp strings.
+
+    Sibling of :func:`_looks_numeric_with_dirty_strings`, and the same
+    shape of problem: a column whose real type is lost because the
+    reader had no dtype information. ``pd.read_csv`` never parses dates
+    unless told to, so ``2022-04-13`` arrives as a plain string.
+
+    Two gates, cheapest first:
+
+    1. **Shape** — ≥ 95% of sampled values must be at least
+       ``_DATETIME_MIN_LENGTH`` characters and contain a date or time
+       separator. This is what keeps bare year strings (``"2020"``) and
+       numeric-looking IDs out: ``pd.to_datetime`` happily reads those
+       as epochs or as Jan 1st, which would mistype whole columns.
+    2. **Parse** — ≥ 95% of the same sample must survive
+       ``pd.to_datetime(errors="coerce")``.
+
+    Both gates run on a deterministic evenly-spaced sample of at most
+    ``_DATETIME_SAMPLE_SIZE`` values, so classification stays cheap on
+    wide or long frames. :func:`_summarize_datetime` re-parses the full
+    column once the type is settled.
+    """
+    # Guard by exclusion rather than by testing for ``object``: pandas
+    # 2.3+ / 3.x hand back the dedicated ``str`` dtype from
+    # ``read_csv``, so an ``is_object_dtype`` gate silently stops
+    # matching anything on a modern pandas. Everything that is not a
+    # number, a flag, or an already-typed timestamp is fair game.
+    if (
+        pd.api.types.is_numeric_dtype(series)
+        or pd.api.types.is_bool_dtype(series)
+        or pd.api.types.is_datetime64_any_dtype(series)
+    ):
+        return False
+
+    non_null = series.dropna()
+    if len(non_null) == 0:
+        return False
+
+    step = max(1, len(non_null) // _DATETIME_SAMPLE_SIZE)
+    sample = non_null.iloc[::step].head(_DATETIME_SAMPLE_SIZE).astype(str)
+
+    shaped = sample.str.len().ge(_DATETIME_MIN_LENGTH) & sample.str.contains(
+        _DATETIME_SEPARATOR_PATTERN, regex=True, na=False
+    )
+    if float(shaped.mean()) < _DATETIME_PARSE_THRESHOLD:
+        return False
+
+    parsed = _coerce_datetime(sample)
+    if parsed is None:
+        return False
+    return float(parsed.notna().mean()) >= _DATETIME_PARSE_THRESHOLD
+
+
+def _coerce_datetime(series: pd.Series) -> pd.Series | None:
+    """``pd.to_datetime(errors="coerce")``, quietly. ``None`` if it blows up.
+
+    pandas warns when it cannot infer one format for the whole column
+    and falls back to per-element parsing. That is the expected path
+    for mixed real-world data and says nothing the caller can act on,
+    so we silence it rather than leak it into the user's terminal.
+    """
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            return pd.to_datetime(series, errors="coerce")
+    except (ValueError, TypeError, OverflowError):
+        return None
 
 
 def _analyze_column(df: pd.DataFrame, col: str) -> dict[str, Any]:
@@ -420,15 +509,40 @@ def _summarize_categorical(s: pd.Series) -> dict[str, Any]:
 
 
 def _summarize_datetime(s: pd.Series) -> dict[str, Any]:
-    """Datetime column: min / max date range."""
+    """Datetime column: min / max date range.
+
+    Accepts both a real ``datetime64`` column (Parquet, which carries
+    dtypes) and the date strings :func:`_looks_like_datetime_strings`
+    classified from a CSV. The unparseable tail — up to 5% by the
+    classifier's threshold — drops out as ``NaT`` and is reported as
+    ``unparsed_count`` so the advisor can mention it.
+    """
+    if not pd.api.types.is_datetime64_any_dtype(s):
+        parsed = _coerce_datetime(s)
+        if parsed is None:
+            return {"range": None}
+        unparsed = int(parsed.isna().sum() - s.isna().sum())
+        s = parsed
+    else:
+        unparsed = 0
+
     s_clean = s.dropna()
     if len(s_clean) == 0:
-        return {"range": None}
+        return {"range": None, "unparsed_count": unparsed}
+
+    # Date-only columns are the common case, and rendering them as
+    # ``2020-06-02 00:00:00`` puts six characters of noise in a table
+    # cell that has to wrap at terminal width. Drop the time component
+    # when every value sits at midnight.
+    date_only = bool((s_clean.dt.normalize() == s_clean).all())
+    fmt = "%Y-%m-%d" if date_only else "%Y-%m-%d %H:%M:%S"
+
     return {
         "range": {
-            "min": str(s_clean.min()),
-            "max": str(s_clean.max()),
-        }
+            "min": s_clean.min().strftime(fmt),
+            "max": s_clean.max().strftime(fmt),
+        },
+        "unparsed_count": unparsed,
     }
 
 

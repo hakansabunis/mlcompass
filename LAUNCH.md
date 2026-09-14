@@ -1,5 +1,11 @@
 # v0.1.0 Launch Checklist
 
+> **Historical.** This is the checklist written for the very first
+> release. The post drafts below still describe v0.1 (`advise` only)
+> and need rewriting against the current feature set before reuse.
+> The external steps — demo recording, Show HN, Reddit — were never
+> carried out.
+
 This file is the single source of truth for shipping mlcompass's first
 public release. Tick items off as you go; everything you need (post
 drafts, recording script, timing) is below.
@@ -13,7 +19,7 @@ drafts, recording script, timing) is below.
 ## 0. Final pre-flight (do once, the day of launch)
 
 - [ ] `git pull --rebase` to make sure local is fresh
-- [ ] `.venv/Scripts/python -X utf8 -m pytest tests/` → 66 passing
+- [ ] `.venv/Scripts/python -X utf8 -m pytest tests/` → all green
 - [ ] `.venv/Scripts/python -X utf8 -m build` → `dist/mlcompass-0.1.0-py3-none-any.whl` and `.tar.gz`
 - [ ] `.venv/Scripts/python -X utf8 -m twine check dist/*` → both PASSED
 - [ ] Skim `README.md`, `CHANGELOG.md`, `ARCHITECTURE.md` for typos
@@ -172,7 +178,7 @@ evaluation, Faz 4 adds deployment checks.
 Three small synthetic example datasets live in examples/ if you want to
 try it without using your own data.
 
-Tests: 66 passing. Apache 2.0. Feedback very welcome — especially on
+Tests: 66 passing. MIT. Feedback very welcome — especially on
 the advisor prompt and the rendering, since those are the things I
 expect to iterate on the most.
 

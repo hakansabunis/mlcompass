@@ -105,13 +105,71 @@ def test_categorical_column_has_cardinality_and_top_values(tmp_path: Path) -> No
 def test_datetime_column_has_range(tmp_path: Path) -> None:
     pytest.importorskip("pyarrow")
     df = pd.DataFrame({"event_date": pd.to_datetime(["2024-01-01", "2024-06-15", "2024-12-31"])})
-    p = tmp_path / "data.parquet"  # CSV would lose dtype info
+    p = tmp_path / "data.parquet"  # carries its own dtypes
     df.to_parquet(p)
 
     col = analyze_dataset(p)["columns"][0]
     assert col["type"] == "datetime"
     assert col["range"] is not None
     assert "2024" in col["range"]["min"]
+
+
+def test_datetime_column_detected_from_csv_strings(tmp_path: Path) -> None:
+    """Dates in a CSV arrive as strings; they must still type as datetime.
+
+    Regression: ``read_csv`` never parses dates, so the classifier used
+    to see plain strings and file every date column under ``text``.
+    """
+    dates = pd.date_range("2022-04-13", periods=120, freq="D").strftime("%Y-%m-%d")
+    df = pd.DataFrame({"signup_date": dates})
+
+    col = analyze_dataset(_csv(tmp_path, df))["columns"][0]
+    assert col["type"] == "datetime"
+    assert col["range"]["min"] == "2022-04-13"
+    assert col["unparsed_count"] == 0
+
+
+def test_datetime_range_keeps_time_when_present(tmp_path: Path) -> None:
+    stamps = pd.date_range("2024-03-01 09:30:00", periods=60, freq="h").strftime(
+        "%Y-%m-%d %H:%M:%S"
+    )
+    df = pd.DataFrame({"logged_at": stamps})
+
+    col = analyze_dataset(_csv(tmp_path, df))["columns"][0]
+    assert col["type"] == "datetime"
+    assert col["range"]["min"] == "2024-03-01 09:30:00"
+
+
+def test_datetime_detection_tolerates_a_few_bad_rows(tmp_path: Path) -> None:
+    dates = list(pd.date_range("2023-01-01", periods=100, freq="D").strftime("%Y-%m-%d"))
+    dates[7] = "not-a-date-at-all"  # 1% junk, under the 5% threshold
+    df = pd.DataFrame({"order_date": dates})
+
+    col = analyze_dataset(_csv(tmp_path, df))["columns"][0]
+    assert col["type"] == "datetime"
+    assert col["unparsed_count"] == 1
+
+
+@pytest.mark.parametrize(
+    ("name", "values"),
+    [
+        # Bare years parse as Jan 1st — mistyping these would wreck the
+        # numeric summary for any "Year Built" style column.
+        ("year_built", [str(1990 + (i % 30)) for i in range(120)]),
+        # Long digit strings parse as epochs.
+        ("account_id", [str(10_000_000 + i) for i in range(120)]),
+        # High-cardinality free text.
+        ("review", [f"customer wrote review number {i}" for i in range(120)]),
+        # Low-cardinality labels.
+        ("plan_type", ["basic", "pro", "enterprise", "trial"] * 30),
+    ],
+)
+def test_non_date_columns_are_not_typed_as_datetime(
+    tmp_path: Path, name: str, values: list[str]
+) -> None:
+    df = pd.DataFrame({name: values})
+    col = analyze_dataset(_csv(tmp_path, df))["columns"][0]
+    assert col["type"] != "datetime"
 
 
 def test_text_column_has_avg_length(tmp_path: Path) -> None:

@@ -5,6 +5,25 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Date columns in CSV / Excel / JSON files are now typed as `datetime`.**
+  `_classify_column` returned `datetime` only for an already-`datetime64`
+  dtype, and `load_dataset` calls `pd.read_csv` without `parse_dates`, so
+  no column read from a text format could ever reach that branch — every
+  date landed in `text` (or `categorical`) and `_summarize_datetime` was
+  dead code outside Parquet. `advise` on the shipped
+  `examples/customer_churn.csv` mistyped `signup_date`. Detection now runs
+  on the string values: a column qualifies when ≥ 95% of a bounded sample
+  is at least 8 characters, carries a date/time separator, and parses
+  under `pd.to_datetime`. The shape gate is what keeps bare years
+  (`"2020"`) and long numeric IDs — both of which `to_datetime` accepts —
+  from being mistyped. Summaries gain `unparsed_count`, and date-only
+  columns render without a `00:00:00` tail.
+- Date detection guards by exclusion (not numeric / bool / datetime64)
+  rather than testing for `object` dtype, so it keeps working under the
+  dedicated `str` dtype pandas 2.3+ and 3.x return from `read_csv`.
+
 ## [0.9.0] — 2026-06-11
 
 **The claim-faithful contract release.** The leakage narrator now ships the
