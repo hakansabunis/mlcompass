@@ -745,3 +745,193 @@ def test_run_cell_stamps_provenance_meta(tmp_path: Path) -> None:
         assert r["task"] == "synthetic"
         assert r["evidence_hash"] == "cafe1234"
         assert r["arm"] == "layer1"
+
+
+# --------------------------------------------------------------------------- #
+# Round-2 registered arms (analysis_plan_2026-09 §2.1, §9 A1)                  #
+#                                                                             #
+# These arms are the comparators the pre-registration names. The tests below   #
+# assert the MECHANISM each arm claims to be, because an arm running a         #
+# different mechanism than its id names is the exact failure the               #
+# pre-registration exists to prevent.                                          #
+# --------------------------------------------------------------------------- #
+
+
+def test_every_arm_has_a_registered_id_and_a_label() -> None:
+    assert set(harness.ARM_IDS) == set(harness.LAYER_LABELS)
+    # Ids must be unique: two arms sharing one id is how a cell ends up
+    # reported under a hypothesis it did not test.
+    assert len(set(harness.ARM_IDS.values())) == len(harness.ARM_IDS)
+    # Every arm the harness can budget for is an arm it can name.
+    assert set(harness.ARM_CALL_FACTOR) <= set(harness.ARM_IDS)
+
+
+def test_the_two_static_arms_are_distinct_hypotheses() -> None:
+    """The plan registers A-STRICT-STATIC as strict mode with NO call-time
+    enum. The fixed-enum arm is a different arm and never carries that id."""
+    assert harness.ARM_IDS["static_schema_noenum"] == "A-STRICT-STATIC"
+    assert harness.ARM_IDS["static_schema"] == "A-STATIC-ENUM-STALE"
+    assert set(harness.STATIC_SCHEMA_ARMS) == {"static_schema", "static_schema_noenum"}
+
+
+def test_registered_battery_carries_the_contract_comparator() -> None:
+    """Every registered contrast X1-X5 is against A-CONTRACT, so a baseline
+    battery without it produces no comparison at all."""
+    assert "layer3_bare" in harness.BASELINE_ARMS
+    assert harness.ARM_IDS["layer3_bare"] == "A-CONTRACT"
+    assert harness.NO_ENFORCEMENT_CONTROL_ARM in harness.BASELINE_ARMS
+    for arm in harness.BASELINE_ARMS:
+        assert arm in harness.ARM_CALL_FACTOR, f"{arm} has no call budget"
+
+
+def test_a_nemo_is_declared_unavailable_rather_than_dropped() -> None:
+    assert "A-NEMO" in harness.UNAVAILABLE_REGISTERED_ARMS
+    assert "A-NEMO" not in set(harness.ARM_IDS.values())
+
+
+def test_layer3_bare_is_the_shipped_stack_under_a_bare_prompt() -> None:
+    """A-CONTRACT = Tier A enums ON + Tier B ON + bare prompt.
+
+    Confounding check: it must NOT send the faithfulness prompt (that is
+    shipped L3) and it must NOT drop the enum (that is the stress arm).
+    """
+    client = _CaptureAnthropic()
+    harness._live_one_response(
+        "anthropic", client, "m", "layer3_bare", EVIDENCE, ["leak_col", "other_col"]
+    )
+    call = client.calls[0]
+    assert call["system"] == harness.LIVE_SYSTEM_PROMPT_BARE, "A-CONTRACT must run bare"
+    schema = call["tools"][0]["input_schema"]
+    enum = schema["properties"]["columns_referenced"]["items"].get("enum")
+    assert enum == ["leak_col", "other_col"], "Tier A enum must be bound to the evidence"
+    # A3.11: the user message is the bare one, not the contract briefing.
+    assert "contract" not in call["messages"][0]["content"].lower()
+
+
+def test_layer3_bare_differs_from_shipped_l3_only_in_the_prompt_pair() -> None:
+    shipped = _CaptureAnthropic()
+    bare = _CaptureAnthropic()
+    for arm, client in (("layer3", shipped), ("layer3_bare", bare)):
+        harness._live_one_response(
+            "anthropic", client, "m", arm, EVIDENCE, ["leak_col", "other_col"]
+        )
+    assert shipped.calls[0]["system"] != bare.calls[0]["system"]
+    assert shipped.calls[0]["tools"] == bare.calls[0]["tools"], "same enforcement stack"
+
+
+def test_layer3_stress_still_drops_the_enum() -> None:
+    """Guards against the bare-prompt refactor leaking Tier A into the stress
+    arm, which would silently change what A-STRESS measures."""
+    client = _CaptureAnthropic()
+    harness._live_one_response(
+        "anthropic", client, "m", "layer3_stress", EVIDENCE, ["leak_col", "other_col"]
+    )
+    schema = client.calls[0]["tools"][0]["input_schema"]
+    assert "enum" not in schema["properties"]["columns_referenced"]["items"]
+
+
+def test_static_noenum_is_strict_with_types_and_required_but_no_enum() -> None:
+    """The registered A-STRICT-STATIC shape: shape constrained, content not."""
+    client = _CaptureAnthropic()
+    out = harness._live_one_response(
+        "anthropic", client, "m", "static_schema_noenum", EVIDENCE, ["leak_col", "other_col"]
+    )
+    tool = client.calls[0]["tools"][0]
+    assert tool["strict"] is True
+    schema = tool["input_schema"]
+    assert schema["additionalProperties"] is False
+    assert "columns_referenced" in schema["required"]
+    assert schema["properties"]["columns_referenced"]["items"] == {"type": "string"}
+    assert out["baseline"]["arm_id"] == "A-STRICT-STATIC"
+    assert out["baseline"]["enum_declared"] is False
+    assert out["baseline"]["static_columns"] == []
+
+
+def test_static_stale_enum_arm_still_declares_the_frozen_domain() -> None:
+    client = _CaptureAnthropic()
+    out = harness._live_one_response(
+        "anthropic",
+        client,
+        "m",
+        "static_schema",
+        EVIDENCE,
+        ["leak_col", "other_col"],
+        static_columns=("frozen_a", "frozen_b"),
+    )
+    schema = client.calls[0]["tools"][0]["input_schema"]
+    assert schema["properties"]["columns_referenced"]["items"]["enum"] == ["frozen_a", "frozen_b"]
+    assert out["baseline"]["arm_id"] == "A-STATIC-ENUM-STALE"
+    assert out["baseline"]["enum_declared"] is True
+    # The domain mismatch that produced any rate is recorded beside it.
+    assert out["baseline"]["coverage"]["overlap"] == 0
+
+
+# --------------------------------------------------------------------------- #
+# Run provenance (§2.7 adapter pin, §5 cell identity)                          #
+# --------------------------------------------------------------------------- #
+
+
+def test_provenance_pins_harness_adapter_and_product() -> None:
+    prov = harness.run_provenance()
+    # §2.7: the adapter commit is pinned BESIDE the harness commit.
+    for part in ("harness", "adapter", "product"):
+        assert part in prov, f"{part} is not pinned"
+        assert prov[part]["sha256"], f"{part} carries no content hash"
+        assert "dirty" in prov[part]
+    assert prov["record_schema"] == harness.RECORD_SCHEMA_VERSION
+    assert prov["value_tolerance"] == harness.VALUE_TOLERANCE
+    assert prov["started_at"].endswith("+00:00")
+
+
+def test_live_run_writes_a_self_describing_jsonl_record(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A published rate must be re-derivable from the log alone.
+
+    Drives the real live_run loop against a fake client and asserts each record
+    carries what is needed to rebuild the cell without the author: what ran,
+    against which evidence, by which code, under which sampling pin.
+    """
+    client = _CaptureAnthropic()
+    monkeypatch.setattr(
+        harness, "_build_live_client", lambda provider: ("anthropic", client, "fake-model")
+    )
+    harness.live_run(
+        "anthropic",
+        2,
+        EVIDENCE,
+        ["leak_col", "other_col"],
+        arms=("layer1",),
+        log_dir=str(tmp_path),
+        task_label="synthetic",
+        seed=0,
+    )
+
+    logs = list(tmp_path.glob("*.jsonl"))
+    assert len(logs) == 1, "one cell, one log file"
+    assert "_e" in logs[0].name, "the evidence hash belongs in the filename"
+    records = [json.loads(line) for line in logs[0].read_text(encoding="utf-8").splitlines()]
+    assert len(records) == 2
+    record = records[0]
+    for field in (
+        "provider",
+        "task",
+        "seed",
+        "evidence_hash",
+        "arm",
+        "arm_id",
+        "model",
+        "strict",
+        "prompt_variant",
+        "n_planned",
+        "sampling",
+        "columns",
+        "claims",
+        "verdict",
+        "scored",
+        "provenance",
+    ):
+        assert field in record, f"a rate cannot be re-derived without {field}"
+    assert record["arm_id"] == "A-L1"
+    assert record["provenance"]["adapter"]["sha256"]
+    assert record["provenance"]["harness"]["sha256"]

@@ -28,7 +28,18 @@ Scoring rules (restated from analysis_plan.md §5, frozen):
   anchor in neither columns_referenced nor any claim column. A record's
   ``omitted`` flag, when present, is the contract's user-facing post-strip
   output and is read as data (Prop. 2: omissions are flagged, not stripped);
-  open arms carry no flag and are recomputed from fields.
+  open arms carry no flag and are recomputed from fields. On a contract arm
+  this channel is therefore the FLAGGED omission rate.
+- omission_undetected = the second column §1.3 of the 2026-09 plan requires
+  beside it: a substantive committed answer that skips the anchor while the
+  arm's own completeness verifier reported no omission. It is defined only
+  for records that carry a completeness flag, because a record from an arm
+  with no verifier cannot be "undetected" by one — those cells report it as
+  unavailable rather than as zero. A non-zero here is not a rate: it is a
+  verifier defect, adjudicated under §3.5, or a divergence between this
+  scorer's commitment rule and the contract's. Either way it is a bug report,
+  and it must be visible in the table rather than absorbed into the flagged
+  column.
 - abstention       = verdict == cannot_determine (A3.12).
 - transport errors = records with a truthy ``error`` field are NOT data:
   excluded from every denominator, counted per cell (A3.9b).
@@ -139,6 +150,9 @@ def score_record(
         ):
             value = True
 
+    committed = bool(cited or claims) and verdict_raw not in ("", "cannot_determine")
+    skips_anchor = anchor is not None and anchor not in set(cited) | set(claim_cols)
+
     omission: bool | None
     if anchor is None:
         omission = None  # undefined on anchor-free evidence (A3.3)
@@ -147,14 +161,22 @@ def score_record(
         # (itself re-derived post-strip); read as recorded data.
         omission = bool(record["omitted"])
     else:
-        committed = bool(cited or claims) and verdict_raw not in ("", "cannot_determine")
-        omission = committed and anchor not in set(cited) | set(claim_cols)
+        omission = committed and skips_anchor
+
+    # The §1.3 second column. Defined only where a completeness verifier
+    # actually ran, i.e. where the record carries a flag to disagree with.
+    omission_undetected: bool | None
+    if anchor is None or record.get("omitted") is None:
+        omission_undetected = None
+    else:
+        omission_undetected = (not bool(record["omitted"])) and committed and skips_anchor
 
     return {
         "excluded_error": False,
         "entity": entity,
         "value": value,
         "omission": omission,
+        "omission_undetected": omission_undetected,
         "abstained": str(verdict_raw or "") == ABSTAIN_VERDICT,
     }
 
@@ -270,17 +292,44 @@ def score_cell(
         "composite": _composite(),
         "entity": _channel("entity"),
         "value": _channel("value"),
+        # Two columns, per §1.3: what the verifier flagged, and what it missed.
+        # The second is None on arms with no completeness verifier — reported
+        # as unavailable, never as a zero the arm did not earn.
         "omission": (_channel("omission") if anchor is not None else None),
+        "omission_undetected": (
+            _channel("omission_undetected")
+            if anchor is not None and any(s.get("omission_undetected") is not None for s in valid)
+            else None
+        ),
         "abstained": _channel("abstained"),
         "no_output": no_output,
         "calls_per_response": calls_per_response,
         "mechanism": _mechanism(valid_records),
+        # For the static-enum arm: how much of THIS task's evidence the frozen
+        # author-time domain covered. Carried as a number, not just inside the
+        # mechanism string, because a table builder has to be able to refuse a
+        # degenerate cell (0% = a rigged mismatch, 100% = a copy of the
+        # live-enum arm) rather than print a verdict from one.
+        "static_domain_coverage": _static_domain_coverage(valid_records),
         "tier_b": {
             "responses_with_catches": sum(1 for x in rejections if x > 0),
             "total_catches": sum(rejections),
         },
         "agreement": agreement,
     }
+
+
+def _static_domain_coverage(records: list[dict[str, Any]]) -> float | None:
+    """Share of this task's evidence columns the frozen author-time domain
+    covered, or None for every arm that declares no domain."""
+    for record in records:
+        baseline = record.get("baseline")
+        if not isinstance(baseline, dict):
+            continue
+        coverage = baseline.get("coverage")
+        if isinstance(coverage, dict) and isinstance(coverage.get("coverage"), (int, float)):
+            return float(coverage["coverage"])
+    return None
 
 
 def _mechanism(records: list[dict[str, Any]]) -> str | None:
@@ -423,7 +472,22 @@ def main() -> int:
         print(f"   composite: {_fmt_channel(cell['composite'])}")
         print(f"   entity   : {_fmt_channel(cell['entity'])}")
         print(f"   value    : {_fmt_channel(cell['value'])}")
-        print(f"   omission : {_fmt_channel(cell['omission'])}")
+        print(f"   omission (flagged)   : {_fmt_channel(cell['omission'])}")
+        undetected = cell.get("omission_undetected")
+        print(
+            "   omission (undetected): "
+            + (
+                _fmt_channel(undetected)
+                if undetected is not None
+                else "n/a (arm has no completeness verifier)"
+            )
+        )
+        if undetected is not None and undetected["k"]:
+            print(
+                f"   !! {undetected['k']} UNDETECTED omission(s): a committed answer "
+                "skipped the anchor and the verifier did not flag it. This is a "
+                "defect report under plan 2026-09 §3.5, not a rate."
+            )
         print(f"   abstained: {_fmt_channel(cell['abstained'])}")
         if cell.get("no_output") is not None:
             print(f"   no answer: {_fmt_channel(cell['no_output'])}")

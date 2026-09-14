@@ -23,13 +23,25 @@ scoring, and differ only in the enforcement mechanism:
   * ``layer1`` — the no-enforcement control. Already exactly that (bare prompt,
     open enum-free schema, no validation, no retry), and the baselines are
     built on that same call, so it is reused rather than duplicated.
+  * ``layer3_bare`` — the CONTRACT arm of this comparison (plan 2026-09 §2.1
+    ``A-CONTRACT``): the shipped enforcement stack (Tier A call-time enum +
+    Tier B verification) with the faithfulness PROMPT removed, so the contract
+    is compared against bare-prompt baselines without confounding prompt with
+    mechanism. Shipped L3 carries the strict prompt and is NOT the comparator
+    for this block.
   * ``guardrails_stock`` — Guardrails AI with structural validation and reask
     only: what a validate-and-reask toolkit gives you out of the box.
   * ``guardrails_tierb`` — Guardrails AI running custom validators that encode
     the Tier B checks. Our validator, their loop; the comparison is loops.
-  * ``static_schema`` — the same product tool builder in the provider's strict
-    structured-output mode, but with a column enum declared once at author
-    time instead of generated from the evidence at call time.
+  * ``static_schema_noenum`` — the registered ``A-STRICT-STATIC`` arm: the
+    provider's strict structured-output mode over a static schema carrying
+    types and required fields and NO column enum at all.
+  * ``static_schema`` — a SECOND, separately registered arm
+    (``A-STATIC-ENUM-STALE``, plan 2026-09 §9 amendment A1): the same strict
+    mode, but with a column enum declared once at author time instead of
+    generated from the evidence at call time. It isolates a STALE domain
+    against a live one, which the no-enum arm cannot see. The two test
+    different hypotheses and are never reported under one label.
 
 See ``scripts/baseline_guardrails.py`` for the toolkit configuration and the
 reasons behind each choice.
@@ -60,6 +72,21 @@ Money-safety controls (Q1 campaign, Phase 0):
   (default on)        incremental JSONL run log under scripts/runs/ — every paid
                       response is flushed to disk immediately; --resume continues
                       an interrupted run without repeating paid calls
+
+Run logs are the evidence, not a by-product (plan 2026-09 §6, §8.4). Two facts
+about them, recorded here because they are easy to get wrong:
+
+  * ``scripts/runs/`` is TRACKED. The repository ignores ``runs/`` globally
+    (ML artefacts) and re-includes this one with a ``!scripts/runs/``
+    negation, which works because the negation names the directory git would
+    otherwise refuse to descend into. Verified, not assumed: ``git
+    check-ignore`` reports a fresh log there as NOT ignored.
+  * **No JSONL from the June 2026 battery survives on disk.** The records
+    behind paper Tables I-II are gone, so the manuscript's "raw live-run
+    records are in the repository" is not currently true, and no pre-v2 cell
+    exists to be compared against (see RECORD_SCHEMA_VERSION). The Round-2
+    battery is what rebuilds that claim; until it runs and its logs are
+    committed, the sentence should not ship.
 
 Usage::
 
@@ -547,12 +574,21 @@ EST_OUT_TOKENS_PER_CALL = 300
 # guardrails_tierb reasks on any faithfulness violation under the bare prompt
 # and additionally requires the anchor unconditionally, so it is budgeted at
 # the STRESS-like 1.5 — deliberately an OVER-estimate, because an
-# under-estimated baseline is the one that blows a budget. static_schema is a
-# single call with no retry loop.
+# under-estimated baseline is the one that blows a budget. The static arms are
+# a single call with no retry loop.
+#
+# layer3_bare carries Tier A, so entity violations are suppressed in the schema
+# and cannot drive retries the way they do in layer3_stress; its retries come
+# from the value and omission checks under a BARE prompt, which layer3's strict
+# prompt suppresses. It is budgeted at the stress factor rather than layer3's
+# 1.05 on the same principle as guardrails_tierb: an over-estimated arm costs a
+# cautious banner, an under-estimated one blows a budget mid-run. Replace it
+# with the observed calls/response from --smoke before committing to a battery.
 ARM_CALL_FACTOR: dict[str, float] = {
     "layer1": 1.0,
     "layer2": 1.0,
     "layer3": 1.05,
+    "layer3_bare": 1.45,
     "layer3_stress": 1.45,
     "layer3_stress_generic": 1.45,
     "tier_a": 1.0,
@@ -560,6 +596,7 @@ ARM_CALL_FACTOR: dict[str, float] = {
     "guardrails_stock": 1.05,
     "guardrails_tierb": 1.5,
     "static_schema": 1.0,
+    "static_schema_noenum": 1.0,
 }
 
 # Guardrails prepends its JSON-schema scaffolding to every REASK prompt, so a
@@ -574,9 +611,30 @@ ARM_INPUT_TOKEN_FACTOR: dict[str, float] = {
 }
 
 # --------------------------------------------------------------------------- #
-# Static (author-time) column domain — the provider-strict baseline            #
+# Static (author-time) schemas — the two provider-strict baselines             #
 # --------------------------------------------------------------------------- #
 
+# Two DIFFERENT arms live here and they are never merged, because they test
+# different hypotheses (plan 2026-09 §2.1, and §9 amendment A1):
+#
+#   static_schema_noenum = A-STRICT-STATIC, the REGISTERED arm. Provider strict
+#       mode over a schema carrying types and required fields and NO column
+#       enum whatsoever, so the column domain is unconstrained and any invented
+#       name decodes successfully. Tests H8, "a static strict schema constrains
+#       shape, not content", whose rejecting outcome is 0/200 on entity while
+#       the matched A-L1 cell exceeds 3%.
+#
+#   static_schema       = A-STATIC-ENUM-STALE, an ADDITIONAL arm. Same strict
+#       mode, but with a column enum frozen at author time. Tests something H8
+#       cannot see: what a STALE domain does once the task moves on. This is
+#       the deployment-realistic shape of "declare the schema once" and the arm
+#       closest to the manuscript's call-time-binding claim.
+#
+# Neither substitutes for the other and neither is ever reported under the
+# other's arm id. Together with `tier_a --strict` they complete a three-rung
+# ladder — no enum / stale enum / live enum — that is a one-variable contrast
+# at every step, because all three run the SAME product tool builder.
+#
 # The `static_schema` arm answers "what does binding the enum to the evidence
 # AT CALL TIME buy over declaring the schema once?". It is the SAME product
 # code path as the `tier_a` arm (build_submit_investigation_tool*, strict
@@ -610,6 +668,10 @@ STATIC_SCHEMA_COLUMNS: tuple[str, ...] = (
     "log_target_v2",
     "near_target_proxy",
 )
+
+
+# The two static arms. Only the first declares a column domain at all.
+STATIC_SCHEMA_ARMS: tuple[str, ...] = ("static_schema", "static_schema_noenum")
 
 
 def _static_schema_coverage(
@@ -973,19 +1035,37 @@ def _live_one_response(
         record.update(result)
         return _sampled(record)
 
-    if layer == "static_schema":
+    if layer in STATIC_SCHEMA_ARMS:
         # BASELINE — provider strict mode over an AUTHOR-TIME schema. Same
         # product tool builder as `tier_a` and the same bare prompt; the only
-        # difference is that the enum domain is the frozen STATIC_SCHEMA_COLUMNS
-        # instead of this evidence's columns. That one-variable difference is
-        # what isolates the value of binding the domain at call time.
-        static_list = list(static_columns)
-        tool = (
-            build_submit_investigation_tool_openai(static_list, strict=True)
-            if kind == "openai"
-            else build_submit_investigation_tool(static_list, strict=True)
+        # difference is the column domain the schema declares:
+        #
+        #   static_schema_noenum (A-STRICT-STATIC): none at all — types and
+        #       required fields only.
+        #   static_schema (A-STATIC-ENUM-STALE): the frozen
+        #       STATIC_SCHEMA_COLUMNS instead of this evidence's columns.
+        #
+        # That one-variable difference is what isolates the value of binding
+        # the domain at call time. Both arms are strict BY CONSTRUCTION (strict
+        # mode is the mechanism under test), independent of the global --strict
+        # flag, which selects strict cells for the open arms.
+        no_enum = layer == "static_schema_noenum"
+        static_list = [] if no_enum else list(static_columns)
+
+        def _static_tool(strict_on: bool, cols: list[str] = static_list) -> dict[str, Any]:
+            builder = (
+                build_submit_investigation_tool_openai
+                if kind == "openai"
+                else build_submit_investigation_tool
+            )
+            return builder(cols, enforce_enum=not no_enum, strict=strict_on)
+
+        tool = _static_tool(True)
+        coverage = (
+            None
+            if no_enum
+            else _static_schema_coverage(static_list, list(allowed), top_candidate(evidence))
         )
-        coverage = _static_schema_coverage(static_list, list(allowed), top_candidate(evidence))
         use_strict = True
         static_exc: Exception | None = None
         degraded: str | None = None
@@ -1015,7 +1095,13 @@ def _live_one_response(
                     )
                     record = _input_from_anthropic(response)
                 record["baseline"] = {
-                    "mechanism": "provider-strict static schema",
+                    "mechanism": (
+                        "provider-strict static schema, no call-time enum"
+                        if no_enum
+                        else "provider-strict static schema, author-time enum"
+                    ),
+                    "arm_id": ARM_IDS[layer],
+                    "enum_declared": not no_enum,
                     "strict_requested": True,
                     "strict_applied": use_strict,
                     "degraded": degraded,
@@ -1034,16 +1120,12 @@ def _live_one_response(
                     use_strict = False
                     degraded = f"strict_unsupported: {type(e).__name__}: {e}"
                     print(
-                        f"  static_schema: provider rejected strict tools; "
+                        f"  {layer}: provider rejected strict tools; "
                         f"retrying WITHOUT strict and flagging the record "
                         f"({type(e).__name__}: {str(e)[:160]})",
                         file=sys.stderr,
                     )
-                    tool = (
-                        build_submit_investigation_tool_openai(static_list, strict=False)
-                        if kind == "openai"
-                        else build_submit_investigation_tool(static_list, strict=False)
-                    )
+                    tool = _static_tool(False)
         return _sampled(_error_response(static_exc or RuntimeError("unknown")))
 
     if layer == "tier_a":
@@ -1114,8 +1196,18 @@ def _live_one_response(
                     temp = None
         return _sampled(_error_response(last_exc or RuntimeError("unknown")))
 
-    if layer in ("layer3", "layer3_stress", "layer3_stress_generic"):
+    if layer in ("layer3", "layer3_bare", "layer3_stress", "layer3_stress_generic"):
         stress = layer.startswith("layer3_stress")
+        # `layer3_bare` is A-CONTRACT (plan 2026-09 §2.1): the SHIPPED
+        # enforcement stack — Tier A call-time enums ON, Tier B verification
+        # ON, the same repair budget — with the faithfulness prompt replaced
+        # by the bare one and the contract-free user message. It is the
+        # comparator in every registered contrast X1-X5, and it exists because
+        # contrasting shipped L3 (strict prompt) against bare-prompt baselines
+        # would confound prompt with mechanism. The ONLY difference from
+        # `layer3` is the prompt pair; the only difference from `layer3_stress`
+        # is that Tier A stays on.
+        bare_prompt = stress or layer == "layer3_bare"
         last_exc = None
         for _attempt in range(2):
             try:
@@ -1124,13 +1216,15 @@ def _live_one_response(
                     client=client,
                     model=model,
                     provider=("openai" if kind == "openai" else "anthropic"),
-                    system_prompt=(LIVE_SYSTEM_PROMPT_BARE if stress else None),
+                    system_prompt=(LIVE_SYSTEM_PROMPT_BARE if bare_prompt else None),
                     enforce_schema_enum=not stress,
                     strict_tools=strict,
                     # A3.2: the generic-retry H5 control names nothing.
                     correction_style=("generic" if layer.endswith("_generic") else "named"),
-                    # A3.11: stress arms use the bare (L1-aligned) user message.
-                    neutral_user=stress,
+                    # A3.11: bare-prompt arms use the bare (L1-aligned) user
+                    # message, so propensity matches the baselines they are
+                    # contrasted against.
+                    neutral_user=bare_prompt,
                     temperature=temp,
                 )
                 return _sampled(_from_contract_result(result))
@@ -1216,6 +1310,89 @@ def _evidence_hash(evidence: dict[str, Any]) -> str:
     """Short content hash of the evidence dict — the run cell's true identity."""
     canonical = json.dumps(evidence, sort_keys=True, default=str)
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:8]
+
+
+# Every record carries the provenance below so a published rate can be
+# re-derived from the log alone, by someone who does not have the author, the
+# shell history, or this session. §2.7 requires the ADAPTER commit pinned
+# beside the harness commit; §5 requires the rest of the cell identity.
+#
+# Content hashes sit beside the commit hashes deliberately: a commit hash only
+# pins a file that was committed, and measurement code is routinely run from a
+# dirty tree. The sha256 of what was actually on disk at run time is the pin
+# that cannot be wrong, and `dirty` says whether the two can disagree.
+RECORD_SCHEMA_VERSION = 2
+"""2 adds provenance/arm_id/strict/prompt_variant to every record.
+
+Purely ADDITIVE: no channel definition, scoring rule, seed or filename
+convention changed, so a v1 cell scores identically under the current scorer
+and stays directly comparable. (No v1 cells survive on disk — see the run-log
+note in the module docstring.)
+"""
+
+
+def _git_output(*args: str) -> str | None:
+    import subprocess
+
+    try:
+        out = subprocess.run(
+            ["git", *args],
+            capture_output=True,
+            text=True,
+            cwd=os.path.dirname(os.path.abspath(__file__)),
+            check=True,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    return out.stdout.strip() or None
+
+
+def _file_pin(path: str) -> dict[str, Any]:
+    """Pin one source file: last commit that touched it, its content hash on
+    disk, and whether the two can disagree."""
+    commit = _git_output("log", "-1", "--format=%h", "--", path)
+    status = _git_output("status", "--porcelain", "--", path)
+    try:
+        with open(path, "rb") as f:
+            digest = hashlib.sha256(f.read()).hexdigest()[:16]
+    except OSError:
+        digest = None
+    return {"commit": commit, "sha256": digest, "dirty": bool(status)}
+
+
+def run_provenance() -> dict[str, Any]:
+    """What every record needs to be re-derivable without the author.
+
+    Harness, adapter and the PRODUCT code under test are pinned separately:
+    the contract arms route through ``investigate_leakage_bound``, so a rate
+    that cannot name the leakage_investigator revision it measured cannot be
+    reproduced.
+    """
+    here = os.path.dirname(os.path.abspath(__file__))
+    product = os.path.normpath(
+        os.path.join(here, "..", "src", "mlcompass", "agents", "leakage_investigator.py")
+    )
+    try:
+        import baseline_guardrails
+
+        toolkit = baseline_guardrails.guardrails_version()
+    except Exception:  # noqa: BLE001 — provenance must never abort a run
+        toolkit = None
+    import datetime
+
+    return {
+        "record_schema": RECORD_SCHEMA_VERSION,
+        "started_at": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
+        "repo_commit": _git_output("rev-parse", "--short", "HEAD"),
+        "harness": _file_pin(os.path.join(here, "reproduce_hallucination_ablation.py")),
+        # §2.7: "the adapter commit hash is pinned in the run record beside the
+        # harness commit". The Guardrails adapter is the adapter; the strict
+        # -mode paths live in the harness and are pinned by the harness entry.
+        "adapter": _file_pin(os.path.join(here, "baseline_guardrails.py")),
+        "product": _file_pin(product),
+        "guardrails_version": toolkit,
+        "value_tolerance": VALUE_TOLERANCE,
+    }
 
 
 class RunLog:
@@ -1353,12 +1530,20 @@ def live_run(
         f"temperature={temperature}",
         file=sys.stderr,
     )
+    if "static_schema_noenum" in arms:
+        print(
+            "  static_schema_noenum (A-STRICT-STATIC): strict mode, types and "
+            "required fields, NO column enum — the column domain is "
+            "unconstrained, so any invented name decodes successfully.",
+            file=sys.stderr,
+        )
     if "static_schema" in arms:
         coverage = _static_schema_coverage(
             list(static_columns), list(allowed), top_candidate(evidence)
         )
         print(
-            f"  static_schema domain: {coverage['overlap']}/{coverage['n_evidence']} "
+            f"  static_schema (A-STATIC-ENUM-STALE) domain: "
+            f"{coverage['overlap']}/{coverage['n_evidence']} "
             f"of this task's evidence columns are in the frozen author-time list "
             f"(coverage {coverage['coverage'] * 100:.0f}%, anchor in list: "
             f"{coverage['anchor_in_static']})",
@@ -1382,6 +1567,17 @@ def live_run(
             )
     ctx = scorer_ctx or (set(allowed), evidence_correlation_map(evidence), top_candidate(evidence))
     ev_hash = _evidence_hash(evidence)
+    provenance = run_provenance()
+    print(
+        f"  provenance: harness {provenance['harness']['commit']}"
+        f"{'+dirty' if provenance['harness']['dirty'] else ''}, adapter "
+        f"{provenance['adapter']['commit']}"
+        f"{'+dirty' if provenance['adapter']['dirty'] else ''}, product "
+        f"{provenance['product']['commit']}"
+        f"{'+dirty' if provenance['product']['dirty'] else ''} "
+        f"(pinned into every record)",
+        file=sys.stderr,
+    )
     out: dict[str, list[dict[str, Any]]] = {}
     for layer in arms:
         # Strict cells are DIFFERENT experimental cells (H4): distinct log name.
@@ -1424,6 +1620,20 @@ def live_run(
                 "task": task_label,
                 "seed": seed,
                 "evidence_hash": ev_hash,
+                # Cell identity per §5: everything needed to re-derive this
+                # cell's rate from the log alone.
+                "arm_id": ARM_IDS.get(layer, "(unregistered arm)"),
+                "strict": bool(strict),
+                "prompt_variant": (
+                    "bare"
+                    if layer in ("layer1", "layer3_bare", "layer3_stress", "layer3_stress_generic")
+                    or layer in STATIC_SCHEMA_ARMS
+                    or layer in GUARDRAILS_ARMS
+                    or layer == "tier_a"
+                    else ("mechanical" if layer == "stress_mech" else "strict")
+                ),
+                "n_planned": n,
+                "provenance": provenance,
             },
         )
     return out
@@ -1492,6 +1702,7 @@ def sweep_run(
         return _sampled(_error_response(last_exc or RuntimeError("unknown")))
 
     ev_hash = _evidence_hash(evidence)
+    provenance = run_provenance()
     out: dict[str, list[dict[str, Any]]] = {}
     for name, prompt in SWEEP_BARE_VARIANTS:
         log = (
@@ -1521,6 +1732,11 @@ def sweep_run(
                 "task": task_label,
                 "seed": seed,
                 "evidence_hash": ev_hash,
+                "arm_id": f"A-SWEEP-{name.upper()}",
+                "strict": False,
+                "prompt_variant": name,
+                "n_planned": n,
+                "provenance": provenance,
             },
         )
     return out
@@ -1623,14 +1839,39 @@ LAYER_LABELS = {
     "layer1": "L1 bare prompt",
     "layer2": "L1+2 strict prompt",
     "layer3": "L1+2+3 evidence-bound",
+    "layer3_bare": "A-CONTRACT bare+TierA+TierB",
     "layer3_stress": "STRESS bare+TierB only",
     "layer3_stress_generic": "STRESS generic-retry",
     "tier_a": "TIER-A only (enum, no verify)",
     "stress_mech": "L3 + worst paraphrase",
-    # Baseline comparison arms (analysis_plan §6).
+    # Baseline comparison arms (analysis_plan §6, plan 2026-09 §2.1).
     "guardrails_stock": "BASE Guardrails (stock)",
     "guardrails_tierb": "BASE Guardrails (+TierB)",
-    "static_schema": "BASE static schema+strict",
+    "static_schema_noenum": "BASE strict, no enum",
+    "static_schema": "BASE strict, stale enum",
+}
+
+# The plan arm id for every harness arm (plan 2026-09 §2.1 + §9 A1).
+#
+# This mapping exists so a cell can never be run, logged or reported under a
+# label naming a different hypothesis than the one it tests — the failure mode
+# the pre-registration exists to prevent. `static_schema` (stale enum) and
+# `static_schema_noenum` (no enum) are different arms with different rejecting
+# outcomes, and only the latter is the registered A-STRICT-STATIC of §2.1. The
+# id is stamped into every record and printed in the run plan.
+ARM_IDS: dict[str, str] = {
+    "layer1": "A-L1",
+    "layer2": "A-L2",
+    "layer3": "A-L3-SHIPPED",
+    "layer3_bare": "A-CONTRACT",
+    "layer3_stress": "A-STRESS",
+    "layer3_stress_generic": "A-STRESS-GENERIC",
+    "tier_a": "A-STRICT-ENUM (needs --strict)",
+    "stress_mech": "A-L3-WORST-PARAPHRASE",
+    "guardrails_stock": "A-GR-STOCK",
+    "guardrails_tierb": "A-GR-OURS",
+    "static_schema_noenum": "A-STRICT-STATIC",
+    "static_schema": "A-STATIC-ENUM-STALE",
 }
 
 # The no-enforcement control for the baseline comparison. `layer1` already IS
@@ -1639,15 +1880,42 @@ LAYER_LABELS = {
 # separate control arm would duplicate it and pay twice for the same number.
 NO_ENFORCEMENT_CONTROL_ARM = "layer1"
 
-# The baseline battery: the no-enforcement control plus the three mechanisms
-# it is contrasted against. Same task, same evidence, same model, same three
-# channels — only the enforcement mechanism differs.
+# The baseline battery: the registered §2.1 arm set runnable in ONE non-strict
+# invocation — the no-enforcement floor, the contract comparator every contrast
+# X1-X5 needs, and the mechanisms it is contrasted against. Same task, same
+# evidence, same model, same 24-hour window (§2.7), same three channels; only
+# the enforcement mechanism differs.
+#
+# Not in this tuple, and why:
+#   A-STRICT-ENUM  — `tier_a` under the GLOBAL --strict flag, so it is a
+#       separate invocation (--only-extra --strict) and a separate cell.
+#   A-NEMO         — adapter not written; contrast X5 does not run this round.
+# Both are reported as not run rather than quietly dropped.
 BASELINE_ARMS: tuple[str, ...] = (
     NO_ENFORCEMENT_CONTROL_ARM,
+    "layer3_bare",
+    "layer3_stress",
     "guardrails_stock",
     "guardrails_tierb",
+    "static_schema_noenum",
     "static_schema",
 )
+
+# The arms that carry a BASELINE mechanism (as opposed to the control and the
+# contract arms that share the battery). Used to gate mock mode, which cannot
+# run any of them.
+MECHANISM_BASELINE_ARMS: frozenset[str] = frozenset(
+    {"guardrails_stock", "guardrails_tierb", "static_schema", "static_schema_noenum"}
+)
+
+# Registered arms §2.1 lists that this harness cannot run today. Printed in the
+# run plan, so an absent arm is a stated gap and never a silent one.
+UNAVAILABLE_REGISTERED_ARMS: dict[str, str] = {
+    "A-NEMO": (
+        "NeMo Guardrails adapter not written; contrast X5 does not run this "
+        "round and is reported as not run, not as a tie"
+    ),
+}
 
 METRIC_LABELS = {"entity": "Entity-fab", "value": "Value-fab", "omission": "Omission"}
 
@@ -1788,9 +2056,10 @@ def main() -> int:
         "--only-baselines",
         action="store_true",
         help=(
-            "Run ONLY the baseline comparison battery (analysis_plan §6): the "
-            f"no-enforcement control ({NO_ENFORCEMENT_CONTROL_ARM}) plus "
-            "guardrails_stock, guardrails_tierb and static_schema. Live only."
+            "Run ONLY the registered baseline battery (plan 2026-09 §2.1): "
+            + ", ".join(BASELINE_ARMS)
+            + ". A-STRICT-ENUM is a separate --only-extra --strict invocation; "
+            "A-NEMO has no adapter. Live only."
         ),
     )
     ap.add_argument(
@@ -1924,6 +2193,25 @@ def main() -> int:
             "not a bill)",
             file=sys.stderr,
         )
+        if any(cell in ARM_IDS for cell in cells):
+            # Every cell prints the registered arm id it will be logged under,
+            # so a mislabelled cell is visible BEFORE it is paid for.
+            for cell in cells:
+                per_arm, arm_calls = estimate_cost_usd(use_model, (cell,), per_cell_n)
+                cost = f"~${per_arm:.2f}" if per_arm is not None else "~$?"
+                print(
+                    f"    {cell:<22s} {ARM_IDS.get(cell, '(unregistered arm)'):<32s} "
+                    f"{arm_calls:>4d} calls  {cost}",
+                    file=sys.stderr,
+                )
+            if args.only_baselines:
+                # Only the baseline battery is expected to cover the §2.1
+                # arm set, so only there is a missing arm a gap worth naming.
+                for arm_id, reason in UNAVAILABLE_REGISTERED_ARMS.items():
+                    print(
+                        f"    {'(not built)':<22s} {arm_id:<32s} NOT RUN: {reason}",
+                        file=sys.stderr,
+                    )
         if args.dry_run:
             print("  --dry-run: no API calls were made.", file=sys.stderr)
             raise SystemExit(0)
@@ -2027,6 +2315,35 @@ def main() -> int:
         static_columns = tuple(c.strip() for c in args.static_columns.split(",") if c.strip())
         if not static_columns:
             raise SystemExit("--static-columns was given but parsed to an empty domain.")
+    if "static_schema" in arms:
+        # Whether A-STATIC-ENUM-STALE is informative on THIS task is decided by
+        # the domain overlap, and a reader deciding whether to spend needs that
+        # before the money leaves, not in the middle of the run. On the
+        # reference task the frozen domain matches exactly, which makes the arm
+        # a degenerate copy of tier_a+strict — worth knowing at plan time.
+        pre = _static_schema_coverage(list(static_columns), list(allowed), anchor)
+        print(
+            f"  static_schema (A-STATIC-ENUM-STALE) domain vs this task: "
+            f"{pre['overlap']}/{pre['n_evidence']} evidence columns covered "
+            f"({pre['coverage'] * 100:.0f}%), anchor in domain: {pre['anchor_in_static']}",
+            file=sys.stderr,
+        )
+        if pre["coverage"] >= 1.0:
+            print(
+                "  NOTE: the frozen domain covers this task exactly, so "
+                "A-STATIC-ENUM-STALE is IDENTICAL to A-STRICT-ENUM here by "
+                "construction — a DEGENERATE cell. The stale-enum arm is only "
+                "informative on a task the author-time list predates. Contrast "
+                "X3b from this cell would compare an arm against itself.",
+                file=sys.stderr,
+            )
+        elif pre["overlap"] == 0:
+            print(
+                "  WARNING: the frozen domain and this evidence are disjoint. "
+                "Any rate that produces is a property of the mismatch, not of "
+                "the mechanism — do not report it as a head-to-head result.",
+                file=sys.stderr,
+            )
     if any(arm in GUARDRAILS_ARMS for arm in arms):
         import baseline_guardrails
 
@@ -2044,7 +2361,7 @@ def main() -> int:
             file=sys.stderr,
         )
     if args.mode == "mock":
-        if any(arm in BASELINE_ARMS[1:] for arm in arms):
+        if any(arm in MECHANISM_BASELINE_ARMS for arm in arms):
             raise SystemExit("The baseline arms are live measurements; add --mode live.")
         responses_by_layer = mock_run(args.n, allowed, corr_map, anchor, seed=args.seed)
     else:

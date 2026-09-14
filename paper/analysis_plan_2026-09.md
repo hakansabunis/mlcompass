@@ -206,13 +206,19 @@ hash), same model pin, same user message, same sampling pin, same repair budget
 | Arm id | Mechanism | What it enforces | Status |
 | --- | --- | --- | --- |
 | `A-L1` | bare prompt, open schema, no verification | nothing | exists (`layer1`) |
-| `A-CONTRACT` | bare prompt + Tier A call-time enum + Tier B | entity and value by construction; omission flagged | **new arm `layer3_bare`**, harness work |
+| `A-CONTRACT` | bare prompt + Tier A call-time enum + Tier B | entity and value by construction; omission flagged | built 2026-09-14, arm `layer3_bare` |
 | `A-STRESS` | bare prompt + Tier B only (no enum) | same, with first-attempt violations observable | exists (`layer3_stress`) |
-| `A-GR-STOCK` | Guardrails AI stock loop: JSON/type validation + reask, no faithfulness validator | output shape | adapter to be written |
-| `A-GR-OURS` | Guardrails AI loop carrying our Tier B checks as a custom validator | loop parity probe | adapter to be written |
-| `A-NEMO` | NeMo Guardrails, nearest output-rail configuration with an equivalent validator | toolkit 2 | adapter + config to be written |
-| `A-STRICT-STATIC` | provider strict mode, static schema (types + required, **no** call-time enum) | shape, decode-enforced | exists (`--strict` on open arms) |
+| `A-GR-STOCK` | Guardrails AI stock loop: JSON/type validation + reask, no faithfulness validator | output shape | exists (`guardrails_stock`) |
+| `A-GR-OURS` | Guardrails AI loop carrying our Tier B checks as a custom validator | loop parity probe | exists (`guardrails_tierb`) |
+| `A-NEMO` | NeMo Guardrails, nearest output-rail configuration with an equivalent validator | toolkit 2 | **not built** — X5 does not run this round |
+| `A-STRICT-STATIC` | provider strict mode, static schema (types + required, **no** call-time enum) | shape, decode-enforced | built 2026-09-14, arm `static_schema_noenum` |
 | `A-STRICT-ENUM` | provider strict mode + call-time evidence enum, **no** Tier B | entity, decode-enforced | exists (`tier_a` + `--strict`) |
+| `A-STATIC-ENUM-STALE` | provider strict mode, **stale author-time enum** | entity, decode-enforced against a domain the task has outgrown | added by **§9 amendment A1**, arm `static_schema`; exploratory contrast X3b, outside the Holm family |
+
+*Edit note (2026-09-14, before the first Round-2 live call): the **Status**
+column above was refreshed to what is actually built, and the last row was
+added by §9 amendment A1. No mechanism, hypothesis, contrast, or rejecting
+outcome in this table was altered.*
 
 Three things are fixed here because they decide whether the comparison means
 anything:
@@ -732,7 +738,72 @@ Amendments are appended here with a date and a reason, BEFORE the run they
 affect. Amendments to v1.0 continue to belong in v1.0 §8; this log covers only
 the Round-2 additions defined in this file.
 
-- *(none yet, 2026-09-14)*
+### A1 — added arm `A-STATIC-ENUM-STALE` (2026-09-14, before the first Round-2 live call)
+
+**What is added.** A second static-schema arm, `A-STATIC-ENUM-STALE`, harness
+arm `static_schema`, alongside the registered `A-STRICT-STATIC` of §2.1. Both
+run the provider's strict structured-output mode over the same product tool
+builder and the same bare prompt. They differ in one variable, the column
+domain the schema declares:
+
+| Arm id | Harness arm | Declared column domain |
+| --- | --- | --- |
+| `A-STRICT-STATIC` (registered §2.1) | `static_schema_noenum` | none — types and required fields only |
+| `A-STATIC-ENUM-STALE` (added here) | `static_schema` | a frozen author-time enum, the reference task's evidence columns |
+| `A-STRICT-ENUM` (registered §2.1) | `tier_a` + `--strict` | the live call-time evidence columns |
+
+**Why it is added.** §2.1 registers `A-STRICT-STATIC` as strict mode with types
+and required fields and *no* call-time enum, which is what H8 tests: a static
+strict schema constrains shape, not content. The harness work done for the
+baseline block built a fixed *enum* arm instead. That arm is not
+`A-STRICT-STATIC` and is not relabelled as one — running a cell under a label
+naming a different hypothesis is precisely the failure this pre-registration
+exists to prevent. But it is not worthless either: it is the arm closest to the
+manuscript's actual claim, which is about binding the domain **at call time**,
+and only a stale-versus-live contrast can see that. `A-STRICT-STATIC` cannot:
+with no domain declared there is no domain to go stale.
+
+So both are built and both are run. The three rows above form a one-variable
+ladder at every step, which neither arm alone provides.
+
+**What this amendment does NOT change.**
+
+- The frozen Holm family of §2.2 stays exactly {X1, X3, X4, X5}. The new arm
+  enters as **X3b**, an *exploratory* contrast outside that family. Enlarging a
+  frozen family after the fact would alter the multiplicity correction applied
+  to every other contrast in it, and a result obtained that way is not a
+  pre-registered result. X3b is reported with its interval and its uncorrected
+  p, labelled exploratory, whatever it shows.
+- H8's rejecting outcome is unchanged and still attaches to
+  `A-STRICT-STATIC` alone: 0/200 on entity while the matched `A-L1` cell
+  exceeds 3%. A zero in `A-STATIC-ENUM-STALE` rejects nothing, because a
+  declared enum constraining entities is the expected behaviour, not a
+  surprise.
+- No contrast precedence, N, seed, equivalence band, materiality bar or losing
+  condition changes.
+
+**Cost.** About $0.05 per arm per cell at N = 200 on the pinned DeepSeek model,
+about $0.47 on the `gpt-5.4-mini` tier. The second arm is bought at the price
+of the first.
+
+**Prediction, registered now.** `A-STATIC-ENUM-STALE` shows an entity rate
+strictly between `A-STRICT-STATIC` and `A-STRICT-ENUM` on any task whose
+evidence the frozen domain does not cover, and ties `A-STRICT-ENUM` at zero on
+the reference task, where the two domains are identical by construction and the
+cell is degenerate. **Rejected if:** the stale enum reads at or above
+`A-STRICT-STATIC` on entity on a non-reference task, which would mean a stale
+declared domain buys nothing at all over no domain.
+
+### A2 — record schema v2 (2026-09-14, before the first Round-2 live call)
+
+Every run record gains `arm_id`, `strict`, `prompt_variant`, `n_planned` and a
+`provenance` block pinning the harness, **adapter** and product-code commits
+with their on-disk content hashes (§2.7, §5). Purely additive: no channel
+definition, scoring rule, seed or filename convention changes, so any pre-v2
+cell scores identically under the current scorer and stays comparable. The
+content hashes sit beside the commit hashes because a commit hash only pins a
+file that was committed, and measurement code is routinely run from a dirty
+tree.
 
 Slots reserved, to be filled before the corresponding first live call:
 
