@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -724,3 +725,51 @@ def test_field_ft5_fee_target_lands_in_medium(tmp_path: Path) -> None:
     result = analyze_dataset(_csv(tmp_path, df))
     assert result["target_hint"]["column"] == "fee"
     assert result["target_hint"]["confidence"] == "medium"
+
+
+# --------------------------------------------------------------------------- #
+# Row-level integrity warnings                                                #
+# --------------------------------------------------------------------------- #
+
+
+def test_warns_about_exact_duplicate_rows(tmp_path: Path) -> None:
+    """Duplicated rows survive a random split into both halves.
+
+    OpenML 1464 (blood-transfusion) carries 215 exact duplicates in 748 rows.
+    Scored against that dataset, `advise` reported no warnings at all.
+    """
+    base = pd.DataFrame({"a": range(100), "b": range(100, 200), "target": [0, 1] * 50})
+    df = pd.concat([base, base.head(30)], ignore_index=True)
+
+    warnings = analyze_dataset(_csv(tmp_path, df))["warnings"]
+    joined = " ".join(warnings).lower()
+    assert "duplicate" in joined
+    assert "30" in joined
+
+
+def test_no_duplicate_warning_when_rows_are_unique(tmp_path: Path) -> None:
+    df = pd.DataFrame({"a": range(200), "b": range(200, 400), "target": [0, 1] * 100})
+    joined = " ".join(analyze_dataset(_csv(tmp_path, df))["warnings"]).lower()
+    assert "duplicate" not in joined
+
+
+def test_warns_about_a_censored_regression_target(tmp_path: Path) -> None:
+    """A pile-up at the exact maximum of a continuous target means clipping.
+
+    OpenML 44031 (california) holds 965 of 20640 rows at the target's exact
+    maximum. `advise` said nothing, and a model trained on it cannot predict
+    above the cap.
+    """
+    rng = np.random.default_rng(0)
+    values = rng.uniform(0.2, 4.5, 950).tolist() + [5.0] * 50
+    df = pd.DataFrame({"feat": rng.normal(size=1000), "price": values})
+
+    joined = " ".join(analyze_dataset(_csv(tmp_path, df))["warnings"]).lower()
+    assert "censor" in joined or "capped" in joined or "clipped" in joined
+
+
+def test_no_censoring_warning_on_an_uncapped_target(tmp_path: Path) -> None:
+    rng = np.random.default_rng(1)
+    df = pd.DataFrame({"feat": rng.normal(size=1000), "price": rng.uniform(0.2, 5.0, 1000)})
+    joined = " ".join(analyze_dataset(_csv(tmp_path, df))["warnings"]).lower()
+    assert "censor" not in joined and "capped" not in joined

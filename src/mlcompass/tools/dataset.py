@@ -196,7 +196,7 @@ def analyze_dataset(
         target_hint = _detect_target_column(df)
 
     task_hint = _infer_task_type(df, target_hint)
-    warnings = _generate_warnings(columns, target_hint, task_hint)
+    warnings = _generate_warnings(columns, target_hint, task_hint, df=df)
 
     return {
         "path": str(path),
@@ -678,13 +678,100 @@ def _infer_task_type(df: pd.DataFrame, target_hint: dict[str, Any]) -> dict[str,
 # --------------------------------------------------------------------------- #
 
 
+_DUPLICATE_ROW_THRESHOLD = 0.005
+_CENSORED_TARGET_THRESHOLD = 0.01
+_CENSORED_MIN_DISTINCT = 20
+
+
+def _duplicate_row_warning(df: pd.DataFrame) -> list[str]:
+    """Flag exact duplicate rows, which a random split puts on both sides.
+
+    This is the quietest way to get an inflated score: the copies land in
+    train and in test, the model recognises rows it has already seen, and
+    nothing in the metrics looks wrong. It is a property of the frame, so
+    no per-column check can find it.
+
+    The 0.5% floor keeps a handful of coincidental repeats in a large frame
+    quiet while still catching the cases that matter — OpenML 1464 carries
+    215 duplicates in 748 rows, and OpenML 1480 carries 13 in 583.
+    """
+    total = len(df)
+    if total == 0:
+        return []
+    count = int(df.duplicated().sum())
+    if count == 0 or count / total < _DUPLICATE_ROW_THRESHOLD:
+        return []
+    return [
+        f"{count} exact duplicate row(s) ({count / total:.1%} of the data). "
+        "A random split puts copies of the same row in both train and test, "
+        "which inflates held-out scores without any metric looking wrong. "
+        "Confirm they are genuine repeated observations before training; "
+        "if not, de-duplicate before splitting, or split on a group key."
+    ]
+
+
+def _censored_target_warning(
+    df: pd.DataFrame,
+    target_hint: dict[str, Any],
+    task_hint: dict[str, Any],
+) -> list[str]:
+    """Flag a continuous target piled up at its own minimum or maximum.
+
+    A recorded value that stacks at an extreme is usually a measurement
+    limit or a clipped cap rather than a real mode: OpenML 44031 holds 965
+    of 20640 rows at the target's exact maximum. A model fitted on it
+    cannot predict past the cap and its errors near the boundary are
+    systematically biased, which no accuracy metric reveals.
+
+    Only continuous targets qualify — the distinct-value floor keeps a
+    discrete or ordinal target, where repeated extremes are ordinary, out
+    of scope.
+    """
+    if task_hint.get("type") != "regression":
+        return []
+    column = target_hint.get("column")
+    if not column or column not in df.columns:
+        return []
+
+    values = pd.to_numeric(df[column], errors="coerce").dropna()
+    if len(values) == 0 or values.nunique() < _CENSORED_MIN_DISTINCT:
+        return []
+
+    out: list[str] = []
+    for bound, label in ((values.min(), "minimum"), (values.max(), "maximum")):
+        share = float((values == bound).mean())
+        if share >= _CENSORED_TARGET_THRESHOLD:
+            out.append(
+                f"Target {column!r} is piled up at its {label}: "
+                f"{int((values == bound).sum())} row(s) ({share:.1%}) sit at "
+                f"exactly {bound:g}. That usually means a censored or capped "
+                "measurement rather than a real mode. A model fitted on it "
+                f"cannot predict beyond the cap, and its errors near {bound:g} "
+                "are systematically biased. Check how the value was recorded "
+                "before treating it as ordinary regression."
+            )
+    return out
+
+
 def _generate_warnings(
     columns: list[dict[str, Any]],
     target_hint: dict[str, Any],
     task_hint: dict[str, Any],
+    *,
+    df: pd.DataFrame | None = None,
 ) -> list[str]:
-    """Surface high-level issues for the advisor to highlight."""
+    """Surface high-level issues for the advisor to highlight.
+
+    ``df`` is needed for the checks that are properties of rows rather than
+    of columns — duplicates and target censoring. It is keyword-only and
+    optional so existing callers that only have column summaries keep
+    working; they simply get the column-level warnings.
+    """
     warnings: list[str] = []
+
+    if df is not None:
+        warnings.extend(_duplicate_row_warning(df))
+        warnings.extend(_censored_target_warning(df, target_hint, task_hint))
 
     high_missing = [c for c in columns if c["missing_pct"] > 0.5]
     if high_missing:

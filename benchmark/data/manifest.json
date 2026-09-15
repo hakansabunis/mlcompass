@@ -1,0 +1,42 @@
+{
+  "source": "openml",
+  "api": "https://www.openml.org/api/v1/json/data",
+  "datasets": [
+    {
+      "openml_id": 1464,
+      "name": "blood-transfusion-service-center",
+      "version": "1",
+      "openml_file_id": "1586225",
+      "default_target_attribute": "Class",
+      "licence": "Public",
+      "csv_path": "data/1464_blood-transfusion-service-center.csv",
+      "sha256": "5ef21d22cd52e907a616c2a85c25841035e9e69b093516c9232042cc78e13027",
+      "rows": 748,
+      "columns": 5
+    },
+    {
+      "openml_id": 1480,
+      "name": "ilpd",
+      "version": "1",
+      "openml_file_id": "1590565",
+      "default_target_attribute": "Class",
+      "licence": "Public",
+      "csv_path": "data/1480_ilpd.csv",
+      "sha256": "8a3a32776f0341286f16ba78816dc4cf196bb26ed547ec831d10ab43cda92277",
+      "rows": 583,
+      "columns": 11
+    },
+    {
+      "openml_id": 44031,
+      "name": "california",
+      "version": "4",
+      "openml_file_id": "22103119",
+      "default_target_attribute": "price",
+      "licence": "See source",
+      "csv_path": "data/44031_california.csv",
+      "sha256": "4815da3fa6b1766150bcc7ed862296cb7968733386883549a94b19b86889d233",
+      "rows": 20640,
+      "columns": 9
+    }
+  ]
+}
