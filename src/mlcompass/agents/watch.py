@@ -13,9 +13,13 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from agentlite import Agent
-
-from ._common import AgentResponseError, parse_json_response
+from ._common import (
+    AgentResponseError,
+    build_anthropic_agent,
+    parse_json_response,
+    resolve_llm_config,
+    run_json_agent,
+)
 
 WATCH_MODEL_DEFAULT = "claude-opus-4-7"
 
@@ -69,13 +73,17 @@ class WatchAgentError(AgentResponseError):
 def build_watch_agent(
     *,
     client: Any | None = None,
-    model: str = WATCH_MODEL_DEFAULT,
-) -> Agent:
-    """Build the watch diagnostician agent (pure reasoner, no tools)."""
-    return Agent(
+    model: str | None = None,
+) -> Any:
+    """Build the Anthropic watch diagnostician agent (pure reasoner, no tools)."""
+    resolved = resolve_llm_config(
+        default_model=WATCH_MODEL_DEFAULT,
+        provider="anthropic",
         model=model,
+    )
+    return build_anthropic_agent(
         system=WATCH_DIAGNOSTICIAN_PROMPT,
-        tools=[],
+        model=resolved.model,
         client=client,
         max_turns=2,
     )
@@ -86,13 +94,25 @@ def diagnose_findings(
     findings: list[dict[str, Any]],
     *,
     client: Any | None = None,
-    model: str = WATCH_MODEL_DEFAULT,
+    model: str | None = None,
+    provider: str | None = None,
+    base_url: str | None = None,
+    api_key: str | None = None,
 ) -> dict[str, Any]:
     """Run the diagnostician on a deterministic watch result.
 
     ``snapshots`` should be a list of plain dicts (the test surface
     accepts dataclass-as-dict conversions equally well; the agent only
     sees JSON either way).
+
+    Provider, model, base URL and API key each resolve in the same order:
+    **explicit argument, then environment (``MLCOMPASS_LLM_PROVIDER``,
+    ``MLCOMPASS_LLM_MODEL``, ``MLCOMPASS_LLM_BASE_URL``, and the provider's
+    own key variable), then the built-in default.** With none of them set
+    the diagnostician talks to Anthropic exactly as it always has.
+    ``provider="openai"`` sends a chat completion instead, which reaches any
+    OpenAI-compatible endpoint — including a local, keyless ollama server
+    via ``base_url``.
 
     Returns the parsed ``{diagnosis, summary}`` dict.
 
@@ -102,8 +122,6 @@ def diagnose_findings(
     if not findings:
         return {"diagnosis": [], "summary": "No anomalies; training looks healthy."}
 
-    agent = build_watch_agent(client=client, model=model)
-
     payload = {"snapshots": snapshots, "findings": findings}
     user_message = (
         "Here is the watch report from mlcompass. Please diagnose each "
@@ -111,7 +129,16 @@ def diagnose_findings(
         f"```json\n{json.dumps(payload, indent=2)}\n```"
     )
 
-    raw = agent.run(user_message)
+    raw = run_json_agent(
+        system=WATCH_DIAGNOSTICIAN_PROMPT,
+        user=user_message,
+        default_model=WATCH_MODEL_DEFAULT,
+        client=client,
+        provider=provider,
+        model=model,
+        base_url=base_url,
+        api_key=api_key,
+    )
     return parse_json_response(
         raw,
         required_keys=("diagnosis", "summary"),

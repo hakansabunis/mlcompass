@@ -31,12 +31,24 @@ from rich.console import Console
 from rich.panel import Panel
 
 from . import __version__
+from .agents._common import (
+    DEFAULT_PROVIDER,
+    ENV_BASE_URL,
+    ENV_MODEL,
+    ENV_PROVIDER,
+    PROVIDER_ANTHROPIC,
+    PROVIDER_KEY_ENV,
+    SUPPORTED_PROVIDERS,
+    build_client,
+    resolve_llm_config,
+)
 from .agents.advise import AdvisorParseError, get_recommendation
 from .agents.audit import AuditAgentError, prioritize_findings
 from .agents.compare import CompareAgentError, hypothesize_comparison
 from .agents.deploy import DeployAgentError, advise_deployment
 from .agents.evaluate import EvaluateAgentError, interpret_evaluation
 from .agents.leakage_investigator import (
+    LEAKAGE_MODEL_DEFAULT,
     LeakageAgentError,
     investigate_leakage_bound,
 )
@@ -115,6 +127,142 @@ _force_utf8_stdio()
 console = Console()
 
 
+# --------------------------------------------------------------------------- #
+# LLM provider selection, shared by every command that has --llm              #
+# --------------------------------------------------------------------------- #
+
+
+def _llm_target(
+    provider: str | None = None,
+    base_url: str | None = None,
+) -> tuple[str, str | None]:
+    """Resolve which provider and endpoint ``--llm`` would use.
+
+    Same precedence as the agents themselves: the explicit flag, then
+    ``MLCOMPASS_LLM_PROVIDER`` / ``MLCOMPASS_LLM_BASE_URL``, then the
+    built-in default (Anthropic, and the SDK's own endpoint).
+    """
+    resolved_provider = (provider or os.environ.get(ENV_PROVIDER) or DEFAULT_PROVIDER).strip()
+    resolved_base_url = base_url or os.environ.get(ENV_BASE_URL) or None
+    return resolved_provider, resolved_base_url
+
+
+def _has_api_key(
+    provider: str | None = None,
+    base_url: str | None = None,
+) -> bool:
+    """True iff ``--llm`` has a provider it can actually reach.
+
+    A credential in the provider's own variable, or a base URL — a local
+    ollama / vLLM server authenticates nobody, so requiring a key there
+    would refuse the one configuration that costs nothing.
+    """
+    resolved_provider, resolved_base_url = _llm_target(provider, base_url)
+    if resolved_provider not in PROVIDER_KEY_ENV:
+        return False
+    if resolved_base_url:
+        return True
+    return bool(os.environ.get(PROVIDER_KEY_ENV[resolved_provider]))
+
+
+def _llm_unavailable_reason(
+    provider: str | None = None,
+    base_url: str | None = None,
+) -> str:
+    """Explain, in one clause, why ``--llm`` cannot run."""
+    resolved_provider, _ = _llm_target(provider, base_url)
+    if resolved_provider not in PROVIDER_KEY_ENV:
+        return (
+            f"unknown provider {resolved_provider!r} (supported: {', '.join(SUPPORTED_PROVIDERS)})"
+        )
+    key_env = PROVIDER_KEY_ENV[resolved_provider]
+    if resolved_provider == PROVIDER_ANTHROPIC:
+        return f"{key_env} is unset"
+    return f"{key_env} is unset and no --base-url was given"
+
+
+def _warn_llm_unavailable(
+    role: str,
+    provider: str | None = None,
+    base_url: str | None = None,
+) -> None:
+    """Print the standard skip warning for an unreachable provider."""
+    console.print(
+        f"\n[yellow]⚠ --llm requested but {_llm_unavailable_reason(provider, base_url)}; "
+        f"skipping {role}.[/yellow]\n"
+        "[dim]  Set that variable, or run a local model for free: "
+        "--provider openai --base-url http://localhost:11434/v1 --model qwen2.5:7b[/dim]"
+    )
+
+
+def _llm_available(
+    role: str,
+    provider: str | None = None,
+    base_url: str | None = None,
+    model: str | None = None,
+) -> bool:
+    """True when ``--llm`` can run; otherwise print why and return False.
+
+    Two ways to be unrunnable: nothing to authenticate or connect to, and —
+    for a non-Anthropic provider — no model, because the built-in default is
+    a Claude model name and sending it elsewhere would be nonsense.
+    """
+    if not _has_api_key(provider, base_url):
+        _warn_llm_unavailable(role, provider, base_url)
+        return False
+
+    resolved_provider, _ = _llm_target(provider, base_url)
+    if resolved_provider != PROVIDER_ANTHROPIC and not (model or os.environ.get(ENV_MODEL)):
+        console.print(
+            f"\n[yellow]⚠ --llm with --provider {resolved_provider} needs --model "
+            f"(or ${ENV_MODEL}); skipping {role}.[/yellow]"
+        )
+        return False
+    return True
+
+
+def llm_target_options(fn: Callable[..., Any]) -> Callable[..., Any]:
+    """Add ``--provider`` / ``--base-url`` to a command that has ``--llm``.
+
+    Every ``--llm`` command accepts the same pair, so they are declared
+    once. Both default to None so that an unset flag falls through to
+    ``MLCOMPASS_LLM_PROVIDER`` / ``MLCOMPASS_LLM_BASE_URL`` and then to the
+    built-in default, rather than silently overriding the environment with
+    a click default.
+    """
+    fn = click.option(
+        "--base-url",
+        "llm_base_url",
+        default=None,
+        metavar="URL",
+        help=(
+            "Endpoint for --provider openai, e.g. http://localhost:11434/v1 "
+            "for a local ollama server (no API key needed). "
+            f"Falls back to ${ENV_BASE_URL}."
+        ),
+    )(fn)
+    fn = click.option(
+        "--provider",
+        "llm_provider",
+        type=click.Choice(list(SUPPORTED_PROVIDERS)),
+        default=None,
+        help=(
+            f"LLM provider for --llm (default: {DEFAULT_PROVIDER}). 'openai' means "
+            "any OpenAI-compatible Chat Completions endpoint. "
+            f"Falls back to ${ENV_PROVIDER}."
+        ),
+    )(fn)
+    return fn
+
+
+#: Reused in every ``--model`` help string, since the resolution order is
+#: the same everywhere.
+MODEL_HELP_SUFFIX = (
+    "Defaults to the built-in Claude model, or $MLCOMPASS_LLM_MODEL. "
+    "Required with --provider openai."
+)
+
+
 @click.group(
     help="mlcompass — your AI ML engineer at every pipeline stage.",
     context_settings={"help_option_names": ["-h", "--help"]},
@@ -191,12 +339,12 @@ def init(name: str, parent_dir: Path, default_model: str) -> None:
     is_flag=True,
     help="Deprecated and now redundant: the advisor is opt-in via --llm.",
 )
+@llm_target_options
 @click.option(
     "--model",
     "advisor_model",
-    default="claude-opus-4-7",
-    show_default=True,
-    help="Claude model used by the advisor.",
+    default=None,
+    help=f"Model used by the advisor. {MODEL_HELP_SUFFIX}",
 )
 def advise(
     dataset_path: Path,
@@ -204,7 +352,9 @@ def advise(
     sample_rows: int | None,
     llm: bool,
     no_llm: bool,
-    advisor_model: str,
+    llm_provider: str | None,
+    llm_base_url: str | None,
+    advisor_model: str | None,
 ) -> None:
     """Run the deterministic dataset analyzer, then the LLM advisor."""
     project = _try_load_project()
@@ -229,13 +379,15 @@ def advise(
         console.print("\n[dim](--no-llm is redundant now; the advisor is opt-in via --llm)[/dim]")
     elif not llm:
         console.print("\n[dim](deterministic analysis only; pass --llm to add the advisor)[/dim]")
-    elif not _has_api_key():
-        console.print(
-            "\n[yellow]⚠ ANTHROPIC_API_KEY not set; "
-            "skipping advisor step. Set the variable to enable.[/yellow]"
-        )
+    elif not _llm_available("advisor step", llm_provider, llm_base_url, advisor_model):
+        pass  # _llm_available already explained why.
     else:
-        recommendation = _run_advisor(analysis, model=advisor_model)
+        recommendation = _run_advisor(
+            analysis,
+            model=advisor_model,
+            provider=llm_provider,
+            base_url=llm_base_url,
+        )
         if recommendation is not None:
             render_recommendation(console, recommendation)
 
@@ -265,11 +417,6 @@ def _try_load_project() -> ProjectContext | None:
         return None
 
 
-def _has_api_key() -> bool:
-    """True iff an Anthropic API key is configured in the environment."""
-    return bool(os.environ.get("ANTHROPIC_API_KEY"))
-
-
 # Indirection points: tests monkeypatch these to inject fakes instead of
 # calling the real agents.
 _advisor_callable: Callable[..., dict[str, Any]] = get_recommendation
@@ -286,7 +433,9 @@ _deploy_advisor_callable: Callable[..., dict[str, Any]] = advise_deployment
 def _run_advisor(
     analysis: dict[str, Any],
     *,
-    model: str,
+    model: str | None,
+    provider: str | None = None,
+    base_url: str | None = None,
 ) -> dict[str, Any] | None:
     """Invoke the LLM advisor, handling parse errors gracefully."""
     try:
@@ -294,7 +443,12 @@ def _run_advisor(
             "[cyan]Consulting model advisor...[/cyan]",
             spinner="dots",
         ):
-            return _advisor_callable(analysis, model=model)
+            return _advisor_callable(
+                analysis,
+                model=model,
+                provider=provider,
+                base_url=base_url,
+            )
     except AdvisorParseError as exc:
         console.print(f"\n[red]✗ Advisor returned an invalid response:[/red] {exc}")
         return None
@@ -393,18 +547,20 @@ def _append_advice_log(
     is_flag=True,
     help="After the static analysis, ask Claude to prioritize the findings.",
 )
+@llm_target_options
 @click.option(
     "--model",
     "llm_model",
-    default="claude-opus-4-7",
-    show_default=True,
-    help="Claude model used by the prioritizer when --llm is set.",
+    default=None,
+    help=f"Model used by the prioritizer when --llm is set. {MODEL_HELP_SUFFIX}",
 )
 def audit(
     script_path: Path,
     skip_rules: tuple[str, ...],
     use_llm: bool,
-    llm_model: str,
+    llm_provider: str | None,
+    llm_base_url: str | None,
+    llm_model: str | None,
 ) -> None:
     """Run the static auditor on ``script_path``."""
     project = _try_load_project()
@@ -416,7 +572,12 @@ def audit(
 
     priorities: dict[str, Any] | None = None
     if use_llm:
-        priorities = _maybe_prioritize(result, model=llm_model)
+        priorities = _maybe_prioritize(
+            result,
+            model=llm_model,
+            provider=llm_provider,
+            base_url=llm_base_url,
+        )
         if priorities is not None:
             render_audit_priorities(console, priorities)
 
@@ -429,19 +590,26 @@ def audit(
         )
 
 
-def _maybe_prioritize(result: dict[str, Any], *, model: str) -> dict[str, Any] | None:
+def _maybe_prioritize(
+    result: dict[str, Any],
+    *,
+    model: str | None,
+    provider: str | None = None,
+    base_url: str | None = None,
+) -> dict[str, Any] | None:
     if not result.get("findings"):
         console.print("\n[dim](--llm: nothing to prioritize, no findings)[/dim]")
         return None
-    if not _has_api_key():
-        console.print(
-            "\n[yellow]⚠ --llm requested but ANTHROPIC_API_KEY is unset; "
-            "skipping prioritizer.[/yellow]"
-        )
+    if not _llm_available("prioritizer", provider, base_url, model):
         return None
     try:
         with console.status("[cyan]Asking the prioritizer...[/cyan]", spinner="dots"):
-            return _audit_prioritizer_callable(result, model=model)
+            return _audit_prioritizer_callable(
+                result,
+                model=model,
+                provider=provider,
+                base_url=base_url,
+            )
     except AuditAgentError as exc:
         console.print(f"\n[red]✗ Prioritizer returned bad response:[/red] {exc}")
         return None
@@ -520,12 +688,12 @@ def _persist_audit_result(
     is_flag=True,
     help="After the deterministic anomalies, ask Claude to diagnose them.",
 )
+@llm_target_options
 @click.option(
     "--model",
     "llm_model",
-    default="claude-opus-4-7",
-    show_default=True,
-    help="Claude model used by the diagnostician when --llm is set.",
+    default=None,
+    help=f"Model used by the diagnostician when --llm is set. {MODEL_HELP_SUFFIX}",
 )
 @click.option(
     "--apply",
@@ -555,7 +723,9 @@ def watch(
     follow: bool,
     poll_interval: float,
     use_llm: bool,
-    llm_model: str,
+    llm_provider: str | None,
+    llm_base_url: str | None,
+    llm_model: str | None,
     apply_flag: bool,
     config_path: Path | None,
     auto_yes: bool,
@@ -581,7 +751,13 @@ def watch(
     diagnosis: dict[str, Any] | None = None
     apply_result: ApplyResult | None = None
     if use_llm:
-        diagnosis = _maybe_diagnose(snapshots, findings, model=llm_model)
+        diagnosis = _maybe_diagnose(
+            snapshots,
+            findings,
+            model=llm_model,
+            provider=llm_provider,
+            base_url=llm_base_url,
+        )
         if diagnosis is not None:
             render_watch_diagnosis(console, diagnosis)
 
@@ -624,16 +800,14 @@ def _maybe_diagnose(
     snapshots: list[Any],
     findings: list[dict[str, Any]],
     *,
-    model: str,
+    model: str | None,
+    provider: str | None = None,
+    base_url: str | None = None,
 ) -> dict[str, Any] | None:
     if not findings:
         console.print("\n[dim](--llm: nothing to diagnose, no anomalies)[/dim]")
         return None
-    if not _has_api_key():
-        console.print(
-            "\n[yellow]⚠ --llm requested but ANTHROPIC_API_KEY is unset; "
-            "skipping diagnostician.[/yellow]"
-        )
+    if not _llm_available("diagnostician", provider, base_url, model):
         return None
     snap_payload = [
         {
@@ -645,7 +819,13 @@ def _maybe_diagnose(
     ]
     try:
         with console.status("[cyan]Asking the diagnostician...[/cyan]", spinner="dots"):
-            return _watch_diagnostician_callable(snap_payload, findings, model=model)
+            return _watch_diagnostician_callable(
+                snap_payload,
+                findings,
+                model=model,
+                provider=provider,
+                base_url=base_url,
+            )
     except WatchAgentError as exc:
         console.print(f"\n[red]✗ Diagnostician returned bad response:[/red] {exc}")
         return None
@@ -810,14 +990,21 @@ def _persist_watch_result(
     is_flag=True,
     help="After the deterministic diff, ask Claude to explain why the winner won.",
 )
+@llm_target_options
 @click.option(
     "--model",
     "llm_model",
-    default="claude-opus-4-7",
-    show_default=True,
-    help="Claude model used by the hypothesizer when --llm is set.",
+    default=None,
+    help=f"Model used by the hypothesizer when --llm is set. {MODEL_HELP_SUFFIX}",
 )
-def compare(run_a: str, run_b: str, use_llm: bool, llm_model: str) -> None:
+def compare(
+    run_a: str,
+    run_b: str,
+    use_llm: bool,
+    llm_provider: str | None,
+    llm_base_url: str | None,
+    llm_model: str | None,
+) -> None:
     """Compare two runs by identifier or directory path."""
     project = _try_load_project()
 
@@ -833,7 +1020,12 @@ def compare(run_a: str, run_b: str, use_llm: bool, llm_model: str) -> None:
 
     hypothesis: dict[str, Any] | None = None
     if use_llm:
-        hypothesis = _maybe_hypothesize(comparison, model=llm_model)
+        hypothesis = _maybe_hypothesize(
+            comparison,
+            model=llm_model,
+            provider=llm_provider,
+            base_url=llm_base_url,
+        )
         if hypothesis is not None:
             render_compare_hypothesis(console, hypothesis)
 
@@ -847,16 +1039,23 @@ def compare(run_a: str, run_b: str, use_llm: bool, llm_model: str) -> None:
         )
 
 
-def _maybe_hypothesize(comparison: dict[str, Any], *, model: str) -> dict[str, Any] | None:
-    if not _has_api_key():
-        console.print(
-            "\n[yellow]⚠ --llm requested but ANTHROPIC_API_KEY is unset; "
-            "skipping hypothesizer.[/yellow]"
-        )
+def _maybe_hypothesize(
+    comparison: dict[str, Any],
+    *,
+    model: str | None,
+    provider: str | None = None,
+    base_url: str | None = None,
+) -> dict[str, Any] | None:
+    if not _llm_available("hypothesizer", provider, base_url, model):
         return None
     try:
         with console.status("[cyan]Asking the hypothesizer...[/cyan]", spinner="dots"):
-            return _compare_hypothesizer_callable(comparison, model=model)
+            return _compare_hypothesizer_callable(
+                comparison,
+                model=model,
+                provider=provider,
+                base_url=base_url,
+            )
     except CompareAgentError as exc:
         console.print(f"\n[red]✗ Hypothesizer returned bad response:[/red] {exc}")
         return None
@@ -933,12 +1132,12 @@ def _persist_compare_result(
     is_flag=True,
     help="After the deterministic report, ask Claude to interpret the results.",
 )
+@llm_target_options
 @click.option(
     "--model",
     "llm_model",
-    default="claude-opus-4-7",
-    show_default=True,
-    help="Claude model used by the interpreter when --llm is set.",
+    default=None,
+    help=f"Model used by the interpreter when --llm is set. {MODEL_HELP_SUFFIX}",
 )
 def evaluate(
     results_path: Path,
@@ -948,7 +1147,9 @@ def evaluate(
     task: str | None,
     hard_examples_k: int,
     use_llm: bool,
-    llm_model: str,
+    llm_provider: str | None,
+    llm_base_url: str | None,
+    llm_model: str | None,
 ) -> None:
     """Evaluate predictions in ``results_path``."""
     project = _try_load_project()
@@ -974,7 +1175,12 @@ def evaluate(
     interpretation: dict[str, Any] | None = None
     leakage_narration: dict[str, Any] | None = None
     if use_llm:
-        interpretation = _maybe_interpret_evaluation(result, model=llm_model)
+        interpretation = _maybe_interpret_evaluation(
+            result,
+            model=llm_model,
+            provider=llm_provider,
+            base_url=llm_base_url,
+        )
         if interpretation is not None:
             render_evaluation_interpretation(console, interpretation)
         # v0.7: when evaluate auto-attached leakage evidence (smell
@@ -982,7 +1188,10 @@ def evaluate(
         # investigator agent.
         if result.get("leakage_investigation"):
             leakage_narration = _maybe_investigate_leakage(
-                result["leakage_investigation"], model=llm_model
+                result["leakage_investigation"],
+                model=llm_model,
+                provider=llm_provider,
+                base_url=llm_base_url,
             )
             if leakage_narration is not None:
                 render_leakage_narration(console, leakage_narration)
@@ -996,45 +1205,95 @@ def evaluate(
         )
 
 
-def _maybe_investigate_leakage(evidence: dict[str, Any], *, model: str) -> dict[str, Any] | None:
-    """Run the leakage investigator if an API key is available."""
-    if not _has_api_key():
+def _maybe_investigate_leakage(
+    evidence: dict[str, Any],
+    *,
+    model: str | None,
+    provider: str | None = None,
+    base_url: str | None = None,
+) -> dict[str, Any] | None:
+    """Run the leakage investigator if a provider is reachable."""
+    if not _has_api_key(provider, base_url):
         console.print(
-            "\n[yellow]⚠ Leakage smell fired but ANTHROPIC_API_KEY is unset; "
+            f"\n[yellow]⚠ Leakage smell fired but "
+            f"{_llm_unavailable_reason(provider, base_url)}; "
             "skipping investigator narration. The evidence panel above is "
             "still the deterministic ground truth.[/yellow]"
         )
         return None
     try:
         with console.status("[cyan]Asking the leakage investigator...[/cyan]", spinner="dots"):
-            return _leakage_investigator_callable(evidence, model=model)
+            return _leakage_investigator_callable(
+                evidence,
+                model=model,
+                provider=provider,
+                base_url=base_url,
+            )
     except LeakageAgentError as exc:
         console.print(f"\n[red]✗ Leakage investigator returned malformed response:[/red] {exc}")
         return None
 
 
-def _default_leakage_investigator(evidence: dict[str, Any], *, model: str) -> dict[str, Any]:
+def _default_leakage_investigator(
+    evidence: dict[str, Any],
+    *,
+    model: str | None,
+    provider: str | None = None,
+    base_url: str | None = None,
+) -> dict[str, Any]:
+    """Call the published evidence-bound investigator, unmodified.
+
+    ``agents/leakage_investigator.py`` is the artifact the paper measures,
+    so it is not touched here. It already takes ``provider`` and an injected
+    ``client``; it just has no ``base_url`` parameter of its own. So when
+    the user picks a non-default endpoint we build the client on this side
+    and hand it over. With no flags set, ``client`` stays None and
+    ``provider`` stays "anthropic" — exactly the call it received before.
+    """
+    kwargs: dict[str, Any] = {}
+    if model is not None:
+        kwargs["model"] = model
+
+    resolved_provider, resolved_base_url = _llm_target(provider, base_url)
+    if resolved_provider != PROVIDER_ANTHROPIC or resolved_base_url:
+        config = resolve_llm_config(
+            default_model=LEAKAGE_MODEL_DEFAULT,
+            provider=provider,
+            model=model,
+            base_url=base_url,
+        )
+        kwargs["provider"] = config.provider
+        kwargs["model"] = config.model
+        kwargs["client"] = build_client(config)
+
     # Production path: the evidence-bound runtime-schema contract. The
     # narrator answers through a tool whose ``columns_referenced`` enum is
     # generated from this evidence dict at call time, and the cited columns
     # are deterministically re-validated against the evidence set. The prose
     # ``investigate_leakage`` remains available as a tool-free fallback.
-    return investigate_leakage_bound(evidence, model=model)
+    return investigate_leakage_bound(evidence, **kwargs)
 
 
 _leakage_investigator_callable: Callable[..., dict[str, Any]] = _default_leakage_investigator
 
 
-def _maybe_interpret_evaluation(result: dict[str, Any], *, model: str) -> dict[str, Any] | None:
-    if not _has_api_key():
-        console.print(
-            "\n[yellow]⚠ --llm requested but ANTHROPIC_API_KEY is unset; "
-            "skipping interpreter.[/yellow]"
-        )
+def _maybe_interpret_evaluation(
+    result: dict[str, Any],
+    *,
+    model: str | None,
+    provider: str | None = None,
+    base_url: str | None = None,
+) -> dict[str, Any] | None:
+    if not _llm_available("interpreter", provider, base_url, model):
         return None
     try:
         with console.status("[cyan]Asking the interpreter...[/cyan]", spinner="dots"):
-            return _evaluate_interpreter_callable(result, model=model)
+            return _evaluate_interpreter_callable(
+                result,
+                model=model,
+                provider=provider,
+                base_url=base_url,
+            )
     except EvaluateAgentError as exc:
         console.print(f"\n[red]✗ Interpreter returned bad response:[/red] {exc}")
         return None
@@ -1107,19 +1366,21 @@ def _persist_evaluate_result(
     is_flag=True,
     help="After the deterministic checks, ask Claude for a production verdict.",
 )
+@llm_target_options
 @click.option(
     "--model",
     "llm_model",
-    default="claude-opus-4-7",
-    show_default=True,
-    help="Claude model used by the advisor when --llm is set.",
+    default=None,
+    help=f"Model used by the advisor when --llm is set. {MODEL_HELP_SUFFIX}",
 )
 def deploy(
     model_path: Path,
     requirements_path: Path | None,
     target: str,
     use_llm: bool,
-    llm_model: str,
+    llm_provider: str | None,
+    llm_base_url: str | None,
+    llm_model: str | None,
 ) -> None:
     """Inspect a model file and produce a deployment-readiness report."""
     project = _try_load_project()
@@ -1139,7 +1400,12 @@ def deploy(
 
     advice: dict[str, Any] | None = None
     if use_llm:
-        advice = _maybe_advise_deployment(report, model=llm_model)
+        advice = _maybe_advise_deployment(
+            report,
+            model=llm_model,
+            provider=llm_provider,
+            base_url=llm_base_url,
+        )
         if advice is not None:
             render_deployment_advice(console, advice)
 
@@ -1154,15 +1420,23 @@ def deploy(
         )
 
 
-def _maybe_advise_deployment(report: dict[str, Any], *, model: str) -> dict[str, Any] | None:
-    if not _has_api_key():
-        console.print(
-            "\n[yellow]⚠ --llm requested but ANTHROPIC_API_KEY is unset; skipping advisor.[/yellow]"
-        )
+def _maybe_advise_deployment(
+    report: dict[str, Any],
+    *,
+    model: str | None,
+    provider: str | None = None,
+    base_url: str | None = None,
+) -> dict[str, Any] | None:
+    if not _llm_available("advisor", provider, base_url, model):
         return None
     try:
         with console.status("[cyan]Asking the advisor...[/cyan]", spinner="dots"):
-            return _deploy_advisor_callable(report, model=model)
+            return _deploy_advisor_callable(
+                report,
+                model=model,
+                provider=provider,
+                base_url=base_url,
+            )
     except DeployAgentError as exc:
         console.print(f"\n[red]✗ Advisor returned bad response:[/red] {exc}")
         return None
@@ -1280,12 +1554,12 @@ def status(recent_decisions: int) -> None:
     is_flag=True,
     help="After the deterministic report, ask Claude to interpret the drift.",
 )
+@llm_target_options
 @click.option(
     "--model",
     "llm_model",
-    default="claude-opus-4-7",
-    show_default=True,
-    help="Claude model used by the interpreter when --llm is set.",
+    default=None,
+    help=f"Model used by the interpreter when --llm is set. {MODEL_HELP_SUFFIX}",
 )
 def monitor(
     reference_path: Path,
@@ -1294,7 +1568,9 @@ def monitor(
     bins: int,
     top_n: int,
     use_llm: bool,
-    llm_model: str,
+    llm_provider: str | None,
+    llm_base_url: str | None,
+    llm_model: str | None,
 ) -> None:
     """Run drift detection between two datasets."""
     project = _try_load_project()
@@ -1321,7 +1597,12 @@ def monitor(
 
     interpretation: dict[str, Any] | None = None
     if use_llm:
-        interpretation = _maybe_interpret_drift(result, model=llm_model)
+        interpretation = _maybe_interpret_drift(
+            result,
+            model=llm_model,
+            provider=llm_provider,
+            base_url=llm_base_url,
+        )
         if interpretation is not None:
             render_drift_interpretation(console, interpretation)
 
@@ -1339,24 +1620,37 @@ def monitor(
         raise SystemExit(1)
 
 
-def _maybe_interpret_drift(result: dict[str, Any], *, model: str) -> dict[str, Any] | None:
-    if not _has_api_key():
-        console.print(
-            "\n[yellow]⚠ --llm requested but ANTHROPIC_API_KEY is unset; "
-            "skipping interpreter.[/yellow]"
-        )
+def _maybe_interpret_drift(
+    result: dict[str, Any],
+    *,
+    model: str | None,
+    provider: str | None = None,
+    base_url: str | None = None,
+) -> dict[str, Any] | None:
+    if not _llm_available("interpreter", provider, base_url, model):
         return None
     try:
         with console.status("[cyan]Asking the drift interpreter...[/cyan]", spinner="dots"):
-            return _monitor_interpreter_callable(result, model=model)
+            return _monitor_interpreter_callable(
+                result,
+                model=model,
+                provider=provider,
+                base_url=base_url,
+            )
     except MonitorAgentError as exc:
         console.print(f"\n[red]✗ Interpreter returned bad response:[/red] {exc}")
         return None
 
 
 # Indirection so tests can monkeypatch without standing up the LLM.
-def _default_monitor_interpreter(result: dict[str, Any], *, model: str) -> dict[str, Any]:
-    return interpret_drift(result, model=model)
+def _default_monitor_interpreter(
+    result: dict[str, Any],
+    *,
+    model: str | None = None,
+    provider: str | None = None,
+    base_url: str | None = None,
+) -> dict[str, Any]:
+    return interpret_drift(result, model=model, provider=provider, base_url=base_url)
 
 
 _monitor_interpreter_callable: Callable[..., dict[str, Any]] = _default_monitor_interpreter
@@ -1457,12 +1751,12 @@ def _persist_monitor_result(
     is_flag=True,
     help="After the deterministic report, ask Claude for a strategist plan.",
 )
+@llm_target_options
 @click.option(
     "--model",
     "llm_model",
-    default="claude-opus-4-7",
-    show_default=True,
-    help="Claude model used by the strategist when --llm is set.",
+    default=None,
+    help=f"Model used by the strategist when --llm is set. {MODEL_HELP_SUFFIX}",
 )
 def optimize(
     runs_dir: Path | None,
@@ -1472,7 +1766,9 @@ def optimize(
     n_suggestions: int,
     constraints: str | None,
     use_llm: bool,
-    llm_model: str,
+    llm_provider: str | None,
+    llm_base_url: str | None,
+    llm_model: str | None,
 ) -> None:
     """Recommend the next hyperparameter configurations."""
     project = _try_load_project()
@@ -1520,7 +1816,12 @@ def optimize(
 
     strategy: dict[str, Any] | None = None
     if use_llm:
-        strategy = _maybe_strategize_optimize(result, model=llm_model)
+        strategy = _maybe_strategize_optimize(
+            result,
+            model=llm_model,
+            provider=llm_provider,
+            base_url=llm_base_url,
+        )
         if strategy is not None:
             render_optimize_strategy(console, strategy)
 
@@ -1533,24 +1834,37 @@ def optimize(
         )
 
 
-def _maybe_strategize_optimize(result: dict[str, Any], *, model: str) -> dict[str, Any] | None:
-    if not _has_api_key():
-        console.print(
-            "\n[yellow]⚠ --llm requested but ANTHROPIC_API_KEY is unset; "
-            "skipping strategist.[/yellow]"
-        )
+def _maybe_strategize_optimize(
+    result: dict[str, Any],
+    *,
+    model: str | None,
+    provider: str | None = None,
+    base_url: str | None = None,
+) -> dict[str, Any] | None:
+    if not _llm_available("strategist", provider, base_url, model):
         return None
     try:
         with console.status("[cyan]Asking the HPO strategist...[/cyan]", spinner="dots"):
-            return _optimize_strategist_callable(result, model=model)
+            return _optimize_strategist_callable(
+                result,
+                model=model,
+                provider=provider,
+                base_url=base_url,
+            )
     except OptimizeAgentError as exc:
         console.print(f"\n[red]✗ Strategist returned bad response:[/red] {exc}")
         return None
 
 
 # Indirection for tests.
-def _default_optimize_strategist(result: dict[str, Any], *, model: str) -> dict[str, Any]:
-    return strategize_optimize(result, model=model)
+def _default_optimize_strategist(
+    result: dict[str, Any],
+    *,
+    model: str | None = None,
+    provider: str | None = None,
+    base_url: str | None = None,
+) -> dict[str, Any]:
+    return strategize_optimize(result, model=model, provider=provider, base_url=base_url)
 
 
 _optimize_strategist_callable: Callable[..., dict[str, Any]] = _default_optimize_strategist

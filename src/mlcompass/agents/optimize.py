@@ -17,9 +17,13 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from agentlite import Agent
-
-from ._common import AgentResponseError, parse_json_response
+from ._common import (
+    AgentResponseError,
+    build_anthropic_agent,
+    parse_json_response,
+    resolve_llm_config,
+    run_json_agent,
+)
 
 OPTIMIZE_MODEL_DEFAULT = "claude-opus-4-7"
 
@@ -63,13 +67,17 @@ class OptimizeAgentError(AgentResponseError):
 def build_optimize_agent(
     *,
     client: Any | None = None,
-    model: str = OPTIMIZE_MODEL_DEFAULT,
-) -> Agent:
-    """Build the optimize strategist agent (pure reasoner, no tools)."""
-    return Agent(
+    model: str | None = None,
+) -> Any:
+    """Build the Anthropic optimize strategist agent (pure reasoner, no tools)."""
+    resolved = resolve_llm_config(
+        default_model=OPTIMIZE_MODEL_DEFAULT,
+        provider="anthropic",
         model=model,
+    )
+    return build_anthropic_agent(
         system=OPTIMIZE_STRATEGIST_PROMPT,
-        tools=[],
+        model=resolved.model,
         client=client,
         max_turns=2,
     )
@@ -79,17 +87,38 @@ def strategize_optimize(
     report: dict[str, Any],
     *,
     client: Any | None = None,
-    model: str = OPTIMIZE_MODEL_DEFAULT,
+    model: str | None = None,
+    provider: str | None = None,
+    base_url: str | None = None,
+    api_key: str | None = None,
 ) -> dict[str, Any]:
-    """Ask Claude to plan the next HPO sprint."""
-    agent = build_optimize_agent(client=client, model=model)
+    """Ask a model to plan the next HPO sprint.
+
+    Provider, model, base URL and API key each resolve in the same order:
+    **explicit argument, then environment (``MLCOMPASS_LLM_PROVIDER``,
+    ``MLCOMPASS_LLM_MODEL``, ``MLCOMPASS_LLM_BASE_URL``, and the provider's
+    own key variable), then the built-in default.** With none of them set
+    the strategist talks to Anthropic exactly as it always has.
+    ``provider="openai"`` sends a chat completion instead, which reaches any
+    OpenAI-compatible endpoint — including a local, keyless ollama server
+    via ``base_url``.
+    """
     payload = json.dumps(_compact(report), default=str)
     user_message = (
         "Here is the optimize report from mlcompass optimize. Please give "
         "a headline, the dominant pattern, and a 2-4 step plan.\n\n"
         f"```json\n{payload}\n```"
     )
-    raw = agent.run(user_message)
+    raw = run_json_agent(
+        system=OPTIMIZE_STRATEGIST_PROMPT,
+        user=user_message,
+        default_model=OPTIMIZE_MODEL_DEFAULT,
+        client=client,
+        provider=provider,
+        model=model,
+        base_url=base_url,
+        api_key=api_key,
+    )
     parsed = parse_json_response(
         raw,
         required_keys=("headline", "pattern", "next_plan"),

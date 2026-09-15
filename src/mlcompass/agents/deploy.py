@@ -10,9 +10,13 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from agentlite import Agent
-
-from ._common import AgentResponseError, parse_json_response
+from ._common import (
+    AgentResponseError,
+    build_anthropic_agent,
+    parse_json_response,
+    resolve_llm_config,
+    run_json_agent,
+)
 
 DEPLOY_MODEL_DEFAULT = "claude-opus-4-7"
 
@@ -58,13 +62,17 @@ class DeployAgentError(AgentResponseError):
 def build_deploy_agent(
     *,
     client: Any | None = None,
-    model: str = DEPLOY_MODEL_DEFAULT,
-) -> Agent:
-    """Build the deployment-advisor agent (pure reasoner, no tools)."""
-    return Agent(
+    model: str | None = None,
+) -> Any:
+    """Build the Anthropic deployment-advisor agent (pure reasoner, no tools)."""
+    resolved = resolve_llm_config(
+        default_model=DEPLOY_MODEL_DEFAULT,
+        provider="anthropic",
         model=model,
+    )
+    return build_anthropic_agent(
         system=DEPLOY_ADVISOR_PROMPT,
-        tools=[],
+        model=resolved.model,
         client=client,
         max_turns=2,
     )
@@ -79,9 +87,21 @@ def advise_deployment(
     report: dict[str, Any],
     *,
     client: Any | None = None,
-    model: str = DEPLOY_MODEL_DEFAULT,
+    model: str | None = None,
+    provider: str | None = None,
+    base_url: str | None = None,
+    api_key: str | None = None,
 ) -> dict[str, Any]:
     """Run the deploy advisor on a structured readiness report.
+
+    Provider, model, base URL and API key each resolve in the same order:
+    **explicit argument, then environment (``MLCOMPASS_LLM_PROVIDER``,
+    ``MLCOMPASS_LLM_MODEL``, ``MLCOMPASS_LLM_BASE_URL``, and the provider's
+    own key variable), then the built-in default.** With none of them set
+    the advisor talks to Anthropic exactly as it always has.
+    ``provider="openai"`` sends a chat completion instead, which reaches any
+    OpenAI-compatible endpoint — including a local, keyless ollama server
+    via ``base_url``.
 
     Returns:
         Parsed ``{verdict, blockers, next_steps, rollout_strategy}`` dict.
@@ -89,15 +109,22 @@ def advise_deployment(
     Raises:
         DeployAgentError: If the response shape is wrong.
     """
-    agent = build_deploy_agent(client=client, model=model)
-
     user_message = (
         "Here is the deployment-readiness report from mlcompass deploy. "
         "Please assess production readiness.\n\n"
         f"```json\n{json.dumps(report, indent=2, default=str)}\n```"
     )
 
-    raw = agent.run(user_message)
+    raw = run_json_agent(
+        system=DEPLOY_ADVISOR_PROMPT,
+        user=user_message,
+        default_model=DEPLOY_MODEL_DEFAULT,
+        client=client,
+        provider=provider,
+        model=model,
+        base_url=base_url,
+        api_key=api_key,
+    )
     return parse_json_response(
         raw,
         required_keys=("verdict", "blockers", "next_steps", "rollout_strategy"),

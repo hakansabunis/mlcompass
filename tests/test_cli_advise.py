@@ -77,7 +77,12 @@ def fake_advisor(
 
     captured: dict[str, Any] = {"called": False, "analysis": None, "model": None}
 
-    def _fake(analysis: dict[str, Any], *, model: str = "claude-opus-4-7") -> dict[str, Any]:
+    def _fake(
+        analysis: dict[str, Any],
+        *,
+        model: str | None = "claude-opus-4-7",
+        **_kwargs: Any,
+    ) -> dict[str, Any]:
         captured["called"] = True
         captured["analysis"] = analysis
         captured["model"] = model

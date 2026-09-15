@@ -13,9 +13,13 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from agentlite import Agent
-
-from ._common import AgentResponseError, parse_json_response
+from ._common import (
+    AgentResponseError,
+    build_anthropic_agent,
+    parse_json_response,
+    resolve_llm_config,
+    run_json_agent,
+)
 
 AUDIT_MODEL_DEFAULT = "claude-opus-4-7"
 
@@ -55,13 +59,17 @@ class AuditAgentError(AgentResponseError):
 def build_audit_agent(
     *,
     client: Any | None = None,
-    model: str = AUDIT_MODEL_DEFAULT,
-) -> Agent:
-    """Build the audit prioritizer agent (pure reasoner, no tools)."""
-    return Agent(
+    model: str | None = None,
+) -> Any:
+    """Build the Anthropic audit prioritizer agent (pure reasoner, no tools)."""
+    resolved = resolve_llm_config(
+        default_model=AUDIT_MODEL_DEFAULT,
+        provider="anthropic",
         model=model,
+    )
+    return build_anthropic_agent(
         system=AUDIT_PRIORITIZER_PROMPT,
-        tools=[],
+        model=resolved.model,
         client=client,
         max_turns=2,
     )
@@ -71,9 +79,21 @@ def prioritize_findings(
     audit_result: dict[str, Any],
     *,
     client: Any | None = None,
-    model: str = AUDIT_MODEL_DEFAULT,
+    model: str | None = None,
+    provider: str | None = None,
+    base_url: str | None = None,
+    api_key: str | None = None,
 ) -> dict[str, Any]:
     """Run the prioritizer on a deterministic audit result.
+
+    Provider, model, base URL and API key each resolve in the same order:
+    **explicit argument, then environment (``MLCOMPASS_LLM_PROVIDER``,
+    ``MLCOMPASS_LLM_MODEL``, ``MLCOMPASS_LLM_BASE_URL``, and the provider's
+    own key variable), then the built-in default.** With none of them set
+    the prioritizer talks to Anthropic exactly as it always has.
+    ``provider="openai"`` sends a chat completion instead, which reaches any
+    OpenAI-compatible endpoint — including a local, keyless ollama server
+    via ``base_url``.
 
     Returns the parsed ``{priorities, synthesis}`` dict.
 
@@ -83,15 +103,22 @@ def prioritize_findings(
     if not audit_result.get("findings"):
         return {"priorities": [], "synthesis": "No findings to prioritize."}
 
-    agent = build_audit_agent(client=client, model=model)
-
     user_message = (
         "Here is the static-analysis result from mlcompass audit. Please "
         "rank the findings by blast radius and write a synthesis.\n\n"
         f"```json\n{json.dumps(audit_result, indent=2)}\n```"
     )
 
-    raw = agent.run(user_message)
+    raw = run_json_agent(
+        system=AUDIT_PRIORITIZER_PROMPT,
+        user=user_message,
+        default_model=AUDIT_MODEL_DEFAULT,
+        client=client,
+        provider=provider,
+        model=model,
+        base_url=base_url,
+        api_key=api_key,
+    )
     return parse_json_response(
         raw,
         required_keys=("priorities", "synthesis"),

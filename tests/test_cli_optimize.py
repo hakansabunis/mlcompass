@@ -127,7 +127,7 @@ def test_optimize_llm_strategist_renders_when_stubbed(
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("ANTHROPIC_API_KEY", "fake")
 
-    def _stub(_result: dict[str, Any], *, model: str) -> dict[str, Any]:
+    def _stub(_result: dict[str, Any], *, model: str | None, **_kwargs: Any) -> dict[str, Any]:
         return {
             "headline": "lr is the dominant lever.",
             "pattern": "Lower learning rate monotonically improves val_acc.",

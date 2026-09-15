@@ -49,7 +49,7 @@ def with_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         cli_module,
         "_leakage_investigator_callable",
-        lambda evidence, *, model: {
+        lambda evidence, **_kw: {
             "verdict": "leakage_uncertain",
             "confidence": "low",
             "evidence_cited": [],
@@ -77,7 +77,12 @@ def test_evaluate_llm_calls_interpreter(
 ) -> None:
     captured: dict[str, Any] = {"called": False, "task": None}
 
-    def fake(evaluation: dict[str, Any], *, model: str = "claude-opus-4-7") -> dict[str, Any]:
+    def fake(
+        evaluation: dict[str, Any],
+        *,
+        model: str | None = "claude-opus-4-7",
+        **_kwargs: Any,
+    ) -> dict[str, Any]:
         captured["called"] = True
         captured["task"] = evaluation.get("task")
         return {
@@ -139,7 +144,12 @@ def test_evaluate_llm_persists_interpretation_to_project(
 ) -> None:
     project = ProjectContext.init("test-proj", parent_dir=tmp_path)
 
-    def fake(evaluation: dict[str, Any], *, model: str = "claude-opus-4-7") -> dict[str, Any]:
+    def fake(
+        evaluation: dict[str, Any],
+        *,
+        model: str | None = "claude-opus-4-7",
+        **_kwargs: Any,
+    ) -> dict[str, Any]:
         return {
             "assessment": "Strong.",
             "strengths": ["s1"],

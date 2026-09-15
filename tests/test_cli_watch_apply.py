@@ -85,7 +85,7 @@ def test_watch_apply_applies_edit_with_yes(
     monkeypatch.setattr(
         cli_module,
         "_watch_diagnostician_callable",
-        lambda snaps, finds, *, model="claude-opus-4-7": diagnosis_with_edit,
+        lambda snaps, finds, **_kw: diagnosis_with_edit,
     )
 
     runner = CliRunner()
@@ -120,7 +120,7 @@ def test_watch_apply_records_rejection_with_interactive_no(
     monkeypatch.setattr(
         cli_module,
         "_watch_diagnostician_callable",
-        lambda snaps, finds, *, model="claude-opus-4-7": diagnosis_with_edit,
+        lambda snaps, finds, **_kw: diagnosis_with_edit,
     )
 
     runner = CliRunner()
@@ -174,7 +174,7 @@ def test_watch_apply_without_config_warns(
     monkeypatch.setattr(
         cli_module,
         "_watch_diagnostician_callable",
-        lambda snaps, finds, *, model="claude-opus-4-7": diagnosis_with_edit,
+        lambda snaps, finds, **_kw: diagnosis_with_edit,
     )
 
     runner = CliRunner()
@@ -206,7 +206,7 @@ def test_watch_apply_skips_when_no_suggested_edits(
     monkeypatch.setattr(
         cli_module,
         "_watch_diagnostician_callable",
-        lambda snaps, finds, *, model="claude-opus-4-7": no_edits,
+        lambda snaps, finds, **_kw: no_edits,
     )
 
     runner = CliRunner()
@@ -244,7 +244,7 @@ def test_watch_apply_persists_to_project_advice_log(
     monkeypatch.setattr(
         cli_module,
         "_watch_diagnostician_callable",
-        lambda snaps, finds, *, model="claude-opus-4-7": diagnosis_with_edit,
+        lambda snaps, finds, **_kw: diagnosis_with_edit,
     )
 
     runner = CliRunner()

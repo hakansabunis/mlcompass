@@ -61,7 +61,12 @@ def test_deploy_llm_calls_advisor(
 ) -> None:
     captured: dict[str, Any] = {"called": False, "target": None}
 
-    def fake(report: dict[str, Any], *, model: str = "claude-opus-4-7") -> dict[str, Any]:
+    def fake(
+        report: dict[str, Any],
+        *,
+        model: str | None = "claude-opus-4-7",
+        **_kwargs: Any,
+    ) -> dict[str, Any]:
         captured["called"] = True
         captured["target"] = report.get("target")
         return fake_advice
@@ -120,7 +125,7 @@ def test_deploy_llm_persists_advice_to_project(
     monkeypatch.setattr(
         cli_module,
         "_deploy_advisor_callable",
-        lambda report, *, model="claude-opus-4-7": fake_advice,
+        lambda report, **_kw: fake_advice,
     )
 
     runner = CliRunner()

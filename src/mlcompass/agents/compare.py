@@ -10,9 +10,13 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from agentlite import Agent
-
-from ._common import AgentResponseError, parse_json_response
+from ._common import (
+    AgentResponseError,
+    build_anthropic_agent,
+    parse_json_response,
+    resolve_llm_config,
+    run_json_agent,
+)
 
 COMPARE_MODEL_DEFAULT = "claude-opus-4-7"
 
@@ -57,13 +61,17 @@ class CompareAgentError(AgentResponseError):
 def build_compare_agent(
     *,
     client: Any | None = None,
-    model: str = COMPARE_MODEL_DEFAULT,
-) -> Agent:
-    """Build the compare hypothesizer agent (pure reasoner, no tools)."""
-    return Agent(
+    model: str | None = None,
+) -> Any:
+    """Build the Anthropic compare hypothesizer agent (pure reasoner, no tools)."""
+    resolved = resolve_llm_config(
+        default_model=COMPARE_MODEL_DEFAULT,
+        provider="anthropic",
         model=model,
+    )
+    return build_anthropic_agent(
         system=COMPARE_HYPOTHESIZER_PROMPT,
-        tools=[],
+        model=resolved.model,
         client=client,
         max_turns=2,
     )
@@ -73,17 +81,27 @@ def hypothesize_comparison(
     comparison: dict[str, Any],
     *,
     client: Any | None = None,
-    model: str = COMPARE_MODEL_DEFAULT,
+    model: str | None = None,
+    provider: str | None = None,
+    base_url: str | None = None,
+    api_key: str | None = None,
 ) -> dict[str, Any]:
     """Run the hypothesizer on a deterministic comparison.
+
+    Provider, model, base URL and API key each resolve in the same order:
+    **explicit argument, then environment (``MLCOMPASS_LLM_PROVIDER``,
+    ``MLCOMPASS_LLM_MODEL``, ``MLCOMPASS_LLM_BASE_URL``, and the provider's
+    own key variable), then the built-in default.** With none of them set
+    the hypothesizer talks to Anthropic exactly as it always has.
+    ``provider="openai"`` sends a chat completion instead, which reaches any
+    OpenAI-compatible endpoint — including a local, keyless ollama server
+    via ``base_url``.
 
     Returns the parsed ``{hypothesis, key_factors, next_experiment}`` dict.
 
     Raises:
         CompareAgentError: If the response shape is wrong.
     """
-    agent = build_compare_agent(client=client, model=model)
-
     user_message = (
         "Here is the side-by-side comparison from mlcompass compare. "
         "Please write the hypothesis, identify key factors, and propose "
@@ -91,7 +109,16 @@ def hypothesize_comparison(
         f"```json\n{json.dumps(comparison, indent=2)}\n```"
     )
 
-    raw = agent.run(user_message)
+    raw = run_json_agent(
+        system=COMPARE_HYPOTHESIZER_PROMPT,
+        user=user_message,
+        default_model=COMPARE_MODEL_DEFAULT,
+        client=client,
+        provider=provider,
+        model=model,
+        base_url=base_url,
+        api_key=api_key,
+    )
     return parse_json_response(
         raw,
         required_keys=("hypothesis", "key_factors", "next_experiment"),

@@ -106,7 +106,7 @@ def test_monitor_llm_interpreter_renders_when_callable_returns(
     """Stub the interpreter so we don't hit the real model."""
     monkeypatch.setenv("ANTHROPIC_API_KEY", "fake-key")
 
-    def _stub(_result: dict[str, Any], *, model: str) -> dict[str, Any]:
+    def _stub(_result: dict[str, Any], *, model: str | None, **_kwargs: Any) -> dict[str, Any]:
         return {
             "headline": "Distributions look stable across the board.",
             "likely_cause": "No meaningful change in upstream sources.",

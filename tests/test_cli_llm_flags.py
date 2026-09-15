@@ -86,7 +86,12 @@ def test_audit_llm_calls_prioritizer(
 ) -> None:
     captured: dict[str, Any] = {"called": False, "model": None}
 
-    def fake(result: dict[str, Any], *, model: str = "claude-opus-4-7") -> dict[str, Any]:
+    def fake(
+        result: dict[str, Any],
+        *,
+        model: str | None = "claude-opus-4-7",
+        **_kwargs: Any,
+    ) -> dict[str, Any]:
         captured["called"] = True
         captured["model"] = model
         return {
@@ -146,7 +151,12 @@ def test_audit_llm_skips_when_no_findings(
 
     called = {"flag": False}
 
-    def fake(_result: dict[str, Any], *, model: str = "claude-opus-4-7") -> dict[str, Any]:
+    def fake(
+        _result: dict[str, Any],
+        *,
+        model: str | None = "claude-opus-4-7",
+        **_kwargs: Any,
+    ) -> dict[str, Any]:
         called["flag"] = True
         return {"priorities": [], "synthesis": ""}
 
@@ -189,7 +199,7 @@ def test_audit_llm_persists_priorities_to_project(
     monkeypatch.setattr(
         cli_module,
         "_audit_prioritizer_callable",
-        lambda result, *, model="claude-opus-4-7": {
+        lambda result, **_kw: {
             "priorities": [{"rule_id": "seed", "priority_rank": 1, "blast_radius": "X"}],
             "synthesis": "S",
         },
@@ -224,7 +234,11 @@ def test_watch_llm_calls_diagnostician(
     captured: dict[str, Any] = {"snapshots": None, "findings": None}
 
     def fake(
-        snapshots: list[dict], findings: list[dict], *, model: str = "claude-opus-4-7"
+        snapshots: list[dict],
+        findings: list[dict],
+        *,
+        model: str | None = "claude-opus-4-7",
+        **_kwargs: Any,
     ) -> dict:
         captured["snapshots"] = snapshots
         captured["findings"] = findings
@@ -321,7 +335,12 @@ def test_compare_llm_calls_hypothesizer(
     a, b = two_runs
     captured: dict[str, Any] = {"called": False}
 
-    def fake(comparison: dict[str, Any], *, model: str = "claude-opus-4-7") -> dict[str, Any]:
+    def fake(
+        comparison: dict[str, Any],
+        *,
+        model: str | None = "claude-opus-4-7",
+        **_kwargs: Any,
+    ) -> dict[str, Any]:
         captured["called"] = True
         return {
             "hypothesis": "B's lower lr won.",

@@ -10,9 +10,13 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from agentlite import Agent
-
-from ._common import AgentResponseError, parse_json_response
+from ._common import (
+    AgentResponseError,
+    build_anthropic_agent,
+    parse_json_response,
+    resolve_llm_config,
+    run_json_agent,
+)
 
 EVALUATE_MODEL_DEFAULT = "claude-opus-4-7"
 
@@ -64,13 +68,17 @@ class EvaluateAgentError(AgentResponseError):
 def build_evaluate_agent(
     *,
     client: Any | None = None,
-    model: str = EVALUATE_MODEL_DEFAULT,
-) -> Agent:
-    """Build the evaluation interpreter agent (pure reasoner, no tools)."""
-    return Agent(
+    model: str | None = None,
+) -> Any:
+    """Build the Anthropic evaluation interpreter agent (pure reasoner, no tools)."""
+    resolved = resolve_llm_config(
+        default_model=EVALUATE_MODEL_DEFAULT,
+        provider="anthropic",
         model=model,
+    )
+    return build_anthropic_agent(
         system=EVALUATE_INTERPRETER_PROMPT,
-        tools=[],
+        model=resolved.model,
         client=client,
         max_turns=2,
     )
@@ -85,9 +93,21 @@ def interpret_evaluation(
     evaluation: dict[str, Any],
     *,
     client: Any | None = None,
-    model: str = EVALUATE_MODEL_DEFAULT,
+    model: str | None = None,
+    provider: str | None = None,
+    base_url: str | None = None,
+    api_key: str | None = None,
 ) -> dict[str, Any]:
     """Run the interpreter on a structured evaluation result.
+
+    Provider, model, base URL and API key each resolve in the same order:
+    **explicit argument, then environment (``MLCOMPASS_LLM_PROVIDER``,
+    ``MLCOMPASS_LLM_MODEL``, ``MLCOMPASS_LLM_BASE_URL``, and the provider's
+    own key variable), then the built-in default.** With none of them set
+    the interpreter talks to Anthropic exactly as it always has.
+    ``provider="openai"`` sends a chat completion instead, which reaches any
+    OpenAI-compatible endpoint — including a local, keyless ollama server
+    via ``base_url``.
 
     Returns:
         Parsed ``{assessment, strengths, weaknesses, next_steps}`` dict.
@@ -95,15 +115,22 @@ def interpret_evaluation(
     Raises:
         EvaluateAgentError: If the response shape is wrong.
     """
-    agent = build_evaluate_agent(client=client, model=model)
-
     user_message = (
         "Here is the evaluation report from mlcompass evaluate. Please "
         "interpret it for me.\n\n"
         f"```json\n{json.dumps(evaluation, indent=2, default=str)}\n```"
     )
 
-    raw = agent.run(user_message)
+    raw = run_json_agent(
+        system=EVALUATE_INTERPRETER_PROMPT,
+        user=user_message,
+        default_model=EVALUATE_MODEL_DEFAULT,
+        client=client,
+        provider=provider,
+        model=model,
+        base_url=base_url,
+        api_key=api_key,
+    )
     return parse_json_response(
         raw,
         required_keys=("assessment", "strengths", "weaknesses", "next_steps"),

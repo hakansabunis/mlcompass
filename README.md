@@ -63,9 +63,10 @@ eleven tools become one-keystroke calls inside Claude Code — one
 v0.7 introduced **automatic leakage investigation** with an
 anti-hallucination contract — when `evaluate` sees a suspiciously
 perfect metric, it gathers structured evidence about which columns
-might be the source and (with `--llm`) hands it to a Claude agent
-that's forbidden from inventing column names or proposing code
-patches.
+might be the source and (with `--llm`) hands it to an agent that's
+forbidden from inventing column names or proposing code patches — a
+guarantee enforced deterministically on this side of the API, so it
+holds whichever provider you point it at.
 
 | Command    | When you run it                          | What you get                                                  | Status |
 | ---------- | ---------------------------------------- | ------------------------------------------------------------- | :----: |
@@ -83,9 +84,11 @@ patches.
 
 Every command except `init`, `status`, and `agent` keeps a fully
 deterministic default path and offers an opt-in `--llm` flag that adds
-a Claude-driven interpretation step on top. The `agent` command is
-the inverse: LLM-first by design, with the other tools as its hands —
-and now remembers across runs via per-project memory.
+an LLM interpretation step on top — against Anthropic by default, or
+any OpenAI-compatible endpoint, including a local model that costs
+nothing (see [Install](#install)). The `agent` command is the inverse:
+LLM-first by design, with the other tools as its hands — and now
+remembers across runs via per-project memory.
 
 **Battle-tested**: v0.6 → v0.7.3 ships **4 field-test patches** that
 closed bugs surfaced by real Kaggle datasets (Telco Churn, Ames House
@@ -97,17 +100,59 @@ through a live dry run before shipping — see
 
 ```bash
 pip install mlcompass
-export ANTHROPIC_API_KEY="sk-ant-..."   # only needed for --llm modes
 ```
+
+Every command runs deterministically with no key and no network. The
+`--llm` modes need **a** provider — and it does not have to be a paid one.
+
+**Local model, no key, no cost** (any OpenAI-compatible server: ollama,
+vLLM, llama.cpp, LM Studio):
+
+```bash
+pip install "mlcompass[agent]"
+ollama serve && ollama pull qwen2.5:7b
+
+export MLCOMPASS_LLM_PROVIDER=openai
+export MLCOMPASS_LLM_BASE_URL=http://localhost:11434/v1
+export MLCOMPASS_LLM_MODEL=qwen2.5:7b
+
+mlcompass advise data.csv --llm
+```
+
+**Hosted model:**
+
+```bash
+export ANTHROPIC_API_KEY="sk-ant-..."    # the default provider
+# or a hosted OpenAI-compatible endpoint:
+export OPENAI_API_KEY="sk-..."
+export MLCOMPASS_LLM_PROVIDER=openai
+export MLCOMPASS_LLM_MODEL=gpt-5.4-mini
+```
+
+Per invocation, the flags win over the environment:
+
+```bash
+mlcompass advise data.csv --llm \
+  --provider openai --base-url http://localhost:11434/v1 --model qwen2.5:7b
+```
+
+`--provider` / `--base-url` / `--model` are available on every command
+that takes `--llm`: `advise`, `audit`, `watch`, `compare`, `evaluate`,
+`deploy`, `monitor`, `optimize`. Resolution order for each setting is
+**flag → environment → built-in default**, and the built-in default is
+Anthropic, so an existing setup keeps working untouched.
 
 Optional extras:
 
 ```bash
 pip install "mlcompass[tensorboard]"          # adds tbparse for TB event files
 pip install "mlcompass[mcp]"                  # adds the Claude / Cursor MCP server
-pip install "mlcompass[agent]"                # adds the self-driving agent (anthropic API)
+pip install "mlcompass[agent]"                # adds --llm + the self-driving agent
 pip install "mlcompass[agent-claude-code]"    # alt agent backend via Claude Code CLI
 ```
+
+The `agent` extra installs both provider SDKs (`anthropic` and `openai`);
+each is imported only on the path that uses it.
 
 ## Use from Claude Desktop / Cursor (MCP)
 

@@ -17,9 +17,13 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from agentlite import Agent
-
-from ._common import AgentResponseError, parse_json_response
+from ._common import (
+    AgentResponseError,
+    build_anthropic_agent,
+    parse_json_response,
+    resolve_llm_config,
+    run_json_agent,
+)
 
 MONITOR_MODEL_DEFAULT = "claude-opus-4-7"
 
@@ -60,13 +64,17 @@ class MonitorAgentError(AgentResponseError):
 def build_monitor_agent(
     *,
     client: Any | None = None,
-    model: str = MONITOR_MODEL_DEFAULT,
-) -> Agent:
-    """Build the drift interpreter agent (pure reasoner, no tools)."""
-    return Agent(
+    model: str | None = None,
+) -> Any:
+    """Build the Anthropic drift interpreter agent (pure reasoner, no tools)."""
+    resolved = resolve_llm_config(
+        default_model=MONITOR_MODEL_DEFAULT,
+        provider="anthropic",
         model=model,
+    )
+    return build_anthropic_agent(
         system=MONITOR_INTERPRETER_PROMPT,
-        tools=[],
+        model=resolved.model,
         client=client,
         max_turns=2,
     )
@@ -76,10 +84,22 @@ def interpret_drift(
     report: dict[str, Any],
     *,
     client: Any | None = None,
-    model: str = MONITOR_MODEL_DEFAULT,
+    model: str | None = None,
+    provider: str | None = None,
+    base_url: str | None = None,
+    api_key: str | None = None,
 ) -> dict[str, Any]:
-    """Ask Claude to interpret a deterministic drift report."""
-    agent = build_monitor_agent(client=client, model=model)
+    """Ask a model to interpret a deterministic drift report.
+
+    Provider, model, base URL and API key each resolve in the same order:
+    **explicit argument, then environment (``MLCOMPASS_LLM_PROVIDER``,
+    ``MLCOMPASS_LLM_MODEL``, ``MLCOMPASS_LLM_BASE_URL``, and the provider's
+    own key variable), then the built-in default.** With none of them set
+    the interpreter talks to Anthropic exactly as it always has.
+    ``provider="openai"`` sends a chat completion instead, which reaches any
+    OpenAI-compatible endpoint — including a local, keyless ollama server
+    via ``base_url``.
+    """
     payload = json.dumps(_compact(report), default=str)
 
     user_message = (
@@ -87,7 +107,16 @@ def interpret_drift(
         "headline, the most likely cause, and 2-4 concrete next steps.\n\n"
         f"```json\n{payload}\n```"
     )
-    raw = agent.run(user_message)
+    raw = run_json_agent(
+        system=MONITOR_INTERPRETER_PROMPT,
+        user=user_message,
+        default_model=MONITOR_MODEL_DEFAULT,
+        client=client,
+        provider=provider,
+        model=model,
+        base_url=base_url,
+        api_key=api_key,
+    )
     parsed = parse_json_response(
         raw,
         required_keys=("headline", "likely_cause", "next_steps"),
