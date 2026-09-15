@@ -1220,6 +1220,27 @@ def _fit_lines(source: str, lines: list[str]) -> list[int]:
     return hits
 
 
+def _comprehension_excludes_target(source: str, tokens: str) -> bool:
+    """True if a comprehension over a column index filters the target out.
+
+    Matches `[c for c in df.columns if c != target_col]` and its `not in`
+    sibling. Two steps rather than one regex: isolate each bracketed
+    comprehension that iterates a column index, then look for a target
+    reference under `!=` or `not in` inside that same bracket. Doing it in
+    one pattern lets the `!=` bind to a comparison in an unrelated
+    comprehension elsewhere on the line.
+    """
+    ref = re.compile(rf"(?:!=|\bnot\s+in\b)[^\]]{{0,80}}?['\"]?(?:{tokens})['\"]?(?![\w'\"])")
+    inner = r"(?:[^\[\]]|\[[^\[\]]*\])*"
+    span_pattern = r"\[" + inner + r"\bfor\b" + inner + r"\]"
+    for span in re.findall(span_pattern, source, re.S):
+        if "columns" not in span:
+            continue
+        if ref.search(span):
+            return True
+    return False
+
+
 def _target_tokens(source: str, target: str) -> list[str]:
     """The target column's name plus any variable holding that literal."""
     tokens = [re.escape(target)]
@@ -1350,10 +1371,27 @@ def check_defects(
     #   3. `columns != <target>`, `columns.drop(<target>)`, `columns.difference(...)`
     #   4. an explicit column-list selection, `df[["V1", "V2"]]`, that omits the target
     #   5. `iloc[:, :-1]`, but only when the target really is the last column
+    #   6. a comprehension over the column index that filters the target out:
+    #      `[c for c in df.columns if c != target_col]`
+    #   7. a set difference on the column index: `set(df.columns) - {target}`
     #
     # Form 4 is not decoration: it is what the first live control run used
     # (`X = df[['V1','V2','V3','V4']]`), and without it the checker reported a
     # defect in a script that had correctly excluded the target.
+    #
+    # Forms 6 and 7 are here because they were missing and the rule was
+    # reporting `target_in_features` on 15 of 108 preserved runs whose scripts
+    # exclude the target correctly (amendment A7). The first was found by
+    # Yusuf Unlu in review, in
+    # runs/ab-20260915-3b0221-1464-control-deepseek-flash-r1/emitted.py:12.
+    #
+    # The shape of this rule is worth naming, because it is the reason the
+    # defect existed: it scores the ABSENCE of every enumerated exclusion
+    # form, so the list of forms is open-ended and every form nobody thought
+    # of becomes a false positive on correct code. The enumeration is the
+    # weakness, not any individual pattern. Tests in
+    # tests/test_ab_target_exclusion.py pin every form above, and a new form
+    # belongs there first.
     tokens = "|".join(_target_tokens(source, target))
     exclusion = re.compile(
         rf"\.drop\s*\([^)]*(?:['\"](?:{tokens})['\"]|(?<![\w'\"])(?:{tokens})(?![\w'\"]))"
@@ -1369,6 +1407,14 @@ def check_defects(
             if quoted_list and not quoted_target.search(listed):
                 target_in_features = False
                 break
+    if target_in_features and _comprehension_excludes_target(source, tokens):
+        target_in_features = False
+    if target_in_features and re.search(
+        rf"set\s*\([^)]*columns[^)]*\)\s*-\s*[\{{\[(][^\}}\])]*"
+        rf"['\"]?(?:{tokens})['\"]?",
+        source,
+    ):
+        target_in_features = False
     if (
         target_in_features
         and target_is_last_column

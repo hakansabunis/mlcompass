@@ -56,10 +56,24 @@ def test_provider_table_covers_the_q1_panel() -> None:
         assert cfg["model"], name
 
 
-def test_deepseek_pins_the_direct_model_name() -> None:
-    # The 'deepseek-chat' alias is deprecated 2026-07-24; the default must be
-    # the direct name so replication runs keep working after that date.
-    assert harness.PROVIDERS["deepseek"]["model"] == "deepseek-v4-flash"
+def test_deepseek_pins_a_model_that_accepts_a_forced_tool_choice() -> None:
+    # This test used to pin 'deepseek-v4-flash', chosen on a deprecation
+    # notice for the 'deepseek-chat' alias and never exercised against the
+    # API. Every current DeepSeek direct name is a thinking-mode model, and
+    # thinking mode refuses the forced tool_choice this harness requires:
+    #
+    #     400 - Thinking mode does not support this tool_choice
+    #
+    # so '--provider deepseek' failed every call and scored every cell 0/0.
+    # Probed 2026-09-15 with a forced tool_choice: deepseek-chat OK;
+    # deepseek-flash, deepseek-v4-flash and deepseek-v4-pro all 400.
+    # deepseek-chat is absent from models.list() but still served, so a
+    # listing check confirms the wrong answer.
+    #
+    # The name is not the invariant. The invariant is that the default is a
+    # model the contract can actually call, and the only way to know that is
+    # to send one forced tool_choice at it before changing this line.
+    assert harness.PROVIDERS["deepseek"]["model"] == "deepseek-chat"
 
 
 def test_every_default_subject_model_has_pricing() -> None:

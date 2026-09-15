@@ -38,11 +38,24 @@ by splitting on duplicate groups: 0 holdout rows in train, 125 duplicates
 still inside train, so the score is honest and the defect stays reachable.
 
 **4. The A/B result, on 108 runs.** The defect count falls from `control`
-to `advise+audit` on all four model lanes. The held-out score shows no
-direction — 3 cells better, 3 worse, 3 flat — and the spread within an arm
-repeatedly exceeds the gap between arms. This is the outcome
-`ab_protocol.md` §6 named before any data existed: **the process improves,
-the metric does not.**
+to `advise+audit` on all four model lanes — 35 → 27 → 9 in total after
+rescoring. The held-out score shows no direction, and the spread within an
+arm repeatedly exceeds the gap between arms. `ab_protocol.md` §6 named
+**"the process improves, the metric does not"** before any data existed and
+nothing refuted it, but only 70 of 108 runs carry a score, so what is
+supported is the weaker **no consistent improvement could be shown**.
+
+**5. Three defects in that result, found in review by Yusuf Ünlü, all
+confirmed against the preserved evidence.** The defect checker flagged
+`target_in_features` on 15 runs whose scripts exclude the target with a
+comprehension the rule did not recognise — corrected by rescoring the same
+bytes, which moved the totals from 40/31/15 to 35/27/9, *toward* the
+hypothesis (A7). Only 70 of 108 runs are scored, with 8 of 36 cells carrying
+none, so the conclusion is weakened accordingly (A9). And `advise+audit`
+gives the model a second attempt that the other arms do not, so the defect
+reduction cannot yet be attributed to mlcompass rather than to the extra
+turn — an equal-budget self-revision arm is needed and has not been run
+(A8).
 
 ---
 
@@ -64,8 +77,12 @@ frozen plan exists to prevent).
 ## Open
 
 - **A6** — whether a saved bundle (model + encoder + columns) counts as a
-  scoreable artefact. 15 runs scored blank for arguably doing the more
-  correct thing.
+  scoreable artefact. 17 runs completed and scored blank for arguably doing
+  the more correct thing; it is most of why `openai-gpt-5.4-mini` has 5 of
+  27 runs scored.
+- **A8** — the equal-budget self-revision arm. Until it runs, the fall from
+  35 defects to 9 cannot be split between mlcompass's findings and the
+  second attempt. This is the single most load-bearing missing experiment.
 - **A decision rule for "beats."** `ab_protocol.md` §9 records that there
   isn't one. With n=3 and medians separated by 0.0002, this is the binding
   constraint on reporting, not the amount of data.

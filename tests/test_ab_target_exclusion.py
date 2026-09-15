@@ -1,0 +1,156 @@
+"""The `target_in_features` rule, pinned form by form.
+
+This rule scores the *absence* of every enumerated way of taking the target
+out of the feature matrix. That shape is the reason it needs this file: the
+list of forms is open-ended, so every form nobody enumerated becomes a false
+positive on correct code, and a false positive here inflates the defect count
+the A/B benchmark reports.
+
+It has already happened once. Yusuf Ünlü found, in review of the 108-run
+battery, that a script excluding the target with a list comprehension
+
+    feature_cols = [c for c in df.columns if c != target_col]
+
+was scored `target_in_features: yes`. Fifteen of the 108 preserved runs
+carried that false positive (amendment A7).
+
+So: every accepted form gets a test, and every genuine defect gets one too,
+because widening an exclusion rule is exactly how you turn a detector into a
+rubber stamp. Add the test before the form.
+"""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "benchmark"))
+
+from run_ab import check_defects  # noqa: E402
+
+TARGET = "Class"
+
+HEAD = """import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+df = pd.read_csv("train.csv")
+"""
+
+
+def _flag(body: str) -> bool:
+    """Run the checker over HEAD + body and return the target_in_features flag."""
+    report = check_defects(
+        HEAD + body,
+        target=TARGET,
+        duplicate_rows=0,
+        minority_fraction=None,
+        target_is_last_column=False,
+    )
+    return bool(report["flags"]["target_in_features"])
+
+
+# --------------------------------------------------------------------------- #
+# Accepted: the target really is excluded. The flag must be False.            #
+# --------------------------------------------------------------------------- #
+
+EXCLUDES = {
+    "drop_literal": 'X = df.drop(columns=["Class"])\ny = df["Class"]\n',
+    "drop_via_variable": (
+        'target_col = "Class"\n'
+        "X = df.drop(columns=[target_col])\ny = df[target_col]\n"
+    ),
+    "pop": 'y = df.pop("Class")\nX = df\n',
+    "columns_neq": 'X = df.loc[:, df.columns != "Class"]\ny = df["Class"]\n',
+    "columns_drop": 'X = df[df.columns.drop("Class")]\ny = df["Class"]\n',
+    "columns_difference": 'X = df[df.columns.difference(["Class"])]\ny = df["Class"]\n',
+    "explicit_list": 'X = df[["V1", "V2", "V3"]]\ny = df["Class"]\n',
+    # Form 6 - the one that was missing.
+    "comprehension_neq_variable": (
+        'target_col = "Class"\n'
+        "feature_cols = [c for c in df.columns if c != target_col]\n"
+        "X = df[feature_cols]\ny = df[target_col]\n"
+    ),
+    "comprehension_neq_literal": (
+        'feature_cols = [c for c in df.columns if c != "Class"]\n'
+        'X = df[feature_cols]\ny = df["Class"]\n'
+    ),
+    "comprehension_not_in": (
+        'target_col = "Class"\n'
+        "X = df[[c for c in df.columns if c not in [target_col]]]\n"
+        "y = df[target_col]\n"
+    ),
+    "comprehension_inline": ('X = df[[c for c in df.columns if c != "Class"]]\ny = df["Class"]\n'),
+    # Form 7.
+    "set_difference": (
+        'feature_cols = list(set(df.columns) - {"Class"})\nX = df[feature_cols]\ny = df["Class"]\n'
+    ),
+}
+
+
+@pytest.mark.parametrize("name", sorted(EXCLUDES))
+def test_excluded_target_is_not_flagged(name: str) -> None:
+    assert not _flag(EXCLUDES[name]), (
+        f"{name}: the script excludes the target, so target_in_features must be "
+        "False. A true flag here is a false positive that inflates the A/B "
+        "defect count."
+    )
+
+
+# --------------------------------------------------------------------------- #
+# Rejected: the target really is in the features. The flag must be True.      #
+# Widening the rule must not cost us these.                                   #
+# --------------------------------------------------------------------------- #
+
+LEAVES_TARGET_IN = {
+    "whole_frame": 'X = df\ny = df["Class"]\n',
+    "comprehension_without_filter": (
+        'feature_cols = [c for c in df.columns]\nX = df[feature_cols]\ny = df["Class"]\n'
+    ),
+    # Filters a different column - the target stays in.
+    "comprehension_filters_other_column": (
+        'feature_cols = [c for c in df.columns if c != "V1"]\n'
+        'X = df[feature_cols]\ny = df["Class"]\n'
+    ),
+    # A comparison against the target that is not a column filter.
+    "unrelated_comparison": (
+        'target_col = "Class"\n'
+        'rows = [r for r in df.index if df.loc[r, "V1"] != 0]\n'
+        "X = df\ny = df[target_col]\n"
+    ),
+    "explicit_list_including_target": 'X = df[["V1", "V2", "Class"]]\ny = df["Class"]\n',
+}
+
+
+@pytest.mark.parametrize("name", sorted(LEAVES_TARGET_IN))
+def test_target_left_in_is_flagged(name: str) -> None:
+    assert _flag(LEAVES_TARGET_IN[name]), (
+        f"{name}: the target is still in the feature matrix, so "
+        "target_in_features must be True. A false flag here means the rule was "
+        "widened into a rubber stamp."
+    )
+
+
+def test_the_run_that_started_this() -> None:
+    """The exact script from the review, byte for byte.
+
+    runs/ab-20260915-3b0221-1464-control-deepseek-flash-r1/emitted.py:11-15.
+    Kept as its own test because a parametrised case can drift away from what
+    the model actually wrote; this one cannot.
+    """
+    source = HEAD + (
+        'target_col = "Class"\n'
+        "feature_cols = [c for c in df.columns if c != target_col]\n"
+        "\n"
+        "X = df[feature_cols]\n"
+        "y = df[target_col]\n"
+    )
+    report = check_defects(
+        source,
+        target=TARGET,
+        duplicate_rows=0,
+        minority_fraction=None,
+        target_is_last_column=True,
+    )
+    assert not report["flags"]["target_in_features"]

@@ -316,3 +316,84 @@ would penalise the treatment arms for taking the intervention's advice.
 Every arm now receives the same list of importable packages, generated from
 the environment the script will actually run in rather than written by
 hand.
+
+**A6 — a saved bundle is not a scoreable artefact, and that is a scorer
+limitation rather than a result.** Unresolved; see §6. Recorded here so the
+numbering below is not mistaken for a gap.
+
+**A7 — the defect checker reported `target_in_features` on scripts that
+exclude the target.** Found by Yusuf Ünlü in review of the 108-run battery,
+against the preserved evidence rather than against a claim. The rule scores
+the *absence* of every enumerated way of taking the target out, and the
+enumeration did not include a comprehension:
+
+```python
+target_col = "Class"
+feature_cols = [c for c in df.columns if c != target_col]
+X = df[feature_cols]
+```
+
+`runs/ab-20260915-3b0221-1464-control-deepseek-flash-r1/emitted.py:11` does
+exactly this and was scored `target_in_features: yes`. **Fifteen of the 108
+runs carried the false positive.**
+
+The shape of the rule is the defect, not any single missing pattern. An
+absence-scored checklist has an open-ended list of forms, so every form
+nobody thought of becomes a false positive on correct code — which inflates
+the defect count in the direction that flatters the treatment arms, since
+correct scripts are what the treatment is supposed to produce. Comprehension
+and set-difference forms were added, and `tests/test_ab_target_exclusion.py`
+now pins every accepted form together with five scripts that genuinely leave
+the target in, because widening an exclusion rule is how a detector becomes
+a rubber stamp.
+
+Corrected against the same bytes via `benchmark/rescore_ab.py` — no model
+call, no re-execution, dataset facts read back from each run's `run.json`.
+Original rows and every original `scoring.md` are kept; the corrected rows
+carry experiment id `ab-20260915-3b0221-rescored` and each run gained a
+`scoring_rescored.md` beside its original.
+
+| lane | control | advise | advise+audit |
+| --- | ---: | ---: | ---: |
+| deepseek-flash | 14 → **13** | 15 → **15** | 7 → **5** |
+| mistral-ministral-8b | 8 → **8** | 2 → **2** | 0 → **0** |
+| ollama-qwen2.5-7b | 6 → **6** | 4 → **4** | 1 → **1** |
+| openai-gpt-5.4-mini | 12 → **8** | 10 → **6** | 7 → **3** |
+| **total** | 40 → **35** | 31 → **27** | 15 → **9** |
+
+The correction did not reverse the direction; it sharpened it. That is worth
+stating plainly rather than quietly, because a correction that happens to
+favour the hypothesis deserves more scrutiny than one that does not: the
+false positives fell 5 on `control`, 4 on `advise` and 6 on `advise+audit`,
+so the arm that gained most from the fix is the treatment arm. The reason is
+mundane and checkable — the comprehension form is more common in the
+scripts written after an audit — but anyone re-reading this should confirm
+it rather than take it.
+
+**A8 — the `advise+audit` arm confounds the intervention with a second
+attempt, and this is not yet resolved.** Raised by Yusuf Ünlü. In
+`advise+audit` the model sees its own script again and revises it; in
+`control` and `advise` it answers once. Some part of the fall from 35 to 9
+is mlcompass telling the model what is wrong, and some part is simply
+getting a second go, and **this experiment cannot separate them.**
+
+Closing it needs a fourth arm at equal budget: a second turn that says
+*review your script and fix any problems you find*, carrying no mlcompass
+output. Until that arm runs, the defensible claim is that **the arm
+combining mlcompass findings with a revision turn produces fewer flagged
+defects**, and not that the findings are what caused it. The reports are
+written to say that, and no stronger.
+
+**A9 — 70 of 108 runs carry a held-out score; the report's conclusion is
+weakened to match.** Also raised in the same review. 21 scripts failed to
+run and 17 ran but saved a model the scorer could not load (see A6). The
+shortfall is severe and uneven: `openai-gpt-5.4-mini` has **5 of 27** runs
+scored, and **17 of the 36 cells have fewer than three scored repeats, 8 of
+them none at all**. A "3 better, 3 worse, 3 flat" reading across cells is
+therefore not resting on three repeats per cell.
+
+"The process improves, the metric does not" claims more than this evidence
+can carry. The claim in §6 stands as a pre-registered *prediction* that was
+not refuted; it is not a measured null. Everywhere a result is reported it
+now reads **no consistent improvement in held-out score could be shown**,
+which is what 70 unevenly distributed scores support.
