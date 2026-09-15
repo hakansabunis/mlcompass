@@ -132,8 +132,27 @@ async def _run_async(
     error: str | None = None
     ok = True
 
+    # The SDK refuses a plain-string prompt whenever `can_use_tool` is set
+    # ("can_use_tool callback requires streaming mode"), because it has to
+    # keep the channel open to ask. A one-item async generator is the
+    # smallest thing that satisfies it while leaving the task text
+    # unchanged.
+    #
+    # This only began to matter once the permission callback became
+    # reachable. While every tool sat in `allowed_tools` the SDK never
+    # consulted the callback, so the string form was accepted and the
+    # requirement stayed invisible — the backend broke the moment the
+    # mutating tool was actually gated.
+    async def _prompt_stream() -> Any:
+        yield {
+            "type": "user",
+            "message": {"role": "user", "content": task},
+            "parent_tool_use_id": None,
+            "session_id": "default",
+        }
+
     try:
-        async for message in sdk.query(prompt=task, options=options):
+        async for message in sdk.query(prompt=_prompt_stream(), options=options):
             mtype = type(message).__name__
             if mtype == "AssistantMessage":
                 turns += 1

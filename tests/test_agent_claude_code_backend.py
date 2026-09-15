@@ -438,3 +438,44 @@ def test_sdk_error_surfaces_clean_failure(monkeypatch: pytest.MonkeyPatch) -> No
     assert result.ok is False
     assert result.stop_reason == "sdk_error"
     assert "subprocess died" in (result.error or "")
+
+
+def test_prompt_is_streamed_not_passed_as_a_bare_string() -> None:
+    """The SDK refuses a string prompt whenever `can_use_tool` is set.
+
+    Regression: while every tool sat in `allowed_tools` the SDK never
+    consulted the permission callback, so a plain string was accepted and
+    this requirement stayed invisible. Gating the mutating tool made the
+    callback reachable, and the backend then failed outright with
+    "can_use_tool callback requires streaming mode" before reaching the
+    model at all.
+    """
+    import asyncio
+    import inspect
+
+    captured: dict[str, object] = {}
+
+    class _FakeSdk:
+        def query(self, *, prompt: object, options: object):  # noqa: ANN401, ARG002
+            captured["prompt"] = prompt
+
+            async def _empty():
+                return
+                yield  # pragma: no cover - makes this an async generator
+
+            return _empty()
+
+    from mlcompass.agent.backends import claude_code as backend
+
+    asyncio.run(
+        backend._run_async(  # type: ignore[attr-defined]
+            task="do the thing",
+            options=object(),
+            on_step=lambda _step: None,
+            sdk=_FakeSdk(),
+        )
+    )
+
+    prompt = captured["prompt"]
+    assert not isinstance(prompt, str), "a bare string prompt disables the permission callback"
+    assert inspect.isasyncgen(prompt) or hasattr(prompt, "__aiter__")
