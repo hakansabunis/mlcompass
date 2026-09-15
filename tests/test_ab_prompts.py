@@ -29,6 +29,12 @@ the holdout shared 38% of its rows with train, so the score rewarded the
 defect the checklist penalises — and the tests for it therefore assert
 measured properties of the written CSVs, not that the harness calls a
 grouping function.
+
+A/B 1.3 adds the execution environment to the prompt (§9 A5), and the same
+discipline applies to it: the tests assert that the package list is a function
+of what this interpreter can import, never that it contains a particular name.
+A list of packages is exactly the kind of thing that gets written down once and
+then quietly stops being true.
 """
 
 from __future__ import annotations
@@ -1314,7 +1320,338 @@ def test_a_protocol_that_no_longer_asks_for_grouping_is_caught() -> None:
     assert "group" in str(excinfo.value).lower()
 
 
-def test_the_harness_declares_the_protocol_version_that_carries_a4() -> None:
+def test_the_harness_declares_the_protocol_version_that_carries_a4_and_a5() -> None:
+    """The version literal moves with the amendments; A4 must still be in the text.
+
+    1.2 carried A4 and 1.3 carries A5. The version is asserted against the
+    document rather than against a remembered number, and A4's own paragraph is
+    asserted to still be there — a version bump that quietly dropped an
+    amendment would otherwise pass here.
+    """
     document = PROTOCOL_PATH.read_text(encoding="utf-8")
-    assert run_ab.AB_PROTOCOL_VERSION == "A/B 1.2"
-    assert "Protocol version: A/B 1.2" in document
+    assert run_ab.AB_PROTOCOL_VERSION == "A/B 1.3"
+    assert "Protocol version: A/B 1.3" in document
+    assert "**A4 — split on duplicate groups.**" in document
+    assert "**A5 — state the execution environment in the prompt.**" in document
+
+
+# --------------------------------------------------------------------------- #
+# A/B 1.3 §9 A5 — the execution environment, stated in the prompt and measured  #
+# --------------------------------------------------------------------------- #
+#
+# A validation run's `advise` arm died on `import imblearn`. That is a
+# reasonable library to reach for and simply absent here, so `runs_at_all` —
+# one of §1's three outcomes — was partly reading this machine's `pip list`.
+# The confound is directional: advise output recommends handling class
+# imbalance, which points at exactly the resampling libraries most likely to be
+# missing, so an unstated environment penalises the treatment arms for taking
+# the intervention's advice.
+#
+# The fix is a package list in the prompt, identical across the arms. What
+# these tests are about is the word *measured*: a hand-written list drifts from
+# the environment the moment anything is installed or removed, and then the
+# prompt is guessing with more confidence than before. So none of them assert
+# that the list contains a particular package. They assert that membership is a
+# function of what this interpreter can actually import.
+
+
+def _package_lines(rendered: str) -> list[str]:
+    return [line.strip() for line in rendered.splitlines() if line.strip()]
+
+
+def _package_names(rendered: str) -> list[str]:
+    """The import names the rendered list offers, in the order it offers them."""
+    return [line.lstrip("- ").split()[0] for line in _package_lines(rendered)]
+
+
+def test_every_package_the_prompt_names_can_actually_be_imported() -> None:
+    """§2: the list "names what is actually importable rather than what we would
+    like to be".
+
+    Checked by importing each name in a subprocess of the interpreter that runs
+    the emitted script, which is the only authority on the question. A list
+    that had been typed out and left to rot would fail here on its first stale
+    entry — which is the failure A5 exists to prevent, one level up.
+    """
+    import subprocess
+
+    names = _package_names(run_ab.environment_packages())
+    assert names, "the list is empty; see test_an_empty_package_list_is_refused"
+    probe = (
+        "import importlib, sys\n"
+        f"names = {names!r}\n"
+        "bad = []\n"
+        "for n in names:\n"
+        "    try:\n"
+        "        importlib.import_module(n)\n"
+        "    except Exception as exc:\n"
+        "        bad.append(f'{n}: {exc}')\n"
+        "print('|'.join(bad))\n"
+    )
+    proc = subprocess.run(
+        [run_ab.SCRIPT_INTERPRETER, "-X", "utf8", "-c", probe],
+        capture_output=True,
+        text=True,
+        timeout=300,
+    )
+    assert proc.returncode == 0, proc.stderr
+    assert proc.stdout.strip() == "", (
+        "the prompt names packages that the interpreter running the emitted "
+        f"script cannot import: {proc.stdout.strip()}"
+    )
+
+
+def test_a_roster_package_appears_exactly_when_this_environment_has_it() -> None:
+    """Membership is decided by the environment, one roster entry at a time.
+
+    The roster is the harness's question — which packages are worth asking
+    about — and the environment is the answer. This asserts the answer is never
+    overridden in either direction: nothing present is withheld, nothing absent
+    is promised.
+    """
+    import importlib.util
+
+    named = set(_package_names(run_ab.environment_packages()))
+    for candidate in run_ab.PACKAGE_ROSTER:
+        try:
+            present = importlib.util.find_spec(candidate) is not None
+        except (ImportError, ValueError):
+            present = False
+        assert (candidate in named) is present, (
+            f"{candidate}: importable={present} but named in the prompt="
+            f"{candidate in named}. The list must follow the environment."
+        )
+
+
+def test_the_list_is_read_from_the_environment_rather_than_written_down(monkeypatch) -> None:
+    """The test the task asks for: swap the environment, and the list follows.
+
+    A literal would be indifferent to this. The probe is replaced with one that
+    reports a different world, and the rendered block has to describe that
+    world instead — which is only possible if nothing about the list is
+    hard-coded.
+    """
+    invented = {"xgboost", "torch"}
+    monkeypatch.setattr(run_ab, "_importable", lambda name: name in invented)
+    monkeypatch.setattr(run_ab, "_distribution_version", lambda name: "")
+
+    rendered = run_ab.environment_packages()
+    assert set(_package_names(rendered)) == invented
+    # And pandas — importable in the real environment, absent from the invented
+    # one — is gone, so the render cannot be carrying a baked-in core list.
+    assert "pandas" not in rendered
+
+
+def test_the_library_that_killed_a_validation_run_is_asked_about() -> None:
+    """A5's own case, pinned.
+
+    `imblearn` has to be *on the roster*, so the prompt answers the question
+    rather than leaving it open; whether it is *in the list* is the
+    environment's business. Pinned as a conditional rather than as "imblearn is
+    absent", because installing imbalanced-learn tomorrow should change the
+    prompt, not break this test.
+    """
+    import importlib.util
+
+    assert "imblearn" in run_ab.PACKAGE_ROSTER
+    try:
+        present = importlib.util.find_spec("imblearn") is not None
+    except (ImportError, ValueError):
+        present = False
+    control, _advise = run_ab.build_prompts(
+        csv_path=CELL["csv_path"],
+        target=CELL["target"],
+        columns=CELL["columns"],
+        advise_stdout="",
+    )
+    assert ("imblearn" in control) is present
+
+
+def test_both_arms_are_handed_the_identical_package_list() -> None:
+    """§2: "The same list goes to every arm."
+
+    Structural, like the rest of §2's single-difference machinery: the list
+    lives in the control prompt, and the advise prompt is control plus a block,
+    so the two cannot hold different lists. Asserted anyway, because that is
+    the property the experiment depends on rather than the implementation that
+    currently provides it.
+    """
+    packages = run_ab.environment_packages()
+    control, advise = run_ab.build_prompts(
+        csv_path=CELL["csv_path"],
+        target=CELL["target"],
+        columns=CELL["columns"],
+        advise_stdout=ADVISE,
+        packages=packages,
+    )
+    assert packages in control
+    assert advise.count(packages) == 1
+    assert control.count(packages) == 1
+
+
+def test_the_control_prompt_never_names_the_tool_under_study() -> None:
+    """Why the list is curated rather than a `pip list` dump.
+
+    `mlcompass` is installed in this environment. A complete dump would
+    therefore put the intervention's own name into the control arm's prompt —
+    telling the arm that is defined by *not* being given mlcompass that a thing
+    called mlcompass is sitting in its environment. §2 allows the arms to
+    differ only by mlcompass's output; it does not allow the control arm to be
+    told the tool exists.
+    """
+    control, _advise = run_ab.build_prompts(
+        csv_path=CELL["csv_path"],
+        target=CELL["target"],
+        columns=CELL["columns"],
+        advise_stdout="",
+    )
+    assert "mlcompass" not in control.lower()
+
+
+def test_a_roster_naming_the_tool_under_study_is_refused() -> None:
+    with pytest.raises(RuntimeError) as excinfo:
+        run_ab.environment_packages(roster=("numpy", "mlcompass"))
+    assert "mlcompass" in str(excinfo.value)
+
+
+def test_the_package_paragraph_states_a_fact_and_gives_no_instruction() -> None:
+    """The same discipline §2 imposes on the mlcompass block, applied here.
+
+    An environment statement is allowed to say what is installed. It is not
+    allowed to become a nudge — "you should use scikit-learn", "remember to
+    handle imbalance" — because that would be the harness adding advice of its
+    own to every arm, and the advice would land differently on arms that were
+    already pointed at the same subject.
+    """
+    control, _advise = run_ab.build_prompts(
+        csv_path=CELL["csv_path"],
+        target=CELL["target"],
+        columns=CELL["columns"],
+        advise_stdout="",
+    )
+    lowered = control.lower()
+    for nudge in ("should", "recommend", "make sure", "remember", "be sure to", "avoid"):
+        assert nudge not in lowered, nudge
+
+
+def test_the_prompt_names_the_interpreter_that_will_run_the_script() -> None:
+    import platform
+
+    control, _advise = run_ab.build_prompts(
+        csv_path=CELL["csv_path"],
+        target=CELL["target"],
+        columns=CELL["columns"],
+        advise_stdout="",
+    )
+    assert platform.python_version() in control
+    assert sys.executable == run_ab.SCRIPT_INTERPRETER
+
+
+def test_the_emitted_script_is_executed_by_the_interpreter_the_prompt_describes(
+    tmp_path, monkeypatch
+) -> None:
+    """The claim the prompt makes has to be the one the harness honours.
+
+    The prompt says "the script will be run by Python X with these packages".
+    If `run_cell` launched some other interpreter, that sentence would be false
+    and the confound A5 closes would be open again under a different name.
+    """
+    import subprocess as real_subprocess
+    from types import SimpleNamespace
+
+    launched: list[list[str]] = []
+
+    def fake_run(command, **kwargs):  # noqa: ANN001, ANN202
+        launched.append(list(command))
+        return SimpleNamespace(stdout="", stderr="", returncode=0)
+
+    monkeypatch.setattr(
+        run_ab,
+        "subprocess",
+        SimpleNamespace(run=fake_run, TimeoutExpired=real_subprocess.TimeoutExpired),
+    )
+    monkeypatch.setattr(
+        run_ab,
+        "call_model",
+        lambda member, messages, timeout: {
+            "ok": True,
+            "text": f"```python\n{CONTROL_ARM_SCRIPT}```",
+            "error": "",
+            "input_tokens": 1,
+            "output_tokens": 1,
+            "finish_reason": "stop",
+            "seconds": 0.1,
+            "temperature_requested": run_ab.TEMPERATURE,
+            "temperature_status": "sent",
+            "temperature_used": run_ab.TEMPERATURE,
+            "temperature_rejection": "",
+        },
+    )
+    monkeypatch.setattr(
+        run_ab,
+        "score_holdout",
+        lambda *a, **k: {
+            "status": "unscorable",
+            "metric": "",
+            "score": "",
+            "artifact": "",
+            "attempts": [],
+            "reason": "unit test does not score",
+        },
+    )
+
+    run_ab.run_cell(
+        dataset=DATASET,
+        arm="control",
+        panel_id="unit",
+        member=MEMBER,
+        split=_split_fixture(tmp_path),
+        findings=None,
+        run_dir=tmp_path / "run",
+        workspace=tmp_path / "ws",
+        llm_timeout=5,
+        script_timeout=30,
+        score_timeout=5,
+    )
+
+    assert launched, "the emitted script was never executed"
+    assert launched[0][0] == run_ab.SCRIPT_INTERPRETER
+    assert launched[0][-1] == "emitted.py"
+
+
+def test_an_empty_package_list_is_refused() -> None:
+    """A prompt that promises a list and shows nothing is worse than no prompt.
+
+    It reads as "nothing is installed", which is never true and which no arm
+    could write a training script against. If the probe comes back empty the
+    harness stops rather than sending it.
+    """
+    with pytest.raises(RuntimeError) as excinfo:
+        run_ab.environment_packages(roster=("no_such_package_at_all_9c1f",))
+    assert "no importable package" in str(excinfo.value).lower()
+
+
+def test_the_package_list_is_deterministic() -> None:
+    assert run_ab.environment_packages() == run_ab.environment_packages()
+
+
+def test_a_harness_that_stops_stating_the_environment_is_caught() -> None:
+    """A5 is checkable the way A2/A3/A4 are: against §2's own words.
+
+    The failure being guarded is the quiet one again. A harness that dropped
+    the package list would keep producing rows that look fine, with a share of
+    the failures caused by an absent import rather than by the model — and the
+    share would be larger on the arms that were told to handle imbalance.
+    """
+    with pytest.raises(run_ab.ProtocolDrift) as excinfo:
+        run_ab.verify_protocol_constants(packages=False)
+    assert "package" in str(excinfo.value).lower()
+
+
+def test_a_protocol_that_no_longer_asks_for_a_package_list_is_caught() -> None:
+    text = PROTOCOL_PATH.read_text(encoding="utf-8").replace(
+        "the list of packages available in the execution environment,", "", 1
+    )
+    with pytest.raises(run_ab.ProtocolDrift) as excinfo:
+        run_ab.verify_protocol_constants(text=text)
+    assert "package" in str(excinfo.value).lower()
