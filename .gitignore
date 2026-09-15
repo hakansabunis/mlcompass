@@ -123,3 +123,9 @@ paper/Konusma_Metni_TR.docx
 paper/Proje_Raporu_TR.docx
 paper/demo/run_sheet.docx
 *.bak
+
+# Provider credentials. Never commit these.
+api_keys.txt
+*api_key*
+*.key
+.env.local
