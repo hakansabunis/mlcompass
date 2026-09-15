@@ -1,0 +1,75 @@
+Running live ablation, task=synthetic, N=200 (evidence columns: 10, anchor: log_target_v2)...
+  evidence dumped: C:\Users\SABUNIS\Desktop\ml-copilot\scripts\runs\evidence_618bd74a.json
+  static_schema (A-STATIC-ENUM-STALE) domain vs this task: 10/10 evidence columns covered (100%), anchor in domain: True
+  NOTE: the frozen domain covers this task exactly, so A-STATIC-ENUM-STALE is IDENTICAL to A-STRICT-ENUM here by construction — a DEGENERATE cell. The stale-enum arm is only informative on a task the author-time list predates. Contrast X3b from this cell would compare an arm against itself.
+  baseline toolkit: guardrails-ai 0.11.0, reask budget 2 (contract parity: max_retries=2)
+  plan: 7 cell(s) x N=200 -> ~1690 calls, ESTIMATED cost ~$0.51 (model=deepseek-chat; rough token estimate, not a bill)
+    layer1                 A-L1                              200 calls  ~$0.05
+    layer3_bare            A-CONTRACT                        290 calls  ~$0.08
+    layer3_stress          A-STRESS                          290 calls  ~$0.08
+    guardrails_stock       A-GR-STOCK                        210 calls  ~$0.08
+    guardrails_tierb       A-GR-OURS                         300 calls  ~$0.11
+    static_schema_noenum   A-STRICT-STATIC                   200 calls  ~$0.05
+    static_schema          A-STATIC-ENUM-STALE               200 calls  ~$0.05
+    (not built)            A-NEMO                           NOT RUN: NeMo Guardrails adapter not written; contrast X5 does not run this round and is reported as not run, not as a tie
+  provider=deepseek kind=openai model=deepseek-chat strict=False temperature=1.0
+  static_schema_noenum (A-STRICT-STATIC): strict mode, types and required fields, NO column enum — the column domain is unconstrained, so any invented name decodes successfully.
+  static_schema (A-STATIC-ENUM-STALE) domain: 10/10 of this task's evidence columns are in the frozen author-time list (coverage 100%, anchor in list: True)
+  NOTE: the static domain covers this task exactly, so static_schema is IDENTICAL to tier_a+strict here by construction. It is a degenerate cell — the informative cells are the task instances the author-time list predates.
+  provenance: harness a77edad, adapter 668f966, product 43218bf (pinned into every record)
+  layer1: 25/200
+  layer1: 50/200
+  layer1: 75/200
+  layer1: 100/200
+  layer1: 125/200
+  layer1: 150/200
+  layer1: 175/200
+  layer1: 200/200
+  layer3_bare: 25/200
+  layer3_bare: 50/200
+  layer3_bare: 75/200
+  layer3_bare: 100/200
+  layer3_bare: 125/200
+  layer3_bare: 150/200
+  layer3_bare: 175/200
+  layer3_bare: 200/200
+  layer3_stress: 25/200
+  layer3_stress: 50/200
+  layer3_stress: 75/200
+  layer3_stress: 100/200
+  layer3_stress: 125/200
+  layer3_stress: 150/200
+  layer3_stress: 175/200
+  layer3_stress: 200/200
+  guardrails_stock: 25/200
+  guardrails_stock: 50/200
+  guardrails_stock: 75/200
+  guardrails_stock: 100/200
+  guardrails_stock: 125/200
+  guardrails_stock: 150/200
+  guardrails_stock: 175/200
+  guardrails_stock: 200/200
+  guardrails_tierb: 25/200
+  guardrails_tierb: 50/200
+  guardrails_tierb: 75/200
+  guardrails_tierb: 100/200
+  guardrails_tierb: 125/200
+  guardrails_tierb: 150/200
+  guardrails_tierb: 175/200
+  guardrails_tierb: 200/200
+  static_schema_noenum: 25/200
+  static_schema_noenum: 50/200
+  static_schema_noenum: 75/200
+  static_schema_noenum: 100/200
+  static_schema_noenum: 125/200
+  static_schema_noenum: 150/200
+  static_schema_noenum: 175/200
+  static_schema_noenum: 200/200
+  static_schema: 25/200
+  static_schema: 50/200
+  static_schema: 75/200
+  static_schema: 100/200
+  static_schema: 125/200
+  static_schema: 150/200
+  static_schema: 175/200
+  static_schema: 200/200
