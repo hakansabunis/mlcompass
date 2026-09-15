@@ -57,82 +57,141 @@ table.
 
 ## 2. Shortlist
 
+Every figure below was checked on 2026-09-15 against the source linked
+beside it. Two things move yearly and must be re-checked before you act:
+quartiles, and article charges.
+
 ### Tier 1 — best fit, realistic odds
 
-**Empirical Software Engineering (EMSE)** · Springer · Scimago **Q1** ·
-rolling submission, no special issue needed.
+#### Empirical Software Engineering (EMSE) · Springer
 
-The closest match in the list, for one reason: EMSE is where a *measured
-claim about developer-facing tooling* belongs, and our sharpest result is
-exactly that shape. A fabrication rate moving from 1% to 100% across six
-rule-free paraphrases of one instruction is an empirical-software-engineering
-finding, not an AI finding. EMSE also has a strong artifact culture, which
-rewards the thing we actually have — a shipped MIT tool, green CI across
-3.10–3.13 × two operating systems, 985 tests — rather than treating it as
-decoration. The pre-registration discipline in `ab_protocol.md` (frozen
-plans, losing conditions written before data, an amendment log naming our
-own two design defects) reads as a virtue here and as an oddity almost
-everywhere else.
+| | |
+| --- | --- |
+| Metrics | **IF 3.6** (2026 release, on 2025 data; 3.4 the year before) · CiteScore 8.2 · **SJR Q1** |
+| ISSN | 1382-3256 / 1573-7616 |
+| Editors-in-chief | Robert Feldt, Thomas Zimmermann |
+| Charges | **Hybrid.** Subscription route costs nothing. Open access is £2390 / $3390 / €2790, chosen *after* acceptance |
+| Home | https://link.springer.com/journal/10664 |
+| Submission guidelines | https://link.springer.com/journal/10664/submission-guidelines |
+| Community site (special issues, RR) | https://emsejournal.github.io/ |
 
-*What it needs from us:* the merge in §1, and the baseline table.
+**Why first.** Our sharpest result is an empirical-software-engineering
+result, not an AI result: a fabrication rate that moves from 1% to 100%
+across six rule-free paraphrases of one instruction. EMSE is where a
+measured claim about developer-facing tooling belongs, and its artifact
+culture rewards what we actually have — a shipped MIT tool, green CI over
+3.10–3.13 × two operating systems, 985 tests — instead of treating it as
+decoration. The pre-registration discipline in `ab_protocol.md` reads as a
+virtue here and as an oddity nearly everywhere else.
 
-**Journal of Systems and Software (JSS)** · Elsevier · Scimago **Q1** ·
-rolling.
+**One thing not to misread.** EMSE's Registered Reports track is
+two-stage and **Stage 1 runs at a partner conference**, not at the journal
+(https://emsejournal.github.io/registered_reports/). Our pre-registration
+is our own discipline, not an EMSE RR submission, and it does not open a
+shortcut. Cite it as method, not as status.
 
-Same family, faster in practice, and more comfortable with a paper whose
-centre of gravity is a working system. Second choice rather than first only
-because EMSE weights the measurement and JSS weights the system, and our
-measurement is the stronger half.
+#### Journal of Systems and Software (JSS) · Elsevier
+
+| | |
+| --- | --- |
+| Metrics | **IF 3.8** (2026) · **Q1** · CCF B |
+| Charges | Hybrid; OA is **$3,850** ex-tax, subscription route free |
+| Home | https://www.sciencedirect.com/journal/journal-of-systems-and-software |
+
+**Why second.** Its scope statement is almost a description of this paper:
+*all articles should provide evidence to support their claims, through
+empirical studies, simulation, formal proofs or other types of
+validation.* We have all three — the propositions, the live battery, the
+benchmarks. JSS is also more comfortable than EMSE with a paper whose
+centre of gravity is a working system. It ranks second only because our
+measurement is stronger than our system, and EMSE weights the measurement.
+
+#### Information and Software Technology (IST) · Elsevier
+
+| | |
+| --- | --- |
+| Metrics | **IF 4.6** (released 17 June 2026, on 2025 data) · CiteScore 9.1 · **JCR Q1 and SJR Q1** |
+| Charges | OA **$3,350–3,820** depending on the source consulted; confirm at submission |
+| Home | https://www.sciencedirect.com/journal/information-and-software-technology |
+
+Added to the list because it is the same family as JSS with a *higher*
+impact factor, which surprises people who assume the ranking follows
+prestige. Scope is improvement of software development practice. A
+reasonable third shot, or a second if JSS declines.
 
 ### Tier 2 — higher ceiling, higher risk
 
-**ACM TOSEM** and **IEEE TSE** · both **Q1**, both top-tier.
+#### ACM TOSEM
 
-Reachable, but not with what is on disk today. These want the full grid —
-providers × tasks × leak patterns — plus the head-to-head against
-Guardrails and NeMo, plus a NeMo adapter that is currently marked *not
-built* in our own harness and honestly reported as not-run rather than as
-a tie. Worth attempting only after the baseline battery and the merge, and
-expect 9–15 months.
+| | |
+| --- | --- |
+| Metrics | **IF 6.9** (2025 JCR) · 8th in Computer Science, Software Engineering |
+| Charges | **Changed on 1 January 2026: ACM is now 100% open access.** An APC applies unless your institution is in ACM Open (2,700+ institutions). A **temporary 2026 subsidy** puts it at **$250 for ACM/SIG members, $350 for non-members** — a 65% discount, funded by ACM and not promised beyond 2026. Geographic and hardship waivers exist |
+| Home | https://dl.acm.org/journal/tosem |
+| Open-access terms | https://dl.acm.org/journal/tosem/open-access |
+| APC list pricing | https://libraries.acm.org/acmopen/apc-list-pricing |
+
+**Action item worth one email:** find out whether Istanbul Medipol
+University is in ACM Open. The answer is the difference between a few
+hundred dollars and a full APC, and the 2026 subsidy makes this the
+cheapest year to publish with ACM that there has been or is likely to be.
+
+#### IEEE TSE
+
+| | |
+| --- | --- |
+| Metrics | **IF 6.5** (2023 JCR — the most recent figure I could confirm) |
+| Review speed | First round **≈11.6 weeks** per author-reported data at https://scirev.org/journal/ieee-transactions-on-software-engineering/ |
+| Home | https://www.computer.org/csdl/journal/ts · https://ieeexplore.ieee.org/xpl/RecentIssue.jsp?punumber=32 |
+
+**Both of these are reachable, and not with what is on disk today.** They
+want the full grid — providers × tasks × leak patterns — plus the
+head-to-head against Guardrails and NeMo. Our own harness currently marks
+the NeMo arm *not built* and reports it as not-run rather than as a tie,
+which is the honest call and also exactly the hole a TOSEM reviewer will
+put a finger on. Attempt only after the baseline battery and the merge in
+§1; budget 9–15 months.
 
 Note: TOSEM's **Agentic AI in Software** special issue is **closed** —
-submissions were due 1 Nov 2025 and the issue published August 2026. There
-is no open agentic-AI special issue at TOSEM to target.
+submissions were due 1 Nov 2025, the issue published August 2026
+(https://dl.acm.org/journal/tosem/agentic-ai-software). There is no open
+agentic-AI special issue at TOSEM to aim at.
 
-### Tier 3 — AI-side, faster turnaround
+### Tier 3 — AI-side, fast, and a worse fit than the impact factor suggests
 
-**Knowledge-Based Systems** and **Expert Systems with Applications** ·
-Elsevier · both **Q1** by JCR and Scimago.
+#### Expert Systems with Applications (ESWA) · Elsevier
 
-Genuinely Q1, genuinely faster, and they accept applied-AI work with an
-evaluation without demanding the SE community's artifact apparatus. The
-trade is reputational: inside software engineering these carry less weight
-than EMSE or JSS for the same quartile. If the goal is a Q1 line on a CV
-quickly, this is the shortest path. If the goal is that the work is read by
-the people who build these tools, it is not.
+| | |
+| --- | --- |
+| Metrics | **IF 9.4** · **Q1** |
+| Charges | OA **$3,490** ex-tax |
+| Speed | Medians: ~5 days to first decision (i.e. desk screen), 62 days to decision after review, 147 days submission→acceptance |
+| Home | https://www.sciencedirect.com/journal/expert-systems-with-applications |
 
-### Tier 4 — open special issues that fit topically
+#### Knowledge-Based Systems (KBS) · Elsevier
 
-**IEEE Software** — *Building Trustworthy Software in the Time of AI*
-· **deadline 5 November 2026**, publication July/August 2027.
+| | |
+| --- | --- |
+| Metrics | Widely listed Q1; **I could not confirm a current 2026 impact factor** — the most recent figure I could verify is 8.038 from 2020. Check before quoting it |
+| Home | https://www.sciencedirect.com/journal/knowledge-based-systems |
 
-Verified open. The scope names testing and validation of AI components and
-human oversight and fail-safe mechanisms, which is our paper's subject in
-the magazine's own words. Caveats, both real: it is a **magazine**, not a
-research journal (Q2, practitioner-facing, roughly 4700 words, few
-equations, no room for the propositions), and it would consume the
-material. Best treated as a *companion* to a journal submission, not a
-substitute — the practitioner-facing version of the same argument, which
-is also the version most likely to bring the tool users.
+**Read the impact factors carefully.** 9.4 against EMSE's 3.6 does not
+mean ESWA is three times the journal. Applied-AI venues carry far higher
+citation density than software-engineering venues, so the numbers are not
+comparable across categories — which is precisely why quartile, not raw
+IF, is the thing to compare.
 
-**Communications AI & Computing** (Nature portfolio, open access) —
-*Safety, Trustworthiness and Robustness in Large Language Models*
-· **deadline 31 May 2027**, confirmed open.
+**And the fit is worse than the topic suggests.** These venues are built
+around a novel method evaluated on benchmarks. Ours is a *contract* paper:
+the mechanism is deliberately simple — set membership, a float comparison,
+an anchor check — and the contribution is the framing plus the
+measurement. That "none of the checks is sophisticated, and that is the
+point" sentence in our own introduction is a strength at EMSE and a desk-
+rejection risk at ESWA. The 5-day median first decision is mostly desk
+screens.
 
-Topically a direct hit. One thing to be clear about before anyone gets
-attached to the Nature branding: it is a **new journal with no impact
-factor and no Scimago quartile yet**, so it cannot be counted as Q1 or Q2
-today, whatever it becomes. It is also open access, so check the APC.
+If the goal is a Q1 line quickly, this is the shortest path. If the goal
+is that the people building these tools read it, it is not.
 
 ### Not viable
 
@@ -141,6 +200,23 @@ today, whatever it becomes. It is also open access, so check the APC.
 | INISTA 2026 | Closed 25 June 2026; conference is 17–19 Sep 2026 |
 | TOSEM *Agentic AI in Software* SI | Closed 1 Nov 2025, published Aug 2026 |
 | EMSE *Software Reliability* SI | Deadline was 1 March 2025 |
+
+---
+
+## 2b. One consequence of INISTA closing that is easy to miss
+
+Because we never submitted to a conference, there is **no prior
+publication to extend**. Springer, Elsevier, ACM and IEEE all require a
+journal submission to be substantially new relative to any earlier
+conference version — usually 30% or more. That requirement does not apply
+to us. We submit the full paper directly, with no overlap to manage and
+no self-plagiarism check to survive.
+
+All four publishers permit an arXiv preprint before submission. IEEE
+additionally requires a specific copyright notice to be added to the
+preprint once a paper is accepted — check that wording if the work ends
+up at TSE, and post to arXiv regardless, since the requirement applies
+after acceptance and not before.
 
 ---
 
