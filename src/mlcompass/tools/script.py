@@ -1,8 +1,20 @@
 """Static analysis of Python training scripts.
 
 Pure ``ast`` — no execution, no LLM calls. Walks the parse tree looking
-for the eight most common reproducibility, correctness, and stability
-issues we see in ML practitioners' training scripts.
+for the most common reproducibility, correctness, and stability issues
+we see in ML practitioners' training scripts.
+
+Two families of rule live here. The first eight are deep-learning
+shaped and mostly torch-gated. The six after them cover tabular
+``pandas + scikit-learn`` training scripts, which are the most common
+kind of ML script there is and which the first eight are structurally
+unable to say anything about — the ``seed`` rule returns early unless a
+stochastic framework is imported, and scikit-learn is not one.
+
+Every rule here is written to be quiet on correct code. Where a shape
+cannot be decided from an AST, the rule stays silent: a false positive
+costs more than a miss, because it teaches users to stop reading the
+output.
 
 Output is a structured dict consumed by ``ui.audit`` and (later, in
 v0.2.1) the optional LLM auditor agent.
@@ -38,6 +50,7 @@ class Finding:
 SEVERITY_ORDER = {"error": 0, "warning": 1, "info": 2}
 
 ALL_RULE_IDS: tuple[str, ...] = (
+    # Deep-learning shaped.
     "seed",
     "val_split",
     "optimizer",
@@ -46,6 +59,13 @@ ALL_RULE_IDS: tuple[str, ...] = (
     "grad_clipping",
     "eval_mode",
     "batch_size",
+    # Tabular pandas + scikit-learn shaped.
+    "preprocess_leak",
+    "refit_across_split",
+    "target_leak",
+    "random_state",
+    "unused_holdout",
+    "metric_choice",
 )
 
 # Recognised ML framework imports.
@@ -110,6 +130,12 @@ def audit_script(
         ("grad_clipping", _check_gradient_clipping),
         ("eval_mode", _check_eval_mode),
         ("batch_size", _check_batch_size),
+        ("preprocess_leak", _check_preprocess_leak),
+        ("refit_across_split", _check_refit_across_split),
+        ("target_leak", _check_target_leak),
+        ("random_state", _check_random_state),
+        ("unused_holdout", _check_unused_holdout),
+        ("metric_choice", _check_metric_choice),
     ]
 
     findings: list[Finding] = []
@@ -580,3 +606,755 @@ def _check_batch_size(tree: ast.AST, frameworks: set[str]) -> list[Finding]:
             )
 
     return findings
+
+
+# --------------------------------------------------------------------------- #
+# Tabular pandas + scikit-learn: shared analysis                              #
+# --------------------------------------------------------------------------- #
+#
+# The rules below are gated by the scikit-learn call names they match, not by
+# an import whitelist. That is deliberate: the ``seed`` rule's whitelist is
+# exactly why it cannot fire on a scikit-learn script.
+
+_SCOPE_NODES = (
+    ast.Module,
+    ast.FunctionDef,
+    ast.AsyncFunctionDef,
+    ast.Lambda,
+    ast.ClassDef,
+)
+
+
+def _scope_local_nodes(tree: ast.AST) -> list[list[ast.AST]]:
+    """Group nodes by enclosing scope, without descending into nested scopes.
+
+    Within one scope, source order is execution order for the straight-line
+    statements these rules care about. Across a scope boundary it is not — a
+    helper defined above a call site still runs after it — so the ordering
+    rules never compare line numbers across this boundary.
+    """
+    scopes: list[list[ast.AST]] = []
+
+    def collect(scope: ast.AST) -> None:
+        local: list[ast.AST] = []
+        stack: list[ast.AST] = list(ast.iter_child_nodes(scope))
+        while stack:
+            node = stack.pop()
+            if isinstance(node, _SCOPE_NODES):
+                collect(node)
+                continue
+            local.append(node)
+            stack.extend(ast.iter_child_nodes(node))
+        scopes.append(local)
+
+    collect(tree)
+    return scopes
+
+
+def _assignments_in_source_order(tree: ast.AST) -> list[ast.Assign]:
+    """Every ``ast.Assign`` in the tree, ordered by position in the source."""
+    assigns = [n for n in ast.walk(tree) if isinstance(n, ast.Assign)]
+    assigns.sort(key=lambda n: (n.lineno, n.col_offset))
+    return assigns
+
+
+def _constructor_names(tree: ast.AST) -> dict[str, str]:
+    """Map ``name -> constructor class`` for every ``name = SomeClass(...)``."""
+    out: dict[str, str] = {}
+    for node in _assignments_in_source_order(tree):
+        if not isinstance(node.value, ast.Call):
+            continue
+        chain = _attr_chain(node.value.func)
+        if not chain:
+            continue
+        for target in node.targets:
+            if isinstance(target, ast.Name):
+                out[target.id] = chain[-1]
+    return out
+
+
+_SPLIT_CALL = ("train_test_split", "sklearn.model_selection.train_test_split")
+
+
+def _split_assignments(tree: ast.AST) -> list[tuple[ast.Call, list[ast.expr]]]:
+    """``(call, targets)`` for every ``a, b, ... = train_test_split(...)``."""
+    out: list[tuple[ast.Call, list[ast.expr]]] = []
+    for node in _assignments_in_source_order(tree):
+        if not isinstance(node.value, ast.Call):
+            continue
+        if not _call_matches(node.value, *_SPLIT_CALL):
+            continue
+        for target in node.targets:
+            if isinstance(target, (ast.Tuple, ast.List)):
+                out.append((node.value, list(target.elts)))
+    return out
+
+
+# --------------------------------------------------------------------------- #
+# Rule: preprocess_leak                                                       #
+# --------------------------------------------------------------------------- #
+
+# Transformers that learn a statistic from every row they are fitted on.
+# Fitting one of these on the full frame and splitting afterwards puts test-set
+# information into the training features.
+#
+# Deliberately absent, each for a reason:
+#   Normalizer            — row-wise, learns nothing from other rows
+#   FunctionTransformer   — stateless unless given a fitted func
+#   LabelEncoder /
+#   LabelBinarizer        — a label vocabulary for the target, not a statistic
+#   OneHotEncoder /
+#   OrdinalEncoder        — learns a category vocabulary; pre-split fitting is
+#                           near-universal practice and the accepted fix is
+#                           handle_unknown=, so flagging it would be noise
+#   Pipeline / make_pipeline — this is the recommended fix, not the defect
+_LEAKY_TRANSFORMERS = frozenset(
+    {
+        "StandardScaler",
+        "MinMaxScaler",
+        "RobustScaler",
+        "MaxAbsScaler",
+        "QuantileTransformer",
+        "PowerTransformer",
+        "SimpleImputer",
+        "KNNImputer",
+        "IterativeImputer",
+        "SelectKBest",
+        "SelectPercentile",
+        "SelectFromModel",
+        "VarianceThreshold",
+        "RFE",
+        "RFECV",
+        "TargetEncoder",
+        "ColumnTransformer",
+    }
+)
+
+_FIT_ATTRS = frozenset({"fit", "fit_transform"})
+
+# Calls after which the data is considered split — anything fitted before one
+# of these was fitted on rows that end up on both sides.
+_SPLIT_BOUNDARY_CALLS = (
+    "train_test_split",
+    "cross_val_score",
+    "cross_validate",
+)
+
+
+def _fitted_transformer(call: ast.Call, ctors: dict[str, str]) -> str | None:
+    """Class name if ``call`` is ``<stateful transformer>.fit()/.fit_transform()``."""
+    func = call.func
+    if not isinstance(func, ast.Attribute) or func.attr not in _FIT_ATTRS:
+        return None
+
+    receiver = func.value
+    cls: str | None = None
+    if isinstance(receiver, ast.Call):
+        # StandardScaler().fit_transform(X)
+        chain = _attr_chain(receiver.func)
+        cls = chain[-1] if chain else None
+    elif isinstance(receiver, ast.Name):
+        # scaler = StandardScaler() ... scaler.fit_transform(X)
+        cls = ctors.get(receiver.id)
+
+    return cls if cls in _LEAKY_TRANSFORMERS else None
+
+
+def _check_preprocess_leak(tree: ast.AST, frameworks: set[str]) -> list[Finding]:
+    """Preprocessing fitted on the whole dataset before it is split."""
+    findings: list[Finding] = []
+    ctors = _constructor_names(tree)
+
+    for local in _scope_local_nodes(tree):
+        calls = sorted(
+            (n for n in local if isinstance(n, ast.Call)),
+            key=lambda c: (c.lineno, c.col_offset),
+        )
+        boundary = next((c for c in calls if _call_matches(c, *_SPLIT_BOUNDARY_CALLS)), None)
+        if boundary is None:
+            continue
+
+        boundary_chain = _attr_chain(boundary.func)
+        boundary_name = boundary_chain[-1] if boundary_chain else "the split"
+        # A fit nested inside the split call's own arguments also runs first.
+        nested = {id(n) for n in ast.walk(boundary)} - {id(boundary)}
+
+        seen: set[int] = set()
+        for call in calls:
+            runs_first = call.lineno < boundary.lineno or id(call) in nested
+            if not runs_first or call.lineno in seen:
+                continue
+            cls = _fitted_transformer(call, ctors)
+            if cls is None:
+                continue
+            seen.add(call.lineno)
+            findings.append(
+                Finding(
+                    rule_id="preprocess_leak",
+                    severity="error",
+                    message=(
+                        f"`{cls}` is fitted on the full dataset before "
+                        f"`{boundary_name}` on line {boundary.lineno}; the statistics "
+                        "it learns include the held-out rows, which inflates every "
+                        "metric measured afterwards."
+                    ),
+                    suggestion=(
+                        "Split first, then fit on the training half only "
+                        f"(`{cls}().fit_transform(X_train)` / `.transform(X_test)`), or "
+                        f"put `{cls}` inside a `Pipeline` so cross-validation refits it "
+                        "per fold."
+                    ),
+                    line=call.lineno,
+                )
+            )
+
+    return findings
+
+
+# --------------------------------------------------------------------------- #
+# Rule: refit_across_split                                                    #
+# --------------------------------------------------------------------------- #
+
+
+def _check_refit_across_split(tree: ast.AST, frameworks: set[str]) -> list[Finding]:
+    """One object fitted on *both* halves of the same split.
+
+    ``scaler.fit_transform(X_train)`` followed by
+    ``scaler.fit_transform(X_test)`` is the canonical form, and it is the
+    ``transform``-was-meant typo: the second fit throws away the statistics
+    learned from the first, so the two halves end up scaled by different
+    constants and the model is scored on a scale it never saw.
+
+    Two shapes are deliberately *not* flagged, because both are correct:
+
+    * Fitting a **different** object on the second half. That is the ordinary
+      train / calibrate / test workflow, where a calibrator is supposed to be
+      fitted on the middle split -- scikit-learn's own
+      ``test_calibration.py`` does exactly this.
+    * Fitting on the second output and scoring on the first. That is reversed
+      naming, not leakage: the two sets are still disjoint.
+
+    ``train_test_split`` returns ``2 * len(arrays)`` values interleaved
+    train, test, train, test…, so even indices are training halves and odd
+    indices are held out, whatever the script chose to call them. Names are
+    resolved per scope -- a ``test_data`` local in one function must not be
+    matched against a split in another.
+    """
+    findings: list[Finding] = []
+
+    for local in _scope_local_nodes(tree):
+        assigns: list[tuple[ast.Assign, ast.Call]] = []
+        for candidate in local:
+            if isinstance(candidate, ast.Assign) and isinstance(candidate.value, ast.Call):
+                assigns.append((candidate, candidate.value))
+        assigns.sort(key=lambda pair: (pair[0].lineno, pair[0].col_offset))
+
+        halves: dict[str, int] = {}
+        for node, split_call in assigns:
+            if not _call_matches(split_call, *_SPLIT_CALL):
+                continue
+            for target in node.targets:
+                if not isinstance(target, (ast.Tuple, ast.List)):
+                    continue
+                for index, element in enumerate(target.elts):
+                    if isinstance(element, ast.Name) and not element.id.startswith("_"):
+                        halves[element.id] = index % 2
+
+        if not halves:
+            continue
+
+        # receiver -> half -> (line, attr, argument name), first fit of each half
+        fits: dict[str, dict[int, tuple[int, str, str]]] = {}
+        calls = sorted(
+            (n for n in local if isinstance(n, ast.Call)),
+            key=lambda c: (c.lineno, c.col_offset),
+        )
+        for call in calls:
+            func = call.func
+            if not isinstance(func, ast.Attribute) or func.attr not in _FIT_ATTRS:
+                continue
+            # A bare name is the only receiver whose identity we can track.
+            if not isinstance(func.value, ast.Name):
+                continue
+            if not call.args or not isinstance(call.args[0], ast.Name):
+                continue
+            half = halves.get(call.args[0].id)
+            if half is None:
+                continue
+            fits.setdefault(func.value.id, {}).setdefault(
+                half, (call.lineno, func.attr, call.args[0].id)
+            )
+
+        for receiver, by_half in sorted(fits.items()):
+            if 0 not in by_half or 1 not in by_half:
+                continue
+            train_line, _, train_arg = by_half[0]
+            hold_line, hold_attr, hold_arg = by_half[1]
+            findings.append(
+                Finding(
+                    rule_id="refit_across_split",
+                    severity="error",
+                    message=(
+                        f"`{receiver}` is fitted on `{train_arg}` (line {train_line}) and "
+                        f"fitted again on `{hold_arg}` (line {hold_line}) — the two halves "
+                        "of one `train_test_split`. The second fit discards what the first "
+                        "learned, so the halves are transformed by different constants."
+                    ),
+                    suggestion=(
+                        f"Fit once on the training half, then call "
+                        f"`{receiver}.transform({hold_arg})` instead of "
+                        f"`{receiver}.{hold_attr}({hold_arg})`."
+                    ),
+                    line=hold_line,
+                )
+            )
+
+    return findings
+
+
+# --------------------------------------------------------------------------- #
+# Rule: target_leak                                                           #
+# --------------------------------------------------------------------------- #
+
+
+def _bare_frame_alias(value: ast.expr) -> str | None:
+    """Frame name if ``value`` is that whole frame, un-narrowed."""
+    if isinstance(value, ast.Name):
+        return value.id
+    if (
+        isinstance(value, ast.Call)
+        and isinstance(value.func, ast.Attribute)
+        and value.func.attr in {"copy", "to_numpy"}
+        and isinstance(value.func.value, ast.Name)
+    ):
+        return value.func.value.id
+    if (
+        isinstance(value, ast.Attribute)
+        and value.attr == "values"
+        and isinstance(value.value, ast.Name)
+    ):
+        return value.value.id
+    return None
+
+
+def _string_column_of(value: ast.expr) -> tuple[str, str] | None:
+    """``(frame, column)`` if ``value`` is ``frame["column"]``."""
+    if (
+        isinstance(value, ast.Subscript)
+        and isinstance(value.value, ast.Name)
+        and isinstance(value.slice, ast.Constant)
+        and isinstance(value.slice.value, str)
+    ):
+        return value.value.id, value.slice.value
+    return None
+
+
+def _check_target_leak(tree: ast.AST, frameworks: set[str]) -> list[Finding]:
+    """The feature matrix is the whole frame the target column came from."""
+    # Any frame that is dropped from or popped is out of scope: we cannot tell
+    # which columns survive, so we say nothing.
+    narrowed: set[str] = set()
+    for node in ast.walk(tree):
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr in {"drop", "pop"}
+            and isinstance(node.func.value, ast.Name)
+        ):
+            narrowed.add(node.func.value.id)
+
+    alias_of: dict[str, str] = {}
+    column_of: dict[str, tuple[str, str]] = {}
+    for node in _assignments_in_source_order(tree):
+        if len(node.targets) != 1 or not isinstance(node.targets[0], ast.Name):
+            continue
+        name = node.targets[0].id
+
+        frame = _bare_frame_alias(node.value)
+        if frame is not None:
+            alias_of[name] = frame
+        else:
+            # Re-bound to something narrower; the alias no longer holds.
+            alias_of.pop(name, None)
+
+        column = _string_column_of(node.value)
+        if column is not None:
+            column_of[name] = column
+        elif frame is None:
+            column_of.pop(name, None)
+
+    if not alias_of or not column_of:
+        return []
+
+    findings: list[Finding] = []
+    seen: set[int] = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call) or len(node.args) < 2:
+            continue
+        is_split = _call_matches(node, *_SPLIT_CALL)
+        is_fit = isinstance(node.func, ast.Attribute) and node.func.attr == "fit"
+        if not (is_split or is_fit):
+            continue
+
+        features, target = node.args[0], node.args[1]
+        if not isinstance(features, ast.Name) or not isinstance(target, ast.Name):
+            continue
+
+        frame = alias_of.get(features.id)
+        column = column_of.get(target.id)
+        if frame is None or column is None or column[0] != frame:
+            continue
+        if frame in narrowed or features.id in narrowed:
+            continue
+        if node.lineno in seen:
+            continue
+
+        seen.add(node.lineno)
+        findings.append(
+            Finding(
+                rule_id="target_leak",
+                severity="error",
+                message=(
+                    f"`{features.id}` is the whole of `{frame}`, and the target "
+                    f"`{target.id}` is `{frame}['{column[1]}']` — so the target column "
+                    "is still one of the features and the model can read the answer."
+                ),
+                suggestion=(
+                    f"Build the feature matrix as "
+                    f"`{features.id} = {frame}.drop(columns=['{column[1]}'])`, or take "
+                    f"the target with `{target.id} = {frame}.pop('{column[1]}')` before "
+                    f"assigning `{features.id}`."
+                ),
+                line=node.lineno,
+            )
+        )
+
+    return findings
+
+
+# --------------------------------------------------------------------------- #
+# Rule: random_state                                                          #
+# --------------------------------------------------------------------------- #
+
+# scikit-learn classes that are stochastic with their *default* parameters.
+# Anything only stochastic under a non-default argument is left out, because
+# firing on `LogisticRegression()` (deterministic under the default lbfgs
+# solver) is exactly the kind of noise that teaches users to ignore the tool.
+# Left out for that reason: LogisticRegression, SVC, LinearSVC, Ridge, Lasso,
+# ElasticNet, KNeighbors*, GaussianNB, and PCA (svd_solver='auto' only picks
+# the randomized solver for large inputs).
+_STOCHASTIC_SKLEARN = frozenset(
+    {
+        # Model selection
+        "ShuffleSplit",
+        "StratifiedShuffleSplit",
+        "GroupShuffleSplit",
+        "RepeatedKFold",
+        "RepeatedStratifiedKFold",
+        "RandomizedSearchCV",
+        # Ensembles and trees
+        "RandomForestClassifier",
+        "RandomForestRegressor",
+        "ExtraTreesClassifier",
+        "ExtraTreesRegressor",
+        "ExtraTreeClassifier",
+        "ExtraTreeRegressor",
+        "DecisionTreeClassifier",
+        "DecisionTreeRegressor",
+        "GradientBoostingClassifier",
+        "GradientBoostingRegressor",
+        "HistGradientBoostingClassifier",
+        "HistGradientBoostingRegressor",
+        "BaggingClassifier",
+        "BaggingRegressor",
+        "RandomTreesEmbedding",
+        "IsolationForest",
+        # Iterative / stochastic fitters
+        "MLPClassifier",
+        "MLPRegressor",
+        "SGDClassifier",
+        "SGDRegressor",
+        "Perceptron",
+        "PassiveAggressiveClassifier",
+        "PassiveAggressiveRegressor",
+        # Unsupervised with random initialisation
+        "KMeans",
+        "MiniBatchKMeans",
+        "BisectingKMeans",
+        "GaussianMixture",
+        "BayesianGaussianMixture",
+        "TruncatedSVD",
+        "FastICA",
+        "TSNE",
+    }
+)
+
+# Deterministic unless ``shuffle=True``; sklearn raises if you pass
+# random_state without it.
+_SHUFFLE_GATED_SPLITTERS = frozenset({"KFold", "StratifiedKFold", "GroupKFold"})
+
+# Deterministic when handed explicit starting centroids rather than an
+# initialisation strategy name.
+_INIT_GATED_CLUSTERERS = frozenset({"KMeans", "MiniBatchKMeans", "BisectingKMeans"})
+
+
+def _has_explicit_init_array(call: ast.Call) -> bool:
+    """True if ``init=`` is something other than a strategy name like ``"k-means++"``."""
+    init = _has_keyword(call, "init")
+    if init is None:
+        return False
+    return not (isinstance(init.value, ast.Constant) and isinstance(init.value.value, str))
+
+
+# Meta-estimators whose ``_make_estimator`` stamps its own ``random_state`` onto
+# every clone of the inner template. ``AdaBoostClassifier(estimator=
+# DecisionTreeClassifier(max_depth=1), random_state=0)`` -- the canonical
+# decision-stump example -- is fully seeded, so the inner constructor must not
+# be flagged.
+#
+# Pipeline, GridSearchCV, OneVsRestClassifier and VotingClassifier are
+# deliberately absent: they clone without seeding, so an unseeded estimator
+# inside one of those really is unseeded.
+_SEEDING_META_ESTIMATORS = frozenset(
+    {
+        "BaggingClassifier",
+        "BaggingRegressor",
+        "AdaBoostClassifier",
+        "AdaBoostRegressor",
+    }
+)
+
+_ESTIMATOR_SLOTS = ("estimator", "base_estimator")
+
+
+def _templates_seeded_by_parent(tree: ast.AST) -> set[int]:
+    """Node ids of estimator templates that an enclosing meta-estimator seeds."""
+    seeded: set[int] = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        if _has_keyword(node, "random_state") is None:
+            continue
+        chain = _attr_chain(node.func)
+        if not chain or chain[-1] not in _SEEDING_META_ESTIMATORS:
+            continue
+
+        candidates: list[ast.expr] = list(node.args[:1])
+        for slot in _ESTIMATOR_SLOTS:
+            kw = _has_keyword(node, slot)
+            if kw is not None:
+                candidates.append(kw.value)
+        for candidate in candidates:
+            if isinstance(candidate, ast.Call):
+                seeded.add(id(candidate))
+    return seeded
+
+
+_GLOBAL_NUMPY_SEEDS = ("numpy.random.seed", "np.random.seed")
+
+
+def _seeds_global_numpy_rng(tree: ast.AST) -> bool:
+    """True if the script seeds the global numpy RNG.
+
+    scikit-learn's ``random_state=None`` draws from exactly that generator, so
+    a script that seeds it does reproduce run to run and must not be flagged.
+    ``np.random.default_rng(...)`` does *not* count: it returns an independent
+    generator that scikit-learn never sees.
+    """
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call) and _call_matches(node, *_GLOBAL_NUMPY_SEEDS):
+            return True
+    return False
+
+
+def _check_random_state(tree: ast.AST, frameworks: set[str]) -> list[Finding]:
+    """scikit-learn's answer to the ``seed`` rule: unset ``random_state=``."""
+    if _seeds_global_numpy_rng(tree):
+        return []
+
+    findings: list[Finding] = []
+    seen: set[tuple[str, int]] = set()
+    seeded_templates = _templates_seeded_by_parent(tree)
+
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        chain = _attr_chain(node.func)
+        if not chain:
+            continue
+        name = chain[-1]
+
+        # ``**params`` may well carry random_state; the AST cannot tell.
+        if any(kw.arg is None for kw in node.keywords):
+            continue
+        if _has_keyword(node, "random_state") is not None:
+            continue
+        if id(node) in seeded_templates:
+            continue
+
+        if name == "train_test_split":
+            shuffle = _has_keyword(node, "shuffle")
+            if (
+                shuffle is not None
+                and isinstance(shuffle.value, ast.Constant)
+                and shuffle.value.value is False
+            ):
+                continue
+        elif name in _SHUFFLE_GATED_SPLITTERS:
+            shuffle = _has_keyword(node, "shuffle")
+            shuffled = (
+                shuffle is not None
+                and isinstance(shuffle.value, ast.Constant)
+                and shuffle.value.value is True
+            )
+            if not shuffled:
+                continue
+        elif name in _STOCHASTIC_SKLEARN:
+            if name in _INIT_GATED_CLUSTERERS and _has_explicit_init_array(node):
+                continue
+        else:
+            continue
+
+        key = (name, node.lineno)
+        if key in seen:
+            continue
+        seen.add(key)
+        findings.append(
+            Finding(
+                rule_id="random_state",
+                severity="warning",
+                message=(
+                    f"`{name}` is called without `random_state=`; it is stochastic "
+                    "with its default parameters, so this run cannot be reproduced."
+                ),
+                suggestion=(
+                    f"Pass `random_state=42` to `{name}` (every split, splitter and "
+                    "estimator that takes one), or seed the global generator once with "
+                    "`np.random.seed(42)`."
+                ),
+                line=node.lineno,
+            )
+        )
+
+    return findings
+
+
+# --------------------------------------------------------------------------- #
+# Rule: unused_holdout                                                        #
+# --------------------------------------------------------------------------- #
+
+
+def _check_unused_holdout(tree: ast.AST, frameworks: set[str]) -> list[Finding]:
+    """A split was made and one of its outputs is never read again."""
+    loaded = {
+        node.id
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load)
+    }
+
+    findings: list[Finding] = []
+    for call, targets in _split_assignments(tree):
+        unused = [
+            t.id
+            for t in targets
+            if isinstance(t, ast.Name) and not t.id.startswith("_") and t.id not in loaded
+        ]
+        if not unused:
+            continue
+        names = ", ".join(f"`{n}`" for n in unused)
+        findings.append(
+            Finding(
+                rule_id="unused_holdout",
+                severity="warning",
+                message=(
+                    f"`train_test_split` assigns {names}, which is never read again; "
+                    "the data was held out and then never scored."
+                ),
+                suggestion=(
+                    "Score the held-out half before saving the model, or name the "
+                    "outputs you genuinely do not want `_`."
+                ),
+                line=call.lineno,
+            )
+        )
+
+    return findings
+
+
+# --------------------------------------------------------------------------- #
+# Rule: metric_choice                                                         #
+# --------------------------------------------------------------------------- #
+
+_OTHER_CLF_METRICS = frozenset(
+    {
+        "roc_auc_score",
+        "average_precision_score",
+        "f1_score",
+        "fbeta_score",
+        "precision_score",
+        "recall_score",
+        "precision_recall_fscore_support",
+        "precision_recall_curve",
+        "roc_curve",
+        "classification_report",
+        "confusion_matrix",
+        "balanced_accuracy_score",
+        "matthews_corrcoef",
+        "cohen_kappa_score",
+        "jaccard_score",
+        "log_loss",
+        "brier_score_loss",
+        "top_k_accuracy_score",
+    }
+)
+
+
+def _check_metric_choice(tree: ast.AST, frameworks: set[str]) -> list[Finding]:
+    """``accuracy_score`` is the only classification metric in the script.
+
+    This is a caution, not an assertion. A static read cannot see the label
+    distribution, so the finding is worded conditionally and kept at ``info``.
+    """
+    accuracy_line: int | None = None
+
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+
+        # A non-accuracy ``scoring=`` argument counts as a second metric.
+        scoring = _has_keyword(node, "scoring")
+        if scoring is not None:
+            if not isinstance(scoring.value, ast.Constant):
+                return []
+            if "accuracy" not in str(scoring.value.value):
+                return []
+
+        chain = _attr_chain(node.func)
+        if not chain:
+            continue
+        name = chain[-1]
+        if name in _OTHER_CLF_METRICS:
+            return []
+        if name == "accuracy_score" and accuracy_line is None:
+            accuracy_line = node.lineno
+
+    if accuracy_line is None:
+        return []
+
+    return [
+        Finding(
+            rule_id="metric_choice",
+            severity="info",
+            message=(
+                "`accuracy_score` is the only classification metric this script "
+                "computes. A static read cannot see the label distribution, so this "
+                "is a caution rather than a verdict: if the target is imbalanced, "
+                "accuracy stays high while the minority class is never predicted."
+            ),
+            suggestion=(
+                "Check the class balance, and report `roc_auc_score`, `f1_score` or "
+                "`classification_report` next to accuracy if it is skewed."
+            ),
+            line=accuracy_line,
+        )
+    ]

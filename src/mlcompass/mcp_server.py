@@ -536,9 +536,11 @@ def mlcompass_audit(
 ) -> dict[str, Any]:
     """Statically analyse a Python training script for common ML mistakes.
 
-    Eight pure-AST rules: ``seed``, ``val_split``, ``optimizer``,
-    ``loss_stability``, ``dataloader``, ``grad_clipping``, ``eval_mode``,
-    ``batch_size``.
+    Fourteen pure-AST rules. Deep-learning shaped: ``seed``, ``val_split``,
+    ``optimizer``, ``loss_stability``, ``dataloader``, ``grad_clipping``,
+    ``eval_mode``, ``batch_size``. Tabular pandas + scikit-learn shaped:
+    ``preprocess_leak``, ``refit_across_split``, ``target_leak``, ``random_state``,
+    ``unused_holdout``, ``metric_choice``.
 
     Args:
         script_path: Path to the Python source file.

@@ -90,7 +90,7 @@ from .tools.optimize import (
     parse_constraints,
 )
 from .tools.runs import RunNotFoundError, compare_runs, load_run
-from .tools.script import audit_script
+from .tools.script import ALL_RULE_IDS, audit_script
 from .ui.advise import render_analysis, render_recommendation
 from .ui.audit import render_audit, render_audit_priorities
 from .ui.compare import render_compare, render_compare_hypothesis
@@ -527,18 +527,7 @@ def _append_advice_log(
     "--skip",
     "skip_rules",
     multiple=True,
-    type=click.Choice(
-        [
-            "seed",
-            "val_split",
-            "optimizer",
-            "loss_stability",
-            "dataloader",
-            "grad_clipping",
-            "eval_mode",
-            "batch_size",
-        ]
-    ),
+    type=click.Choice(list(ALL_RULE_IDS)),
     help="Rule IDs to skip (may be repeated).",
 )
 @click.option(

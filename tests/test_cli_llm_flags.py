@@ -140,12 +140,16 @@ def test_audit_llm_skips_when_no_findings(
         "import torch.nn as nn\n"
         "from sklearn.model_selection import train_test_split\n"
         "torch.manual_seed(42)\n"
-        "X_tr, X_v, y_tr, y_v = train_test_split(X, y, test_size=0.2)\n"
+        # random_state= and the print() are load-bearing: torch.manual_seed does
+        # not seed the numpy RNG train_test_split uses, and an unread holdout is
+        # a real finding. See the clean_script fixture in test_cli_audit.py.
+        "X_tr, X_v, y_tr, y_v = train_test_split(X, y, test_size=0.2, random_state=42)\n"
         "model = nn.Linear(10, 1)\n"
         "model.train()\n"
         "model.eval()\n"
         "optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)\n"
-        "loader = torch.utils.data.DataLoader(ds, batch_size=64, shuffle=True)\n",
+        "loader = torch.utils.data.DataLoader(ds, batch_size=64, shuffle=True)\n"
+        "print(len(X_tr), len(X_v), len(y_tr), len(y_v))\n",
         encoding="utf-8",
     )
 

@@ -15,7 +15,14 @@ from mlcompass.context import ProjectContext
 
 @pytest.fixture
 def clean_script(tmp_path: Path) -> Path:
-    """A small training script that passes every rule."""
+    """A small training script that passes every rule.
+
+    ``random_state=`` is load-bearing: ``torch.manual_seed`` does not seed
+    the numpy global RNG that ``train_test_split`` draws from, so without it
+    the split is genuinely irreproducible and the ``random_state`` rule is
+    right to say so. The split outputs are consumed for the same reason --
+    an unread holdout is a real finding, not fixture noise.
+    """
     code = """
 import torch
 import torch.nn as nn
@@ -23,13 +30,14 @@ from sklearn.model_selection import train_test_split
 
 torch.manual_seed(42)
 
-X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2)
+X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
 model = nn.Linear(10, 1)
 model.train()
 model.eval()
 
 optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
 loader = torch.utils.data.DataLoader(ds, batch_size=64, shuffle=True)
+print(len(X_train), len(X_val), len(y_train), len(y_val))
 """
     p = tmp_path / "train_clean.py"
     p.write_text(code, encoding="utf-8")

@@ -449,7 +449,7 @@ mlcompass audit train.py
    Summary: 2 error   4 warning   1 info
 ```
 
-Eight pure-AST rules:
+Fourteen pure-AST rules. Eight are deep-learning shaped:
 
 | Rule              | Catches                                                       |
 | ----------------- | ------------------------------------------------------------- |
@@ -461,6 +461,24 @@ Eight pure-AST rules:
 | `grad_clipping`   | RNN / Transformer built but `clip_grad_norm_` never called    |
 | `eval_mode`       | `model.train()` appears but `.eval()` never does              |
 | `batch_size`      | Implausibly small (<4) or huge (>4096)                        |
+
+Six cover tabular `pandas + scikit-learn` scripts, which none of the
+eight above can say anything about — `seed` returns early unless a
+stochastic framework is imported, and scikit-learn is not one:
+
+| Rule              | Catches                                                       |
+| ----------------- | ------------------------------------------------------------- |
+| `preprocess_leak` | Scaler / imputer / selector fitted on the full frame, then split |
+| `refit_across_split` | Same scaler/model fitted on *both* halves of one split      |
+| `target_leak`     | `X = df` while `y = df['target']` — the answer is a feature    |
+| `random_state`    | A stochastic sklearn call with no `random_state=` and no global seed |
+| `unused_holdout`  | `train_test_split` output that is never read again             |
+| `metric_choice`   | `accuracy_score` as the only classification metric (info only) |
+
+These are written to be quiet on correct code. Where a shape cannot be
+decided from an AST — a preprocessing step fitted inside a helper
+function, `X` built by column subset, `**params` that may carry
+`random_state` — the rule stays silent rather than guess.
 
 ## Example — `watch`
 
