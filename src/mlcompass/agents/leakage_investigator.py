@@ -566,7 +566,11 @@ def investigate_leakage_bound(
         ``["entity", "entity+value"]`` — violation-composition telemetry),
         ``attempts_made`` (provider calls issued, 1..max_retries+1),
         ``had_unrecoverable_violation`` (True if a phantom survived the retry
-        budget and was stripped deterministically), and ``evidence_bound``.
+        budget and was stripped deterministically), ``omitted_critical_evidence``
+        (True if a committed verdict never addressed the completeness anchor),
+        ``critical_column`` (the anchor itself, or None when the evidence
+        names no candidate — the renderer needs it to say *which* column the
+        narration failed to address), and ``evidence_bound``.
     """
     allowed = evidence_allowed_columns(evidence)
     allowed_set = set(allowed)
@@ -746,6 +750,11 @@ def investigate_leakage_bound(
         "attempts_made": attempts_made,
         "had_unrecoverable_violation": had_unrecoverable,
         "omitted_critical_evidence": omitted,
+        # The completeness anchor, carried out so the renderer can name the
+        # column the narration failed to address. An omission warning that
+        # cannot say *which* evidence item was skipped leaves the reader to
+        # rediscover it from the evidence panel by hand.
+        "critical_column": anchor,
         "evidence_bound": True,
     }
 

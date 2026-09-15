@@ -411,6 +411,9 @@ def test_omitting_top_candidate_triggers_retry_then_flag() -> None:
     assert out["schema_rejections"] == 3
     assert out["omitted_critical_evidence"] is True
     assert out["had_unrecoverable_violation"] is False  # nothing unsound, just incomplete
+    # The renderer names the omitted column in its warning, so the anchor has
+    # to leave this function; a bare boolean cannot say *what* was skipped.
+    assert out["critical_column"] == "log_target_v2"
 
 
 def test_cannot_determine_is_not_an_omission() -> None:
