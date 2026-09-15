@@ -22,6 +22,7 @@ environment, and are never printed.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import pathlib
 import sys
@@ -108,10 +109,8 @@ def _post(base: str, key: str | None, payload: dict[str, Any]) -> tuple[bool, An
             return True, json.loads(r.read().decode()), time.monotonic() - clock
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode("utf-8", "replace")[:300]
-        try:
+        with contextlib.suppress(json.JSONDecodeError, AttributeError):
             detail = json.loads(detail).get("error", {}).get("message", detail)
-        except (json.JSONDecodeError, AttributeError):
-            pass
         return False, f"HTTP {exc.code}: {str(detail)[:140]}", time.monotonic() - clock
     except Exception as exc:  # noqa: BLE001 - probe reports whatever went wrong
         return False, f"{type(exc).__name__}: {str(exc)[:140]}", time.monotonic() - clock
