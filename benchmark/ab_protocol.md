@@ -1,9 +1,11 @@
 # A/B protocol — does mlcompass change how an LLM trains a model?
 
-Protocol version: A/B 1.2. No scored experiments conducted under it yet;
-one unscored pipeline-validation pair was run under 1.0 and is recorded in
-§9. The three amendments in §9 were made before any scored run, prompted by
-gaps the validation pair exposed.
+Protocol version: A/B 1.2. No scored experiments conducted under it yet.
+Fourteen unscored pipeline-validation runs were made under 1.0 and 1.1, all
+of them superseded and all of them kept; they are what the four amendments
+in §9 were written from. Every amendment was made **before any scored run**.
+§10 records what is known to be wrong with the design and is not being
+fixed.
 
 This is a **second** protocol, not a revision of `protocol.md`. That one
 asks whether mlcompass detects known defects in a dataset. This one asks a
@@ -189,11 +191,14 @@ helps" would be the more flattering claim and the less true one.
 
 ## 9. Amendments
 
-Recorded per `protocol.md` §1 discipline: all three were made **before any
-scored run**, prompted by what a single unscored validation pair exposed.
-That pair — local `qwen2.5:7b`, openml-1464, one repetition per arm — is
-kept as evidence of the pipeline working end to end and is **not** a result:
-both arms scored ROC AUC 0.6835 with 1 of 6 defects, at n=1.
+Recorded per `protocol.md` §1 discipline: all four were made **before any
+scored run**, prompted by what the unscored validation runs exposed. Those
+runs — local `qwen2.5:7b`, openml-1464, one repetition per arm — were kept
+as evidence of the pipeline working end to end and are **not** results. A1
+to A3 came out of the first pair under 1.0, where both arms scored ROC AUC
+0.6835 with 1 of 6 defects at n=1; A4 came out of the twelve three-arm runs
+under 1.1, which is the set that made the inversion visible. Every one of
+them is superseded by A4 and marked as such where it sits.
 
 **A1 — third arm (`advise+audit`).** Under 1.0 the treatment arm was
 specified to carry both `advise` and `audit` output. That is not
@@ -219,12 +224,22 @@ the setting rather than the model.
 
 **A4 — split on duplicate groups.** Under 1.1 the harness split the pinned
 CSV directly. On OpenML 1464 that placed 71 of 187 holdout rows verbatim in
-train, and the consequence was not subtle: across seven validation runs the
-relationship between the checklist and the score was perfectly inverted and
-perfectly consistent — **every script scoring 0 defects scored ROC AUC
-0.5552, every script scoring 1 defect scored 0.6835**, the defect in
-question being failure to de-duplicate. The benchmark was paying scripts to
-leak, on the one measure §1 calls the one that cannot be argued with.
+train, and the consequence was not subtle: across the **twelve** validation
+runs recorded under 1.1 the relationship between the checklist and the score
+was perfectly inverted and perfectly separated — **every one of the eight
+scripts that left the duplicates in scored at least 0.6532, every one of the
+four that removed them scored 0.5552**, and no run fell between. The
+benchmark was paying scripts to leak, on the one measure §1 calls the one
+that cannot be argued with.
+
+Two corrections to the numbers this amendment was first drafted with, made
+on re-reading `ab_results.csv` and recorded rather than quietly applied.
+There are twelve 1.1 runs, not seven. And the 1-defect runs did not all
+score 0.6835: seven did and one scored 0.6532, so the relationship is a
+clean separation of two groups rather than a pair of constants. Both
+corrections leave the conclusion where it was and make it slightly stronger
+— the separation is total, with the worst leaking run still above the best
+clean one.
 
 This is the failure mlcompass exists to detect, built into the scoring of
 the study meant to evaluate it, and mlcompass's own warning text names the
@@ -236,3 +251,44 @@ honest for every arm.
 
 Every validation run recorded before this amendment is superseded. They are
 kept, since discarding evidence of a design error is how the error survives.
+
+## 10. Stated limitations
+
+Things known to be wrong with this design, recorded rather than fixed. The
+distinction from §9 is that an amendment changes the protocol; a limitation
+is a fact about what the protocol can and cannot measure, and writing it down
+is the alternative to quietly working around it.
+
+**L1 — on this dataset family the `advise+audit` intervention is an empty
+block, so A1's prediction may not be testable here.** `mlcompass audit`
+reported "No issues detected by the static checks" on 4 of 4 first-turn
+scripts in the 1.1 validation runs, all of them pandas + scikit-learn on
+OpenML 1464. The revision round still happened — §2 requires it, and an audit
+finding nothing is a result — but what went back to the model was a framed
+empty block. An arm whose intervention is empty cannot be distinguished from
+the arm above it, and A1 predicted the defect count would fall further from
+`advise` to `advise+audit` than from `control` to `advise`.
+
+The mechanism is not that the scripts were clean. `audit`'s `seed` rule
+returns early unless the script imports one of a fixed set of stochastic
+frameworks — torch, tensorflow, keras, numpy, random, jax, lightning —
+and scikit-learn is not among them, so an unseeded pandas + sklearn script
+is not flagged. The same script with `import numpy as np` added and nothing
+else changed is flagged `error / seed`. Of the remaining rules, `val_split`
+does apply to sklearn but only fires when the script performs no split at all,
+and `optimizer`, `loss_stability`, `dataloader`, `grad_clipping`, `eval_mode`
+and `batch_size` are deep-learning shaped. A tabular sklearn script that calls
+`train_test_split` therefore has, in practice, no rule left that can fire.
+
+`audit` is **not** being changed to close this. The checklist in §4 is frozen
+and five of its six items are what `audit` and `advise` already check, which
+is what makes the comparison fair; widening `audit`'s rules after seeing that
+the treatment arm produced no findings would be tuning the instrument to the
+experiment, and any subsequent difference between the arms would be
+uninterpretable. The honest options are to report the null for this family,
+or to add a dataset family where `audit` has rules that apply — a
+torch-shaped task — and report that separately. Until one of those happens,
+`advise+audit` results on tabular sklearn data are reported with this
+limitation attached, and a defect count that does not fall between `advise`
+and `advise+audit` is not evidence that revision does not help. It is
+evidence that nothing was said.
