@@ -1,0 +1,2 @@
+
+(not run: mlcompass audit takes a training script; at prompt-construction time no script exists. ab_protocol.md section 2 does not say what audit's input is in a cell whose only inputs are a CSV and a target, so the block is left empty rather than filled with advice this harness invented.)

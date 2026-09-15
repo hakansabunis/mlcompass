@@ -1,0 +1,1552 @@
+"""Execute and score the with/without cells of `ab_protocol.md` (A/B 1.0).
+
+One invocation runs every (dataset x arm x model x repetition) cell, preserves
+the evidence each run produced, and appends one row per run to
+`ab_results.csv`.
+
+    python benchmark/run_ab.py --panel-id ollama-qwen2.5-7b --plan   # freeze, run nothing
+    python benchmark/run_ab.py --experiment-id <id> --panel-id ollama-qwen2.5-7b
+    python benchmark/run_ab.py --panel-id ollama-qwen2.5-7b --dry-run
+
+This is a *second* harness, not a revision of `run_benchmark.py`. That one
+asks whether mlcompass detects known defects in a dataset and scores against
+`ground_truth.json`; this one asks whether an LLM writes a better training
+script when mlcompass's deterministic findings are in front of it, and scores
+by executing what the model wrote. The two answer different questions with
+different outcome measures, so they keep separate result files. What is shared
+is the model panel — `PANEL` is imported from `run_benchmark.py` rather than
+restated, so a panel member cannot drift between the two batteries.
+
+.. warning::
+
+   **This harness executes Python source written by a language model, and
+   then unpickles a file that source wrote.** Both are arbitrary code
+   execution by construction: there is no way to measure what a script does
+   without running it, which is the whole point of ab_protocol.md section 1.
+
+   What the containment is: each run executes in its own fresh temp workspace
+   (never the repository tree), seeded with `train.csv` and nothing else; as a
+   separate subprocess, so a crash, a hang or a `sys.exit` cannot take the
+   harness with it; under a wall-clock timeout that is never disabled; and the
+   holdout split is written outside that workspace so the executed script
+   cannot read, fit or overwrite the file it is scored on. Model loading runs
+   in a second subprocess under its own timeout, because `pickle.load` of a
+   file written by model-generated code runs whatever that file says to run.
+
+   What the containment is **not**: a sandbox. The subprocess inherits this
+   user's account, filesystem permissions, environment and network. It is
+   isolation against accident — a runaway loop, a stray `rm` inside the
+   workspace, a script that never returns — not against malice. Do not point
+   this harness at a model or a prompt you would not run as yourself.
+
+Protocol points this implements, and where they bite:
+
+- **Plan before execution** (`protocol.md` section 1, inherited). `--plan`
+  writes `runs/<experiment_id>/plan.md` and stops; execution refuses to start
+  without one, so a cell cannot be scored under settings invented after seeing
+  it. The holdout fraction and the stratification choice are recorded there.
+- **Identical inputs** (section 2, inherited). Every dataset is re-hashed
+  against `ground_truth.json` before use; a mismatch aborts.
+- **The harness owns the split** (section 3). It splits the pinned CSV once
+  per (dataset, seed) — so both arms and every repetition at that seed are
+  scored on the identical holdout — writes `train.csv` into the run workspace
+  and keeps `holdout.csv` in a harness-private directory. Neither arm is told
+  a holdout exists.
+- **One difference between the arms** (section 2). The treatment prompt is
+  the control prompt plus an appended mlcompass block, by construction:
+  `build_prompts` returns `(control, control + block)`. Nothing else can
+  diverge, and `tests/test_ab_prompts.py` asserts the substring relation.
+- **Frozen scoring** (sections 3 and 4). The metric is fixed per task type
+  before execution; the six-defect checklist is a deterministic function of
+  the emitted source. No model scores anything, here or anywhere below.
+- **Failures are kept** (section 5). A model that returned no code, a script
+  that crashed or timed out, a model file that would not load — each is
+  recorded with a blank `holdout_score` and the reason, never discarded and
+  never back-filled with a number the script did not earn.
+- **No pooling** (section 5). `panel_id`, `provider` and `model` are columns
+  on every row and nothing in this file aggregates across them.
+"""
+
+from __future__ import annotations
+
+import argparse
+import contextlib
+import csv
+import hashlib
+import json
+import platform
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+import time
+import urllib.error
+import urllib.request
+import uuid
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+BENCH = Path(__file__).parent
+sys.path.insert(0, str(BENCH))
+
+# Shared with the detection battery on purpose. PANEL especially: a model is a
+# configuration, and the same model must mean the same endpoint in both
+# result files or the two batteries stop being about the same systems. The
+# underscore-prefixed helpers are imported rather than copied for the same
+# reason — a divergent `_utc_now` would be a silent evidence defect.
+from run_benchmark import (  # noqa: E402
+    PANEL,
+    _git,
+    _load_ground_truth,
+    _utc_now,
+    _verify_inputs,
+    load_keys,
+)
+
+AB_RESULTS = BENCH / "ab_results.csv"
+RUNS = BENCH / "runs"
+
+AB_PROTOCOL_VERSION = "A/B 1.0"
+
+# Split geometry. ab_protocol.md section 3 fixes *that* the harness owns the
+# split and *that* the seed is recorded; it does not fix the fraction or
+# whether classification splits are stratified. Both are chosen here, frozen,
+# and written into every plan so a later run cannot quietly use a different
+# one. Stratification is on for classification because an unstratified draw
+# can hand back a holdout missing a class, and ROC AUC is undefined there.
+HOLDOUT_FRACTION = 0.25
+STRATIFY_CLASSIFICATION = True
+
+DEFAULT_LLM_TIMEOUT = 900
+DEFAULT_SCRIPT_TIMEOUT = 600
+DEFAULT_SCORE_TIMEOUT = 300
+MAX_COMPLETION_TOKENS = 4096
+
+ARMS = ("control", "treatment")
+
+# ab_protocol.md section 3: "Metric per task type, fixed in advance."
+METRIC_BY_TASK: dict[str, str] = {
+    "binary_classification": "roc_auc",
+    "multiclass_classification": "macro_f1",
+    "regression": "r2",
+}
+
+# ab_protocol.md section 4, in table order. The CSV carries each flag as its
+# own column so a reader can see *which* defect moved, not only how many.
+DEFECT_IDS = (
+    "no_seed",
+    "leak_fit_before_split",
+    "leak_duplicate_rows",
+    "wrong_metric_for_imbalance",
+    "no_validation",
+    "target_in_features",
+)
+
+RESULT_COLUMNS = [
+    "run_id",
+    "experiment_id",
+    "protocol_version",
+    "dataset_id",
+    "arm",
+    "panel_id",
+    "provider",
+    "model",
+    "repeat_index",
+    "seed",
+    "started_at_utc",
+    "mlcompass_commit",
+    "status",
+    "holdout_metric",
+    "holdout_score",
+    "defect_count",
+    *DEFECT_IDS,
+    "script_exit_code",
+    "runtime_seconds",
+    "input_tokens",
+    "output_tokens",
+    "artifacts_path",
+    "notes",
+]
+
+
+# --------------------------------------------------------------------------- #
+# Prompts — the one place the arms are allowed to differ                      #
+# --------------------------------------------------------------------------- #
+
+# ab_protocol.md section 2: the control arm gets "the raw CSV path, the target
+# column name, and the task: write a training script". The instruction to save
+# the fitted model is added because section 3 scores by loading it; it is in
+# *both* prompts, so it is part of the task, not part of the intervention.
+CONTROL_PROMPT = """\
+You are given a tabular dataset saved as a CSV file at this path:
+
+{csv_path}
+
+The target column is: {target}
+
+The columns in the file are:
+{columns}
+
+Write a complete Python training script that trains a model to predict the \
+target column from the other columns in that file, and saves the fitted model \
+to a file in the current working directory so it can be loaded and used to \
+predict on new rows later.
+
+Reply with the script inside a single ```python code block, and nothing else.
+"""
+
+# The only text that may differ between the arms. It is a frame around
+# mlcompass's own bytes and carries no advice of its own: if a command
+# produced nothing, the block is present and empty, per section 2.
+TREATMENT_BLOCK = """
+Below is the verbatim output of two mlcompass commands run on the same inputs.
+
+--- mlcompass advise ---
+{advise}
+--- end mlcompass advise ---
+
+--- mlcompass audit ---
+{audit}
+--- end mlcompass audit ---
+"""
+
+
+def build_prompts(
+    *,
+    csv_path: str,
+    target: str,
+    columns: str,
+    advise_stdout: str,
+    audit_stdout: str,
+) -> tuple[str, str]:
+    """Build the control and treatment prompts for one cell.
+
+    The treatment prompt is the control prompt with a block appended, and is
+    constructed that way rather than from a parallel template: two templates
+    can drift a token apart without anyone noticing, and ab_protocol.md
+    section 2 allows exactly one difference. The caller gets both strings and
+    `tests/test_ab_prompts.py` asserts the strict-substring relation holds.
+    """
+    control = CONTROL_PROMPT.format(csv_path=csv_path, target=target, columns=columns)
+    block = TREATMENT_BLOCK.format(advise=advise_stdout, audit=audit_stdout)
+    return control, control + block
+
+
+def column_listing(frame: Any) -> str:
+    """One short line per column: the name and the dtype pandas inferred."""
+    return "\n".join(f"  - {name} ({dtype})" for name, dtype in frame.dtypes.items())
+
+
+# --------------------------------------------------------------------------- #
+# The split — owned by the harness, never seen by either arm                  #
+# --------------------------------------------------------------------------- #
+
+
+def prepare_split(dataset: dict[str, Any], seed: int, private_dir: Path) -> dict[str, Any]:
+    """Split the pinned CSV once for a (dataset, seed) and keep the holdout.
+
+    Returns the paths plus the two dataset facts the defect checklist needs
+    (duplicate count, minority-class fraction), both measured on the *train*
+    frame — that is the only frame either arm is shown, so it is the frame
+    against which "duplicates present in the input" has to be read.
+    """
+    import pandas as pd
+    from sklearn.model_selection import train_test_split
+
+    source = (BENCH / dataset["csv_path"]).resolve()
+    target = dataset["target"]
+    frame = pd.read_csv(source)
+
+    is_classification = dataset["task"].endswith("classification")
+    stratify = frame[target] if (is_classification and STRATIFY_CLASSIFICATION) else None
+    train_df, holdout_df = train_test_split(
+        frame,
+        test_size=HOLDOUT_FRACTION,
+        random_state=seed,
+        shuffle=True,
+        stratify=stratify,
+    )
+
+    private_dir.mkdir(parents=True, exist_ok=True)
+    train_csv = private_dir / "train.csv"
+    holdout_csv = private_dir / "holdout.csv"
+    train_df.to_csv(train_csv, index=False)
+    holdout_df.to_csv(holdout_csv, index=False)
+
+    if is_classification:
+        shares = train_df[target].value_counts(normalize=True)
+        minority_fraction: float | None = float(shares.min())
+    else:
+        minority_fraction = None
+
+    return {
+        "train_csv": train_csv,
+        "holdout_csv": holdout_csv,
+        "columns": column_listing(train_df),
+        "seed": seed,
+        "holdout_fraction": HOLDOUT_FRACTION,
+        "stratified": stratify is not None,
+        "train_rows": int(len(train_df)),
+        "holdout_rows": int(len(holdout_df)),
+        "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+        "train_sha256": hashlib.sha256(train_csv.read_bytes()).hexdigest(),
+        "holdout_sha256": hashlib.sha256(holdout_csv.read_bytes()).hexdigest(),
+        "duplicate_rows": int(train_df.duplicated().sum()),
+        "minority_fraction": minority_fraction,
+        "target_is_last_column": bool(list(train_df.columns)[-1] == target),
+    }
+
+
+# --------------------------------------------------------------------------- #
+# The mlcompass block — treatment only                                        #
+# --------------------------------------------------------------------------- #
+
+
+class AdviseFailed(RuntimeError):
+    """`mlcompass advise` did not run, so no treatment cell may run either."""
+
+
+def mlcompass_findings(train_csv: Path, target: str, timeout: int) -> dict[str, Any]:
+    """Collect the verbatim stdout that the treatment arm is handed.
+
+    `advise` runs on `train.csv`, not on the pinned file: section 2 says "the
+    same inputs", and the inputs are what the arm is given. Running it on the
+    full frame would put counts describing holdout rows into the prompt, which
+    is the leak section 3 exists to prevent.
+
+    `audit` is a different matter and is recorded as not run. The command
+    takes a *training script* (`mlcompass audit <script.py>`), and at
+    prompt-construction time no script exists — the script is the thing the
+    model has not written yet. Section 2 asks for its output "on the same
+    inputs" without saying what audit's input is in a cell that has no script.
+    Rather than invent one (auditing some starter script, or auditing the
+    control arm's emitted script and feeding it to treatment, which would make
+    the arms dependent), the block is left empty, which is what section 2
+    itself prescribes when a command says nothing. Reported as a protocol gap
+    rather than papered over.
+
+    An `advise` that *fails* is a different thing again, and raises. Section 2
+    licenses an empty block when mlcompass "says nothing about a dataset" — a
+    tool that could not run said nothing of the kind, and pasting its silence
+    would present a broken invocation as a clean dataset and quietly turn the
+    treatment arm into a second control arm. Every treatment row in the
+    experiment would then be mislabelled, so the run stops instead.
+    """
+    workspace = Path(tempfile.mkdtemp(prefix="mlcab_advise_"))
+    command = [
+        sys.executable,
+        "-X",
+        "utf8",
+        "-m",
+        "mlcompass.cli",
+        "advise",
+        str(train_csv),
+        "--target",
+        target,
+    ]
+    try:
+        proc = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            cwd=workspace,
+            timeout=timeout,
+        )
+        advise_stdout, advise_status = proc.stdout, ("ok" if proc.returncode == 0 else "failed")
+        advise_stderr = proc.stderr
+    except subprocess.TimeoutExpired:
+        advise_stdout, advise_status, advise_stderr = "", "timeout", ""
+    finally:
+        shutil.rmtree(workspace, ignore_errors=True)
+
+    if advise_status != "ok":
+        raise AdviseFailed(
+            f"`mlcompass advise` {advise_status} on {train_csv.name} under "
+            f"{sys.executable}.\n{advise_stderr.strip()[:600]}\n\n"
+            "The treatment arm cannot run: an empty findings block would say "
+            "mlcompass found nothing, when in fact it never ran. Fix the "
+            "invocation (is mlcompass installed for this interpreter?) and "
+            "start the experiment again."
+        )
+
+    return {
+        "advise_stdout": advise_stdout,
+        "advise_status": advise_status,
+        "advise_stderr": advise_stderr,
+        "advise_command": command,
+        "audit_stdout": "",
+        "audit_status": "not-run",
+        "audit_reason": (
+            "mlcompass audit takes a training script; at prompt-construction time no "
+            "script exists. ab_protocol.md section 2 does not say what audit's input "
+            "is in a cell whose only inputs are a CSV and a target, so the block is "
+            "left empty rather than filled with advice this harness invented."
+        ),
+    }
+
+
+# --------------------------------------------------------------------------- #
+# The model call — the same OpenAI-compatible path the other battery uses     #
+# --------------------------------------------------------------------------- #
+
+
+def _post(
+    base_url: str, key: str | None, payload: dict[str, Any], timeout: int
+) -> tuple[bool, Any, float]:
+    body = json.dumps(payload).encode()
+    headers = {"Content-Type": "application/json"}
+    if key:
+        headers["Authorization"] = f"Bearer {key}"
+    request = urllib.request.Request(
+        f"{base_url.rstrip('/')}/chat/completions", data=body, headers=headers
+    )
+    clock = time.monotonic()
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:  # noqa: S310
+            return True, json.loads(response.read().decode()), time.monotonic() - clock
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", "replace")[:400]
+        with contextlib.suppress(json.JSONDecodeError, AttributeError):
+            detail = json.loads(detail).get("error", {}).get("message", detail)
+        return False, f"HTTP {exc.code}: {str(detail)[:240]}", time.monotonic() - clock
+    except Exception as exc:  # noqa: BLE001 - the row records whatever went wrong
+        return False, f"{type(exc).__name__}: {str(exc)[:240]}", time.monotonic() - clock
+
+
+def call_model(member: dict[str, Any], prompt: str, timeout: int) -> dict[str, Any]:
+    """One chat completion against a panel member. Credentials are never logged."""
+    base_url = member["base_url"] or "https://api.openai.com/v1"
+    key = load_keys().get(member["key_name"], "") if member["key_name"] else None
+    messages = [{"role": "user", "content": prompt}]
+
+    payload: dict[str, Any] = {
+        "model": member["model"],
+        "messages": messages,
+        "max_completion_tokens": MAX_COMPLETION_TOKENS,
+    }
+    ok, response, seconds = _post(base_url, key, payload, timeout)
+    if not ok:
+        # Some OpenAI-compatible endpoints still want the retired parameter
+        # name; `scripts/check_provider_models.py` hits the same wall.
+        del payload["max_completion_tokens"]
+        payload["max_tokens"] = MAX_COMPLETION_TOKENS
+        ok, response, seconds = _post(base_url, key, payload, timeout)
+    if not ok:
+        return {
+            "ok": False,
+            "text": "",
+            "error": str(response),
+            "input_tokens": "",
+            "output_tokens": "",
+            "finish_reason": "",
+            "seconds": seconds,
+        }
+
+    choice = response["choices"][0]
+    usage = response.get("usage") or {}
+    return {
+        "ok": True,
+        "text": choice["message"].get("content") or "",
+        "error": "",
+        "input_tokens": usage.get("prompt_tokens", ""),
+        "output_tokens": usage.get("completion_tokens", ""),
+        "finish_reason": choice.get("finish_reason", ""),
+        "seconds": seconds,
+    }
+
+
+_FENCE = re.compile(r"```(?:python|py)?[ \t]*\r?\n(.*?)```", re.DOTALL | re.IGNORECASE)
+_OPEN_FENCE = re.compile(r"```(?:python|py)?[ \t]*\r?\n", re.IGNORECASE)
+_LOOKS_LIKE_CODE = re.compile(r"^\s*(?:import|from)\s+\w", re.MULTILINE)
+
+
+def extract_python(reply: str) -> tuple[str | None, str]:
+    """Pull the script out of a chat reply, unmodified. Returns (source, how)."""
+    blocks = _FENCE.findall(reply)
+    if blocks:
+        with_imports = [b for b in blocks if _LOOKS_LIKE_CODE.search(b)]
+        chosen = max(with_imports or blocks, key=len)
+        return chosen, f"fenced block ({len(blocks)} found)"
+    opened = _OPEN_FENCE.search(reply)
+    if opened:
+        # Truncated mid-block: keep what there is and let it fail honestly at
+        # execution rather than recording the cell as "no code".
+        return reply[opened.end() :], "unclosed fence — reply was cut off"
+    if _LOOKS_LIKE_CODE.search(reply):
+        return reply, "no fence; whole reply reads as source"
+    return None, "no Python found in the reply"
+
+
+# --------------------------------------------------------------------------- #
+# Process-defect checklist — ab_protocol.md section 4, frozen                  #
+# --------------------------------------------------------------------------- #
+#
+# Every rule below is a regex over the emitted source plus, where the defect is
+# defined relative to the data ("duplicates present in the input", "a target
+# whose minority class is under 20%"), a measured fact about train.csv. No
+# model participates: section 4 requires the checklist be scored by a frozen
+# script, "never by the model that wrote the code and never by a model at all".
+# A defect counts once per script however many times it occurs.
+
+_FRAMEWORK_IMPORTS = {
+    "numpy": r"^\s*(?:import\s+numpy|from\s+numpy\b)",
+    "random": r"^\s*(?:import\s+random\b|from\s+random\s+import)",
+    "sklearn": r"^\s*(?:import\s+sklearn|from\s+sklearn\b)",
+    "torch": r"^\s*(?:import\s+torch\b|from\s+torch\b)",
+    "tensorflow": r"^\s*(?:import\s+tensorflow|from\s+tensorflow\b)",
+    "lightgbm": r"^\s*(?:import\s+lightgbm|from\s+lightgbm\b)",
+    "xgboost": r"^\s*(?:import\s+xgboost|from\s+xgboost\b)",
+}
+
+_FRAMEWORK_SEEDS = {
+    "numpy": (
+        r"np\.random\.seed\s*\(|numpy\.random\.seed\s*\("
+        r"|default_rng\s*\(\s*\d|RandomState\s*\(\s*\d"
+    ),
+    "random": r"(?<![\w.])random\.seed\s*\(",
+    "sklearn": r"random_state\s*=\s*\d+",
+    "torch": r"torch\.manual_seed\s*\(|torch\.cuda\.manual_seed\w*\s*\(",
+    "tensorflow": (
+        r"tf\.random\.set_seed\s*\(|tensorflow\.random\.set_seed\s*\("
+        r"|set_random_seed\s*\("
+    ),
+    "lightgbm": r"random_state\s*=\s*\d+|(?<![\w.])seed\s*=\s*\d+",
+    "xgboost": r"random_state\s*=\s*\d+|(?<![\w.])seed\s*=\s*\d+",
+}
+
+# What counts as "the split": the line at which held-out data first becomes
+# distinct from training data. A search estimator's `.fit` splits internally,
+# so its construction is the boundary for anything fitted before it.
+_SPLIT_LINE = re.compile(
+    r"train_test_split\s*\(|\.split\s*\(|cross_val_score\s*\(|cross_validate\s*\("
+    r"|GridSearchCV\s*\(|RandomizedSearchCV\s*\("
+)
+
+_TRANSFORMER = (
+    r"\w*(?:Scaler|Encoder|Imputer|Normalizer|Binarizer|Discretizer|Vectorizer"
+    r"|PowerTransformer|QuantileTransformer|PolynomialFeatures|FunctionTransformer)"
+)
+_TRANSFORMER_ASSIGN = re.compile(rf"^\s*(\w+)\s*=\s*{_TRANSFORMER}\s*\(", re.MULTILINE)
+_TRANSFORMER_INLINE_FIT = re.compile(rf"{_TRANSFORMER}\s*\([^\n]*\)\s*\.\s*fit(?:_transform)?\s*\(")
+_TRAIN_TEST_SPLIT_ARG = re.compile(r"train_test_split\s*\(\s*([A-Za-z_]\w*)")
+
+_VALIDATION = re.compile(
+    r"train_test_split\s*\(|cross_val_score\s*\(|cross_validate\s*\(|KFold\s*\("
+    r"|StratifiedKFold\s*\(|ShuffleSplit\s*\(|GroupKFold\s*\(|TimeSeriesSplit\s*\("
+    r"|GridSearchCV\s*\(|RandomizedSearchCV\s*\(|validation_split\s*="
+)
+
+_ACCURACY = re.compile(
+    r"accuracy_score\s*\(|scoring\s*=\s*['\"]accuracy['\"]|['\"]accuracy['\"]|\.score\s*\("
+)
+
+
+def _fit_lines(source: str, lines: list[str]) -> list[int]:
+    """Line indexes at which a scaler / encoder / imputer is fitted directly."""
+    names = set(_TRANSFORMER_ASSIGN.findall(source))
+    hits: list[int] = []
+    alternatives = "|".join(re.escape(n) for n in names)
+    by_name = (
+        re.compile(rf"(?<![\w.])(?:{alternatives})\s*\.\s*fit(?:_transform)?\s*\(")
+        if names
+        else None
+    )
+    for index, line in enumerate(lines):
+        if _TRANSFORMER_INLINE_FIT.search(line) or (by_name and by_name.search(line)):
+            hits.append(index)
+    return hits
+
+
+def _target_tokens(source: str, target: str) -> list[str]:
+    """The target column's name plus any variable holding that literal."""
+    tokens = [re.escape(target)]
+    for name in re.findall(rf"^\s*(\w+)\s*=\s*['\"]{re.escape(target)}['\"]", source, re.MULTILINE):
+        tokens.append(re.escape(name))
+    return tokens
+
+
+_SPLIT_CALL_ARGS = re.compile(r"train_test_split\s*\(([^)]*)")
+
+
+def _split_input_names(source: str) -> list[str]:
+    """The bare variable names handed to `train_test_split`, in order.
+
+    `train_test_split(X, y, test_size=0.2)` gives ``["X", "y"]``; an argument
+    that is an expression rather than a name (``df.drop(...)``) contributes
+    nothing, because there is no variable whose derivation can be located.
+    """
+    match = _SPLIT_CALL_ARGS.search(source)
+    if not match:
+        return []
+    names = []
+    for raw in match.group(1).split(","):
+        arg = raw.strip()
+        if "=" in arg:
+            break
+        if re.fullmatch(r"[A-Za-z_]\w*", arg):
+            names.append(arg)
+    return names
+
+
+def _first_derivation_line(lines: list[str], names: list[str]) -> int | None:
+    """The earliest line that assigns any of ``names``.
+
+    This is where the data that will be split stops tracking the frame it was
+    read from: anything done to the frame afterwards does not reach the split.
+    """
+    if not names:
+        return None
+    alternatives = "|".join(re.escape(n) for n in names)
+    assigned = re.compile(rf"^\s*(?:{alternatives})\s*(?:,[^=\n]*)?=(?!=)")
+    hits = [i for i, line in enumerate(lines) if assigned.match(line)]
+    return min(hits) if hits else None
+
+
+def check_defects(
+    source: str,
+    *,
+    target: str,
+    duplicate_rows: int,
+    minority_fraction: float | None,
+    target_is_last_column: bool = False,
+) -> dict[str, Any]:
+    """Score one emitted script against the six-defect checklist.
+
+    Deterministic: same source and same dataset facts give the same six
+    booleans, every time, on any machine.
+    """
+    lines = source.splitlines()
+    split_hits = [i for i, line in enumerate(lines) if _SPLIT_LINE.search(line)]
+    split_line = split_hits[0] if split_hits else None
+
+    # no_seed — "No seeding call reaches any framework the script imports."
+    # Read literally: the defect is the absence of *any* seeded framework. A
+    # script that imports nothing seedable is also caught, which is the right
+    # side to err on for a reproducibility check.
+    imported = {n for n, p in _FRAMEWORK_IMPORTS.items() if re.search(p, source, re.MULTILINE)}
+    seeded = {n for n in imported if re.search(_FRAMEWORK_SEEDS[n], source)}
+    no_seed = not seeded
+
+    # leak_fit_before_split — fitted before the split, or on the full frame.
+    fit_lines = _fit_lines(source, lines)
+    if split_line is None:
+        fitted_before = bool(fit_lines)
+    else:
+        fitted_before = any(i < split_line for i in fit_lines)
+    full_frame = _TRAIN_TEST_SPLIT_ARG.search(source)
+    fitted_on_full_frame = False
+    if full_frame and fit_lines:
+        frame_name = full_frame.group(1)
+        on_frame = re.compile(rf"\.\s*fit(?:_transform)?\s*\(\s*{re.escape(frame_name)}\b")
+        fitted_on_full_frame = any(on_frame.search(lines[i]) for i in fit_lines)
+    leak_fit_before_split = fitted_before or fitted_on_full_frame
+
+    # leak_duplicate_rows — duplicates in the input are not removed before the
+    # split. Vacuously clean when the input has none.
+    #
+    # "Before the split" is read as *before the data that gets split stops
+    # tracking the frame*, not merely before the `train_test_split` line. The
+    # difference is not academic: a first live run produced
+    #
+    #     X = data.drop(columns=['Class'])
+    #     data = data.drop_duplicates()          # too late, X already taken
+    #     X_train, ... = train_test_split(X, y, ...)
+    #
+    # which removes no duplicate from anything that is split. A line-order
+    # check against the split call alone would credit that as clean and hand
+    # the treatment arm a defect it did not actually avoid. This is still not
+    # dataflow analysis: a dedupe of some *other* frame ahead of the
+    # derivation would be credited. The approximation is recorded rather than
+    # hidden — `dedupe_deadline` in the evidence says which line was used.
+    dedupe = [i for i, line in enumerate(lines) if "drop_duplicates" in line]
+    derivation_line = _first_derivation_line(lines, _split_input_names(source))
+    deadline = derivation_line if derivation_line is not None else split_line
+    if duplicate_rows == 0:
+        leak_duplicate_rows = False
+    elif deadline is None:
+        leak_duplicate_rows = not dedupe
+    else:
+        leak_duplicate_rows = not any(i < deadline for i in dedupe)
+
+    # wrong_metric_for_imbalance — accuracy reported on a target whose minority
+    # class is under 20%. The precondition is a property of the data, so on a
+    # balanced-enough target this can never fire, by design.
+    imbalanced = minority_fraction is not None and minority_fraction < 0.20
+    wrong_metric_for_imbalance = bool(imbalanced and _ACCURACY.search(source))
+
+    # no_validation — no held-out or cross-validated evaluation of any kind.
+    no_validation = not _VALIDATION.search(source)
+
+    # target_in_features — the target column is still in the feature matrix.
+    # Scored by looking for evidence that it was taken out; absence of every
+    # form of exclusion is the defect. The frozen list of what counts as
+    # taking it out:
+    #
+    #   1. `.drop(...)` naming the target
+    #   2. `.pop("<target>")`
+    #   3. `columns != <target>`, `columns.drop(<target>)`, `columns.difference(...)`
+    #   4. an explicit column-list selection, `df[["V1", "V2"]]`, that omits the target
+    #   5. `iloc[:, :-1]`, but only when the target really is the last column
+    #
+    # Form 4 is not decoration: it is what the first live control run used
+    # (`X = df[['V1','V2','V3','V4']]`), and without it the checker reported a
+    # defect in a script that had correctly excluded the target.
+    tokens = "|".join(_target_tokens(source, target))
+    exclusion = re.compile(
+        rf"\.drop\s*\([^)]*(?:['\"](?:{tokens})['\"]|(?<![\w'\"])(?:{tokens})(?![\w'\"]))"
+        rf"|\.pop\s*\(\s*['\"]?(?:{tokens})['\"]?\s*\)"
+        rf"|columns\s*(?:!=|\.drop\s*\()\s*['\"]?(?:{tokens})['\"]?"
+        rf"|columns\.difference\s*\(",
+    )
+    target_in_features = not exclusion.search(source)
+    if target_in_features:
+        quoted_target = re.compile(rf"['\"](?:{tokens})['\"]")
+        for listed in re.findall(r"\[\s*\[([^\[\]]+)\]\s*\]", source):
+            quoted_list = "'" in listed or '"' in listed
+            if quoted_list and not quoted_target.search(listed):
+                target_in_features = False
+                break
+    if (
+        target_in_features
+        and target_is_last_column
+        and re.search(r"iloc\s*\[\s*:\s*,\s*:\s*-\s*1\s*\]", source)
+    ):
+        target_in_features = False
+
+    flags = {
+        "no_seed": no_seed,
+        "leak_fit_before_split": leak_fit_before_split,
+        "leak_duplicate_rows": leak_duplicate_rows,
+        "wrong_metric_for_imbalance": wrong_metric_for_imbalance,
+        "no_validation": no_validation,
+        "target_in_features": target_in_features,
+    }
+    return {
+        "flags": flags,
+        "defect_count": sum(1 for v in flags.values() if v),
+        "frameworks_imported": sorted(imported),
+        "frameworks_seeded": sorted(seeded),
+        "split_line": None if split_line is None else split_line + 1,
+        "dedupe_deadline": None if deadline is None else deadline + 1,
+        "transformer_fit_lines": [i + 1 for i in fit_lines],
+        "input_duplicate_rows": duplicate_rows,
+        "input_minority_fraction": minority_fraction,
+        "target_is_last_column": target_is_last_column,
+    }
+
+
+# --------------------------------------------------------------------------- #
+# Holdout scoring — a second subprocess, because pickles execute              #
+# --------------------------------------------------------------------------- #
+
+SCORER_SOURCE = '''\
+"""Score whatever the emitted script saved against the harness's holdout.
+
+Runs as its own process: loading a file written by model-generated code is
+arbitrary code execution, and a scorer that dies must not take the harness
+with it. Prints one JSON object on stdout and nothing else.
+"""
+
+import json
+import pickle
+import sys
+from pathlib import Path
+
+
+def _load(path):
+    try:
+        import joblib
+
+        return joblib.load(path), ""
+    except Exception as exc:  # noqa: BLE001
+        joblib_error = "joblib: %s: %s" % (type(exc).__name__, exc)
+    try:
+        with open(path, "rb") as handle:
+            return pickle.load(handle), ""
+    except Exception as exc:  # noqa: BLE001
+        return None, "%s; pickle: %s: %s" % (joblib_error, type(exc).__name__, exc)
+
+
+def main():
+    workspace, holdout_path = Path(sys.argv[1]), Path(sys.argv[2])
+    target, task = sys.argv[3], sys.argv[4]
+    import pandas as pd
+    from sklearn.metrics import f1_score, r2_score, roc_auc_score
+
+    patterns = ("*.joblib", "*.pkl", "*.pickle", "*.sav", "*.jbl", "*.model", "*.bin")
+    candidates = sorted({p for pat in patterns for p in workspace.rglob(pat)}, key=lambda p: str(p))
+    result = {"status": "unscorable", "metric": "", "score": "", "artifact": "", "attempts": []}
+    if not candidates:
+        result["reason"] = "the script saved no loadable model file in its workspace"
+        print(json.dumps(result))
+        return
+
+    frame = pd.read_csv(holdout_path)
+    if target not in frame.columns:
+        result["reason"] = "holdout is missing the target column %r" % target
+        print(json.dumps(result))
+        return
+    y = frame[target]
+    raw_X = frame.drop(columns=[target])
+
+    for path in candidates:
+        name = str(path.relative_to(workspace))
+        model, load_error = _load(path)
+        if model is None:
+            result["attempts"].append({"artifact": name, "error": load_error[:300]})
+            continue
+        if not hasattr(model, "predict"):
+            kind = type(model).__name__
+            result["attempts"].append(
+                {"artifact": name, "error": "loaded object has no .predict (%s)" % kind}
+            )
+            continue
+
+        X = raw_X
+        expected = getattr(model, "feature_names_in_", None)
+        if expected is not None:
+            expected = [str(c) for c in expected]
+            missing = [c for c in expected if c not in X.columns]
+            if missing:
+                result["attempts"].append(
+                    {
+                        "artifact": name,
+                        "error": "model expects features the raw holdout does not contain: %s"
+                        % ", ".join(missing[:8]),
+                    }
+                )
+                continue
+            X = X[expected]
+
+        try:
+            if task == "regression":
+                score = float(r2_score(y, model.predict(X)))
+                metric = "r2"
+            elif task == "multiclass_classification":
+                score = float(f1_score(y, model.predict(X), average="macro"))
+                metric = "macro_f1"
+            elif task == "binary_classification":
+                classes = list(getattr(model, "classes_", []))
+                if len(classes) != 2:
+                    raise ValueError("model exposes %d classes, not 2" % len(classes))
+                if not set(map(str, classes)) <= set(map(str, y.unique())):
+                    raise ValueError(
+                        "model classes %s do not match the holdout labels %s"
+                        % (classes, sorted(y.unique().tolist()))
+                    )
+                positive = classes[1]
+                if hasattr(model, "predict_proba"):
+                    scores = model.predict_proba(X)[:, 1]
+                elif hasattr(model, "decision_function"):
+                    scores = model.decision_function(X)
+                else:
+                    raise ValueError("model exposes neither predict_proba nor decision_function")
+                score = float(roc_auc_score((y == positive).astype(int), scores))
+                metric = "roc_auc"
+            else:
+                raise ValueError("no metric is fixed for task %r" % task)
+        except Exception as exc:  # noqa: BLE001
+            result["attempts"].append(
+                {"artifact": name, "error": "%s: %s" % (type(exc).__name__, str(exc)[:300])}
+            )
+            continue
+
+        result.update({"status": "scored", "metric": metric, "score": score, "artifact": name})
+        print(json.dumps(result))
+        return
+
+    result["reason"] = "no saved artefact could be loaded and used to predict on the holdout"
+    print(json.dumps(result))
+
+
+main()
+'''
+
+
+def score_holdout(
+    workspace: Path, split: dict[str, Any], dataset: dict[str, Any], private_dir: Path, timeout: int
+) -> dict[str, Any]:
+    """Run the scorer in its own process and return its verdict."""
+    scorer = private_dir / "score_holdout.py"
+    scorer.write_text(SCORER_SOURCE, encoding="utf-8")
+    command = [
+        sys.executable,
+        "-X",
+        "utf8",
+        str(scorer),
+        str(workspace),
+        str(split["holdout_csv"]),
+        dataset["target"],
+        dataset["task"],
+    ]
+    try:
+        proc = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            cwd=private_dir,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired:
+        return {
+            "status": "unscorable",
+            "metric": "",
+            "score": "",
+            "artifact": "",
+            "attempts": [],
+            "reason": f"scoring did not finish within {timeout}s",
+        }
+    if proc.returncode != 0:
+        return {
+            "status": "unscorable",
+            "metric": "",
+            "score": "",
+            "artifact": "",
+            "attempts": [],
+            "reason": f"scorer exited {proc.returncode}: {proc.stderr.strip()[:300]}",
+        }
+    try:
+        return dict(json.loads(proc.stdout.strip().splitlines()[-1]))
+    except (json.JSONDecodeError, IndexError):
+        return {
+            "status": "unscorable",
+            "metric": "",
+            "score": "",
+            "artifact": "",
+            "attempts": [],
+            "reason": f"scorer produced no JSON verdict: {proc.stdout.strip()[:200]}",
+        }
+
+
+# --------------------------------------------------------------------------- #
+# One cell                                                                    #
+# --------------------------------------------------------------------------- #
+
+
+def run_cell(
+    *,
+    dataset: dict[str, Any],
+    arm: str,
+    panel_id: str,
+    member: dict[str, Any],
+    split: dict[str, Any],
+    findings: dict[str, Any] | None,
+    run_dir: Path,
+    workspace: Path,
+    llm_timeout: int,
+    script_timeout: int,
+    score_timeout: int,
+) -> dict[str, Any]:
+    """Prompt, execute, score and check one (dataset, arm, model, repetition)."""
+    run_dir.mkdir(parents=True, exist_ok=True)
+    private_dir = run_dir / "_harness_private"
+    private_dir.mkdir(exist_ok=True)
+
+    # The workspace is seeded with train.csv and nothing else — no repository,
+    # no holdout, no artefact from a previous run. The emitted script is then
+    # written into it and run with the workspace as its working directory, so
+    # anything it saves lands there and is thrown away with it.
+    #
+    # Its path is deterministic per (dataset, seed, repetition) rather than a
+    # `mkdtemp` name, and the arms of one cell share it. The path is *in the
+    # prompt*, so a random per-run directory would put a different token in
+    # each arm's prompt and break the single-difference guarantee of section 2
+    # in the one place a unit test on `build_prompts` could not see it. Runs
+    # are sequential and the directory is cleared before each one, so sharing
+    # the name carries nothing between them.
+    shutil.rmtree(workspace, ignore_errors=True)
+    workspace.mkdir(parents=True)
+    shutil.copyfile(split["train_csv"], workspace / "train.csv")
+    workspace_train = workspace / "train.csv"
+
+    control, treatment = build_prompts(
+        csv_path=str(workspace_train),
+        target=dataset["target"],
+        columns=split["columns"],
+        advise_stdout=(findings or {}).get("advise_stdout", ""),
+        audit_stdout=(findings or {}).get("audit_stdout", ""),
+    )
+    if not treatment.startswith(control):
+        raise RuntimeError(
+            "the treatment prompt does not begin with the control prompt; "
+            "ab_protocol.md section 2 allows exactly one difference between "
+            "the arms and this cell has more than one."
+        )
+    prompt = control if arm == "control" else treatment
+    (run_dir / "prompt.txt").write_text(prompt, encoding="utf-8")
+    prompt_hashes = {
+        "control_prompt_sha256": hashlib.sha256(control.encode("utf-8")).hexdigest(),
+        "prompt_sha256": hashlib.sha256(prompt.encode("utf-8")).hexdigest(),
+    }
+
+    started = _utc_now()
+    clock = time.monotonic()
+    reply = call_model(member, prompt, llm_timeout)
+    (run_dir / "reply.txt").write_text(reply["text"], encoding="utf-8")
+
+    outcome: dict[str, Any] = {
+        "started": started,
+        "prompt_hashes": prompt_hashes,
+        "status": "",
+        "script_exit_code": "",
+        "holdout_metric": METRIC_BY_TASK.get(dataset["task"], ""),
+        "holdout_score": "",
+        "defects": None,
+        "notes": "",
+        "input_tokens": reply["input_tokens"],
+        "output_tokens": reply["output_tokens"],
+        "runtime": 0.0,
+    }
+
+    if not reply["ok"]:
+        outcome.update(
+            status="llm_failed",
+            notes=f"model call failed: {reply['error']}",
+            runtime=time.monotonic() - clock,
+        )
+        shutil.rmtree(workspace, ignore_errors=True)
+        _write_run_record(
+            run_dir, dataset, arm, panel_id, member, split, reply, outcome, None, None
+        )
+        _write_scoring(run_dir, dataset, arm, outcome, None, None)
+        return outcome
+
+    source, how = extract_python(reply["text"])
+    if source is None:
+        outcome.update(
+            status="no_code",
+            notes=f"no script to run: {how}",
+            runtime=time.monotonic() - clock,
+        )
+        shutil.rmtree(workspace, ignore_errors=True)
+        _write_run_record(
+            run_dir, dataset, arm, panel_id, member, split, reply, outcome, None, None
+        )
+        _write_scoring(run_dir, dataset, arm, outcome, None, None)
+        return outcome
+
+    # Verbatim: what the model wrote is the artefact under study (section 7).
+    (run_dir / "emitted.py").write_text(source, encoding="utf-8")
+    (workspace / "emitted.py").write_text(source, encoding="utf-8")
+
+    try:
+        proc = subprocess.run(
+            [sys.executable, "-X", "utf8", "emitted.py"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            cwd=workspace,
+            timeout=script_timeout,
+        )
+        script_stdout, script_stderr = proc.stdout, proc.stderr
+        exit_code: int | None = proc.returncode
+        status = "completed" if proc.returncode == 0 else "script_failed"
+    except subprocess.TimeoutExpired as exc:
+        script_stdout = exc.stdout.decode("utf-8", "replace") if exc.stdout else ""
+        script_stderr = exc.stderr.decode("utf-8", "replace") if exc.stderr else ""
+        exit_code, status = None, "script_timeout"
+
+    (run_dir / "script_stdout.txt").write_text(script_stdout, encoding="utf-8")
+    (run_dir / "script_stderr.txt").write_text(script_stderr, encoding="utf-8")
+
+    # The checklist reads the source, so it is scored whatever the script did:
+    # a crashed script still has defects, and section 1 ranks the three
+    # outcomes rather than gating one on another.
+    defects = check_defects(
+        source,
+        target=dataset["target"],
+        duplicate_rows=split["duplicate_rows"],
+        minority_fraction=split["minority_fraction"],
+        target_is_last_column=split["target_is_last_column"],
+    )
+
+    scored = (
+        score_holdout(workspace, split, dataset, private_dir, score_timeout)
+        if status == "completed"
+        else {
+            "status": "unscorable",
+            "metric": "",
+            "score": "",
+            "artifact": "",
+            "attempts": [],
+            "reason": f"script did not complete ({status}); nothing to load",
+        }
+    )
+    shutil.rmtree(workspace, ignore_errors=True)
+
+    notes = []
+    if scored["status"] == "scored":
+        outcome["holdout_score"] = scored["score"]
+        outcome["holdout_metric"] = scored["metric"]
+        notes.append(f"scored from {scored['artifact']}")
+    else:
+        notes.append(f"holdout score blank: {scored.get('reason', 'unscorable')}")
+    if how != "fenced block (1 found)":
+        notes.append(f"code extraction: {how}")
+    if reply["finish_reason"] not in ("stop", ""):
+        notes.append(f"finish_reason={reply['finish_reason']}")
+
+    outcome.update(
+        status=status,
+        script_exit_code="" if exit_code is None else exit_code,
+        defects=defects,
+        notes="; ".join(notes),
+        runtime=time.monotonic() - clock,
+    )
+    _write_run_record(
+        run_dir, dataset, arm, panel_id, member, split, reply, outcome, defects, scored
+    )
+    _write_scoring(run_dir, dataset, arm, outcome, defects, scored)
+    return outcome
+
+
+def _write_run_record(
+    run_dir: Path,
+    dataset: dict[str, Any],
+    arm: str,
+    panel_id: str,
+    member: dict[str, Any],
+    split: dict[str, Any],
+    reply: dict[str, Any],
+    outcome: dict[str, Any],
+    defects: dict[str, Any] | None,
+    scored: dict[str, Any] | None,
+) -> None:
+    """Everything section 7 asks to preserve, minus the files written beside it."""
+    record = {
+        "dataset_id": dataset["dataset_id"],
+        "arm": arm,
+        "panel_id": panel_id,
+        "provider": member["provider"],
+        "model": member["model"],
+        "endpoint": member["base_url"] or "https://api.openai.com/v1",
+        # Both arms of a cell must show the same control_prompt_sha256: that is
+        # the single-difference guarantee of section 2, checkable from the
+        # evidence alone without rebuilding the prompts.
+        **outcome["prompt_hashes"],
+        "started_at_utc": outcome["started"],
+        "status": outcome["status"],
+        "script_exit_code": outcome["script_exit_code"],
+        "runtime_seconds": round(outcome["runtime"], 3),
+        "usage": {
+            "input_tokens": reply["input_tokens"],
+            "output_tokens": reply["output_tokens"],
+            "finish_reason": reply["finish_reason"],
+        },
+        "split": {k: (str(v) if isinstance(v, Path) else v) for k, v in split.items()},
+        "holdout": scored,
+        "defects": defects,
+        "execution": {
+            "workspace": "fresh temp dir, seeded with train.csv only, deleted after the run",
+            "containment": (
+                "separate subprocess, wall-clock timeout, holdout outside the workspace"
+            ),
+            "python": platform.python_version(),
+            "platform": platform.platform(),
+        },
+        "mlcompass_commit": _git("rev-parse", "HEAD"),
+        "tree_dirty": bool(_git("status", "--porcelain")),
+    }
+    (run_dir / "run.json").write_text(
+        json.dumps(record, indent=2, default=str) + "\n", encoding="utf-8"
+    )
+
+
+def _write_scoring(
+    run_dir: Path,
+    dataset: dict[str, Any],
+    arm: str,
+    outcome: dict[str, Any],
+    defects: dict[str, Any] | None,
+    scored: dict[str, Any] | None,
+) -> None:
+    lines = [
+        f"# A/B scoring — {run_dir.name}",
+        "",
+        f"Dataset: {dataset['dataset_id']} ({dataset['name']}), arm: {arm}",
+        f"Status: {outcome['status']}, script exit code: {outcome['script_exit_code']}",
+        "",
+        "## holdout_score (ab_protocol.md section 3)",
+        "",
+    ]
+    if scored is None:
+        lines += [f"Blank. {outcome['notes'] or 'the run produced no script to score'}"]
+    elif scored["status"] == "scored":
+        lines += [f"{scored['metric']} = {scored['score']:.6f}, from `{scored['artifact']}`."]
+    else:
+        lines += [f"Blank. {scored.get('reason', 'unscorable')}"]
+        for attempt in scored.get("attempts", []):
+            lines.append(f"- tried `{attempt['artifact']}`: {attempt['error']}")
+
+    lines += ["", "## process_defects (ab_protocol.md section 4)", ""]
+    if defects is None:
+        lines += [
+            "Not scored: there is no emitted source to score. Section 4's checklist is a",
+            "property of the emitted script, and a run that produced none has no script.",
+            "",
+            "Scored by a frozen function over the emitted source. No model scored this.",
+        ]
+        (run_dir / "scoring.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+        return
+
+    lines += [
+        f"defect_count: {defects['defect_count']} of 6",
+        "",
+        "| defect | present |",
+        "| --- | --- |",
+    ]
+    lines += [f"| `{k}` | {'yes' if v else 'no'} |" for k, v in defects["flags"].items()]
+    lines += [
+        "",
+        "Checklist evidence:",
+        f"- frameworks imported: {defects['frameworks_imported'] or 'none'}",
+        f"- frameworks seeded: {defects['frameworks_seeded'] or 'none'}",
+        f"- first split at source line: {defects['split_line'] or 'no split found'}",
+        f"- de-duplication had to happen before source line:"
+        f" {defects['dedupe_deadline'] or 'n/a'}",
+        f"- transformer fit at source lines: {defects['transformer_fit_lines'] or 'none'}",
+        f"- duplicate rows in train.csv: {defects['input_duplicate_rows']}",
+        f"- minority-class fraction in train.csv: {defects['input_minority_fraction']}",
+        f"- target is the last column of train.csv: {defects['target_is_last_column']}",
+        "",
+        "Scored by a frozen function over the emitted source. No model scored this.",
+    ]
+    (run_dir / "scoring.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+# --------------------------------------------------------------------------- #
+# Plan, results, main                                                         #
+# --------------------------------------------------------------------------- #
+
+
+def append_result(row: dict[str, Any]) -> None:
+    exists = AB_RESULTS.exists() and AB_RESULTS.read_text(encoding="utf-8").strip()
+    with AB_RESULTS.open("a", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=RESULT_COLUMNS)
+        if not exists:
+            writer.writeheader()
+        writer.writerow({k: row.get(k, "") for k in RESULT_COLUMNS})
+
+
+def write_plan(
+    experiment_id: str,
+    gt: dict[str, Any],
+    datasets: list[dict[str, Any]],
+    panel_ids: list[str],
+    arms: list[str],
+    repeats: int,
+    seeds: list[int],
+    timeouts: tuple[int, int, int],
+) -> Path:
+    plan_dir = RUNS / experiment_id
+    plan_dir.mkdir(parents=True, exist_ok=True)
+    plan = plan_dir / "plan.md"
+    llm_timeout, script_timeout, score_timeout = timeouts
+    cells = [
+        f"| {d['dataset_id']} | {a} | {p} | {repeats} | {', '.join(map(str, seeds))}"
+        f" | {METRIC_BY_TASK.get(d['task'], '(no metric fixed)')} |"
+        for d in datasets
+        for a in arms
+        for p in panel_ids
+    ]
+    plan.write_text(
+        "\n".join(
+            [
+                f"# A/B experiment plan — {experiment_id}",
+                "",
+                f"Frozen at {_utc_now()} (UTC), before execution.",
+                "",
+                f"- Protocol: ab_protocol.md, version {AB_PROTOCOL_VERSION}",
+                f"- Dataset registry: ground_truth.json v{gt['registry_version']},"
+                f" frozen {gt['frozen_at_utc']} (used here for the pinned files,"
+                " their targets and their task types only — the case list is not"
+                " scored by this battery)",
+                f"- mlcompass commit: {_git('rev-parse', 'HEAD')}",
+                f"- Tree dirty at planning time: {bool(_git('status', '--porcelain'))}",
+                f"- Python {platform.python_version()} on {platform.platform()}",
+                f"- Repetitions per cell: {repeats}; seeds {seeds}",
+                f"- Timeouts: model call {llm_timeout}s, emitted script {script_timeout}s,"
+                f" holdout scoring {score_timeout}s",
+                f"- Max completion tokens: {MAX_COMPLETION_TOKENS}",
+                "",
+                "## Split (section 3)",
+                "",
+                f"- Holdout fraction: {HOLDOUT_FRACTION}",
+                f"- Stratified on the target for classification tasks: {STRATIFY_CLASSIFICATION}",
+                "- Split once per (dataset, seed) with `sklearn.model_selection.train_test_split`,",
+                "  `shuffle=True`, `random_state=<seed>`. Both arms and every repetition at that",
+                "  seed are scored on the identical holdout.",
+                "- The fraction and the stratification choice are not fixed by ab_protocol.md.",
+                "  They are fixed here, before execution, and recorded so a later run cannot",
+                "  quietly use different ones.",
+                "",
+                "## Arms (section 2)",
+                "",
+                "- `control`: train.csv path, target column, column listing, write-a-script task.",
+                "- `treatment`: byte-identical prompt plus an appended block carrying the verbatim",
+                "  stdout of `mlcompass advise` on the same train.csv. The treatment prompt is",
+                "  constructed as `control + block`, so the arms cannot differ anywhere else.",
+                "- `mlcompass audit` takes a training script and no script exists at",
+                "  prompt-construction time, so its block is present and empty. ab_protocol.md",
+                "  section 2 does not specify audit's input for a cell that has no script; this",
+                "  harness does not invent one.",
+                "",
+                "## Models (section 5 — reported per model, never pooled)",
+                "",
+                *[
+                    f"- `{p}`: `{PANEL[p]['model']}` via `{PANEL[p]['provider']}` at "
+                    f"{PANEL[p]['base_url'] or 'the provider default endpoint'}"
+                    f" — {PANEL[p]['note']}."
+                    for p in panel_ids
+                ],
+                "",
+                "## Cells",
+                "",
+                "| dataset | arm | model | repeats | seeds | metric |",
+                "| --- | --- | --- | --- | --- | --- |",
+                *cells,
+                "",
+                "## Scoring (sections 3 and 4)",
+                "",
+                "- `holdout_score`: the saved model loaded by the harness and predicted on",
+                "  holdout.csv. ROC AUC for binary, macro F1 for multiclass, R² for regression.",
+                "  A script that saved nothing loadable scores blank with a recorded reason;",
+                "  no number is substituted.",
+                "- `process_defects`: the six-item checklist, a frozen deterministic function of",
+                "  the emitted source. Never scored by a model.",
+                "- `runs_at_all`: the emitted script's exit status.",
+                "",
+                "## Execution order",
+                "",
+                "Sequential, dataset-major then arm then model. Every run executes the emitted",
+                "script as a subprocess in a fresh temp workspace holding train.csv only, under",
+                "a wall-clock timeout, with holdout.csv outside that workspace.",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    return plan
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description="Run the ab_protocol.md with/without battery.")
+    ap.add_argument("--experiment-id", default=None, help="reuse an existing frozen plan")
+    ap.add_argument("--dataset", action="append", help="dataset_id to run, repeatable; default all")
+    ap.add_argument(
+        "--panel-id",
+        action="append",
+        help=f"model lane, repeatable. Panel: {', '.join(sorted(PANEL))}",
+    )
+    ap.add_argument("--arm", action="append", choices=list(ARMS), help="default: both arms")
+    ap.add_argument("--repeats", type=int, default=1)
+    ap.add_argument("--seed", type=int, action="append", help="seed per repetition (repeatable)")
+    ap.add_argument("--timeout", type=int, default=DEFAULT_LLM_TIMEOUT, help="model call timeout")
+    ap.add_argument("--script-timeout", type=int, default=DEFAULT_SCRIPT_TIMEOUT)
+    ap.add_argument("--score-timeout", type=int, default=DEFAULT_SCORE_TIMEOUT)
+    ap.add_argument("--plan", action="store_true", help="freeze a plan and exit without running")
+    ap.add_argument("--dry-run", action="store_true", help="print the cells and exit")
+    args = ap.parse_args()
+
+    gt = _load_ground_truth()
+    datasets = gt["datasets"]
+    if args.dataset:
+        wanted = set(args.dataset)
+        datasets = [d for d in datasets if d["dataset_id"] in wanted]
+        missing = wanted - {d["dataset_id"] for d in datasets}
+        if missing:
+            print(f"Unknown dataset_id(s): {sorted(missing)}")
+            return 1
+
+    panel_ids = list(args.panel_id or [])
+    unknown = [p for p in panel_ids if p not in PANEL]
+    if unknown:
+        print(f"Unknown panel id(s): {unknown}; known: {sorted(PANEL)}")
+        return 1
+    if not panel_ids:
+        print("Every A/B cell needs a model. Pass --panel-id at least once.")
+        print(f"Panel: {', '.join(sorted(PANEL))}")
+        return 1
+
+    arms = list(args.arm or ARMS)
+    seeds = args.seed or list(range(args.repeats))
+    if len(seeds) < args.repeats:
+        seeds = (seeds * args.repeats)[: args.repeats]
+
+    problems = _verify_inputs(gt)
+    if problems:
+        print("Input verification failed (protocol.md section 2):")
+        for problem in problems:
+            print(f"  {problem}")
+        print("\nRun: python benchmark/fetch_datasets.py --verify")
+        return 1
+    print(f"Inputs verified: {len(gt['datasets'])} dataset(s) match the registry.\n")
+
+    for dataset in datasets:
+        if dataset["task"] not in METRIC_BY_TASK:
+            print(f"{dataset['dataset_id']}: no metric is fixed for task {dataset['task']!r}.")
+            return 1
+
+    if args.dry_run:
+        for dataset in datasets:
+            for arm in arms:
+                for panel_id in panel_ids:
+                    print(
+                        f"  {dataset['dataset_id']:<14} {arm:<10} {panel_id:<22}"
+                        f" x{args.repeats}  metric={METRIC_BY_TASK[dataset['task']]}"
+                    )
+        return 0
+
+    experiment_id = (
+        args.experiment_id or f"ab-{datetime.now(timezone.utc):%Y%m%d}-{uuid.uuid4().hex[:6]}"
+    )
+    plan_path = RUNS / experiment_id / "plan.md"
+
+    if args.plan:
+        path = write_plan(
+            experiment_id,
+            gt,
+            datasets,
+            panel_ids,
+            arms,
+            args.repeats,
+            seeds,
+            (args.timeout, args.script_timeout, args.score_timeout),
+        )
+        print(f"Plan frozen: {path.relative_to(BENCH)}")
+        print(
+            f"\nRun it with:\n  python benchmark/run_ab.py --experiment-id {experiment_id} "
+            + " ".join(f"--panel-id {p}" for p in panel_ids)
+        )
+        return 0
+
+    if not plan_path.exists():
+        print(f"No frozen plan at {plan_path.relative_to(BENCH)}.")
+        print("The plan comes before execution. Freeze one with --plan.")
+        return 1
+    print(f"Using frozen plan: {plan_path.relative_to(BENCH)}\n")
+
+    split_root = RUNS / experiment_id / "_splits"
+    splits: dict[tuple[str, int], dict[str, Any]] = {}
+    findings_cache: dict[tuple[str, int], dict[str, Any]] = {}
+    total = 0
+
+    for dataset in datasets:
+        for rep in range(1, args.repeats + 1):
+            seed = seeds[rep - 1]
+            key = (dataset["dataset_id"], seed)
+            if key not in splits:
+                splits[key] = prepare_split(
+                    dataset, seed, split_root / f"{dataset['dataset_id']}-seed{seed}"
+                )
+            split = splits[key]
+
+            # One workspace path per (dataset, seed, repetition), shared by
+            # both arms and cleared before each run: the path is part of the
+            # prompt, so the arms have to be handed the same one.
+            workspace = (
+                Path(tempfile.gettempdir())
+                / f"mlcab-{dataset['openml_id']}-seed{seed}-r{rep}"
+            )
+
+            for arm in arms:
+                findings = None
+                if arm == "treatment":
+                    if key not in findings_cache:
+                        try:
+                            findings_cache[key] = mlcompass_findings(
+                                split["train_csv"], dataset["target"], args.timeout
+                            )
+                        except AdviseFailed as exc:
+                            print(f"\nAborting after {total} run(s).\n{exc}")
+                            return 1
+                    findings = findings_cache[key]
+
+                for panel_id in panel_ids:
+                    member = PANEL[panel_id]
+                    run_id = (
+                        f"{experiment_id}-{dataset['openml_id']}-{arm}"
+                        f"-{panel_id.replace(':', '-')}-r{rep}"
+                    )
+                    run_dir = RUNS / run_id
+                    outcome = run_cell(
+                        dataset=dataset,
+                        arm=arm,
+                        panel_id=panel_id,
+                        member=member,
+                        split=split,
+                        findings=findings,
+                        run_dir=run_dir,
+                        workspace=workspace,
+                        llm_timeout=args.timeout,
+                        script_timeout=args.script_timeout,
+                        score_timeout=args.score_timeout,
+                    )
+                    if findings is not None:
+                        (run_dir / "mlcompass_advise.txt").write_text(
+                            findings["advise_stdout"], encoding="utf-8"
+                        )
+                        (run_dir / "mlcompass_audit.txt").write_text(
+                            findings["audit_stdout"]
+                            + f"\n(not run: {findings['audit_reason']})\n",
+                            encoding="utf-8",
+                        )
+
+                    defects = outcome["defects"]
+                    append_result(
+                        {
+                            "run_id": run_id,
+                            "experiment_id": experiment_id,
+                            "protocol_version": AB_PROTOCOL_VERSION,
+                            "dataset_id": dataset["dataset_id"],
+                            "arm": arm,
+                            "panel_id": panel_id,
+                            "provider": member["provider"],
+                            "model": member["model"],
+                            "repeat_index": rep,
+                            "seed": seed,
+                            "started_at_utc": outcome["started"],
+                            "mlcompass_commit": _git("rev-parse", "HEAD"),
+                            "status": outcome["status"],
+                            "holdout_metric": outcome["holdout_metric"],
+                            "holdout_score": outcome["holdout_score"],
+                            "defect_count": defects["defect_count"] if defects else "",
+                            **{
+                                d: (int(defects["flags"][d]) if defects else "")
+                                for d in DEFECT_IDS
+                            },
+                            "script_exit_code": outcome["script_exit_code"],
+                            "runtime_seconds": round(outcome["runtime"], 3),
+                            "input_tokens": outcome["input_tokens"],
+                            "output_tokens": outcome["output_tokens"],
+                            "artifacts_path": f"runs/{run_id}",
+                            "notes": outcome["notes"],
+                        }
+                    )
+
+                    mark = "ok " if outcome["status"] == "completed" else outcome["status"]
+                    score = outcome["holdout_score"]
+                    shown = f"{score:.4f}" if isinstance(score, float) else "blank"
+                    detail = (
+                        f"{outcome['holdout_metric'] or 'score'}={shown}"
+                        f", defects={defects['defect_count'] if defects else 'n/a'}/6"
+                    )
+                    print(f"  {mark:<15} {run_id:<52} {outcome['runtime']:>6.1f}s  {detail}")
+                    total += 1
+
+    print(
+        f"\n{total} run(s). Results appended to {AB_RESULTS.name};"
+        f" evidence under runs/. Holdout splits kept under runs/{experiment_id}/_splits/."
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
