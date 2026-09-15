@@ -1,6 +1,6 @@
 # A/B protocol — does mlcompass change how an LLM trains a model?
 
-Protocol version: A/B 1.1. No scored experiments conducted under it yet;
+Protocol version: A/B 1.2. No scored experiments conducted under it yet;
 one unscored pipeline-validation pair was run under 1.0 and is recorded in
 §9. The three amendments in §9 were made before any scored run, prompted by
 gaps the validation pair exposed.
@@ -74,13 +74,25 @@ pinned CSV once with a recorded seed, writes `train.csv`, and keeps
 is given `train.csv` only and none is told a holdout exists — an arm that
 knows it is being scored on a specific file can fit it.
 
-**Geometry, frozen:** holdout fraction **0.25**, and **stratified on the
-target for classification tasks**. The fraction is the usual compromise —
+**Geometry, frozen:** holdout fraction **0.25**, **stratified on the target
+for classification tasks**, and **split on duplicate groups** — every set of
+identical rows lands entirely on one side. See §9 A4: without the last of
+these the scoring rewarded the defect it was built to penalise. The fraction is the usual compromise —
 smaller and the score is noise, larger and the model is starved and looks
 worse than it is. Stratification is not a preference: on 1464 the minority
 class is 23.8%, and an unstratified draw can leave the holdout with a single
 class present, where ROC AUC is undefined and the run is wasted for a reason
 that has nothing to do with the arms.
+
+Splitting on duplicate groups is not a refinement; it is what makes the
+held-out score mean anything on data that contains duplicates. A plain
+stratified split of OpenML 1464 puts **71 of 187 holdout rows (38%)
+verbatim into train**, so a script that does the right thing and
+de-duplicates is scored on a holdout it has been denied the answers to,
+while one that leaves the duplicates in is scored on rows it memorised.
+Grouping first leaves the holdout sharing no row with train, and leaves
+**125 duplicates still inside train**, so `leak_duplicate_rows` remains a
+defect a script can commit and the score no longer depends on committing it.
 
 The score is computed by the harness by loading the emitted model (or
 re-running the script's predict path) against `holdout.csv`. Metric per
@@ -204,3 +216,23 @@ unrelated to the arms.
 required "the same generation settings" without naming one, so each provider
 supplied its own default and a between-lane difference could have come from
 the setting rather than the model.
+
+**A4 — split on duplicate groups.** Under 1.1 the harness split the pinned
+CSV directly. On OpenML 1464 that placed 71 of 187 holdout rows verbatim in
+train, and the consequence was not subtle: across seven validation runs the
+relationship between the checklist and the score was perfectly inverted and
+perfectly consistent — **every script scoring 0 defects scored ROC AUC
+0.5552, every script scoring 1 defect scored 0.6835**, the defect in
+question being failure to de-duplicate. The benchmark was paying scripts to
+leak, on the one measure §1 calls the one that cannot be argued with.
+
+This is the failure mlcompass exists to detect, built into the scoring of
+the study meant to evaluate it, and mlcompass's own warning text names the
+remedy: de-duplicate before splitting, *or split on a group key*. The second
+is chosen because the first would delete the defect along with the leak —
+grouping keeps 125 duplicates inside train, so a script can still fail to
+remove them, while the holdout shares no row with train and the score is
+honest for every arm.
+
+Every validation run recorded before this amendment is superseded. They are
+kept, since discarding evidence of a design error is how the error survives.

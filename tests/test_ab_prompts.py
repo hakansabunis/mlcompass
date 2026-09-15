@@ -22,6 +22,13 @@ frozen and deterministic, so it is tested against scripts whose defects are
 known by construction. Sections 3 and 5 freeze the split geometry and the
 generation temperature, and both are checked against the protocol text rather
 than against a number retyped into the harness.
+
+Since A/B 1.2 the split itself is tested rather than only its settings. §9 A4
+records the split having been wrong in a way no setting would have revealed —
+the holdout shared 38% of its rows with train, so the score rewarded the
+defect the checklist penalises — and the tests for it therefore assert
+measured properties of the written CSVs, not that the harness calls a
+grouping function.
 """
 
 from __future__ import annotations
@@ -398,9 +405,15 @@ AUDIT = """\
 
 
 def test_the_three_arms_are_control_advise_and_advise_plus_audit() -> None:
-    """§2 under 1.1 names three arms; `treatment` is a retired 1.0 name."""
+    """§2 since 1.1 names three arms; `treatment` is a retired 1.0 name.
+
+    The arm list is deliberately not tied to the protocol version here. 1.2
+    changed the split and left §2 alone, and a test that re-asserted the
+    version on every unrelated amendment would have to be edited each time —
+    which is how a test stops being read. The version has its own assertion in
+    the A4 section below.
+    """
     assert run_ab.ARMS == ("control", "advise", "advise+audit")
-    assert run_ab.AB_PROTOCOL_VERSION == "A/B 1.1"
 
 
 def test_the_advise_audit_arms_first_turn_is_byte_identical_to_the_advise_arms_only_turn() -> None:
@@ -484,6 +497,14 @@ def _split_fixture(tmp_path):
         "holdout_csv": holdout,
         "columns": "  - V1 (int64)\n  - Class (int64)",
         "seed": 7,
+        "holdout_fraction": run_ab.HOLDOUT_FRACTION,
+        "stratified": True,
+        "train_rows": 2,
+        "holdout_rows": 1,
+        # §9 A4's pair, carried here too: `scoring.md` prints both on every run
+        # and a fixture missing them would let the writer drift unnoticed.
+        "grouped_on_duplicates": True,
+        "holdout_rows_present_in_train": 0,
         "duplicate_rows": 0,
         "minority_fraction": 0.5,
         "target_is_last_column": True,
@@ -865,9 +886,12 @@ def test_the_split_geometry_the_harness_uses_is_the_one_the_protocol_freezes() -
     Under 1.0 these were the harness's own defaults, documented as "not fixed
     by ab_protocol.md". §9 A2 froze them in the protocol text, so the harness
     has to agree with that text rather than carry a number someone retyped.
+    A4 added a third value to the same paragraph, and it is checked the same
+    way — see the A4 section below for why that matters more than the others.
     """
     assert run_ab.HOLDOUT_FRACTION == 0.25
     assert run_ab.STRATIFY_CLASSIFICATION is True
+    assert run_ab.GROUP_ON_DUPLICATES is True
     run_ab.verify_protocol_constants()  # raises if the harness and §3/§5 disagree
 
 
@@ -1014,3 +1038,283 @@ def test_appending_a_1_1_row_to_a_1_0_results_file_is_refused(tmp_path, monkeypa
     monkeypatch.setattr(run_ab, "AB_RESULTS", stale)
     with pytest.raises(run_ab.ResultSchemaMismatch):
         run_ab.append_result({"run_id": "r2", "arm": "advise+audit"})
+
+
+# --------------------------------------------------------------------------- #
+# A/B 1.2 §9 A4 — the split is on duplicate groups                             #
+# --------------------------------------------------------------------------- #
+#
+# A2 froze the fraction and the stratification and stopped there, and the gap
+# it left was not cosmetic. A plain stratified split of OpenML 1464 put 71 of
+# 187 holdout rows verbatim into train, so `holdout_score` — the measure §1
+# calls the one that cannot be argued with — was paying scripts to leak. The
+# seven validation runs under 1.1 came out perfectly inverted: every 0-defect
+# script scored 0.5552, every 1-defect script scored 0.6835, the defect being
+# failure to de-duplicate.
+#
+# So these tests do not check that the harness calls a grouping function. They
+# check the two properties A4 exists to hold apart, which a grouping bug would
+# break in opposite directions:
+#
+#   - no holdout row appears verbatim in train (the leak is gone), and
+#   - duplicates survive *inside* train (the defect is still reachable).
+#
+# De-duplicating the frame before splitting would satisfy the first and
+# destroy the second, and `leak_duplicate_rows` would stop being something a
+# script can fail at — the benchmark would then measure nothing where it used
+# to measure the wrong thing.
+
+SEED = 20260915
+
+# ab_protocol.md §3/§9 A4 states these four numbers for 1464 at fraction 0.25,
+# seed 20260915, stratified. They are in the document, so they are checked
+# against the code rather than trusted — the same discipline A2 applied to the
+# fraction, applied to what the fraction now produces.
+PROTOCOL_1464 = {
+    "train_rows": 524,
+    "holdout_rows": 224,
+    "holdout_rows_present_in_train": 0,
+    "duplicate_rows": 125,
+}
+
+
+def _pinned_datasets() -> list[dict]:
+    """The three datasets `ground_truth.json` pins, as `prepare_split` takes them."""
+    return run_ab._load_ground_truth()["datasets"]
+
+
+def _dataset(dataset_id: str) -> dict:
+    return next(d for d in _pinned_datasets() if d["dataset_id"] == dataset_id)
+
+
+def _rows(path) -> list[tuple]:
+    import pandas as pd
+
+    frame = pd.read_csv(path)
+    return [tuple(r) for r in frame.itertuples(index=False, name=None)]
+
+
+def _contamination(split: dict) -> int:
+    """Holdout rows that appear verbatim in train, counted from the written files.
+
+    Deliberately recomputed from the two CSVs rather than read out of the
+    split record: the record is the harness's own claim, and this is the test
+    that decides whether the claim is true.
+    """
+    train = set(_rows(split["train_csv"]))
+    return sum(1 for row in _rows(split["holdout_csv"]) if row in train)
+
+
+_pinned = pytest.mark.skipif(
+    not (ROOT / "benchmark" / "data").is_dir(),
+    reason="pinned CSVs absent; run `python benchmark/fetch_datasets.py`",
+)
+
+
+@_pinned
+@pytest.mark.parametrize("dataset_id", ["openml-1464", "openml-1480", "openml-44031"])
+def test_no_holdout_row_appears_verbatim_in_train(dataset_id: str, tmp_path) -> None:
+    """A4's first half, on every pinned dataset.
+
+    Stated as a count rather than as a property of the implementation: a
+    harness that stopped grouping, grouped on the wrong key, or grouped and
+    then reshuffled rows between the sides would all fail here, and none of
+    them would fail a test that asserted a function was called.
+    """
+    split = run_ab.prepare_split(_dataset(dataset_id), SEED, tmp_path / dataset_id)
+    leaked = _contamination(split)
+    assert leaked == 0, (
+        f"{dataset_id}: {leaked} of {split['holdout_rows']} holdout rows appear "
+        "verbatim in train. The holdout is then partly memorised, and a script "
+        "that de-duplicates is scored on rows it was denied while one that does "
+        "not is scored on rows it kept — which is §9 A4's whole subject."
+    )
+    # And the harness's own record of the same number agrees, so a reader of
+    # `runs/<id>/run.json` sees the checked quantity rather than an assurance.
+    assert split["holdout_rows_present_in_train"] == 0
+
+
+@_pinned
+def test_the_1464_split_matches_the_numbers_the_protocol_states(tmp_path) -> None:
+    """§3 and §9 A4 print four numbers for this split. They are the code's too.
+
+    A2's lesson generalises: a number written into a document and separately
+    into a harness is a number that will eventually differ. §3 says grouping
+    leaves 125 duplicates inside train, and that claim is load-bearing — it is
+    the sentence saying the defect survives the remedy.
+    """
+    split = run_ab.prepare_split(_dataset("openml-1464"), SEED, tmp_path / "1464")
+    measured = {k: split[k] for k in PROTOCOL_1464}
+    assert measured == PROTOCOL_1464, (
+        "the 1464 split no longer produces the geometry ab_protocol.md §3 "
+        f"describes: {measured} against the document's {PROTOCOL_1464}."
+    )
+
+
+@_pinned
+@pytest.mark.parametrize("dataset_id", ["openml-1464", "openml-1480", "openml-44031"])
+def test_duplicates_survive_inside_train_where_the_source_has_them(
+    dataset_id: str, tmp_path
+) -> None:
+    """A4's second half: the remedy must not delete the defect.
+
+    mlcompass's own warning names two remedies — de-duplicate before
+    splitting, or split on a group key — and A4 takes the second precisely
+    because the first would make `leak_duplicate_rows` unfireable. A harness
+    that handed the arms a de-duplicated `train.csv` would pass every leak
+    test above and quietly turn a six-item checklist into a five-item one.
+
+    Stated conditionally on the source, so it cannot be satisfied by a harness
+    that injects duplicates: where the pinned file has none, train has none.
+    """
+    import pandas as pd
+
+    dataset = _dataset(dataset_id)
+    source = pd.read_csv(run_ab.BENCH / dataset["csv_path"])
+    source_duplicates = int(source.duplicated().sum())
+    split = run_ab.prepare_split(dataset, SEED, tmp_path / dataset_id)
+
+    assert split["source_duplicate_rows"] == source_duplicates
+    if source_duplicates == 0:
+        assert split["duplicate_rows"] == 0
+        return
+
+    assert split["duplicate_rows"] > 0, (
+        f"{dataset_id}: the pinned file has {source_duplicates} duplicate rows and "
+        "train has none. Grouping is supposed to keep them on one side, not "
+        "remove them — `leak_duplicate_rows` is a defect a script commits "
+        "against the data it is given, and there is nothing left to commit."
+    )
+    # Reachable, not merely present: the checklist fires on a script that never
+    # calls `drop_duplicates`, against this split's own measured facts.
+    never_dedupes = run_ab.check_defects(
+        LIVE_CONTROL,
+        target=dataset["target"],
+        duplicate_rows=split["duplicate_rows"],
+        minority_fraction=split["minority_fraction"],
+        target_is_last_column=split["target_is_last_column"],
+    )
+    assert never_dedupes["flags"]["leak_duplicate_rows"] is True
+
+
+@_pinned
+@pytest.mark.parametrize("dataset_id", ["openml-1464", "openml-1480"])
+def test_stratification_still_holds_after_grouping(dataset_id: str, tmp_path) -> None:
+    """Grouping changes what is being stratified, so the result is measured.
+
+    `train_test_split(stratify=...)` now balances *groups*, and groups hold
+    different numbers of rows, so an exactly balanced draw of groups does not
+    give an exactly balanced draw of rows. The guarantee A2 bought — that a
+    class cannot go missing from the holdout, where ROC AUC is undefined — has
+    to be re-established at the row level rather than inherited.
+
+    Tolerance is 5 percentage points, chosen against the reason §3 gives for
+    stratifying at all: 1464's minority class is 23.8%, and the failure being
+    prevented is a holdout with one class in it, not a holdout a point or two
+    off. On 1464 the drift is 1.2pp in train and 2.8pp in the holdout.
+    """
+    import pandas as pd
+
+    dataset = _dataset(dataset_id)
+    target = dataset["target"]
+    source = pd.read_csv(run_ab.BENCH / dataset["csv_path"])
+    split = run_ab.prepare_split(dataset, SEED, tmp_path / dataset_id)
+    train = pd.read_csv(split["train_csv"])
+    holdout = pd.read_csv(split["holdout_csv"])
+
+    classes = set(source[target].unique())
+    assert set(train[target].unique()) == classes
+    assert set(holdout[target].unique()) == classes, (
+        f"{dataset_id}: a class is missing from the holdout. §3 stratifies to "
+        "prevent exactly this — ROC AUC is undefined on a single-class holdout "
+        "and the run is wasted for a reason unrelated to the arms."
+    )
+
+    expected = source[target].value_counts(normalize=True)
+    for label, frame in (("train", train), ("holdout", holdout)):
+        share = frame[target].value_counts(normalize=True)
+        drift = (share - expected).abs().max()
+        assert drift <= 0.05, (
+            f"{dataset_id} {label}: class balance drifted {drift:.4f} from the "
+            "source. Grouping stratifies groups; the row-level balance that "
+            "follows is what the score is actually computed on."
+        )
+
+    # The mechanism, so a failure above can be read: the group-level draw is
+    # tight, and any row-level drift comes from groups holding different
+    # numbers of rows rather than from stratification having been dropped.
+    assert split["stratified"] is True
+    assert abs(split["holdout_groups"] / split["duplicate_groups"] - 0.25) < 0.01
+
+
+@_pinned
+def test_a_regression_to_the_ungrouped_split_is_caught_by_the_contamination_count(
+    tmp_path,
+) -> None:
+    """The failure this whole amendment is about, reproduced beside the fix.
+
+    The ungrouped split is built here with the same fraction, the same seed and
+    the same stratification, so the only difference between the two is the one
+    A4 introduces. It contaminates; the harness's does not. Written this way
+    the test is not asserting that some function is called — it is asserting
+    that the harness sits on the correct side of a measured difference, which
+    is what would still be true if the implementation were replaced.
+    """
+    import pandas as pd
+    from sklearn.model_selection import train_test_split
+
+    dataset = _dataset("openml-1464")
+    frame = pd.read_csv(run_ab.BENCH / dataset["csv_path"])
+    ungrouped_train, ungrouped_holdout = train_test_split(
+        frame,
+        test_size=run_ab.HOLDOUT_FRACTION,
+        random_state=SEED,
+        shuffle=True,
+        stratify=frame[dataset["target"]],
+    )
+    known = {tuple(r) for r in ungrouped_train.itertuples(index=False, name=None)}
+    ungrouped_leak = sum(
+        1 for r in ungrouped_holdout.itertuples(index=False, name=None) if tuple(r) in known
+    )
+    assert ungrouped_leak == 71, (
+        "the ungrouped baseline no longer leaks 71 rows, so this test is no "
+        f"longer reproducing what §9 A4 describes (got {ungrouped_leak})."
+    )
+
+    split = run_ab.prepare_split(dataset, SEED, tmp_path / "1464")
+    assert _contamination(split) == 0
+
+
+def test_a_harness_that_stops_grouping_is_caught() -> None:
+    """`verify_protocol_constants` covers A4 the way it covers the fraction.
+
+    This is the check that matters most of the three. A wrong fraction makes a
+    holdout the wrong size, which is visible in any run record; a harness that
+    stopped grouping would go on producing plausible scores, silently inflated
+    for exactly the scripts that leak, which is what happened. So a harness
+    disagreeing with §3 about grouping aborts before it splits, exactly as one
+    disagreeing about 0.25 does.
+    """
+    with pytest.raises(run_ab.ProtocolDrift):
+        run_ab.verify_protocol_constants(grouping=False)
+
+
+def test_a_protocol_that_no_longer_asks_for_grouping_is_caught() -> None:
+    """The check reads the document, so it fails from either side.
+
+    Both directions are drift and both stop the run: the point of reading §3
+    back out of the file is that neither the harness nor the protocol can move
+    without the other.
+    """
+    text = PROTOCOL_PATH.read_text(encoding="utf-8").replace(
+        "**split on duplicate groups**", "split however you like"
+    )
+    with pytest.raises(run_ab.ProtocolDrift) as excinfo:
+        run_ab.verify_protocol_constants(text=text)
+    assert "group" in str(excinfo.value).lower()
+
+
+def test_the_harness_declares_the_protocol_version_that_carries_a4() -> None:
+    document = PROTOCOL_PATH.read_text(encoding="utf-8")
+    assert run_ab.AB_PROTOCOL_VERSION == "A/B 1.2"
+    assert "Protocol version: A/B 1.2" in document

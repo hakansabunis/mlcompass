@@ -1,4 +1,4 @@
-"""Execute and score the with/without cells of `ab_protocol.md` (A/B 1.1).
+"""Execute and score the with/without cells of `ab_protocol.md` (A/B 1.2).
 
 One invocation runs every (dataset x arm x model x repetition) cell, preserves
 the evidence each run produced, and appends one row per run to
@@ -48,14 +48,22 @@ Protocol points this implements, and where they bite:
 - **Identical inputs** (section 2, inherited). Every dataset is re-hashed
   against `ground_truth.json` before use; a mismatch aborts.
 - **The harness owns the split, with the geometry §3 freezes** (section 3,
-  amended by §9 A2). It splits the pinned CSV once per (dataset, seed) — so
-  every arm and every repetition at that seed are scored on the identical
+  amended by §9 A2 and A4). It splits the pinned CSV once per (dataset, seed)
+  — so every arm and every repetition at that seed are scored on the identical
   holdout — at a holdout fraction of 0.25, stratified on the target for
-  classification, writes `train.csv` into the run workspace and keeps
+  classification, and **on duplicate groups**, so that every copy of a row
+  lands on one side. It writes `train.csv` into the run workspace and keeps
   `holdout.csv` in a harness-private directory. No arm is told a holdout
-  exists. Those two numbers are the protocol's, not this file's:
+  exists. None of those three is this file's choice:
   `verify_protocol_constants` re-reads them out of `ab_protocol.md` before any
   cell runs and aborts if the harness and the document disagree.
+- **The grouping is a split, not a de-duplication** (§9 A4). It removes the
+  leak — no holdout row appears verbatim in train, and the harness records the
+  count rather than asserting it — while leaving duplicates inside `train.csv`
+  so `leak_duplicate_rows` stays a defect a script can commit. Under 1.1 the
+  two were not separated and the scoring inverted: every 0-defect script
+  scored 0.5552 and every 1-defect script 0.6835 on 1464, the defect being
+  failure to de-duplicate.
 - **One difference between neighbouring arms** (section 2). The `advise`
   prompt is the `control` prompt plus an appended mlcompass block, by
   construction: `build_prompts` returns `(control, control + block)`. The
@@ -126,7 +134,7 @@ AB_RESULTS = BENCH / "ab_results.csv"
 AB_PROTOCOL = BENCH / "ab_protocol.md"
 RUNS = BENCH / "runs"
 
-AB_PROTOCOL_VERSION = "A/B 1.1"
+AB_PROTOCOL_VERSION = "A/B 1.2"
 
 # ---- Constants the protocol freezes, not the harness ---------------------- #
 #
@@ -142,9 +150,18 @@ AB_PROTOCOL_VERSION = "A/B 1.1"
 # the literal, is what makes them the protocol's.
 
 # ab_protocol.md §3, "Geometry, frozen": holdout fraction 0.25, stratified on
-# the target for classification tasks.
+# the target for classification tasks, split on duplicate groups.
 HOLDOUT_FRACTION = 0.25
 STRATIFY_CLASSIFICATION = True
+
+# ab_protocol.md §3 as amended by §9 A4. This one is not a preference and not a
+# refinement: without it the benchmark rewarded the defect it exists to
+# penalise. A plain stratified split of 1464 put 71 of 187 holdout rows
+# verbatim into train, and across the seven 1.1 validation runs every 0-defect
+# script scored 0.5552 while every 1-defect script scored 0.6835 — the defect
+# being failure to de-duplicate. `holdout_score` is §1's measure that "cannot
+# be argued with", and it was measuring memorisation.
+GROUP_ON_DUPLICATES = True
 
 # ab_protocol.md §5, "Generation settings, frozen": temperature 1.0 on every
 # arm and every provider, sent explicitly and recorded in each run record.
@@ -185,6 +202,7 @@ _PROTOCOL_FRACTION = re.compile(r"holdout fraction \*\*([0-9]*\.?[0-9]+)\*\*")
 _PROTOCOL_STRATIFY = re.compile(
     r"\*\*stratified\s+on\s+the\s+target\s+for\s+classification", re.IGNORECASE
 )
+_PROTOCOL_GROUPING = re.compile(r"\*\*split\s+on\s+duplicate\s+groups\*\*", re.IGNORECASE)
 _PROTOCOL_TEMPERATURE = re.compile(
     r"temperature\s+([0-9]*\.?[0-9]+)\s+on\s+every\s+arm\s+and\s+every\s+provider", re.IGNORECASE
 )
@@ -195,17 +213,26 @@ def verify_protocol_constants(
     text: str | None = None,
     fraction: float | None = None,
     stratify: bool | None = None,
+    grouping: bool | None = None,
     temperature: float | None = None,
 ) -> dict[str, Any]:
     """Check the harness against §3 and §5 of `ab_protocol.md`.
 
     Called once at the top of a run, before a single cell executes. The point
-    is narrow and worth stating: §9 A2 and A3 made the split geometry and the
-    temperature *the protocol's* values, and a constant that has been retyped
-    into a second file is a constant that will eventually say something the
-    protocol does not. If they disagree the run stops, because a battery
+    is narrow and worth stating: §9 A2, A3 and A4 made the split geometry and
+    the temperature *the protocol's* values, and a constant that has been
+    retyped into a second file is a constant that will eventually say something
+    the protocol does not. If they disagree the run stops, because a battery
     scored under settings the protocol does not describe is evidence for
     nothing.
+
+    Grouping is checked here for a sharper reason than the other two. A wrong
+    fraction produces a holdout of visibly the wrong size, and a dropped
+    stratification produces a run that fails loudly on a single-class holdout.
+    A harness that quietly stopped grouping would keep producing plausible
+    scores — inflated for precisely the scripts that leak — and §9 A4 is the
+    record of that having happened for seven runs without anyone noticing from
+    the numbers alone.
 
     The keyword arguments exist so the check can be exercised against a
     doctored document or a doctored harness without editing either.
@@ -214,6 +241,7 @@ def verify_protocol_constants(
     ours = {
         "holdout_fraction": HOLDOUT_FRACTION if fraction is None else fraction,
         "stratify_classification": STRATIFY_CLASSIFICATION if stratify is None else stratify,
+        "group_on_duplicates": GROUP_ON_DUPLICATES if grouping is None else grouping,
         "temperature": TEMPERATURE if temperature is None else temperature,
     }
 
@@ -241,6 +269,16 @@ def verify_protocol_constants(
             "the holdout single-class, where ROC AUC is undefined."
         )
 
+    theirs_grouping = bool(_PROTOCOL_GROUPING.search(document))
+    if theirs_grouping != ours["group_on_duplicates"]:
+        raise ProtocolDrift(
+            f"duplicate-group splitting: ab_protocol.md §3 says {theirs_grouping}, "
+            f"this harness uses {ours['group_on_duplicates']}. §9 A4 froze it "
+            "because without it the holdout shares rows with train, and the "
+            "leaking scripts are the ones that score well — the benchmark then "
+            "pays for the defect it was built to catch."
+        )
+
     temperature_match = _PROTOCOL_TEMPERATURE.search(document)
     if temperature_match is None:
         raise ProtocolDrift(
@@ -259,6 +297,7 @@ def verify_protocol_constants(
     return {
         "holdout_fraction": theirs_fraction,
         "stratify_classification": theirs_stratify,
+        "group_on_duplicates": theirs_grouping,
         "temperature": theirs_temperature,
         "source": str(AB_PROTOCOL) if text is None else "<supplied text>",
     }
@@ -448,18 +487,54 @@ def column_listing(frame: Any) -> str:
 # --------------------------------------------------------------------------- #
 
 
+def duplicate_group_codes(frame: Any) -> Any:
+    """One integer per row, equal exactly when the rows are identical (§9 A4).
+
+    The group key is the whole row, every column including the target, because
+    that is what "identical rows" means to the thing being prevented: a holdout
+    row the model has already been shown, answer included.
+
+    `groupby(dropna=False)` rather than a hash of the row's text, for one
+    reason that matters. The defect checklist reads `DataFrame.duplicated()`,
+    and pandas treats two NaNs there as equal. A group key that disagreed —
+    tuple comparison does, NaN being unequal to itself — would let a harness
+    call two rows distinct while the checklist calls them duplicates, and the
+    two halves of A4 would then be measuring different things.
+    """
+    return frame.groupby(list(frame.columns), dropna=False, sort=False).ngroup().to_numpy()
+
+
 def prepare_split(dataset: dict[str, Any], seed: int, private_dir: Path) -> dict[str, Any]:
     """Split the pinned CSV once for a (dataset, seed) and keep the holdout.
 
-    Geometry is §3's, frozen by §9 A2 at 0.25 and stratified on the target for
-    classification, and checked against the protocol text by
-    `verify_protocol_constants` before any cell runs.
+    Geometry is §3's — frozen by §9 A2 at 0.25 and stratified on the target for
+    classification, and by §9 A4 as a split on duplicate *groups* — and checked
+    against the protocol text by `verify_protocol_constants` before any cell
+    runs.
+
+    What A4 changes and why it is not a detail: the unit drawn is a set of
+    identical rows, not a row, so every copy of a row lands on the same side.
+    Under 1.1 the draw was per row, and on 1464 that put 71 of 187 holdout rows
+    verbatim into train. The consequence was the opposite of subtle — a script
+    that de-duplicated was scored on a holdout whose answers it had thrown
+    away, and one that did not was scored on rows it had memorised, so the
+    benchmark paid for `leak_duplicate_rows` rather than penalising it.
+
+    The grouping is a *split* and not a de-duplication, which is the second
+    half of A4 and the easier half to get wrong. `train.csv` keeps every
+    duplicate that falls on the train side — 125 of them on 1464 — so
+    `leak_duplicate_rows` remains a defect a script can commit. De-duplicating
+    the frame first would also empty the holdout of shared rows, and would
+    quietly delete one of the six checklist items along the way.
 
     Returns the paths plus the two dataset facts the defect checklist needs
     (duplicate count, minority-class fraction), both measured on the *train*
     frame — that is the only frame any arm is shown, so it is the frame
-    against which "duplicates present in the input" has to be read.
+    against which "duplicates present in the input" has to be read. It also
+    returns the contamination count, measured rather than asserted: §7 keeps
+    what a run was scored on, and "no holdout row is in train" is a number.
     """
+    import numpy as np
     import pandas as pd
     from sklearn.model_selection import train_test_split
 
@@ -468,13 +543,36 @@ def prepare_split(dataset: dict[str, Any], seed: int, private_dir: Path) -> dict
     frame = pd.read_csv(source)
 
     is_classification = dataset["task"].endswith("classification")
-    stratify = frame[target] if (is_classification and STRATIFY_CLASSIFICATION) else None
-    train_df, holdout_df = train_test_split(
-        frame,
+
+    if GROUP_ON_DUPLICATES:
+        codes = duplicate_group_codes(frame)
+        # One representative row per group. Every row in a group is identical,
+        # so the representative's target *is* the group's target and
+        # stratifying on it is stratifying on the same label the rows carry.
+        representatives = frame.assign(_group=codes).drop_duplicates("_group")
+        units = representatives["_group"].to_numpy()
+        unit_labels = representatives[target].to_numpy()
+    else:  # pragma: no cover - `verify_protocol_constants` refuses to run here
+        codes = np.arange(len(frame))
+        units, unit_labels = codes, frame[target].to_numpy()
+
+    stratify = unit_labels if (is_classification and STRATIFY_CLASSIFICATION) else None
+    train_units, holdout_units = train_test_split(
+        units,
         test_size=HOLDOUT_FRACTION,
         random_state=seed,
         shuffle=True,
         stratify=stratify,
+    )
+    train_df = frame[np.isin(codes, train_units)]
+    holdout_df = frame[np.isin(codes, holdout_units)]
+
+    # Measured from the frames that were actually written, not inferred from
+    # the fact that grouping ran. This is the number §9 A4 exists to hold at
+    # zero, so the harness records it in every run rather than assuring it.
+    known = set(map(tuple, train_df.itertuples(index=False, name=None)))
+    contamination = sum(
+        1 for row in holdout_df.itertuples(index=False, name=None) if tuple(row) in known
     )
 
     private_dir.mkdir(parents=True, exist_ok=True)
@@ -501,7 +599,18 @@ def prepare_split(dataset: dict[str, Any], seed: int, private_dir: Path) -> dict
         "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
         "train_sha256": hashlib.sha256(train_csv.read_bytes()).hexdigest(),
         "holdout_sha256": hashlib.sha256(holdout_csv.read_bytes()).hexdigest(),
+        # §9 A4's two numbers, side by side because they are the two halves of
+        # the amendment and moving one without the other is the failure:
+        # `holdout_rows_present_in_train` is the leak that had to go,
+        # `duplicate_rows` is the defect that had to stay reachable.
+        "grouped_on_duplicates": bool(GROUP_ON_DUPLICATES),
+        "holdout_rows_present_in_train": int(contamination),
         "duplicate_rows": int(train_df.duplicated().sum()),
+        "duplicate_groups": int(len(units)),
+        "train_groups": int(len(train_units)),
+        "holdout_groups": int(len(holdout_units)),
+        "source_rows": int(len(frame)),
+        "source_duplicate_rows": int(frame.duplicated().sum()),
         "minority_fraction": minority_fraction,
         "target_is_last_column": bool(list(train_df.columns)[-1] == target),
     }
@@ -1383,7 +1492,7 @@ def run_cell(
         outcome.update(status=status, notes=note, runtime=time.monotonic() - clock)
         shutil.rmtree(workspace, ignore_errors=True)
         _write_run_record(run_dir, dataset, arm, panel_id, member, split, outcome, None)
-        _write_scoring(run_dir, dataset, arm, outcome, outcome["defects"], None)
+        _write_scoring(run_dir, dataset, arm, outcome, outcome["defects"], None, split)
         return outcome
 
     def tally(turns: list[dict[str, Any]], field: str) -> Any:
@@ -1582,7 +1691,7 @@ def run_cell(
         runtime=time.monotonic() - clock,
     )
     _write_run_record(run_dir, dataset, arm, panel_id, member, split, outcome, scored)
-    _write_scoring(run_dir, dataset, arm, outcome, defects, scored)
+    _write_scoring(run_dir, dataset, arm, outcome, defects, scored, split)
     return outcome
 
 
@@ -1655,6 +1764,7 @@ def _write_scoring(
     outcome: dict[str, Any],
     defects: dict[str, Any] | None,
     scored: dict[str, Any] | None,
+    split: dict[str, Any],
 ) -> None:
     temperature_line = (
         f"Temperature: requested {TEMPERATURE} (ab_protocol.md §5), "
@@ -1692,6 +1802,16 @@ def _write_scoring(
             lines += [f"- Flags the revision moved: {', '.join(moved) if moved else 'none'}", ""]
     lines += [
         "## holdout_score (ab_protocol.md section 3)",
+        "",
+        # §9 A4's number, on the page where someone asks whether the score can
+        # be believed. Under 1.1 this read 71 of 187 on 1464 and nothing said
+        # so, which is how seven runs were scored on a memorised holdout.
+        f"Split: {split['train_rows']} train / {split['holdout_rows']} holdout rows"
+        f" at fraction {split['holdout_fraction']}, seed {split['seed']},"
+        f" stratified {split['stratified']},"
+        f" grouped on duplicate rows {split.get('grouped_on_duplicates')}.",
+        f"Holdout rows present verbatim in train: "
+        f"{split.get('holdout_rows_present_in_train')} (§9 A4 holds this at 0).",
         "",
     ]
     if scored is None:
@@ -1825,14 +1945,21 @@ def write_plan(
                 "  temperature the provider did not honour. A failure that does not name the",
                 "  parameter is recorded as a failure, not read as a rejection.",
                 "",
-                "## Split (section 3, frozen by §9 A2)",
+                "## Split (section 3, frozen by §9 A2 and A4)",
                 "",
                 f"- Holdout fraction: {HOLDOUT_FRACTION}",
                 f"- Stratified on the target for classification tasks: {STRATIFY_CLASSIFICATION}",
+                f"- Split on duplicate groups: {GROUP_ON_DUPLICATES}",
                 "- Split once per (dataset, seed) with `sklearn.model_selection.train_test_split`,",
-                "  `shuffle=True`, `random_state=<seed>`. Every arm and every repetition at that",
-                "  seed are scored on the identical holdout.",
-                "- Both values are the protocol's, read back out of ab_protocol.md §3 by",
+                "  `shuffle=True`, `random_state=<seed>`, drawing *groups of identical rows*",
+                "  rather than rows, and stratifying on each group's target. Every arm and every",
+                "  repetition at that seed are scored on the identical holdout.",
+                "- The grouping removes the leak without removing the defect: no holdout row",
+                "  appears verbatim in train, and duplicates remain inside train.csv, so",
+                "  `leak_duplicate_rows` is still something an emitted script can commit. Each",
+                "  run record carries the measured contamination count next to the train",
+                "  duplicate count, because those are the two halves of §9 A4.",
+                "- All three values are the protocol's, read back out of ab_protocol.md §3 by",
                 "  `verify_protocol_constants` before any cell runs. A harness that disagreed",
                 "  with the document would abort rather than split.",
                 "",
@@ -1907,10 +2034,10 @@ def main() -> int:
     ap.add_argument("--dry-run", action="store_true", help="print the cells and exit")
     args = ap.parse_args()
 
-    # §9 A2 and A3 made the split geometry and the temperature the protocol's
-    # values. Before anything is planned or run, check that this harness still
-    # agrees with the document; a battery scored under settings the protocol
-    # does not describe is evidence for nothing.
+    # §9 A2, A3 and A4 made the split geometry and the temperature the
+    # protocol's values. Before anything is planned or run, check that this
+    # harness still agrees with the document; a battery scored under settings
+    # the protocol does not describe is evidence for nothing.
     try:
         frozen = verify_protocol_constants()
     except ProtocolDrift as exc:
@@ -1920,6 +2047,7 @@ def main() -> int:
         f"Protocol constants confirmed against {Path(frozen['source']).name}: "
         f"holdout {frozen['holdout_fraction']}, "
         f"stratified {frozen['stratify_classification']}, "
+        f"grouped on duplicates {frozen['group_on_duplicates']}, "
         f"temperature {frozen['temperature']}."
     )
 
