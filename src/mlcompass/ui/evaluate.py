@@ -413,13 +413,22 @@ def render_leakage_narration(
     # narrator did not produce. Flagging is the only admissible remedy, and a
     # flag nobody renders is not a remedy.
     if narration.get("omitted_critical_evidence"):
+        # Name the anchor whenever the contract carried it out. A warning that
+        # says only "the top-ranked column" leaves the reader to re-derive
+        # which column that was from the evidence panel by hand; the verifier
+        # already knows, because the anchor is what it checked against.
+        anchor = narration.get("critical_column")
+        target = (
+            f"the top-ranked candidate leak column '{anchor}'"
+            if anchor
+            else "the top-ranked candidate leak column"
+        )
         lines.append(
             "\n[bold yellow]⚠ Incomplete[/bold yellow] [dim yellow](contract: completeness "
             "violation)[/dim yellow]\n"
-            "[yellow]  The narrator committed to a verdict without addressing the "
-            "top-ranked candidate leak column. This cannot be repaired by deletion, so it "
-            "is flagged rather than fixed: read the evidence panel above in full — the "
-            "findings below are incomplete.[/yellow]"
+            f"[yellow]  The narrator committed to a verdict without addressing {target}. "
+            "This cannot be repaired by deletion, so it is flagged rather than fixed: read "
+            "the evidence panel above in full — the findings below are incomplete.[/yellow]"
         )
     if narration.get("had_unrecoverable_violation"):
         lines.append(

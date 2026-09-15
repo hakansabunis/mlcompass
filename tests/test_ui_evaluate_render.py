@@ -6,17 +6,25 @@ unverified free-text channel is visibly marked as such. A claim about a
 renderer is discharged by a renderer test, not by a sentence. These are that
 test.
 
-Three properties are asserted here:
+Four properties are asserted here:
 
 1. **Completeness reaches the user.** Proposition 2 says completeness admits
    no safe repair, so the only available remedy is to flag it. A flag that
    stops at a dict key is not a flag. ``omitted_critical_evidence`` and
-   ``had_unrecoverable_violation`` must appear in the rendered panel.
-2. **The verified/unverified partition is visible.** The contract-governed
+   ``had_unrecoverable_violation`` must appear in the rendered panel — each
+   one exactly when its flag is set, and the omission warning must name the
+   column that went unaddressed.
+2. **Inside the contract panel, verified content leads and prose is marked.**
+   The panel carries both channels: entity and value blocks that passed Tier
+   B, and a hypothesis the contract never inspected. Limitation 4's mitigation
+   is precisely the claim that the verified channel is the actionable output
+   and the free-text one is labelled — an ordering-and-labelling claim about
+   this one function, asserted here on the contract panel alone.
+3. **The verified/unverified partition is visible.** The contract-governed
    panel and the unguarded interpreter panel are both rendered by the CLI in
    the same terminal output. A reader must be able to tell which one carries
    a verification guarantee.
-3. **The validated value channel is rendered at all.** ``claims`` is the
+4. **The validated value channel is rendered at all.** ``claims`` is the
    output of Tier B check (2); it was absent from the panel before ``96f0071``
    and its absence is not detectable without a test.
 """
@@ -107,6 +115,7 @@ CLEAN_NARRATION: dict[str, Any] = {
     "attempts_made": 1,
     "had_unrecoverable_violation": False,
     "omitted_critical_evidence": False,
+    "critical_column": "log_target_v2",
     "evidence_bound": True,
 }
 
@@ -132,11 +141,35 @@ def test_persistent_omission_is_surfaced_to_the_user() -> None:
     """
     text = _render(
         render_leakage_narration,
-        _narration(omitted_critical_evidence=True, schema_rejections=3, attempts_made=3),
+        _narration(
+            omitted_critical_evidence=True,
+            critical_column="near_target_proxy",
+            schema_rejections=3,
+            attempts_made=3,
+        ),
     )
     lowered = text.lower()
     assert "incomplete" in lowered, text
     assert "top-ranked candidate" in lowered, text
+    # The warning must name the column, not merely describe its rank. A reader
+    # who has to re-derive the anchor from the evidence panel is doing the
+    # verifier's bookkeeping by hand.
+    assert "near_target_proxy" in text, text
+    # Omission is not a soundness failure: the strip notice must stay silent.
+    assert "stripped" not in lowered, text
+
+
+def test_omission_warning_survives_a_missing_anchor() -> None:
+    """A payload without ``critical_column`` still warns, just without a name.
+
+    The key is new; a persisted or third-party narration dict predating it
+    must not silence the one warning Proposition 2 says is the only remedy.
+    """
+    payload = _narration(omitted_critical_evidence=True)
+    del payload["critical_column"]
+    lowered = _render(render_leakage_narration, payload).lower()
+    assert "incomplete" in lowered, lowered
+    assert "top-ranked candidate leak column." in lowered, lowered
 
 
 def test_stripped_violation_is_surfaced_to_the_user() -> None:
@@ -162,6 +195,8 @@ def test_stripped_violation_is_surfaced_to_the_user() -> None:
     # assertion on it would pass without the warning existing at all.
     assert "stripped" in lowered, text
     assert "did not survive the corrective retry" in lowered, text
+    # A strip is not an omission: the completeness warning must stay silent.
+    assert "incomplete" not in lowered, text
 
 
 def test_clean_response_shows_neither_warning() -> None:
@@ -170,6 +205,80 @@ def test_clean_response_shows_neither_warning() -> None:
     lowered = text.lower()
     assert "incomplete" not in lowered, text
     assert "stripped" not in lowered, text
+
+
+def test_contract_warnings_precede_the_findings_they_qualify() -> None:
+    """Both flags describe the findings below them, so they render above them.
+
+    A completeness warning printed *after* the evidence it qualifies is read
+    only by someone who already read to the bottom of the panel.
+    """
+    text = _render(
+        render_leakage_narration,
+        _narration(omitted_critical_evidence=True, had_unrecoverable_violation=True),
+    ).lower()
+    for warning in ("incomplete", "stripped"):
+        assert text.find(warning) != -1, text
+        assert text.find(warning) < text.find("evidence cited"), (warning, text)
+
+
+# --------------------------------------------------------------------------- #
+# Defect 2 — inside the contract panel, verified content leads                 #
+# --------------------------------------------------------------------------- #
+#
+# The panel mixes two channels with different warranties: the entity and value
+# blocks passed Tier B, the hypothesis and the recommended checks are prose the
+# contract never inspected. Limitation 4's mitigation is the claim that the
+# verified channel is the actionable output and the free-text one is marked as
+# such. That is a statement about ordering and labelling in this function, and
+# it holds or fails independently of whether the two *panels* are
+# distinguishable, so it is asserted here on the contract panel alone.
+
+
+def test_verified_blocks_precede_the_model_prose() -> None:
+    """Verified findings render above the unverified hypothesis, not below it.
+
+    Leading with the prose puts the one unwarranted sentence at the top of the
+    panel and the verified findings beneath it — the reader's first impression
+    would come from the channel with no guarantee behind it.
+    """
+    text = _render(render_leakage_narration, _narration()).lower()
+
+    cited_at = text.find("evidence cited")
+    claims_at = text.find("claims")
+    hypothesis_at = text.find("hypothesis")
+    for name, index in (("evidence cited", cited_at), ("claims", claims_at)):
+        assert index != -1, (name, text)
+    assert hypothesis_at != -1, text
+    assert cited_at < hypothesis_at, text
+    assert claims_at < hypothesis_at, text
+
+    # And the last verification label sits above the prose, so no "verified"
+    # marker can be read as covering the sentence underneath it.
+    assert text.rfind("verified against the evidence") < hypothesis_at, text
+
+
+def test_contract_panel_prose_is_labelled_not_verified() -> None:
+    """The hypothesis block carries its disclaimer on its own header.
+
+    Not in the panel somewhere: on the block, so a reader skimming to the
+    prose meets the label without having to scan back up.
+    """
+    text = _render(render_leakage_narration, _narration()).lower()
+    hypothesis_at = text.find("hypothesis")
+    assert hypothesis_at != -1, text
+    header = text[hypothesis_at : hypothesis_at + 120]
+    assert "not verified" in header, header
+    assert "model prose" in header, header
+
+
+def test_recommended_checks_are_not_labelled_verified() -> None:
+    """The check list is passed through as written and must not claim otherwise."""
+    text = _render(render_leakage_narration, _narration()).lower()
+    checks_at = text.find("recommended manual checks")
+    assert checks_at != -1, text
+    header = text[checks_at : checks_at + 80]
+    assert "not verified" in header, header
 
 
 # --------------------------------------------------------------------------- #
