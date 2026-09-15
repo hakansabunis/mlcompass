@@ -1,0 +1,18 @@
+Below is the verbatim output of mlcompass run on the script you just wrote.
+
+--- mlcompass audit ---
+(no .mlcompass/ project found in current path — running standalone; results 
+will not be persisted)
+
+┌────────────────────────────── 🔎 Script audit ──────────────────────────────┐
+│ Path:                                                                       │
+│ C:\Users\SABUNIS\AppData\Local\Temp\mlcab_audit_amlf1558\train_model.py     │
+│ Lines:       34                                                             │
+│ Frameworks:  sklearn                                                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+✓ No issues detected by the static checks.
+
+--- end mlcompass audit ---
+
+Revise the script if that output gives you reason to. Reply with the complete final script inside a single ```python code block, and nothing else.

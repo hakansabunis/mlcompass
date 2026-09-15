@@ -1,0 +1,11 @@
+(no .mlcompass/ project found in current path — running standalone; results 
+will not be persisted)
+
+┌────────────────────────────── 🔎 Script audit ──────────────────────────────┐
+│ Path:                                                                       │
+│ C:\Users\SABUNIS\AppData\Local\Temp\mlcab_audit_26nogbz6\train_model.py     │
+│ Lines:       24                                                             │
+│ Frameworks:  sklearn                                                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+✓ No issues detected by the static checks.

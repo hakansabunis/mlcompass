@@ -12,6 +12,33 @@ functionality is unchanged.
 - `results.csv`: one row per future dataset case, configuration, and repetition.
 - `runs/`: supporting records for each run, stored under a unique run ID.
 
+A second, separate battery asks a different question — whether an LLM writes
+better training code with mlcompass's findings in front of it — and keeps its
+own protocol, harness and result file:
+
+- `ab_protocol.md`: the three-arm with/without protocol, currently A/B 1.2.
+- `run_ab.py`: its harness. Reads the frozen constants back out of the
+  protocol before every run and refuses to start if the two disagree.
+- `ab_results.csv`: one row per (dataset x arm x model x repetition).
+
+## Superseded evidence
+
+Some preserved runs are **not results** and are marked as such rather than
+deleted, per `ab_protocol.md` §9 A4: discarding the evidence of a design
+error is how the error survives.
+
+- `ab_results_v1.0.csv` and `ab_results_v1.1_superseded.csv` hold every A/B
+  run made before A/B 1.2.
+- Every `runs/ab-*` directory from those versions carries a `SUPERSEDED.md`
+  saying what is wrong with it.
+
+What is wrong with them is one thing: the holdout was drawn per row rather
+than per duplicate group, so 71 of its 187 rows on OpenML 1464 appear
+verbatim in train. Their `holdout_score` values measure memorisation as much
+as skill and must not be read as results. The emitted scripts and the
+defect-checklist flags in those runs are unaffected — §4's checklist is a
+function of the source, not of the split.
+
 The local `.gitignore` overrides the repository's generic `runs/` exclusion;
 `runs/.gitkeep` preserves the initially empty directory.
 

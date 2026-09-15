@@ -1,0 +1,2 @@
+Model Accuracy: 0.7857142857142857
+Trained model saved as trained_model.joblib

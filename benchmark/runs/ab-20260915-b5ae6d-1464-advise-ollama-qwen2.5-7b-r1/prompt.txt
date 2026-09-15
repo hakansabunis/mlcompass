@@ -1,0 +1,50 @@
+You are given a tabular dataset saved as a CSV file at this path:
+
+C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed20260915-r1\train.csv
+
+The target column is: Class
+
+The columns in the file are:
+  - V1 (int64)
+  - V2 (int64)
+  - V3 (int64)
+  - V4 (int64)
+  - Class (int64)
+
+Write a complete Python training script that trains a model to predict the target column from the other columns in that file, and saves the fitted model to a file in the current working directory so it can be loaded and used to predict on new rows later.
+
+Reply with the script inside a single ```python code block, and nothing else.
+
+Below is the verbatim output of mlcompass run on the same inputs.
+
+--- mlcompass advise ---
+(no .mlcompass/ project found in current path — running standalone; results 
+will not be persisted)
+
+┌──────────────────────────── 📊 Dataset analysis ────────────────────────────┐
+│ Path:                                                                       │
+│ C:\Users\SABUNIS\AppData\Local\Temp\mlcab_advise_ls9wcsfc\train.csv         │
+│ Shape:   561 rows × 5 columns                                               │
+│ Target:  Class (explicit confidence)                                        │
+│ Task:    binary classification (1=76%, 2=24%)                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+Columns                                                                    
+┌───────┬─────────────┬─────────┬─────────────────────────────────────────┐
+│ Name  │ Type        │ Missing │ Notes                                   │
+├───────┼─────────────┼─────────┼─────────────────────────────────────────┤
+│ V1    │ numeric     │      0% │ range [0.0, 72.0], 6 IQR outliers       │
+│ V2    │ numeric     │      0% │ range [1.0, 50.0], 30 IQR outliers      │
+│ V3    │ numeric     │      0% │ range [250.0, 12500.0], 30 IQR outliers │
+│ V4    │ numeric     │      0% │ range [2.0, 98.0]                       │
+│ Class │ categorical │      0% │ cardinality 2                           │
+└───────┴─────────────┴─────────┴─────────────────────────────────────────┘
+
+⚠ Warnings
+  • 142 exact duplicate row(s) (25.3% of the data). A random split puts copies 
+of the same row in both train and test, which inflates held-out scores without 
+any metric looking wrong. Confirm they are genuine repeated observations before
+training; if not, de-duplicate before splitting, or split on a group key.
+
+(deterministic analysis only; pass --llm to add the advisor)
+
+--- end mlcompass advise ---

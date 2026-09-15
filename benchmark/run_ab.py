@@ -1872,6 +1872,14 @@ def append_result(row: dict[str, Any]) -> None:
     corruption would surface much later, in a reader wondering why an arm was
     called `1.0`. A/B 1.1 added four columns, so this is not hypothetical — the
     1.0 rows live in `ab_results_v1.0.csv` and this file starts fresh.
+
+    The 1.1 rows were moved out for a different reason, and the file name says
+    which: `ab_results_v1.1_superseded.csv`. Their columns match this schema
+    exactly, so nothing would have stopped them being appended to; what is
+    wrong with them is §9 A4 — they were scored on a holdout sharing 71 of its
+    187 rows with train. Mixing them in beside 1.2 rows would have put results
+    and non-results in one column of one file, distinguishable only by reading
+    `protocol_version` and knowing what A4 was.
     """
     existing = AB_RESULTS.read_text(encoding="utf-8").strip() if AB_RESULTS.exists() else ""
     if existing:

@@ -1,0 +1,30 @@
+```python
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from joblib import dump
+
+# Load the dataset
+file_path = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed20260915-r1\train.csv"
+df = pd.read_csv(file_path)
+
+# Handle duplicate rows as advised by mlcompass
+duplicates = df[df.duplicated(keep=False)]
+non_duplicates = df.drop_duplicates()
+
+X = non_duplicates[["V1", "V2", "V3", "V4"]]
+y = non_duplicates["Class"]
+
+# Split the data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Train a model
+model = RandomForestClassifier(n_estimators=100, random_state=42)
+model.fit(X_train, y_train)
+
+# Save the trained model to file in the current working directory
+model_file_path = "./fitted_model.joblib"
+dump(model, model_file_path)
+
+print(f"Model saved to {model_file_path}")
+```
