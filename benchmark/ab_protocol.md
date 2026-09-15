@@ -261,11 +261,11 @@ is the alternative to quietly working around it.
 
 **L1 — on this dataset family the `advise+audit` intervention is an empty
 block, so A1's prediction may not be testable here.** `mlcompass audit`
-reported "No issues detected by the static checks" on 4 of 4 first-turn
-scripts in the 1.1 validation runs, all of them pandas + scikit-learn on
-OpenML 1464. The revision round still happened — §2 requires it, and an audit
-finding nothing is a result — but what went back to the model was a framed
-empty block. An arm whose intervention is empty cannot be distinguished from
+reported "No issues detected by the static checks" on **5 of 5** first-turn
+scripts across the 1.1 and 1.2 validation runs, all of them pandas +
+scikit-learn on OpenML 1464. The revision round still happened — §2 requires
+it, and an audit finding nothing is a result — but what went back to the
+model was a framed empty block. An arm whose intervention is empty cannot be distinguished from
 the arm above it, and A1 predicted the defect count would fall further from
 `advise` to `advise+audit` than from `control` to `advise`.
 
