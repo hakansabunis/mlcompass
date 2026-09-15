@@ -550,6 +550,16 @@ def mlcompass_findings(train_csv: Path, target: str, timeout: int) -> dict[str, 
     full frame would put counts describing holdout rows into the prompt, which
     is the leak section 3 exists to prevent.
 
+    It reads a *copy* of that file, under a neutral name outside the benchmark
+    tree. `advise` prints the path it read, and that line goes into the advise
+    arms' prompt verbatim; read straight out of
+    `benchmark/runs/<experiment_id>/_splits/`, it told the model it was one
+    cell of an experiment. The control arm is never told that, and mlcompass
+    did not find it in the data — §2 lets the arms differ by what the tool
+    produced about the dataset, not by what the harness happens to have named
+    its directories. The bytes are identical and their digest is recorded, so
+    what advise described is still checkable.
+
     An `advise` that *fails* raises. Section 2 licenses an empty block when
     mlcompass says nothing about a dataset — a tool that could not run said
     nothing of the kind, and pasting its silence would present a broken
@@ -557,18 +567,25 @@ def mlcompass_findings(train_csv: Path, target: str, timeout: int) -> dict[str, 
     second control arms. Every such row in the experiment would then be
     mislabelled, so the run stops instead.
     """
-    command = [
-        sys.executable,
-        "-X",
-        "utf8",
-        "-m",
-        "mlcompass.cli",
-        "advise",
-        str(train_csv),
-        "--target",
-        target,
-    ]
-    advise_stdout, advise_status, advise_stderr = _run_mlcompass(command, timeout)
+    source_sha256 = hashlib.sha256(train_csv.read_bytes()).hexdigest()
+    handover = Path(tempfile.mkdtemp(prefix="mlcab_advise_"))
+    try:
+        neutral_csv = handover / "train.csv"
+        shutil.copyfile(train_csv, neutral_csv)
+        command = [
+            sys.executable,
+            "-X",
+            "utf8",
+            "-m",
+            "mlcompass.cli",
+            "advise",
+            str(neutral_csv),
+            "--target",
+            target,
+        ]
+        advise_stdout, advise_status, advise_stderr = _run_mlcompass(command, timeout)
+    finally:
+        shutil.rmtree(handover, ignore_errors=True)
 
     if advise_status != "ok":
         raise AdviseFailed(
@@ -585,6 +602,9 @@ def mlcompass_findings(train_csv: Path, target: str, timeout: int) -> dict[str, 
         "advise_status": advise_status,
         "advise_stderr": advise_stderr,
         "advise_command": command,
+        "advise_source_sha256": source_sha256,
+        "advised_as": "train.csv in a throwaway directory, to keep the experiment's "
+        "identity out of advise's stdout and therefore out of the arms' prompt",
     }
 
 
@@ -1318,11 +1338,20 @@ def run_cell(
         )
     first_prompt = control if arm == "control" else advise
     (run_dir / "prompt.txt").write_text(first_prompt, encoding="utf-8")
+    # `control_prompt_sha256` must agree across all three arms and
+    # `advise_prompt_sha256` across the two that have one: that is §2's
+    # single-difference guarantee, checkable from the evidence alone without
+    # rebuilding a prompt. The advise digest is therefore recorded only where
+    # an advise prompt was actually built. On the control arm `advise` is
+    # control-plus-an-empty-block, a string nothing ever sent, and writing its
+    # digest under the same key would put a third value in the column whose
+    # only job is to show the other two agree.
     prompt_hashes = {
         "control_prompt_sha256": hashlib.sha256(control.encode("utf-8")).hexdigest(),
-        "advise_prompt_sha256": hashlib.sha256(advise.encode("utf-8")).hexdigest(),
         "prompt_sha256": hashlib.sha256(first_prompt.encode("utf-8")).hexdigest(),
     }
+    if arm in ADVISE_ARMS:
+        prompt_hashes["advise_prompt_sha256"] = hashlib.sha256(advise.encode("utf-8")).hexdigest()
 
     started = _utc_now()
     clock = time.monotonic()

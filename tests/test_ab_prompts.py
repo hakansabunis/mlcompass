@@ -1,23 +1,34 @@
 """The one-difference guarantee of `ab_protocol.md` section 2.
 
-Both arms get the same dataset, task, model and settings; they differ in
-exactly one thing, the mlcompass block. That claim is the whole experiment —
-if a stray token diverges, the measured difference is no longer attributable
-to the intervention and every row in `ab_results.csv` becomes uninterpretable.
+Every arm gets the same dataset, task, model and settings; each differs from
+the one above it in exactly one thing. That claim is the whole experiment — if
+a stray token diverges, the measured difference is no longer attributable to
+the intervention and every row in `ab_results.csv` becomes uninterpretable.
 
-So it is asserted mechanically rather than trusted: for the same cell, the
-control prompt must be a *strict* substring of the treatment prompt. When it
-is not, the failure says where the two diverge instead of printing two walls
-of text and leaving the reader to diff them by eye.
+So it is asserted mechanically rather than trusted. Under A/B 1.1 the
+assertion has two shapes, because the arms do:
+
+- `control` vs `advise` differ *inside one prompt*, so the control prompt must
+  be a **strict prefix** of the advise prompt. When it is not, the failure says
+  where the two diverge instead of printing two walls of text and leaving the
+  reader to diff them by eye.
+- `advise` vs `advise+audit` differ by a **further turn**, not a longer first
+  one. The prefix relation is not what is true there and is not asserted;
+  what is asserted is that the `advise+audit` arm's first turn is byte-
+  identical to the `advise` arm's only turn.
 
 The process-defect checklist gets the same treatment. Section 4 calls it
 frozen and deterministic, so it is tested against scripts whose defects are
-known by construction.
+known by construction. Sections 3 and 5 freeze the split geometry and the
+generation temperature, and both are checked against the protocol text rather
+than against a number retyped into the harness.
 """
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
+import json
 import sys
 from pathlib import Path
 
@@ -68,22 +79,19 @@ def _divergence(control: str, treatment: str) -> str:
 
 
 @pytest.mark.parametrize(
-    ("advise", "audit", "label"),
+    ("advise", "label"),
     [
-        (ADVISE, "", "findings present"),
-        ("", "", "no findings — section 2's empty block"),
-        ("  • 13 exact duplicate row(s) (2.2% of the data).\n", "", "small findings"),
+        (ADVISE, "findings present"),
+        ("", "no findings — section 2's empty block"),
+        ("  • 13 exact duplicate row(s) (2.2% of the data).\n", "small findings"),
     ],
 )
-def test_control_prompt_is_a_strict_substring_of_treatment(
-    advise: str, audit: str, label: str
-) -> None:
+def test_control_prompt_is_a_strict_substring_of_treatment(advise: str, label: str) -> None:
     control, treatment = run_ab.build_prompts(
         csv_path=CELL["csv_path"],
         target=CELL["target"],
         columns=CELL["columns"],
         advise_stdout=advise,
-        audit_stdout=audit,
     )
     assert control in treatment, f"[{label}] {_divergence(control, treatment)}"
     assert len(treatment) > len(control), (
@@ -99,13 +107,12 @@ def test_control_prompt_is_a_strict_substring_of_treatment(
 
 
 def test_the_only_difference_is_the_mlcompass_block() -> None:
-    """Removing the block from the treatment prompt returns the control prompt."""
+    """Removing the block from the advise prompt returns the control prompt."""
     control, treatment = run_ab.build_prompts(
         csv_path=CELL["csv_path"],
         target=CELL["target"],
         columns=CELL["columns"],
         advise_stdout=ADVISE,
-        audit_stdout="",
     )
     remainder = treatment[len(control) :]
     assert ADVISE in remainder
@@ -125,14 +132,32 @@ def test_an_empty_findings_block_is_still_present() -> None:
         target=CELL["target"],
         columns=CELL["columns"],
         advise_stdout="",
-        audit_stdout="",
     )
     remainder = treatment[len(control) :]
     assert "mlcompass advise" in remainder
-    assert "mlcompass audit" in remainder
     assert not any(
         word in remainder.lower() for word in ("should", "recommend", "make sure", "remember")
     )
+
+
+def test_the_advise_prompt_carries_no_audit_block() -> None:
+    """A1: `audit` is a separate arm and a separate turn, not a second block here.
+
+    Under A/B 1.0 the treatment prompt carried an `--- mlcompass audit ---`
+    section that was always empty, because no script exists when the first
+    prompt is built. §9 A1 moved audit to its own arm as a revision round, so
+    the first-turn prompt must no longer mention it at all: an empty section
+    headed with the command's name tells the model a check ran and found
+    nothing, which is exactly the advice §2 forbids the harness to invent.
+    """
+    _control, advise = run_ab.build_prompts(
+        csv_path=CELL["csv_path"],
+        target=CELL["target"],
+        columns=CELL["columns"],
+        advise_stdout=ADVISE,
+    )
+    assert "mlcompass audit" not in advise
+    assert "audit" not in advise.lower()
 
 
 def test_a_per_arm_workspace_path_would_break_the_guarantee() -> None:
@@ -150,14 +175,12 @@ def test_a_per_arm_workspace_path_would_break_the_guarantee() -> None:
         target=CELL["target"],
         columns=CELL["columns"],
         advise_stdout="",
-        audit_stdout="",
     )
     _, treatment = run_ab.build_prompts(
         csv_path=r"C:\tmp\mlcab_bbbbbbb\train.csv",
         target=CELL["target"],
         columns=CELL["columns"],
         advise_stdout=ADVISE,
-        audit_stdout="",
     )
     assert not treatment.startswith(control)
     assert "diverge at character" in _divergence(control, treatment)
@@ -362,3 +385,632 @@ def test_extract_python_keeps_a_truncated_block() -> None:
     source, how = run_ab.extract_python("```python\nimport pandas as pd\ndf = pd.read")
     assert source is not None
     assert "unclosed fence" in how
+
+
+# --------------------------------------------------------------------------- #
+# A/B 1.1 §9 A1 — the third arm                                               #
+# --------------------------------------------------------------------------- #
+
+AUDIT = """\
+⚠ error    seed              No random seed is set anywhere in the script.
+⚠ warning  val_split         No validation split detected in the script.
+"""
+
+
+def test_the_three_arms_are_control_advise_and_advise_plus_audit() -> None:
+    """§2 under 1.1 names three arms; `treatment` is a retired 1.0 name."""
+    assert run_ab.ARMS == ("control", "advise", "advise+audit")
+    assert run_ab.AB_PROTOCOL_VERSION == "A/B 1.1"
+
+
+def test_the_advise_audit_arms_first_turn_is_byte_identical_to_the_advise_arms_only_turn() -> None:
+    """A1's comparability claim, stated as what is actually true of a revision round.
+
+    §2's single-difference rule is a *prefix* relation between `control` and
+    `advise`, because those two differ inside one prompt. `advise+audit`
+    differs by carrying a further turn rather than a longer first one, so the
+    prefix relation is not what holds and is not what is asserted. What is
+    asserted — and what makes the two arms comparable — is that the revision
+    round begins from the identical first turn, byte for byte. The
+    control/advise prefix assertion above is untouched by this.
+    """
+    control, advise = run_ab.build_prompts(
+        csv_path=CELL["csv_path"],
+        target=CELL["target"],
+        columns=CELL["columns"],
+        advise_stdout=ADVISE,
+    )
+    messages = run_ab.build_revision_messages(
+        advise_prompt=advise,
+        first_reply="```python\nimport pandas as pd\n```",
+        audit_stdout=AUDIT,
+    )
+    assert [m["role"] for m in messages] == ["user", "assistant", "user"]
+    assert messages[0]["content"] == advise, _divergence(advise, messages[0]["content"])
+    # And it is the *advise* prompt, not the control prompt: the revision round
+    # is a third arm downstream of the second, not downstream of the first.
+    assert messages[0]["content"] != control
+    assert messages[0]["content"].startswith(control)
+
+
+def test_an_empty_audit_result_still_produces_a_revision_turn() -> None:
+    """§2, applied to the new round: an arm never receives advice the tool did not produce.
+
+    `mlcompass audit` finding nothing is a result, not a reason to skip the
+    round. Skipping it would silently collapse `advise+audit` into `advise`
+    for those cells, and the aggregate would then be a mixture of two arms
+    reported as one.
+    """
+    messages = run_ab.build_revision_messages(
+        advise_prompt="PROMPT", first_reply="REPLY", audit_stdout=""
+    )
+    assert len(messages) == 3
+    body = messages[2]["content"]
+    assert "mlcompass audit" in body
+    # The revision turn is a frame around audit's bytes and carries no advice
+    # of its own — not even a hint about what a revision might address.
+    assert not any(
+        word in body.lower()
+        for word in ("should", "recommend", "make sure", "remember", "seed", "leak", "duplicate")
+    )
+
+
+DATASET = {
+    "dataset_id": "unit-1",
+    "name": "unit fixture",
+    "openml_id": 9999,
+    "target": "Class",
+    "task": "binary_classification",
+}
+MEMBER = {
+    "provider": "openai",
+    "base_url": "http://localhost:11434/v1",
+    "model": "unit-model",
+    "key_name": None,
+}
+
+FIRST_TURN_SCRIPT = "# FIRST-TURN-SENTINEL\nimport pandas as pd\nprint('first')\n"
+REVISED_SCRIPT = "# REVISED-SENTINEL\nimport pandas as pd\nprint('revised')\n"
+CONTROL_ARM_SCRIPT = "# CONTROL-ARM-SENTINEL\nimport pandas as pd\nprint('control')\n"
+
+
+def _split_fixture(tmp_path):
+    train = tmp_path / "train.csv"
+    train.write_text("V1,Class\n1,0\n2,1\n", encoding="utf-8")
+    holdout = tmp_path / "holdout.csv"
+    holdout.write_text("V1,Class\n3,0\n", encoding="utf-8")
+    return {
+        "train_csv": train,
+        "holdout_csv": holdout,
+        "columns": "  - V1 (int64)\n  - Class (int64)",
+        "seed": 7,
+        "duplicate_rows": 0,
+        "minority_fraction": 0.5,
+        "target_is_last_column": True,
+    }
+
+
+def test_the_advise_audit_arm_audits_only_its_own_first_turn_script(tmp_path, monkeypatch) -> None:
+    """§2: "Each arm audits only its **own** script."
+
+    The cheap wrong implementation is to audit whatever script is lying around
+    — the control arm's, or the `advise` arm's from the run before — and feed
+    the findings into this arm. That would turn three comparable conditions
+    into one three-step condition, and the `advise+audit` column would then be
+    measuring the control arm's mistakes. Here the control arm's source is put
+    on disk first, with its own sentinel, and the test asserts that what
+    reached `mlcompass audit` is this arm's own first turn and nothing else.
+    """
+    audited: list[str] = []
+    audited_paths: list[str] = []
+
+    def fake_audit(script_path, timeout):  # noqa: ANN001
+        audited.append(Path(script_path).read_text(encoding="utf-8"))
+        audited_paths.append(str(script_path))
+        return {
+            "audit_stdout": AUDIT,
+            "audit_status": "ok",
+            "audit_stderr": "",
+            "audit_command": ["mlcompass", "audit", str(script_path)],
+        }
+
+    replies = iter(
+        [
+            f"```python\n{FIRST_TURN_SCRIPT}```",
+            f"```python\n{REVISED_SCRIPT}```",
+        ]
+    )
+
+    def fake_call_model(member, messages, timeout):  # noqa: ANN001
+        return {
+            "ok": True,
+            "text": next(replies),
+            "error": "",
+            "input_tokens": 10,
+            "output_tokens": 20,
+            "finish_reason": "stop",
+            "seconds": 0.1,
+            "temperature_requested": run_ab.TEMPERATURE,
+            "temperature_status": "sent",
+            "temperature_used": run_ab.TEMPERATURE,
+            "temperature_rejection": "",
+        }
+
+    monkeypatch.setattr(run_ab, "mlcompass_audit", fake_audit)
+    monkeypatch.setattr(run_ab, "call_model", fake_call_model)
+    monkeypatch.setattr(
+        run_ab,
+        "score_holdout",
+        lambda *a, **k: {
+            "status": "unscorable",
+            "metric": "",
+            "score": "",
+            "artifact": "",
+            "attempts": [],
+            "reason": "unit test does not score",
+        },
+    )
+
+    run_dir = tmp_path / "run"
+    workspace = tmp_path / "ws"
+    # A neighbouring arm's output, already on disk where a sloppy audit could
+    # pick it up.
+    (tmp_path / "control_arm_emitted.py").write_text(CONTROL_ARM_SCRIPT, encoding="utf-8")
+
+    outcome = run_ab.run_cell(
+        dataset=DATASET,
+        arm="advise+audit",
+        panel_id="unit",
+        member=MEMBER,
+        split=_split_fixture(tmp_path),
+        findings={"advise_stdout": ADVISE, "advise_status": "ok"},
+        run_dir=run_dir,
+        workspace=workspace,
+        llm_timeout=5,
+        script_timeout=30,
+        score_timeout=5,
+    )
+
+    assert len(audited) == 1, "the revision round must audit exactly once"
+    assert "FIRST-TURN-SENTINEL" in audited[0]
+    assert "CONTROL-ARM-SENTINEL" not in audited[0]
+    assert "REVISED-SENTINEL" not in audited[0]
+
+    # The revised script is the one that gets scored (§2: "Scoring uses the
+    # revised script"), and the pre-revision script is preserved beside it.
+    assert (run_dir / "emitted.py").read_text(encoding="utf-8") == REVISED_SCRIPT
+    assert (run_dir / "emitted_pre_revision.py").read_text(encoding="utf-8") == FIRST_TURN_SCRIPT
+    assert outcome["defects_pre_revision"] is not None
+    assert outcome["defects"] is not None
+
+
+def test_the_audited_path_does_not_name_the_arm_the_run_or_the_model(tmp_path, monkeypatch) -> None:
+    """Found by the first live `advise+audit` run, not by reading the code.
+
+    `mlcompass audit` prints the path of the script it read, and that line goes
+    into the revision prompt verbatim. When the audited file lived under
+    `runs/<experiment>-<dataset>-advise+audit-<panel>-r1/`, the model was shown
+    its own arm name, the dataset id, the panel id and the run id — none of
+    which came from mlcompass, and all of which tell it that it is one cell of
+    a benchmark. §2 allows the arms to differ only by what mlcompass produced,
+    so the file is handed over under a neutral name outside the run directory.
+    The bytes are preserved separately, and `run.json` records their digest so
+    a reader can still confirm which script was audited.
+    """
+    audited_paths: list[str] = []
+
+    def fake_audit(script_path, timeout):  # noqa: ANN001
+        audited_paths.append(str(script_path))
+        return {
+            "audit_stdout": "",
+            "audit_status": "ok",
+            "audit_stderr": "",
+            "audit_command": ["mlcompass", "audit", str(script_path)],
+        }
+
+    replies = iter([f"```python\n{FIRST_TURN_SCRIPT}```", f"```python\n{REVISED_SCRIPT}```"])
+    monkeypatch.setattr(run_ab, "mlcompass_audit", fake_audit)
+    monkeypatch.setattr(
+        run_ab,
+        "call_model",
+        lambda member, messages, timeout: {
+            "ok": True,
+            "text": next(replies),
+            "error": "",
+            "input_tokens": 1,
+            "output_tokens": 1,
+            "finish_reason": "stop",
+            "seconds": 0.1,
+            "temperature_requested": run_ab.TEMPERATURE,
+            "temperature_status": "sent",
+            "temperature_used": run_ab.TEMPERATURE,
+            "temperature_rejection": "",
+        },
+    )
+    monkeypatch.setattr(
+        run_ab,
+        "score_holdout",
+        lambda *a, **k: {
+            "status": "unscorable",
+            "metric": "",
+            "score": "",
+            "artifact": "",
+            "attempts": [],
+            "reason": "unit test does not score",
+        },
+    )
+
+    run_dir = tmp_path / "ab-20260915-abc123-9999-advise+audit-ollama-qwen2.5-7b-r1"
+    outcome = run_ab.run_cell(
+        dataset=DATASET,
+        arm="advise+audit",
+        panel_id="ollama-qwen2.5-7b",
+        member=MEMBER,
+        split=_split_fixture(tmp_path),
+        findings={"advise_stdout": ADVISE, "advise_status": "ok"},
+        run_dir=run_dir,
+        workspace=tmp_path / "ws",
+        llm_timeout=5,
+        script_timeout=30,
+        score_timeout=5,
+    )
+
+    assert len(audited_paths) == 1
+    handed_over = audited_paths[0]
+    for leak in ("advise+audit", "ab-20260915-abc123", "ollama-qwen2.5-7b", "9999", "unit-1"):
+        assert leak not in handed_over, f"the audited path leaks {leak!r}: {handed_over}"
+
+    # Neutrality is not allowed to cost traceability: the digest in the run
+    # record ties the audited bytes to the preserved pre-revision script.
+    digest = hashlib.sha256(FIRST_TURN_SCRIPT.encode("utf-8")).hexdigest()
+    assert outcome["audit"]["audited_sha256"] == digest
+    record = json.loads((run_dir / "run.json").read_text(encoding="utf-8"))
+    assert record["audit"]["audited_sha256"] == digest
+
+
+def test_a_control_arm_run_never_reaches_the_auditor(tmp_path, monkeypatch) -> None:
+    """The other half of arm independence: the two-arm arms run one turn only."""
+    audited: list[str] = []
+    monkeypatch.setattr(
+        run_ab, "mlcompass_audit", lambda script_path, timeout: audited.append(script_path)
+    )
+    monkeypatch.setattr(
+        run_ab,
+        "call_model",
+        lambda member, messages, timeout: {
+            "ok": True,
+            "text": f"```python\n{CONTROL_ARM_SCRIPT}```",
+            "error": "",
+            "input_tokens": 1,
+            "output_tokens": 1,
+            "finish_reason": "stop",
+            "seconds": 0.1,
+            "temperature_requested": run_ab.TEMPERATURE,
+            "temperature_status": "sent",
+            "temperature_used": run_ab.TEMPERATURE,
+            "temperature_rejection": "",
+        },
+    )
+    monkeypatch.setattr(
+        run_ab,
+        "score_holdout",
+        lambda *a, **k: {
+            "status": "unscorable",
+            "metric": "",
+            "score": "",
+            "artifact": "",
+            "attempts": [],
+            "reason": "unit test does not score",
+        },
+    )
+    outcome = run_ab.run_cell(
+        dataset=DATASET,
+        arm="control",
+        panel_id="unit",
+        member=MEMBER,
+        split=_split_fixture(tmp_path),
+        findings=None,
+        run_dir=tmp_path / "run",
+        workspace=tmp_path / "ws",
+        llm_timeout=5,
+        script_timeout=30,
+        score_timeout=5,
+    )
+    assert audited == []
+    assert outcome["defects_pre_revision"] is None
+    # And it records no hash for a prompt it never built. The control arm has
+    # no `mlcompass advise` output, so the "advise prompt" it could compute is
+    # control-plus-empty-block — a string nothing ever sent. Recording its
+    # digest under the same key the two advise arms use puts a third value in
+    # a column whose whole purpose is to let a reader confirm those two agree.
+    record = json.loads((tmp_path / "run" / "run.json").read_text(encoding="utf-8"))
+    assert "control_prompt_sha256" in record
+    assert "advise_prompt_sha256" not in record
+    assert record["prompt_sha256"] == record["control_prompt_sha256"]
+
+
+def test_the_advised_csv_path_does_not_name_the_experiment_or_the_benchmark(
+    tmp_path, monkeypatch
+) -> None:
+    """The same leak as the audited path, one command upstream.
+
+    `mlcompass advise` prints the path of the CSV it read, and that line goes
+    into both advise arms' prompt verbatim. Reading it straight out of
+    `benchmark/runs/<experiment_id>/_splits/` therefore told the model it was a
+    cell of a benchmark — something the control arm is never told, and
+    something mlcompass did not find in the data. §2 lets the arms differ by
+    what mlcompass produced about the dataset; "you are run 3 of an
+    experiment" is not that. The bytes advise reads are unchanged.
+    """
+    seen: list[list[str]] = []
+    handed_bytes: list[str] = []
+
+    def fake_run(command, timeout):  # noqa: ANN001
+        seen.append(list(command))
+        # Read it here: the throwaway directory is deleted before the call
+        # returns, which is the point of it being throwaway.
+        handed_bytes.append(Path(command[-3]).read_text(encoding="utf-8"))
+        return "⚠ Warnings\n  • 142 exact duplicate row(s).\n", "ok", ""
+
+    monkeypatch.setattr(run_ab, "_run_mlcompass", fake_run)
+
+    split_dir = tmp_path / "runs" / "ab-20260915-a736b4" / "_splits" / "openml-1464-seed20260915"
+    split_dir.mkdir(parents=True)
+    train = split_dir / "train.csv"
+    train.write_text("V1,Class\n1,0\n2,1\n1,0\n", encoding="utf-8")
+
+    findings = run_ab.mlcompass_findings(train, "Class", 30)
+
+    assert len(seen) == 1
+    handed_over = seen[0][-3]  # the positional CSV argument
+    for leak in ("ab-20260915-a736b4", "_splits", "openml-1464", "runs"):
+        assert leak not in handed_over, f"the advised path leaks {leak!r}: {handed_over}"
+    # Same bytes, so advise is describing the same data it always was.
+    assert handed_bytes == [train.read_text(encoding="utf-8")]
+    assert findings["advise_source_sha256"] == hashlib.sha256(train.read_bytes()).hexdigest()
+
+
+def test_both_advise_arms_record_the_same_first_turn_digest(tmp_path, monkeypatch) -> None:
+    """The comparability claim, checkable from the evidence without rebuilding a prompt.
+
+    §2 makes `advise` and `advise+audit` comparable only if they open from the
+    identical turn. `run.json` therefore has to carry a digest that is equal
+    across the two and visibly so — that is what a reader of `runs/` checks
+    when they do not trust the harness.
+    """
+
+    def fake_call(member, messages, timeout):  # noqa: ANN001
+        return {
+            "ok": True,
+            "text": f"```python\n{FIRST_TURN_SCRIPT}```",
+            "error": "",
+            "input_tokens": 1,
+            "output_tokens": 1,
+            "finish_reason": "stop",
+            "seconds": 0.1,
+            "temperature_requested": run_ab.TEMPERATURE,
+            "temperature_status": "sent",
+            "temperature_used": run_ab.TEMPERATURE,
+            "temperature_rejection": "",
+        }
+
+    monkeypatch.setattr(run_ab, "call_model", fake_call)
+    monkeypatch.setattr(
+        run_ab,
+        "mlcompass_audit",
+        lambda script_path, timeout: {
+            "audit_stdout": AUDIT,
+            "audit_status": "ok",
+            "audit_stderr": "",
+            "audit_command": [],
+        },
+    )
+    monkeypatch.setattr(
+        run_ab,
+        "score_holdout",
+        lambda *a, **k: {
+            "status": "unscorable",
+            "metric": "",
+            "score": "",
+            "artifact": "",
+            "attempts": [],
+            "reason": "unit test does not score",
+        },
+    )
+
+    digests = {}
+    # One workspace path, shared by the arms of a cell and cleared before each
+    # run, exactly as `main` does it. The path is inside the prompt, so a
+    # per-arm workspace would put a second difference between the arms — the
+    # regression `test_a_per_arm_workspace_path_would_break_the_guarantee`
+    # pins.
+    workspace = tmp_path / "ws"
+    for arm in ("advise", "advise+audit"):
+        run_dir = tmp_path / arm.replace("+", "-")
+        run_ab.run_cell(
+            dataset=DATASET,
+            arm=arm,
+            panel_id="unit",
+            member=MEMBER,
+            split=_split_fixture(tmp_path),
+            findings={"advise_stdout": ADVISE, "advise_status": "ok"},
+            run_dir=run_dir,
+            workspace=workspace,
+            llm_timeout=5,
+            script_timeout=30,
+            score_timeout=5,
+        )
+        digests[arm] = json.loads((run_dir / "run.json").read_text(encoding="utf-8"))
+
+    assert digests["advise"]["prompt_sha256"] == digests["advise+audit"]["prompt_sha256"]
+    assert (
+        digests["advise"]["advise_prompt_sha256"]
+        == (digests["advise+audit"]["advise_prompt_sha256"])
+    )
+    # The revision turn is the third arm's alone, and has its own digest.
+    assert "revision_prompt_sha256" in digests["advise+audit"]
+    assert "revision_prompt_sha256" not in digests["advise"]
+
+
+# --------------------------------------------------------------------------- #
+# A/B 1.1 §9 A2 — split geometry frozen by the protocol, not by the harness    #
+# --------------------------------------------------------------------------- #
+
+PROTOCOL_PATH = ROOT / "benchmark" / "ab_protocol.md"
+
+
+def test_the_split_geometry_the_harness_uses_is_the_one_the_protocol_freezes() -> None:
+    """A2: 0.25 and stratified-for-classification are §3's now, not the harness's.
+
+    Under 1.0 these were the harness's own defaults, documented as "not fixed
+    by ab_protocol.md". §9 A2 froze them in the protocol text, so the harness
+    has to agree with that text rather than carry a number someone retyped.
+    """
+    assert run_ab.HOLDOUT_FRACTION == 0.25
+    assert run_ab.STRATIFY_CLASSIFICATION is True
+    run_ab.verify_protocol_constants()  # raises if the harness and §3/§5 disagree
+
+
+def test_a_harness_that_drifts_from_the_protocols_split_fraction_is_caught() -> None:
+    text = PROTOCOL_PATH.read_text(encoding="utf-8").replace(
+        "holdout fraction **0.25**", "holdout fraction **0.30**"
+    )
+    with pytest.raises(run_ab.ProtocolDrift) as excinfo:
+        run_ab.verify_protocol_constants(text=text)
+    assert "0.3" in str(excinfo.value)
+
+
+def test_a_harness_that_drops_stratification_is_caught() -> None:
+    with pytest.raises(run_ab.ProtocolDrift):
+        run_ab.verify_protocol_constants(stratify=False)
+
+
+def test_no_surface_of_the_harness_still_calls_the_geometry_its_own_choice() -> None:
+    """Under 1.0 the docstring, the comment and the frozen plan all said §3 did
+    not fix the fraction and the harness had chosen it. A2 makes that sentence
+    false wherever it survives, and a frozen plan that repeats it would
+    misdescribe the run it governs.
+    """
+    source = SCRIPT.read_text(encoding="utf-8")
+    for stale in (
+        "not fixed by ab_protocol.md",
+        "it does not fix the fraction",
+        "Both are chosen here",
+    ):
+        assert stale not in source, stale
+
+
+# --------------------------------------------------------------------------- #
+# A/B 1.1 §9 A3 — temperature frozen, sent explicitly, recorded                #
+# --------------------------------------------------------------------------- #
+
+OK_RESPONSE = {
+    "choices": [{"message": {"content": "```python\nprint(1)\n```"}, "finish_reason": "stop"}],
+    "usage": {"prompt_tokens": 11, "completion_tokens": 22},
+}
+
+
+def test_the_temperature_the_harness_sends_is_the_one_the_protocol_freezes() -> None:
+    assert run_ab.TEMPERATURE == 1.0
+    with pytest.raises(run_ab.ProtocolDrift):
+        run_ab.verify_protocol_constants(temperature=0.0)
+
+
+def test_every_model_call_sends_the_temperature_explicitly(monkeypatch) -> None:
+    """§5: "sent explicitly rather than left to the provider default"."""
+    seen: list[dict] = []
+
+    def fake_post(base_url, key, payload, timeout):  # noqa: ANN001
+        seen.append(dict(payload))
+        return True, OK_RESPONSE, 0.1
+
+    monkeypatch.setattr(run_ab, "_post", fake_post)
+    result = run_ab.call_model(MEMBER, [{"role": "user", "content": "hi"}], 10)
+
+    assert seen, "no request was made"
+    assert seen[0]["temperature"] == 1.0
+    assert result["temperature_status"] == "sent"
+    assert result["temperature_used"] == 1.0
+
+
+def test_a_provider_that_rejects_the_temperature_is_recorded_not_silently_defaulted(
+    monkeypatch,
+) -> None:
+    """§5/A3: a lane at an unknown temperature is not comparable, and must say so.
+
+    The failure mode this guards is the quiet one: drop the parameter, get a
+    200, write the row, and leave a reader of `ab_results.csv` believing every
+    lane ran at 1.0. The run is allowed to continue — the evidence is worth
+    keeping — but `temperature_used` must not claim a number the provider
+    never honoured.
+    """
+    attempts: list[dict] = []
+
+    def fake_post(base_url, key, payload, timeout):  # noqa: ANN001
+        attempts.append(dict(payload))
+        if "temperature" in payload:
+            return (
+                False,
+                "HTTP 400: Unsupported value: 'temperature' does not support 1.0 "
+                "with this model. Only the default (1) is supported.",
+                0.1,
+            )
+        return True, OK_RESPONSE, 0.1
+
+    monkeypatch.setattr(run_ab, "_post", fake_post)
+    result = run_ab.call_model(MEMBER, [{"role": "user", "content": "hi"}], 10)
+
+    assert result["ok"] is True
+    assert result["temperature_status"] == "rejected"
+    assert result["temperature_used"] == "unknown"
+    assert "temperature" in result["temperature_rejection"].lower()
+    assert any("temperature" in a for a in attempts), "the parameter was never even attempted"
+    assert not all("temperature" in a for a in attempts)
+
+
+def test_a_failure_that_does_not_name_the_temperature_is_not_read_as_a_rejection(
+    monkeypatch,
+) -> None:
+    """Only an attributable rejection licenses dropping the parameter.
+
+    A generic 500 is not evidence that the provider dislikes `temperature`,
+    and retrying without it would be the harness inventing an explanation and
+    then recording it as fact.
+    """
+    monkeypatch.setattr(
+        run_ab, "_post", lambda *a, **k: (False, "HTTP 503: upstream unavailable", 0.1)
+    )
+    result = run_ab.call_model(MEMBER, [{"role": "user", "content": "hi"}], 10)
+    assert result["ok"] is False
+    assert result["temperature_status"] == "failed"
+    assert result["temperature_used"] == "unknown"
+
+
+# --------------------------------------------------------------------------- #
+# ab_results.csv — the columns A1 and A3 add                                   #
+# --------------------------------------------------------------------------- #
+
+
+def test_the_results_schema_carries_temperature_and_both_revision_defect_counts() -> None:
+    for column in (
+        "temperature",
+        "temperature_status",
+        "defect_count_pre_revision",
+        "defect_count_post_revision",
+    ):
+        assert column in run_ab.RESULT_COLUMNS, column
+
+
+def test_appending_a_1_1_row_to_a_1_0_results_file_is_refused(tmp_path, monkeypatch) -> None:
+    """A 1.0 header and a 1.1 row do not line up, and DictWriter will not say so.
+
+    `csv.DictWriter` writes values in *its* field order into a file whose
+    header is someone else's. Every subsequent row would be silently shifted,
+    and the corruption would only surface when a reader wondered why an arm
+    column held a temperature.
+    """
+    stale = tmp_path / "ab_results.csv"
+    stale.write_text("run_id,experiment_id,arm\nr1,e1,treatment\n", encoding="utf-8")
+    monkeypatch.setattr(run_ab, "AB_RESULTS", stale)
+    with pytest.raises(run_ab.ResultSchemaMismatch):
+        run_ab.append_result({"run_id": "r2", "arm": "advise+audit"})
