@@ -10,7 +10,7 @@
       "default_target_attribute": "Class",
       "licence": "Public",
       "csv_path": "data/1464_blood-transfusion-service-center.csv",
-      "sha256": "5ef21d22cd52e907a616c2a85c25841035e9e69b093516c9232042cc78e13027",
+      "sha256": "c3e5dc8f63e2bdc41e30f2b7a9398207203ac1c594bac206d450441a04d268c2",
       "rows": 748,
       "columns": 5
     },
@@ -22,7 +22,7 @@
       "default_target_attribute": "Class",
       "licence": "Public",
       "csv_path": "data/1480_ilpd.csv",
-      "sha256": "8a3a32776f0341286f16ba78816dc4cf196bb26ed547ec831d10ab43cda92277",
+      "sha256": "f4c766043a65b662c9db5b80b1910116d57802b03a8961ba14684fafe853b630",
       "rows": 583,
       "columns": 11
     },
@@ -34,9 +34,10 @@
       "default_target_attribute": "price",
       "licence": "See source",
       "csv_path": "data/44031_california.csv",
-      "sha256": "4815da3fa6b1766150bcc7ed862296cb7968733386883549a94b19b86889d233",
+      "sha256": "7da6568380b1b33d1a453abaaddfa78b47eec1237ad030becfc847da4577e3ec",
       "rows": 20640,
       "columns": 9
     }
-  ]
+  ],
+  "hash_basis": "sha256 of the file with CRLF and lone CR normalised to LF, not of the raw bytes. These CSVs are text and git may hand a checkout either line ending, so a raw-byte digest pins the platform rather than the data: the 1.0 registry's digests were taken over CRLF bytes and would have rejected every dataset on a Linux checkout of the same commit. Recompute with: python -c \"import hashlib,sys;print(hashlib.sha256(open(sys.argv[1],'rb').read().replace(b'\r\n',b'\n').replace(b'\r',b'\n')).hexdigest())\" <file>. .gitattributes additionally pins benchmark/data/*.csv to LF in the working tree."
 }

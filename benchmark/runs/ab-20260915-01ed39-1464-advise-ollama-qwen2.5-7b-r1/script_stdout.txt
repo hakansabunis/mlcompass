@@ -1,0 +1,2 @@
+Test Accuracy: 0.68
+Model saved as trained_model.joblib

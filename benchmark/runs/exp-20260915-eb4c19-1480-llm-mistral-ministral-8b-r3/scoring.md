@@ -1,21 +1,13 @@
 # Scoring — exp-20260915-eb4c19-1480-llm-mistral-ministral-8b-r3
 
 Dataset: openml-1480 (ilpd)
-Status: completed
+Configuration: llm:mistral-ministral-8b
+Status: failed
+Scoring version: 2.0; ground-truth registry 1.1
 
-known_issues: 1
-correct_detections: 1  ['DUP-1480']
-missed_issues: 0  []
-unverified_findings: 0
+Reason: advisor returned no parseable response, so the configuration under test was not exercised; the CLI still exited 0. Detection and finding counts left blank per protocol.md section 4.
 
-## Findings reported by the tool
+Run did not complete; detection and finding counts are left blank per
+protocol.md section 4, which says not to treat a missing output as a
+successful clean report. The run is kept, not discarded (section 3.6).
 
-- 13 exact duplicate row(s) (2.2% of the data). A random split puts copies of
-
-## Unmatched findings (unverified, not refuted)
-
-- (none)
-
-false_positives and hallucinations are blank: refuting a reported
-issue needs a reviewer, and protocol.md section 4 puts an unrefutable
-claim in unverified_findings rather than in false_positives.

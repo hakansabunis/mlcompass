@@ -1,0 +1,12 @@
+(no .mlcompass/ project found in current path — running standalone; results 
+will not be persisted)
+
+┌────────────────────────────── 🔎 Script audit ──────────────────────────────┐
+│ Path:                                                                       │
+│ C:\Users\SABUNIS\Desktop\ml-copilot\benchmark\runs\ab-20260915-5df16f-1464- │
+│ advise+audit-ollama-qwen2.5-7b-r1\emitted_pre_revision.py                   │
+│ Lines:       22                                                             │
+│ Frameworks:  sklearn                                                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+✓ No issues detected by the static checks.

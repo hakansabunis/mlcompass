@@ -1,18 +1,32 @@
 # Scoring — exp-20260915-eb4c19-1480-deterministic-r1
 
 Dataset: openml-1480 (ilpd)
+Configuration: deterministic
 Status: completed
+Scoring version: 2.0; ground-truth registry 1.1
+
+Scope scored: full output.
 
 known_issues: 1
 correct_detections: 1  ['DUP-1480']
 missed_issues: 0  []
-unverified_findings: 0
+unverified_findings: 0  (= 0 unmatched detection claims + 0 suggestions)
 
-## Findings reported by the tool
+A detection claim asserts a defect and is checked against the registry;
+it comes from `⚠ Warnings` or `⚠ Pitfalls`. A suggestion comes from
+`🔧 Feature engineering` or `✨ Recommended models` and has no ground
+truth to match against, so it is counted apart rather than pooled with
+claims that could have matched and did not.
+
+## Findings in scope
 
 - 13 exact duplicate row(s) (2.2% of the data). A random split puts copies of
 
-## Unmatched findings (unverified, not refuted)
+## Unmatched detection claims (unverified, not refuted)
+
+- (none)
+
+## Suggestions (no ground truth to match against)
 
 - (none)
 

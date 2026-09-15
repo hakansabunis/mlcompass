@@ -1,0 +1,17 @@
+# The benchmark's pinned datasets are checksummed inputs. Without an explicit
+# entry git leaves their line endings to the platform, so the same commit gives
+# a Windows checkout CRLF and a Linux one LF, and a hash taken over the bytes
+# rejects the file on the other machine while the rows are identical.
+#
+# Two mechanisms, deliberately agreeing rather than one covering for the other:
+# this pins the working tree to LF everywhere, and `run_benchmark.py`
+# normalises line endings before hashing, so verification holds even in a
+# checkout that predates this file.
+benchmark/data/*.csv text eol=lf
+benchmark/results.csv text eol=lf
+
+# Preserved run evidence is what a run actually printed. Git must not rewrite
+# it in either direction, so it is marked as not-text rather than pinned to a
+# line ending: an evidence file that changes on checkout is not evidence.
+benchmark/runs/**/stdout.txt -text
+benchmark/runs/**/stderr.txt -text

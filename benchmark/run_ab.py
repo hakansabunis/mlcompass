@@ -1,4 +1,4 @@
-"""Execute and score the with/without cells of `ab_protocol.md` (A/B 1.0).
+"""Execute and score the with/without cells of `ab_protocol.md` (A/B 1.1).
 
 One invocation runs every (dataset x arm x model x repetition) cell, preserves
 the evidence each run produced, and appends one row per run to
@@ -47,15 +47,32 @@ Protocol points this implements, and where they bite:
   it. The holdout fraction and the stratification choice are recorded there.
 - **Identical inputs** (section 2, inherited). Every dataset is re-hashed
   against `ground_truth.json` before use; a mismatch aborts.
-- **The harness owns the split** (section 3). It splits the pinned CSV once
-  per (dataset, seed) — so both arms and every repetition at that seed are
-  scored on the identical holdout — writes `train.csv` into the run workspace
-  and keeps `holdout.csv` in a harness-private directory. Neither arm is told
-  a holdout exists.
-- **One difference between the arms** (section 2). The treatment prompt is
-  the control prompt plus an appended mlcompass block, by construction:
-  `build_prompts` returns `(control, control + block)`. Nothing else can
-  diverge, and `tests/test_ab_prompts.py` asserts the substring relation.
+- **The harness owns the split, with the geometry §3 freezes** (section 3,
+  amended by §9 A2). It splits the pinned CSV once per (dataset, seed) — so
+  every arm and every repetition at that seed are scored on the identical
+  holdout — at a holdout fraction of 0.25, stratified on the target for
+  classification, writes `train.csv` into the run workspace and keeps
+  `holdout.csv` in a harness-private directory. No arm is told a holdout
+  exists. Those two numbers are the protocol's, not this file's:
+  `verify_protocol_constants` re-reads them out of `ab_protocol.md` before any
+  cell runs and aborts if the harness and the document disagree.
+- **One difference between neighbouring arms** (section 2). The `advise`
+  prompt is the `control` prompt plus an appended mlcompass block, by
+  construction: `build_prompts` returns `(control, control + block)`. The
+  `advise+audit` arm is a *second turn* on top of the `advise` arm's first,
+  not a longer first turn, so the property that holds there is that its
+  opening user message is byte-identical to the `advise` prompt.
+  `tests/test_ab_prompts.py` asserts both, separately and in those terms.
+- **Each arm audits only its own script** (section 2). The `advise+audit` arm
+  runs its own first turn, audits the script *that* turn produced, and revises.
+  No arm ever sees another arm's output; if it did, the three arms would be one
+  three-step condition.
+- **Frozen generation settings** (section 5, amended by §9 A3). Temperature
+  1.0 on every arm and every provider, sent explicitly in the request body and
+  recorded in every run record. A provider that rejects the parameter is
+  recorded as having rejected it and its `temperature_used` reads `unknown`;
+  the row is kept, but it never claims a temperature the provider did not
+  honour.
 - **Frozen scoring** (sections 3 and 4). The metric is fixed per task type
   before execution; the six-defect checklist is a deterministic function of
   the emitted source. No model scores anything, here or anywhere below.
@@ -106,25 +123,146 @@ from run_benchmark import (  # noqa: E402
 )
 
 AB_RESULTS = BENCH / "ab_results.csv"
+AB_PROTOCOL = BENCH / "ab_protocol.md"
 RUNS = BENCH / "runs"
 
-AB_PROTOCOL_VERSION = "A/B 1.0"
+AB_PROTOCOL_VERSION = "A/B 1.1"
 
-# Split geometry. ab_protocol.md section 3 fixes *that* the harness owns the
-# split and *that* the seed is recorded; it does not fix the fraction or
-# whether classification splits are stratified. Both are chosen here, frozen,
-# and written into every plan so a later run cannot quietly use a different
-# one. Stratification is on for classification because an unstratified draw
-# can hand back a holdout missing a class, and ROC AUC is undefined there.
+# ---- Constants the protocol freezes, not the harness ---------------------- #
+#
+# Under A/B 1.0 the three values below were this file's own defaults, and the
+# 1.0 plan said so in as many words. §9 amendments A2 and A3 moved all three
+# into the protocol text, so the harness is now a *reader* of them rather than
+# their author. Retyping a number out of a document is exactly how the document
+# and the code drift apart, so `verify_protocol_constants` reads §3 and §5 back
+# out of `ab_protocol.md` and refuses to start a run when they disagree.
+#
+# The literals stay in the source because a harness that cannot be imported
+# without parsing a markdown file is worse than one that can; the check, not
+# the literal, is what makes them the protocol's.
+
+# ab_protocol.md §3, "Geometry, frozen": holdout fraction 0.25, stratified on
+# the target for classification tasks.
 HOLDOUT_FRACTION = 0.25
 STRATIFY_CLASSIFICATION = True
+
+# ab_protocol.md §5, "Generation settings, frozen": temperature 1.0 on every
+# arm and every provider, sent explicitly and recorded in each run record.
+TEMPERATURE = 1.0
 
 DEFAULT_LLM_TIMEOUT = 900
 DEFAULT_SCRIPT_TIMEOUT = 600
 DEFAULT_SCORE_TIMEOUT = 300
+DEFAULT_AUDIT_TIMEOUT = 300
 MAX_COMPLETION_TOKENS = 4096
 
-ARMS = ("control", "treatment")
+# ab_protocol.md §2 under 1.1. `treatment` was the 1.0 name for what is now
+# `advise`; rows carrying it belong to the 1.0 validation pair and are kept in
+# `ab_results_v1.0.csv`, not renamed.
+ARMS = ("control", "advise", "advise+audit")
+
+# The arms that receive `mlcompass advise` output in their first turn. Kept as
+# a set rather than tested with `arm != "control"` so that adding a fourth arm
+# has to be a deliberate edit here.
+ADVISE_ARMS = frozenset({"advise", "advise+audit"})
+
+# The arm that runs the §9 A1 revision round.
+AUDIT_ARM = "advise+audit"
+
+
+class ProtocolDrift(RuntimeError):
+    """The harness and `ab_protocol.md` disagree about a frozen constant."""
+
+
+class ResultSchemaMismatch(RuntimeError):
+    """`ab_results.csv` was written under a different set of columns."""
+
+
+_PROTOCOL_FRACTION = re.compile(r"holdout fraction \*\*([0-9]*\.?[0-9]+)\*\*")
+# Both §3 and §5 wrap, so every gap is matched as whitespace rather than as a
+# space. A regex that only works while the paragraph happens to fit on one line
+# is a check that fails the next time someone reflows the document.
+_PROTOCOL_STRATIFY = re.compile(
+    r"\*\*stratified\s+on\s+the\s+target\s+for\s+classification", re.IGNORECASE
+)
+_PROTOCOL_TEMPERATURE = re.compile(
+    r"temperature\s+([0-9]*\.?[0-9]+)\s+on\s+every\s+arm\s+and\s+every\s+provider", re.IGNORECASE
+)
+
+
+def verify_protocol_constants(
+    *,
+    text: str | None = None,
+    fraction: float | None = None,
+    stratify: bool | None = None,
+    temperature: float | None = None,
+) -> dict[str, Any]:
+    """Check the harness against §3 and §5 of `ab_protocol.md`.
+
+    Called once at the top of a run, before a single cell executes. The point
+    is narrow and worth stating: §9 A2 and A3 made the split geometry and the
+    temperature *the protocol's* values, and a constant that has been retyped
+    into a second file is a constant that will eventually say something the
+    protocol does not. If they disagree the run stops, because a battery
+    scored under settings the protocol does not describe is evidence for
+    nothing.
+
+    The keyword arguments exist so the check can be exercised against a
+    doctored document or a doctored harness without editing either.
+    """
+    document = AB_PROTOCOL.read_text(encoding="utf-8") if text is None else text
+    ours = {
+        "holdout_fraction": HOLDOUT_FRACTION if fraction is None else fraction,
+        "stratify_classification": STRATIFY_CLASSIFICATION if stratify is None else stratify,
+        "temperature": TEMPERATURE if temperature is None else temperature,
+    }
+
+    fraction_match = _PROTOCOL_FRACTION.search(document)
+    if fraction_match is None:
+        raise ProtocolDrift(
+            "ab_protocol.md §3 no longer states a holdout fraction in the form "
+            "'holdout fraction **<number>**'. The harness cannot confirm it is "
+            "splitting the way the protocol says, so it will not split at all."
+        )
+    theirs_fraction = float(fraction_match.group(1))
+    if theirs_fraction != ours["holdout_fraction"]:
+        raise ProtocolDrift(
+            f"holdout fraction: ab_protocol.md §3 says {theirs_fraction}, this "
+            f"harness uses {ours['holdout_fraction']}. §9 A2 froze the geometry "
+            "in the protocol; change it there and here together, or not at all."
+        )
+
+    theirs_stratify = bool(_PROTOCOL_STRATIFY.search(document))
+    if theirs_stratify != ours["stratify_classification"]:
+        raise ProtocolDrift(
+            f"stratification: ab_protocol.md §3 says {theirs_stratify}, this "
+            f"harness uses {ours['stratify_classification']}. §3 gives the "
+            "reason — on an imbalanced target an unstratified draw can leave "
+            "the holdout single-class, where ROC AUC is undefined."
+        )
+
+    temperature_match = _PROTOCOL_TEMPERATURE.search(document)
+    if temperature_match is None:
+        raise ProtocolDrift(
+            "ab_protocol.md §5 no longer states a frozen temperature in the "
+            "form 'temperature <number> on every arm and every provider'. The "
+            "harness cannot confirm what it is supposed to send."
+        )
+    theirs_temperature = float(temperature_match.group(1))
+    if theirs_temperature != ours["temperature"]:
+        raise ProtocolDrift(
+            f"temperature: ab_protocol.md §5 says {theirs_temperature}, this "
+            f"harness sends {ours['temperature']}. §9 A3 froze it so that a "
+            "difference between lanes cannot come from the setting."
+        )
+
+    return {
+        "holdout_fraction": theirs_fraction,
+        "stratify_classification": theirs_stratify,
+        "temperature": theirs_temperature,
+        "source": str(AB_PROTOCOL) if text is None else "<supplied text>",
+    }
+
 
 # ab_protocol.md section 3: "Metric per task type, fixed in advance."
 METRIC_BY_TASK: dict[str, str] = {
@@ -157,10 +295,21 @@ RESULT_COLUMNS = [
     "seed",
     "started_at_utc",
     "mlcompass_commit",
+    "temperature",
+    "temperature_status",
     "status",
     "holdout_metric",
     "holdout_score",
     "defect_count",
+    # §9 A1 asks for the revision round's effect to be visible per run rather
+    # than only in an aggregate. Both are blank on `control` and `advise`,
+    # which have no revision round; on `advise+audit`,
+    # `defect_count_post_revision` is the same number as `defect_count`,
+    # because the revised script is the scored one.
+    "defect_count_pre_revision",
+    "defect_count_post_revision",
+    # The six flags below describe the *scored* script: the revised one on
+    # `advise+audit`, the only one elsewhere.
     *DEFECT_IDS,
     "script_exit_code",
     "runtime_seconds",
@@ -197,19 +346,37 @@ predict on new rows later.
 Reply with the script inside a single ```python code block, and nothing else.
 """
 
-# The only text that may differ between the arms. It is a frame around
-# mlcompass's own bytes and carries no advice of its own: if a command
+# The only text that may differ between `control` and `advise`. It is a frame
+# around mlcompass's own bytes and carries no advice of its own: if the command
 # produced nothing, the block is present and empty, per section 2.
-TREATMENT_BLOCK = """
-Below is the verbatim output of two mlcompass commands run on the same inputs.
+#
+# Under 1.0 this block also carried an always-empty `--- mlcompass audit ---`
+# section, because audit reads a script and none exists yet. §9 A1 removed it:
+# a section headed with a command's name and holding nothing tells the model
+# that a check ran and was satisfied, which is advice the harness invented.
+ADVISE_BLOCK = """
+Below is the verbatim output of mlcompass run on the same inputs.
 
 --- mlcompass advise ---
 {advise}
 --- end mlcompass advise ---
+"""
+
+# The second turn of the `advise+audit` arm, and the only text that may differ
+# between `advise` and `advise+audit`. Same discipline as the block above: a
+# frame around audit's bytes, and nothing that names a defect, suggests a fix
+# or implies there is one to find. "if that output gives you reason to" is
+# load-bearing — with an empty findings block, an instruction to revise would
+# be the harness telling the model something mlcompass did not.
+REVISION_PROMPT = """\
+Below is the verbatim output of mlcompass run on the script you just wrote.
 
 --- mlcompass audit ---
 {audit}
 --- end mlcompass audit ---
+
+Revise the script if that output gives you reason to. Reply with the complete \
+final script inside a single ```python code block, and nothing else.
 """
 
 
@@ -219,19 +386,56 @@ def build_prompts(
     target: str,
     columns: str,
     advise_stdout: str,
-    audit_stdout: str,
 ) -> tuple[str, str]:
-    """Build the control and treatment prompts for one cell.
+    """Build the `control` and `advise` prompts for one cell.
 
-    The treatment prompt is the control prompt with a block appended, and is
+    The `advise` prompt is the `control` prompt with a block appended, and is
     constructed that way rather than from a parallel template: two templates
     can drift a token apart without anyone noticing, and ab_protocol.md
     section 2 allows exactly one difference. The caller gets both strings and
-    `tests/test_ab_prompts.py` asserts the strict-substring relation holds.
+    `tests/test_ab_prompts.py` asserts the strict-prefix relation holds.
+
+    This is also the `advise+audit` arm's first turn — that arm sends this
+    exact string and then a second message, rather than a longer first one.
     """
     control = CONTROL_PROMPT.format(csv_path=csv_path, target=target, columns=columns)
-    block = TREATMENT_BLOCK.format(advise=advise_stdout, audit=audit_stdout)
+    block = ADVISE_BLOCK.format(advise=advise_stdout)
     return control, control + block
+
+
+def build_revision_messages(
+    *,
+    advise_prompt: str,
+    first_reply: str,
+    audit_stdout: str,
+) -> list[dict[str, str]]:
+    """Build the `advise+audit` arm's revision round (§9 A1).
+
+    Three messages, in the order a person would have produced them: the
+    `advise` prompt verbatim, the model's own reply to it, and the audit of
+    the script that reply contained.
+
+    Two properties this shape buys, both of which §2 needs:
+
+    - The arms stay comparable in the only way a second turn can be. There is
+      no prefix relation to assert between a one-turn and a two-turn
+      conversation, and pretending otherwise would mean weakening the
+      control/advise assertion to something both could satisfy. Instead the
+      first turn *is* the `advise` prompt, byte for byte, and that is what the
+      test asserts.
+    - The arm never sees another arm's work. `first_reply` is this arm's own
+      first turn and `audit_stdout` is the audit of that reply's script; the
+      caller has no other source to pass.
+
+    An empty `audit_stdout` still produces all three messages. mlcompass
+    finding nothing is a finding, and skipping the round would quietly turn
+    those cells into `advise` cells reported under the third arm's name.
+    """
+    return [
+        {"role": "user", "content": advise_prompt},
+        {"role": "assistant", "content": first_reply},
+        {"role": "user", "content": REVISION_PROMPT.format(audit=audit_stdout)},
+    ]
 
 
 def column_listing(frame: Any) -> str:
@@ -247,9 +451,13 @@ def column_listing(frame: Any) -> str:
 def prepare_split(dataset: dict[str, Any], seed: int, private_dir: Path) -> dict[str, Any]:
     """Split the pinned CSV once for a (dataset, seed) and keep the holdout.
 
+    Geometry is §3's, frozen by §9 A2 at 0.25 and stratified on the target for
+    classification, and checked against the protocol text by
+    `verify_protocol_constants` before any cell runs.
+
     Returns the paths plus the two dataset facts the defect checklist needs
     (duplicate count, minority-class fraction), both measured on the *train*
-    frame — that is the only frame either arm is shown, so it is the frame
+    frame — that is the only frame any arm is shown, so it is the frame
     against which "duplicates present in the input" has to be read.
     """
     import pandas as pd
@@ -300,41 +508,55 @@ def prepare_split(dataset: dict[str, Any], seed: int, private_dir: Path) -> dict
 
 
 # --------------------------------------------------------------------------- #
-# The mlcompass block — treatment only                                        #
+# The mlcompass output — `advise` up front, `audit` in the revision round      #
 # --------------------------------------------------------------------------- #
 
 
 class AdviseFailed(RuntimeError):
-    """`mlcompass advise` did not run, so no treatment cell may run either."""
+    """`mlcompass advise` did not run, so no arm that needs it may run either."""
+
+
+def _run_mlcompass(command: list[str], timeout: int) -> tuple[str, str, str]:
+    """Run one mlcompass command in a throwaway cwd. Returns (stdout, status, stderr).
+
+    The cwd matters: mlcompass looks for a `.mlcompass/` project in the
+    directory it is run from, and running it inside the repository would let a
+    stray project file change what an arm is shown between one cell and the
+    next.
+    """
+    workspace = Path(tempfile.mkdtemp(prefix="mlcab_tool_"))
+    try:
+        proc = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            cwd=workspace,
+            timeout=timeout,
+        )
+        return proc.stdout, ("ok" if proc.returncode == 0 else "failed"), proc.stderr
+    except subprocess.TimeoutExpired:
+        return "", "timeout", ""
+    finally:
+        shutil.rmtree(workspace, ignore_errors=True)
 
 
 def mlcompass_findings(train_csv: Path, target: str, timeout: int) -> dict[str, Any]:
-    """Collect the verbatim stdout that the treatment arm is handed.
+    """Collect the verbatim `mlcompass advise` stdout that the advise arms are handed.
 
     `advise` runs on `train.csv`, not on the pinned file: section 2 says "the
     same inputs", and the inputs are what the arm is given. Running it on the
     full frame would put counts describing holdout rows into the prompt, which
     is the leak section 3 exists to prevent.
 
-    `audit` is a different matter and is recorded as not run. The command
-    takes a *training script* (`mlcompass audit <script.py>`), and at
-    prompt-construction time no script exists — the script is the thing the
-    model has not written yet. Section 2 asks for its output "on the same
-    inputs" without saying what audit's input is in a cell that has no script.
-    Rather than invent one (auditing some starter script, or auditing the
-    control arm's emitted script and feeding it to treatment, which would make
-    the arms dependent), the block is left empty, which is what section 2
-    itself prescribes when a command says nothing. Reported as a protocol gap
-    rather than papered over.
-
-    An `advise` that *fails* is a different thing again, and raises. Section 2
-    licenses an empty block when mlcompass "says nothing about a dataset" — a
-    tool that could not run said nothing of the kind, and pasting its silence
-    would present a broken invocation as a clean dataset and quietly turn the
-    treatment arm into a second control arm. Every treatment row in the
-    experiment would then be mislabelled, so the run stops instead.
+    An `advise` that *fails* raises. Section 2 licenses an empty block when
+    mlcompass says nothing about a dataset — a tool that could not run said
+    nothing of the kind, and pasting its silence would present a broken
+    invocation as a clean dataset and quietly turn both advise arms into
+    second control arms. Every such row in the experiment would then be
+    mislabelled, so the run stops instead.
     """
-    workspace = Path(tempfile.mkdtemp(prefix="mlcab_advise_"))
     command = [
         sys.executable,
         "-X",
@@ -346,28 +568,13 @@ def mlcompass_findings(train_csv: Path, target: str, timeout: int) -> dict[str, 
         "--target",
         target,
     ]
-    try:
-        proc = subprocess.run(
-            command,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            cwd=workspace,
-            timeout=timeout,
-        )
-        advise_stdout, advise_status = proc.stdout, ("ok" if proc.returncode == 0 else "failed")
-        advise_stderr = proc.stderr
-    except subprocess.TimeoutExpired:
-        advise_stdout, advise_status, advise_stderr = "", "timeout", ""
-    finally:
-        shutil.rmtree(workspace, ignore_errors=True)
+    advise_stdout, advise_status, advise_stderr = _run_mlcompass(command, timeout)
 
     if advise_status != "ok":
         raise AdviseFailed(
             f"`mlcompass advise` {advise_status} on {train_csv.name} under "
             f"{sys.executable}.\n{advise_stderr.strip()[:600]}\n\n"
-            "The treatment arm cannot run: an empty findings block would say "
+            "The advise arms cannot run: an empty findings block would say "
             "mlcompass found nothing, when in fact it never ran. Fix the "
             "invocation (is mlcompass installed for this interpreter?) and "
             "start the experiment again."
@@ -378,14 +585,34 @@ def mlcompass_findings(train_csv: Path, target: str, timeout: int) -> dict[str, 
         "advise_status": advise_status,
         "advise_stderr": advise_stderr,
         "advise_command": command,
-        "audit_stdout": "",
-        "audit_status": "not-run",
-        "audit_reason": (
-            "mlcompass audit takes a training script; at prompt-construction time no "
-            "script exists. ab_protocol.md section 2 does not say what audit's input "
-            "is in a cell whose only inputs are a CSV and a target, so the block is "
-            "left empty rather than filled with advice this harness invented."
-        ),
+    }
+
+
+def mlcompass_audit(script_path: Path, timeout: int) -> dict[str, Any]:
+    """Run `mlcompass audit` on one arm's own first-turn script (§9 A1).
+
+    This is the command that could not run at prompt-construction time under
+    1.0, and the reason the third arm exists: `audit` reads a *training
+    script*, so it cannot be asked anything until the model has written one.
+    The script it is given here is the one this arm's own first turn produced
+    and nothing else — feeding it another arm's output would make the three
+    arms one three-step condition, which §2 forbids in as many words.
+
+    Unlike `advise`, a failure here does not abort the experiment. It fails one
+    cell: the other arms are unaffected, and the evidence for the cell that did
+    run its first turn is worth keeping. The caller records the cell as
+    `audit_failed` rather than sending an empty findings block, for the same
+    reason `AdviseFailed` exists — "audit found nothing" and "audit did not
+    run" are different claims and the second one must not be dressed as the
+    first.
+    """
+    command = [sys.executable, "-X", "utf8", "-m", "mlcompass.cli", "audit", str(script_path)]
+    audit_stdout, audit_status, audit_stderr = _run_mlcompass(command, timeout)
+    return {
+        "audit_stdout": audit_stdout,
+        "audit_status": audit_status,
+        "audit_stderr": audit_stderr,
+        "audit_command": command,
     }
 
 
@@ -417,33 +644,87 @@ def _post(
         return False, f"{type(exc).__name__}: {str(exc)[:240]}", time.monotonic() - clock
 
 
-def call_model(member: dict[str, Any], prompt: str, timeout: int) -> dict[str, Any]:
-    """One chat completion against a panel member. Credentials are never logged."""
+def _rejects_temperature(error: str) -> bool:
+    """Does this provider error attribute the failure to the temperature parameter?
+
+    Deliberately narrow. §9 A3 lets the harness drop the parameter and record
+    the fact — but only when the provider said that is the problem. A generic
+    500 or a rate limit is not evidence that a lane dislikes `temperature`, and
+    retrying without it there would mean inventing an explanation and then
+    writing it into the evidence as measured. An unattributable failure is
+    recorded as a failure.
+    """
+    return "temperature" in error.lower()
+
+
+def call_model(
+    member: dict[str, Any], messages: list[dict[str, str]], timeout: int
+) -> dict[str, Any]:
+    """One chat completion against a panel member. Credentials are never logged.
+
+    Temperature is §5's, frozen by §9 A3 at 1.0 and sent in the body rather
+    than left to the provider's default. The return value always carries what
+    actually happened to it:
+
+    - ``temperature_status`` is ``sent`` when the accepted request carried the
+      parameter, ``rejected`` when the provider refused it by name and the
+      request succeeded without it, and ``failed`` when no request succeeded.
+    - ``temperature_used`` is the number when it was sent and ``unknown``
+      otherwise. It is never back-filled with 1.0 on the grounds that the
+      provider's default is probably that anyway: §5's whole point is that
+      defaults differ between providers, so a lane running on an unrecorded
+      one is not comparable and the row has to say so.
+    """
     base_url = member["base_url"] or "https://api.openai.com/v1"
     key = load_keys().get(member["key_name"], "") if member["key_name"] else None
-    messages = [{"role": "user", "content": prompt}]
 
-    payload: dict[str, Any] = {
-        "model": member["model"],
-        "messages": messages,
-        "max_completion_tokens": MAX_COMPLETION_TOKENS,
-    }
-    ok, response, seconds = _post(base_url, key, payload, timeout)
-    if not ok:
-        # Some OpenAI-compatible endpoints still want the retired parameter
-        # name; `scripts/check_provider_models.py` hits the same wall.
-        del payload["max_completion_tokens"]
-        payload["max_tokens"] = MAX_COMPLETION_TOKENS
+    base: dict[str, Any] = {"model": member["model"], "messages": messages}
+
+    # Two independent parameter incompatibilities, tried in a fixed order so a
+    # row can be read against it. The token-limit name is the older wall:
+    # some OpenAI-compatible endpoints still want the retired spelling, and
+    # `scripts/check_provider_models.py` hits the same one.
+    token_variants = [
+        {"max_completion_tokens": MAX_COMPLETION_TOKENS},
+        {"max_tokens": MAX_COMPLETION_TOKENS},
+    ]
+
+    errors: list[str] = []
+    ok, response, seconds = False, "", 0.0
+    temperature_status, temperature_used, rejection = "failed", "unknown", ""
+
+    # Pass one: every token-parameter spelling, with the temperature present.
+    for tokens in token_variants:
+        payload = {**base, **tokens, "temperature": TEMPERATURE}
         ok, response, seconds = _post(base_url, key, payload, timeout)
+        if ok:
+            temperature_status, temperature_used = "sent", TEMPERATURE
+            break
+        errors.append(str(response))
+
+    # Pass two: only if a provider named the parameter as the problem.
+    if not ok and any(_rejects_temperature(e) for e in errors):
+        rejection = next(e for e in errors if _rejects_temperature(e))
+        for tokens in token_variants:
+            ok, response, seconds = _post(base_url, key, {**base, **tokens}, timeout)
+            if ok:
+                temperature_status, temperature_used = "rejected", "unknown"
+                break
+            errors.append(str(response))
+
     if not ok:
         return {
             "ok": False,
             "text": "",
-            "error": str(response),
+            "error": "; ".join(dict.fromkeys(errors))[:600],
             "input_tokens": "",
             "output_tokens": "",
             "finish_reason": "",
             "seconds": seconds,
+            "temperature_requested": TEMPERATURE,
+            "temperature_status": "failed",
+            "temperature_used": "unknown",
+            "temperature_rejection": rejection,
         }
 
     choice = response["choices"][0]
@@ -456,6 +737,10 @@ def call_model(member: dict[str, Any], prompt: str, timeout: int) -> dict[str, A
         "output_tokens": usage.get("completion_tokens", ""),
         "finish_reason": choice.get("finish_reason", ""),
         "seconds": seconds,
+        "temperature_requested": TEMPERATURE,
+        "temperature_status": temperature_status,
+        "temperature_used": temperature_used,
+        "temperature_rejection": rejection,
     }
 
 
@@ -929,6 +1214,43 @@ def score_holdout(
 # --------------------------------------------------------------------------- #
 
 
+def _turn_record(index: int, label: str, prompt: str, reply: dict[str, Any]) -> dict[str, Any]:
+    """What §7 preserves about one model call, minus the text beside it on disk."""
+    return {
+        "turn": index,
+        "label": label,
+        "prompt_sha256": hashlib.sha256(prompt.encode("utf-8")).hexdigest(),
+        "ok": reply["ok"],
+        "error": reply["error"],
+        "finish_reason": reply["finish_reason"],
+        "input_tokens": reply["input_tokens"],
+        "output_tokens": reply["output_tokens"],
+        "seconds": round(reply["seconds"], 3),
+        "temperature_requested": reply["temperature_requested"],
+        "temperature_status": reply["temperature_status"],
+        "temperature_used": reply["temperature_used"],
+        "temperature_rejection": reply["temperature_rejection"],
+    }
+
+
+def _cell_temperature(turns: list[dict[str, Any]]) -> tuple[str, Any]:
+    """Collapse the per-turn temperature outcomes into the cell's row values.
+
+    A cell is `sent` only if every turn it made was; one rejected turn makes
+    the whole cell's temperature unknown, because the scored script came out
+    of a conversation part of which ran at a setting nobody recorded. §5's
+    comparability claim is about the run, not about its best turn.
+    """
+    statuses = [t["temperature_status"] for t in turns]
+    if not statuses:
+        return "", ""
+    if "failed" in statuses:
+        return "failed", "unknown"
+    if "rejected" in statuses:
+        return "rejected", "unknown"
+    return "sent", TEMPERATURE
+
+
 def run_cell(
     *,
     dataset: dict[str, Any],
@@ -942,8 +1264,18 @@ def run_cell(
     llm_timeout: int,
     script_timeout: int,
     score_timeout: int,
+    audit_timeout: int = DEFAULT_AUDIT_TIMEOUT,
 ) -> dict[str, Any]:
-    """Prompt, execute, score and check one (dataset, arm, model, repetition)."""
+    """Prompt, execute, score and check one (dataset, arm, model, repetition).
+
+    `control` and `advise` are one turn. `advise+audit` is that same turn
+    followed by a revision round (§9 A1): the script the first turn produced is
+    written out, `mlcompass audit` is run on **that file and no other**, the
+    findings go back to the same model in a second user message, and the
+    revised script is the one that gets executed, scored and defect-checked.
+    The pre-revision script is kept beside it and defect-checked too, so the
+    revision round's effect is visible per run rather than only in aggregate.
+    """
     run_dir.mkdir(parents=True, exist_ok=True)
     private_dir = run_dir / "_harness_private"
     private_dir.mkdir(exist_ok=True)
@@ -965,30 +1297,35 @@ def run_cell(
     shutil.copyfile(split["train_csv"], workspace / "train.csv")
     workspace_train = workspace / "train.csv"
 
-    control, treatment = build_prompts(
+    if arm in ADVISE_ARMS and findings is None:
+        raise RuntimeError(
+            f"arm {arm!r} is defined by carrying `mlcompass advise` output and was "
+            "given none. An empty block here would say the tool found nothing "
+            "when it never ran, and the row would be mislabelled."
+        )
+
+    control, advise = build_prompts(
         csv_path=str(workspace_train),
         target=dataset["target"],
         columns=split["columns"],
         advise_stdout=(findings or {}).get("advise_stdout", ""),
-        audit_stdout=(findings or {}).get("audit_stdout", ""),
     )
-    if not treatment.startswith(control):
+    if not advise.startswith(control):
         raise RuntimeError(
-            "the treatment prompt does not begin with the control prompt; "
+            "the advise prompt does not begin with the control prompt; "
             "ab_protocol.md section 2 allows exactly one difference between "
-            "the arms and this cell has more than one."
+            "those two arms and this cell has more than one."
         )
-    prompt = control if arm == "control" else treatment
-    (run_dir / "prompt.txt").write_text(prompt, encoding="utf-8")
+    first_prompt = control if arm == "control" else advise
+    (run_dir / "prompt.txt").write_text(first_prompt, encoding="utf-8")
     prompt_hashes = {
         "control_prompt_sha256": hashlib.sha256(control.encode("utf-8")).hexdigest(),
-        "prompt_sha256": hashlib.sha256(prompt.encode("utf-8")).hexdigest(),
+        "advise_prompt_sha256": hashlib.sha256(advise.encode("utf-8")).hexdigest(),
+        "prompt_sha256": hashlib.sha256(first_prompt.encode("utf-8")).hexdigest(),
     }
 
     started = _utc_now()
     clock = time.monotonic()
-    reply = call_model(member, prompt, llm_timeout)
-    (run_dir / "reply.txt").write_text(reply["text"], encoding="utf-8")
 
     outcome: dict[str, Any] = {
         "started": started,
@@ -998,38 +1335,139 @@ def run_cell(
         "holdout_metric": METRIC_BY_TASK.get(dataset["task"], ""),
         "holdout_score": "",
         "defects": None,
+        "defects_pre_revision": None,
+        "audit": None,
+        "turns": [],
+        "temperature_status": "",
+        "temperature_used": "",
         "notes": "",
-        "input_tokens": reply["input_tokens"],
-        "output_tokens": reply["output_tokens"],
+        "input_tokens": "",
+        "output_tokens": "",
         "runtime": 0.0,
     }
 
-    if not reply["ok"]:
-        outcome.update(
-            status="llm_failed",
-            notes=f"model call failed: {reply['error']}",
-            runtime=time.monotonic() - clock,
+    def finish(status: str, note: str) -> dict[str, Any]:
+        """Close a cell that produced no scorable script, keeping what it did produce."""
+        outcome["temperature_status"], outcome["temperature_used"] = _cell_temperature(
+            outcome["turns"]
         )
+        outcome.update(status=status, notes=note, runtime=time.monotonic() - clock)
         shutil.rmtree(workspace, ignore_errors=True)
-        _write_run_record(
-            run_dir, dataset, arm, panel_id, member, split, reply, outcome, None, None
-        )
-        _write_scoring(run_dir, dataset, arm, outcome, None, None)
+        _write_run_record(run_dir, dataset, arm, panel_id, member, split, outcome, None)
+        _write_scoring(run_dir, dataset, arm, outcome, outcome["defects"], None)
         return outcome
+
+    def tally(turns: list[dict[str, Any]], field: str) -> Any:
+        """Sum a usage field across the cell's turns; blank if any turn did not report it."""
+        values = [t[field] for t in turns]
+        return sum(values) if all(isinstance(v, int) for v in values) else ""
+
+    # ---- Turn 1: the arm's own first draft --------------------------------- #
+    reply = call_model(member, [{"role": "user", "content": first_prompt}], llm_timeout)
+    outcome["turns"].append(_turn_record(1, f"{arm} first turn", first_prompt, reply))
+    (run_dir / "reply_turn1.txt").write_text(reply["text"], encoding="utf-8")
+    (run_dir / "reply.txt").write_text(reply["text"], encoding="utf-8")
+    outcome["input_tokens"] = tally(outcome["turns"], "input_tokens")
+    outcome["output_tokens"] = tally(outcome["turns"], "output_tokens")
+
+    if not reply["ok"]:
+        return finish("llm_failed", f"model call failed: {reply['error']}")
 
     source, how = extract_python(reply["text"])
     if source is None:
-        outcome.update(
-            status="no_code",
-            notes=f"no script to run: {how}",
-            runtime=time.monotonic() - clock,
+        return finish("no_code", f"no script to run: {how}")
+
+    # ---- The revision round, `advise+audit` only (§9 A1) ------------------- #
+    if arm == AUDIT_ARM:
+        # The audited script is this arm's own first turn and nothing else:
+        # §2 requires each arm audit only its own script, and the cheap way to
+        # get that wrong is to point the auditor at whatever `emitted.py`
+        # happens to be lying about.
+        pre_path = run_dir / "emitted_pre_revision.py"
+        pre_path.write_text(source, encoding="utf-8")
+        outcome["defects_pre_revision"] = check_defects(
+            source,
+            target=dataset["target"],
+            duplicate_rows=split["duplicate_rows"],
+            minority_fraction=split["minority_fraction"],
+            target_is_last_column=split["target_is_last_column"],
         )
-        shutil.rmtree(workspace, ignore_errors=True)
-        _write_run_record(
-            run_dir, dataset, arm, panel_id, member, split, reply, outcome, None, None
+
+        # But it is handed over from a neutral path, not from that one. The
+        # first live run of this arm showed why: `mlcompass audit` prints the
+        # path it read, and that line goes into the revision prompt verbatim,
+        # so a file under `runs/<experiment>-<dataset>-advise+audit-<panel>-r1/`
+        # told the model its arm name, its dataset, its model and its run id.
+        # None of that came from mlcompass, and §2 lets the arms differ only by
+        # what mlcompass produced. The digest below keeps the traceability that
+        # the run-directory path used to provide.
+        audit_dir = Path(tempfile.mkdtemp(prefix="mlcab_audit_"))
+        audited_sha256 = hashlib.sha256(source.encode("utf-8")).hexdigest()
+        try:
+            handed_over = audit_dir / "train_model.py"
+            handed_over.write_text(source, encoding="utf-8")
+            audit = mlcompass_audit(handed_over, audit_timeout)
+        finally:
+            shutil.rmtree(audit_dir, ignore_errors=True)
+
+        outcome["audit"] = {
+            **{k: v for k, v in audit.items() if k != "audit_stdout"},
+            # The same bytes are preserved verbatim as `emitted_pre_revision.py`
+            # beside this record, so a reader can confirm the audited script is
+            # this arm's own first turn without trusting the path.
+            "audited_sha256": audited_sha256,
+            "audited_as": "train_model.py in a throwaway directory, to keep the run's "
+            "identity out of audit's stdout and therefore out of the revision prompt",
+        }
+        (run_dir / "mlcompass_audit.txt").write_text(audit["audit_stdout"], encoding="utf-8")
+
+        if audit["audit_status"] != "ok":
+            # Symmetric with `AdviseFailed`, and for the same reason: "audit
+            # found nothing" and "audit did not run" are different claims, and
+            # an empty findings block would make the second read as the first.
+            # One cell fails; the experiment does not.
+            return finish(
+                "audit_failed",
+                f"`mlcompass audit` {audit['audit_status']} on this arm's own first-turn "
+                f"script; the revision round did not happen and nothing was scored. "
+                f"{audit['audit_stderr'].strip()[:300]}",
+            )
+
+        messages = build_revision_messages(
+            advise_prompt=advise,
+            first_reply=reply["text"],
+            audit_stdout=audit["audit_stdout"],
         )
-        _write_scoring(run_dir, dataset, arm, outcome, None, None)
-        return outcome
+        if messages[0]["content"] != advise:
+            raise RuntimeError(
+                "the revision round's first turn is not the advise prompt; "
+                "ab_protocol.md section 2 makes the arms comparable only if "
+                "advise+audit begins from the identical first turn."
+            )
+        (run_dir / "prompt_revision.txt").write_text(messages[2]["content"], encoding="utf-8")
+        prompt_hashes["revision_prompt_sha256"] = hashlib.sha256(
+            messages[2]["content"].encode("utf-8")
+        ).hexdigest()
+
+        revision = call_model(member, messages, llm_timeout)
+        outcome["turns"].append(
+            _turn_record(2, "advise+audit revision", messages[2]["content"], revision)
+        )
+        (run_dir / "reply_turn2.txt").write_text(revision["text"], encoding="utf-8")
+        (run_dir / "reply.txt").write_text(revision["text"], encoding="utf-8")
+        outcome["input_tokens"] = tally(outcome["turns"], "input_tokens")
+        outcome["output_tokens"] = tally(outcome["turns"], "output_tokens")
+
+        if not revision["ok"]:
+            return finish("llm_failed_revision", f"revision call failed: {revision['error']}")
+
+        revised, how = extract_python(revision["text"])
+        if revised is None:
+            return finish("no_code_revision", f"no revised script to run: {how}")
+        # §2: "Scoring uses the revised script."
+        source, reply = revised, revision
+
+    outcome["temperature_status"], outcome["temperature_used"] = _cell_temperature(outcome["turns"])
 
     # Verbatim: what the model wrote is the artefact under study (section 7).
     (run_dir / "emitted.py").write_text(source, encoding="utf-8")
@@ -1092,6 +1530,20 @@ def run_cell(
         notes.append(f"code extraction: {how}")
     if reply["finish_reason"] not in ("stop", ""):
         notes.append(f"finish_reason={reply['finish_reason']}")
+    if outcome["defects_pre_revision"] is not None:
+        notes.append(
+            f"revision round: defects {outcome['defects_pre_revision']['defect_count']}"
+            f" -> {defects['defect_count']}"
+        )
+    if outcome["temperature_status"] == "rejected":
+        rejection = next(
+            (t["temperature_rejection"] for t in outcome["turns"] if t["temperature_rejection"]),
+            "",
+        )
+        notes.append(
+            f"temperature {TEMPERATURE} rejected by the provider; this lane ran at an "
+            f"unrecorded default and is not comparable on §5's terms: {rejection[:180]}"
+        )
 
     outcome.update(
         status=status,
@@ -1100,9 +1552,7 @@ def run_cell(
         notes="; ".join(notes),
         runtime=time.monotonic() - clock,
     )
-    _write_run_record(
-        run_dir, dataset, arm, panel_id, member, split, reply, outcome, defects, scored
-    )
+    _write_run_record(run_dir, dataset, arm, panel_id, member, split, outcome, scored)
     _write_scoring(run_dir, dataset, arm, outcome, defects, scored)
     return outcome
 
@@ -1114,9 +1564,7 @@ def _write_run_record(
     panel_id: str,
     member: dict[str, Any],
     split: dict[str, Any],
-    reply: dict[str, Any],
     outcome: dict[str, Any],
-    defects: dict[str, Any] | None,
     scored: dict[str, Any] | None,
 ) -> None:
     """Everything section 7 asks to preserve, minus the files written beside it."""
@@ -1127,22 +1575,34 @@ def _write_run_record(
         "provider": member["provider"],
         "model": member["model"],
         "endpoint": member["base_url"] or "https://api.openai.com/v1",
-        # Both arms of a cell must show the same control_prompt_sha256: that is
-        # the single-difference guarantee of section 2, checkable from the
-        # evidence alone without rebuilding the prompts.
+        # Every arm of a cell must show the same control_prompt_sha256, and the
+        # two advise arms the same advise_prompt_sha256: that is the
+        # single-difference guarantee of section 2, checkable from the evidence
+        # alone without rebuilding the prompts.
         **outcome["prompt_hashes"],
         "started_at_utc": outcome["started"],
         "status": outcome["status"],
         "script_exit_code": outcome["script_exit_code"],
         "runtime_seconds": round(outcome["runtime"], 3),
+        # §5 as amended by §9 A3: what was asked for, what happened to it, and
+        # what the cell actually ran at. `temperature_used: "unknown"` is a
+        # recorded fact, not a missing value.
+        "temperature": {
+            "requested": TEMPERATURE,
+            "status": outcome["temperature_status"],
+            "used": outcome["temperature_used"],
+            "frozen_by": "ab_protocol.md §5 (§9 A3)",
+        },
+        "turns": outcome["turns"],
         "usage": {
-            "input_tokens": reply["input_tokens"],
-            "output_tokens": reply["output_tokens"],
-            "finish_reason": reply["finish_reason"],
+            "input_tokens": outcome["input_tokens"],
+            "output_tokens": outcome["output_tokens"],
         },
         "split": {k: (str(v) if isinstance(v, Path) else v) for k, v in split.items()},
         "holdout": scored,
-        "defects": defects,
+        "defects": outcome["defects"],
+        "defects_pre_revision": outcome["defects_pre_revision"],
+        "audit": outcome["audit"],
         "execution": {
             "workspace": "fresh temp dir, seeded with train.csv only, deleted after the run",
             "containment": (
@@ -1167,12 +1627,41 @@ def _write_scoring(
     defects: dict[str, Any] | None,
     scored: dict[str, Any] | None,
 ) -> None:
+    temperature_line = (
+        f"Temperature: requested {TEMPERATURE} (ab_protocol.md §5), "
+        f"status {outcome['temperature_status'] or 'n/a'}, "
+        f"in force {outcome['temperature_used'] or 'n/a'}"
+    )
     lines = [
         f"# A/B scoring — {run_dir.name}",
         "",
         f"Dataset: {dataset['dataset_id']} ({dataset['name']}), arm: {arm}",
         f"Status: {outcome['status']}, script exit code: {outcome['script_exit_code']}",
+        temperature_line,
         "",
+    ]
+    if arm == AUDIT_ARM:
+        pre = outcome["defects_pre_revision"]
+        lines += [
+            "## Revision round (ab_protocol.md section 2, §9 A1)",
+            "",
+            f"- Turns: {len(outcome['turns'])} (first turn identical to the `advise` arm's)",
+            f"- `mlcompass audit` on this arm's own first-turn script:"
+            f" {(outcome['audit'] or {}).get('audit_status', 'not reached')}",
+            f"- Pre-revision defect count: {pre['defect_count'] if pre else 'n/a'} of 6",
+            f"- Post-revision defect count:"
+            f" {defects['defect_count'] if defects else 'n/a'} of 6"
+            " (this is the scored script)",
+            "",
+        ]
+        if pre is not None and defects is not None:
+            moved = [
+                f"`{name}` {'fixed' if pre['flags'][name] else 'introduced'}"
+                for name in DEFECT_IDS
+                if pre["flags"][name] != defects["flags"][name]
+            ]
+            lines += [f"- Flags the revision moved: {', '.join(moved) if moved else 'none'}", ""]
+    lines += [
         "## holdout_score (ab_protocol.md section 3)",
         "",
     ]
@@ -1209,8 +1698,7 @@ def _write_scoring(
         f"- frameworks imported: {defects['frameworks_imported'] or 'none'}",
         f"- frameworks seeded: {defects['frameworks_seeded'] or 'none'}",
         f"- first split at source line: {defects['split_line'] or 'no split found'}",
-        f"- de-duplication had to happen before source line:"
-        f" {defects['dedupe_deadline'] or 'n/a'}",
+        f"- de-duplication had to happen before source line: {defects['dedupe_deadline'] or 'n/a'}",
         f"- transformer fit at source lines: {defects['transformer_fit_lines'] or 'none'}",
         f"- duplicate rows in train.csv: {defects['input_duplicate_rows']}",
         f"- minority-class fraction in train.csv: {defects['input_minority_fraction']}",
@@ -1227,10 +1715,32 @@ def _write_scoring(
 
 
 def append_result(row: dict[str, Any]) -> None:
-    exists = AB_RESULTS.exists() and AB_RESULTS.read_text(encoding="utf-8").strip()
+    """Append one run to `ab_results.csv`, refusing a file of a different shape.
+
+    `csv.DictWriter` writes values in *its* field order and never looks at the
+    header already on disk. Appending a 1.1 row to the 1.0 file would therefore
+    line a temperature up under an arm column and say nothing about it; the
+    corruption would surface much later, in a reader wondering why an arm was
+    called `1.0`. A/B 1.1 added four columns, so this is not hypothetical — the
+    1.0 rows live in `ab_results_v1.0.csv` and this file starts fresh.
+    """
+    existing = AB_RESULTS.read_text(encoding="utf-8").strip() if AB_RESULTS.exists() else ""
+    if existing:
+        header = next(csv.reader([existing.splitlines()[0]]))
+        if header != RESULT_COLUMNS:
+            missing = [c for c in RESULT_COLUMNS if c not in header]
+            extra = [c for c in header if c not in RESULT_COLUMNS]
+            raise ResultSchemaMismatch(
+                f"{AB_RESULTS.name} was written under a different set of columns "
+                f"({len(header)} there, {len(RESULT_COLUMNS)} here). "
+                f"Missing: {missing or 'none'}. Unexpected: {extra or 'none'}. "
+                "Appending would silently shift every value into the wrong column. "
+                "Move the old file aside (e.g. to ab_results_v1.0.csv) and run again; "
+                "rows are evidence and are not rewritten in place."
+            )
     with AB_RESULTS.open("a", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=RESULT_COLUMNS)
-        if not exists:
+        if not existing:
             writer.writeheader()
         writer.writerow({k: row.get(k, "") for k in RESULT_COLUMNS})
 
@@ -1276,27 +1786,39 @@ def write_plan(
                 f" holdout scoring {score_timeout}s",
                 f"- Max completion tokens: {MAX_COMPLETION_TOKENS}",
                 "",
-                "## Split (section 3)",
+                "## Generation settings (section 5, frozen by §9 A3)",
+                "",
+                f"- Temperature: {TEMPERATURE} on every arm and every provider, sent explicitly",
+                "  in the request body rather than left to the provider default, and recorded in",
+                "  every run record.",
+                "- A provider that rejects the parameter by name has the rejection recorded and",
+                "  its `temperature_used` reads `unknown`. The row is kept; it never claims a",
+                "  temperature the provider did not honour. A failure that does not name the",
+                "  parameter is recorded as a failure, not read as a rejection.",
+                "",
+                "## Split (section 3, frozen by §9 A2)",
                 "",
                 f"- Holdout fraction: {HOLDOUT_FRACTION}",
                 f"- Stratified on the target for classification tasks: {STRATIFY_CLASSIFICATION}",
                 "- Split once per (dataset, seed) with `sklearn.model_selection.train_test_split`,",
-                "  `shuffle=True`, `random_state=<seed>`. Both arms and every repetition at that",
+                "  `shuffle=True`, `random_state=<seed>`. Every arm and every repetition at that",
                 "  seed are scored on the identical holdout.",
-                "- The fraction and the stratification choice are not fixed by ab_protocol.md.",
-                "  They are fixed here, before execution, and recorded so a later run cannot",
-                "  quietly use different ones.",
+                "- Both values are the protocol's, read back out of ab_protocol.md §3 by",
+                "  `verify_protocol_constants` before any cell runs. A harness that disagreed",
+                "  with the document would abort rather than split.",
                 "",
-                "## Arms (section 2)",
+                "## Arms (section 2, three since §9 A1)",
                 "",
                 "- `control`: train.csv path, target column, column listing, write-a-script task.",
-                "- `treatment`: byte-identical prompt plus an appended block carrying the verbatim",
-                "  stdout of `mlcompass advise` on the same train.csv. The treatment prompt is",
-                "  constructed as `control + block`, so the arms cannot differ anywhere else.",
-                "- `mlcompass audit` takes a training script and no script exists at",
-                "  prompt-construction time, so its block is present and empty. ab_protocol.md",
-                "  section 2 does not specify audit's input for a cell that has no script; this",
-                "  harness does not invent one.",
+                "- `advise`: byte-identical prompt plus an appended block carrying the verbatim",
+                "  stdout of `mlcompass advise` on the same train.csv. The advise prompt is",
+                "  constructed as `control + block`, so those two arms cannot differ elsewhere.",
+                "- `advise+audit`: the `advise` arm's turn, byte for byte, then one revision",
+                "  round. `mlcompass audit` is run on the script *that arm's own* first turn",
+                "  produced, its verbatim stdout goes back to the same model in a second user",
+                "  message, and the revised script is the one scored. No arm ever sees another",
+                "  arm's output. An audit that finds nothing still produces the round, with an",
+                "  empty findings block.",
                 "",
                 "## Models (section 5 — reported per model, never pooled)",
                 "",
@@ -1351,9 +1873,26 @@ def main() -> int:
     ap.add_argument("--timeout", type=int, default=DEFAULT_LLM_TIMEOUT, help="model call timeout")
     ap.add_argument("--script-timeout", type=int, default=DEFAULT_SCRIPT_TIMEOUT)
     ap.add_argument("--score-timeout", type=int, default=DEFAULT_SCORE_TIMEOUT)
+    ap.add_argument("--audit-timeout", type=int, default=DEFAULT_AUDIT_TIMEOUT)
     ap.add_argument("--plan", action="store_true", help="freeze a plan and exit without running")
     ap.add_argument("--dry-run", action="store_true", help="print the cells and exit")
     args = ap.parse_args()
+
+    # §9 A2 and A3 made the split geometry and the temperature the protocol's
+    # values. Before anything is planned or run, check that this harness still
+    # agrees with the document; a battery scored under settings the protocol
+    # does not describe is evidence for nothing.
+    try:
+        frozen = verify_protocol_constants()
+    except ProtocolDrift as exc:
+        print(f"Protocol drift, refusing to run:\n  {exc}")
+        return 1
+    print(
+        f"Protocol constants confirmed against {Path(frozen['source']).name}: "
+        f"holdout {frozen['holdout_fraction']}, "
+        f"stratified {frozen['stratify_classification']}, "
+        f"temperature {frozen['temperature']}."
+    )
 
     gt = _load_ground_truth()
     datasets = gt["datasets"]
@@ -1452,13 +1991,18 @@ def main() -> int:
             # both arms and cleared before each run: the path is part of the
             # prompt, so the arms have to be handed the same one.
             workspace = (
-                Path(tempfile.gettempdir())
-                / f"mlcab-{dataset['openml_id']}-seed{seed}-r{rep}"
+                Path(tempfile.gettempdir()) / f"mlcab-{dataset['openml_id']}-seed{seed}-r{rep}"
             )
 
             for arm in arms:
                 findings = None
-                if arm == "treatment":
+                if arm in ADVISE_ARMS:
+                    # One `advise` invocation per (dataset, seed), shared by the
+                    # two arms that carry it. Sharing the *stdout* is not the
+                    # same as sharing an arm's output: `advise` reads the data,
+                    # which both arms are given identically, and re-running it
+                    # would only risk a difference between the arms that §2
+                    # does not allow. What is never shared is a script.
                     if key not in findings_cache:
                         try:
                             findings_cache[key] = mlcompass_findings(
@@ -1488,18 +2032,15 @@ def main() -> int:
                         llm_timeout=args.timeout,
                         script_timeout=args.script_timeout,
                         score_timeout=args.score_timeout,
+                        audit_timeout=args.audit_timeout,
                     )
                     if findings is not None:
                         (run_dir / "mlcompass_advise.txt").write_text(
                             findings["advise_stdout"], encoding="utf-8"
                         )
-                        (run_dir / "mlcompass_audit.txt").write_text(
-                            findings["audit_stdout"]
-                            + f"\n(not run: {findings['audit_reason']})\n",
-                            encoding="utf-8",
-                        )
 
                     defects = outcome["defects"]
+                    pre = outcome["defects_pre_revision"]
                     append_result(
                         {
                             "run_id": run_id,
@@ -1514,13 +2055,18 @@ def main() -> int:
                             "seed": seed,
                             "started_at_utc": outcome["started"],
                             "mlcompass_commit": _git("rev-parse", "HEAD"),
+                            "temperature": outcome["temperature_used"],
+                            "temperature_status": outcome["temperature_status"],
                             "status": outcome["status"],
                             "holdout_metric": outcome["holdout_metric"],
                             "holdout_score": outcome["holdout_score"],
                             "defect_count": defects["defect_count"] if defects else "",
+                            "defect_count_pre_revision": pre["defect_count"] if pre else "",
+                            "defect_count_post_revision": (
+                                defects["defect_count"] if (defects and arm == AUDIT_ARM) else ""
+                            ),
                             **{
-                                d: (int(defects["flags"][d]) if defects else "")
-                                for d in DEFECT_IDS
+                                d: (int(defects["flags"][d]) if defects else "") for d in DEFECT_IDS
                             },
                             "script_exit_code": outcome["script_exit_code"],
                             "runtime_seconds": round(outcome["runtime"], 3),
@@ -1534,10 +2080,12 @@ def main() -> int:
                     mark = "ok " if outcome["status"] == "completed" else outcome["status"]
                     score = outcome["holdout_score"]
                     shown = f"{score:.4f}" if isinstance(score, float) else "blank"
-                    detail = (
-                        f"{outcome['holdout_metric'] or 'score'}={shown}"
-                        f", defects={defects['defect_count'] if defects else 'n/a'}/6"
+                    moved = (
+                        f"{pre['defect_count']}->{defects['defect_count']}"
+                        if (pre and defects)
+                        else (str(defects["defect_count"]) if defects else "n/a")
                     )
+                    detail = f"{outcome['holdout_metric'] or 'score'}={shown}, defects={moved}/6"
                     print(f"  {mark:<15} {run_id:<52} {outcome['runtime']:>6.1f}s  {detail}")
                     total += 1
 

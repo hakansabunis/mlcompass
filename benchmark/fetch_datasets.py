@@ -61,7 +61,16 @@ def _get_bytes(url: str) -> bytes:
 
 
 def _sha256(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
+    """sha256 over line-ending-normalised content, not over raw bytes.
+
+    These CSVs are text. Git is free to give a Windows checkout CRLF and a
+    Linux one LF for the same commit, so a raw-byte digest pins the platform
+    rather than the data and a manifest written on one rejects the files on
+    the other. Normalising first makes `--verify` mean what it says. Must
+    stay identical to `run_benchmark.normalized_sha256`, or the two checks
+    disagree about the same file.
+    """
+    return hashlib.sha256(data.replace(b"\r\n", b"\n").replace(b"\r", b"\n")).hexdigest()
 
 
 def describe(dataset_id: int) -> dict[str, Any]:

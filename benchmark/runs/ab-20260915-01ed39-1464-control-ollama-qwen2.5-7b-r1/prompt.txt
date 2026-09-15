@@ -1,0 +1,16 @@
+You are given a tabular dataset saved as a CSV file at this path:
+
+C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed20260915-r1\train.csv
+
+The target column is: Class
+
+The columns in the file are:
+  - V1 (int64)
+  - V2 (int64)
+  - V3 (int64)
+  - V4 (int64)
+  - Class (int64)
+
+Write a complete Python training script that trains a model to predict the target column from the other columns in that file, and saves the fitted model to a file in the current working directory so it can be loaded and used to predict on new rows later.
+
+Reply with the script inside a single ```python code block, and nothing else.

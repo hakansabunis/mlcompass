@@ -1,18 +1,32 @@
 # Scoring — exp-20260915-eb4c19-1464-deterministic-r2
 
 Dataset: openml-1464 (blood-transfusion-service-center)
+Configuration: deterministic
 Status: completed
+Scoring version: 2.0; ground-truth registry 1.1
+
+Scope scored: full output.
 
 known_issues: 1
 correct_detections: 1  ['DUP-1464']
 missed_issues: 0  []
-unverified_findings: 0
+unverified_findings: 0  (= 0 unmatched detection claims + 0 suggestions)
 
-## Findings reported by the tool
+A detection claim asserts a defect and is checked against the registry;
+it comes from `⚠ Warnings` or `⚠ Pitfalls`. A suggestion comes from
+`🔧 Feature engineering` or `✨ Recommended models` and has no ground
+truth to match against, so it is counted apart rather than pooled with
+claims that could have matched and did not.
+
+## Findings in scope
 
 - 215 exact duplicate row(s) (28.7% of the data). A random split puts copies
 
-## Unmatched findings (unverified, not refuted)
+## Unmatched detection claims (unverified, not refuted)
+
+- (none)
+
+## Suggestions (no ground truth to match against)
 
 - (none)
 
