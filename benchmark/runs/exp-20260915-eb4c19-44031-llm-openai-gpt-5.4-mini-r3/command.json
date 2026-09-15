@@ -1,0 +1,29 @@
+{
+  "command": [
+    "C:\\Users\\SABUNIS\\Desktop\\ml-copilot\\.venv\\Scripts\\python.exe",
+    "-X",
+    "utf8",
+    "-m",
+    "mlcompass.cli",
+    "advise",
+    "C:\\Users\\SABUNIS\\Desktop\\ml-copilot\\benchmark\\data\\44031_california.csv",
+    "--target",
+    "price",
+    "--llm",
+    "--provider",
+    "openai",
+    "--model",
+    "gpt-5.4-mini"
+  ],
+  "cwd": "fresh temp workspace, no .mlcompass present",
+  "started_at_utc": "2026-09-15T10:59:27Z",
+  "exit_code": 0,
+  "status": "completed",
+  "runtime_seconds": 12.383,
+  "seed": 2,
+  "input_sha256": "4815da3fa6b1766150bcc7ed862296cb7968733386883549a94b19b86889d233",
+  "python": "3.13.3",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "mlcompass_commit": "da14df8ce75036a4707a6a9c092644b14824f1f3",
+  "tree_dirty": true
+}

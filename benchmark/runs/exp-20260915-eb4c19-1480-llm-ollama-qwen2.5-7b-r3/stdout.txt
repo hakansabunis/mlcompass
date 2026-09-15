@@ -1,0 +1,63 @@
+(no .mlcompass/ project found in current path — running standalone; results 
+will not be persisted)
+
+┌─────────────────────────── 📊 Dataset analysis ───────────────────────────┐
+│ Path:    C:\Users\SABUNIS\Desktop\ml-copilot\benchmark\data\1480_ilpd.csv │
+│ Shape:   583 rows × 11 columns                                            │
+│ Target:  Class (explicit confidence)                                      │
+│ Task:    binary classification (1=71%, 2=29%)                             │
+└───────────────────────────────────────────────────────────────────────────┘
+Columns                                                                  
+┌───────┬─────────────┬─────────┬───────────────────────────────────────┐
+│ Name  │ Type        │ Missing │ Notes                                 │
+├───────┼─────────────┼─────────┼───────────────────────────────────────┤
+│ V1    │ numeric     │      0% │ range [4.0, 90.0]                     │
+│ V2    │ categorical │      0% │ cardinality 2                         │
+│ V3    │ numeric     │      0% │ range [0.4, 75.0], 84 IQR outliers    │
+│ V4    │ numeric     │      0% │ range [0.1, 19.7], 81 IQR outliers    │
+│ V5    │ numeric     │      0% │ range [63.0, 2110.0], 69 IQR outliers │
+│ V6    │ numeric     │      0% │ range [10.0, 2000.0], 73 IQR outliers │
+│ V7    │ numeric     │      0% │ range [10.0, 4929.0], 66 IQR outliers │
+│ V8    │ numeric     │      0% │ range [2.7, 9.6], 8 IQR outliers      │
+│ V9    │ numeric     │      0% │ range [0.9, 5.5]                      │
+│ V10   │ numeric     │      0% │ range [0.3, 2.8], 10 IQR outliers     │
+│ Class │ categorical │      0% │ cardinality 2                         │
+└───────┴─────────────┴─────────┴───────────────────────────────────────┘
+
+⚠ Warnings
+  • 13 exact duplicate row(s) (2.2% of the data). A random split puts copies of
+the same row in both train and test, which inflates held-out scores without any
+metric looking wrong. Confirm they are genuine repeated observations before 
+training; if not, de-duplicate before splitting, or split on a group key.
+
+✨ Recommended models                                                          
+┌─────────────────────┬───────────────────────────────────────────────────────┐
+│ Model               │ Why                                                   │
+├─────────────────────┼───────────────────────────────────────────────────────┤
+│ Logistic Regression │ Baseline linear model suitable for binary             │
+│                     │ classification with balanced class distribution.      │
+│ Decision Trees      │ Simple and interpretable model useful for             │
+│                     │ understanding feature importance.                     │
+│ XGBoost             │ Gradient boosting machine known to perform well on a  │
+│                     │ wide range of datasets.                               │
+└─────────────────────┴───────────────────────────────────────────────────────┘
+
+🔧 Feature engineering
+  • V3 → log1p(V3) to linearize positive right-skewed distribution, handling 
+potential outliers.
+     Outliers exist (84 iqr_count).
+  • V4 → log1p(V4) for similar reasons as V3
+     Outliers exist (81 iqr_count)
+  • V5 → scale(V5) to maintain feature range, which can be important for 
+ensemble methods like XGBoost.
+     High std and outliers present(69 iqr_count).
+  • V7 → log1p(V7) for similar reasons as V3 and V4
+     Outliers exist (66 iqr_count).
+
+⚠ Pitfalls
+  • Class Imbalance (71% vs. 29%)
+     → Use AUC or F1 score, class_weight='balanced', or consider oversampling 
+minority class.
+  • Duplicate rows (2.2% of the data)
+     → Remove exact duplicates before splitting into train and test sets to 
+avoid leakage in evaluation.

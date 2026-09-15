@@ -1,0 +1,148 @@
+(no .mlcompass/ project found in current path — running standalone; results 
+will not be persisted)
+
+┌──────────────────────────── 📊 Dataset analysis ────────────────────────────┐
+│ Path:                                                                       │
+│ C:\Users\SABUNIS\Desktop\ml-copilot\benchmark\data\44031_california.csv     │
+│ Shape:   20,640 rows × 9 columns                                            │
+│ Target:  price (explicit confidence)                                        │
+│ Task:    regression (range 0.14 → 1.79)                                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+Columns                                                                     
+┌────────────┬─────────┬─────────┬─────────────────────────────────────────┐
+│ Name       │ Type    │ Missing │ Notes                                   │
+├────────────┼─────────┼─────────┼─────────────────────────────────────────┤
+│ MedInc     │ numeric │      0% │ range [0.5, 15.0], 681 IQR outliers     │
+│ HouseAge   │ numeric │      0% │ range [1.0, 52.0]                       │
+│ AveRooms   │ numeric │      0% │ range [0.8, 141.9], 511 IQR outliers    │
+│ AveBedrms  │ numeric │      0% │ range [0.3, 34.1], 1424 IQR outliers    │
+│ Population │ numeric │      0% │ range [3.0, 35682.0], 1196 IQR outliers │
+│ AveOccup   │ numeric │      0% │ range [0.7, 1243.3], 711 IQR outliers   │
+│ Latitude   │ numeric │      0% │ range [32.5, 42.0]                      │
+│ Longitude  │ numeric │      0% │ range [-124.3, -114.3]                  │
+│ price      │ numeric │      0% │ range [0.1, 1.8]                        │
+└────────────┴─────────┴─────────┴─────────────────────────────────────────┘
+
+⚠ Warnings
+  • Target 'price' is piled up at its maximum: 965 row(s) (4.7%) sit at exactly
+1.79176. That usually means a censored or capped measurement rather than a real
+mode. A model fitted on it cannot predict beyond the cap, and its errors near 
+1.79176 are systematically biased. Check how the value was recorded before 
+treating it as ordinary regression.
+
+✨ Recommended models                                                          
+┌──────────────────────────────────────┬──────────────────────────────────────┐
+│ Model                                │ Why                                  │
+├──────────────────────────────────────┼──────────────────────────────────────┤
+│ Ridge / Linear regression (with      │ Target 'price' is continuous and     │
+│ engineered + spatial features)       │ well-behaved (no IQR/z outliers,     │
+│                                      │ mean 1.06, std 0.36) and all 8       │
+│                                      │ predictors are numeric — a           │
+│                                      │ regularized linear model gives an    │
+│                                      │ interpretable sanity-check floor;    │
+│                                      │ use it after winsorizing the         │
+│                                      │ heavy-tailed                         │
+│                                      │ AveRooms/AveBedrms/AveOccup columns. │
+│ Gradient boosting (LightGBM /        │ Pure tabular regression with 20,640  │
+│ XGBoost / HistGradientBoosting)      │ rows and strong suspected            │
+│                                      │ nonlinear/interaction structure      │
+│                                      │ between MedInc, Latitude/Longitude   │
+│                                      │ and AveOccup; boosted trees are the  │
+│                                      │ conservative default and handle the  │
+│                                      │ 511–1424 IQR-outlier rows in         │
+│                                      │ AveRooms/AveBedrms/AveOccup without  │
+│                                      │ manual clipping.                     │
+│ Random Forest / ExtraTrees regressor │ Low-tuning, variance-averaged        │
+│                                      │ counterpart to boosting that is      │
+│                                      │ robust to the extreme AveRooms max   │
+│                                      │ of 141.9 and AveOccup max of 1243.3; │
+│                                      │ useful as a second opinion and for   │
+│                                      │ permutation importances that         │
+│                                      │ cross-check the boosted model.       │
+└──────────────────────────────────────┴──────────────────────────────────────┘
+
+🔧 Feature engineering
+  • Latitude → Build geo features jointly with Longitude: KMeans clusters 
+(k≈10-30) on (Latitude, Longitude), distance to coastline, distance to 
+LA/SF/San Diego/San Jose centroids, and a k-nearest-neighbour mean of 'price' 
+computed out-of-fold.
+     Latitude and Longitude are the only spatial columns (no outliers, ranges 
+32.5-42.0 and -124.4 to -114.3) and location is the dominant driver of 
+California house values, yet raw coordinates force trees to approximate 
+diagonal splits.
+  • Longitude → Add rotated coordinates (e.g. rotate lat/lon by ~30-45 degrees)
+and their interaction with MedInc.
+     The California coastline runs diagonally; rotated axes align with the 
+geography and let linear models in the baseline capture the same coastal 
+gradient the trees find.
+  • AveRooms → Winsorize or log-transform, and derive rooms_per_person = 
+AveRooms / AveOccup and bedroom_ratio = AveBedrms / AveRooms.
+     AveRooms has IQR outliers (511 rows) and a max of 141.9 versus a median of
+5.23 — these are small-denominator artifacts, and the room ratios are the 
+standard corrected form of this feature pair.
+  • AveBedrms → Winsorize at the 99th percentile (or log1p) before use in the 
+linear baseline; keep raw for trees.
+     AveBedrms shows the most IQR outliers of any column (1424 rows) with max 
+34.07 against a median of 1.05, so it will dominate any unregularized linear 
+fit.
+  • AveOccup → Log-transform or cap, and replace/augment with households = 
+Population / AveOccup.
+     AveOccup is extremely right-skewed (mean 3.07, max 1243.3, std 10.4, 711 
+IQR outliers) while only 8 rows exceed 3 z-scores; the households count is the 
+physically meaningful quantity underneath.
+  • Population → Use log1p(Population) and Population / AveOccup; consider 
+Population relative to the geographic-neighbourhood mean as a density proxy.
+     Population spans 3 to 35,682 with 1196 IQR outliers, and no area column 
+exists, so density must be approximated from neighbours or from households.
+  • MedInc → Add log(MedInc), MedInc × AveRooms, and MedInc relative to the KNN
+neighbourhood mean.
+     MedInc has 681 IQR outliers and a max of 15.0 against a median of 3.53, 
+and income is usually the single strongest non-spatial predictor — interactions
+with the geo clusters localize its effect.
+  • HouseAge → Bin into coarse age bands and interact with the geo cluster; add
+age × MedInc.
+     HouseAge is the cleanest column (0 outliers, range 1-52, median 29) so it 
+carries little linear signal alone, but renovation/value dynamics are known to 
+be location-dependent.
+
+⚠ Pitfalls
+  • Target 'price' is capped: 965 rows (4.7%) sit at exactly 1.79176, matching 
+the max of the target range (min 0.1398, max 1.7918). This looks censored, not 
+a natural mode.
+     → Confirm how the value was recorded before treating it as ordinary 
+regression. Options: fit a Tobit/censored regression (or two-part model), train
+only on uncapped rows and document the ceiling, or explicitly clip predictions 
+to [0.1398, 1.7918] and treat near-cap errors as biased rather than 
+informative. Whichever you choose, never report a residual at the cap as if it 
+were an unbiased error.
+  • Spatial autocorrelation: rows are geographic (Latitude/Longitude, 20,640 
+block-group-style records). A random train/test split puts near-identical 
+neighbouring locations on both sides.
+     → Use spatially blocked or grouped cross-validation (cluster on 
+Latitude/Longitude, e.g. k-fold over geo clusters) and report the blocked score
+as the honest estimate; compute any KNN-target features out-of-fold to avoid 
+leakage.
+  • Small-denominator artifacts create the extreme values in AveRooms (max 
+141.9), AveBedrms (max 34.07) and AveOccup (max 1243.3) — these are ratios, not
+measurement errors to delete.
+     → Do not drop as 'errors'. Winsorize or log-transform for the linear 
+baseline and any distance-based model; let tree models use them raw and verify 
+with a capped-vs-uncapped comparison.
+  • Scale mismatch between feature types: Population is in the thousands while 
+AveBedrms is ~1, and the target 'price' is on a compressed ~0.14-1.79 scale 
+(looks pre-scaled).
+     → Fit a StandardScaler/RobustScaler inside the CV pipeline for the linear 
+and KNN models (tree models are invariant); if you invert the target scaling 
+for reporting, keep the inverse transform inside the same pipeline to avoid 
+inconsistency.
+  • No missing values are reported in any of the 9 columns, which is unusual 
+for real housing data and suggests the file was already cleaned or imputed 
+upstream.
+     → Confirm the provenance of the file before assuming missingness is a 
+non-issue; if imputation was applied, verify it did not use the target or leak 
+across the train/test boundary.
+  • Potential duplicate or near-duplicate rows (block groups sharing identical 
+Latitude/Longitude coordinates).
+     → Check for exact duplicates on the coordinate pair plus Population before
+splitting; de-duplicate across folds or group them so the same location cannot 
+appear in both train and test.

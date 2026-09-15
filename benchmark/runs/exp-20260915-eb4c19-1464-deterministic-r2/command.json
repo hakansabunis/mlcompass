@@ -1,0 +1,24 @@
+{
+  "command": [
+    "C:\\Users\\SABUNIS\\Desktop\\ml-copilot\\.venv\\Scripts\\python.exe",
+    "-X",
+    "utf8",
+    "-m",
+    "mlcompass.cli",
+    "advise",
+    "C:\\Users\\SABUNIS\\Desktop\\ml-copilot\\benchmark\\data\\1464_blood-transfusion-service-center.csv",
+    "--target",
+    "Class"
+  ],
+  "cwd": "fresh temp workspace, no .mlcompass present",
+  "started_at_utc": "2026-09-15T10:43:11Z",
+  "exit_code": 0,
+  "status": "completed",
+  "runtime_seconds": 0.872,
+  "seed": 1,
+  "input_sha256": "5ef21d22cd52e907a616c2a85c25841035e9e69b093516c9232042cc78e13027",
+  "python": "3.13.3",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "mlcompass_commit": "8f1b084a4ee0184be8ffbcad42b206927f291f7b",
+  "tree_dirty": true
+}

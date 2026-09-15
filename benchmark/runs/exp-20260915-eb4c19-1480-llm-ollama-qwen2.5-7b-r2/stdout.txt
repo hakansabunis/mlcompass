@@ -1,0 +1,57 @@
+(no .mlcompass/ project found in current path — running standalone; results 
+will not be persisted)
+
+┌─────────────────────────── 📊 Dataset analysis ───────────────────────────┐
+│ Path:    C:\Users\SABUNIS\Desktop\ml-copilot\benchmark\data\1480_ilpd.csv │
+│ Shape:   583 rows × 11 columns                                            │
+│ Target:  Class (explicit confidence)                                      │
+│ Task:    binary classification (1=71%, 2=29%)                             │
+└───────────────────────────────────────────────────────────────────────────┘
+Columns                                                                  
+┌───────┬─────────────┬─────────┬───────────────────────────────────────┐
+│ Name  │ Type        │ Missing │ Notes                                 │
+├───────┼─────────────┼─────────┼───────────────────────────────────────┤
+│ V1    │ numeric     │      0% │ range [4.0, 90.0]                     │
+│ V2    │ categorical │      0% │ cardinality 2                         │
+│ V3    │ numeric     │      0% │ range [0.4, 75.0], 84 IQR outliers    │
+│ V4    │ numeric     │      0% │ range [0.1, 19.7], 81 IQR outliers    │
+│ V5    │ numeric     │      0% │ range [63.0, 2110.0], 69 IQR outliers │
+│ V6    │ numeric     │      0% │ range [10.0, 2000.0], 73 IQR outliers │
+│ V7    │ numeric     │      0% │ range [10.0, 4929.0], 66 IQR outliers │
+│ V8    │ numeric     │      0% │ range [2.7, 9.6], 8 IQR outliers      │
+│ V9    │ numeric     │      0% │ range [0.9, 5.5]                      │
+│ V10   │ numeric     │      0% │ range [0.3, 2.8], 10 IQR outliers     │
+│ Class │ categorical │      0% │ cardinality 2                         │
+└───────┴─────────────┴─────────┴───────────────────────────────────────┘
+
+⚠ Warnings
+  • 13 exact duplicate row(s) (2.2% of the data). A random split puts copies of
+the same row in both train and test, which inflates held-out scores without any
+metric looking wrong. Confirm they are genuine repeated observations before 
+training; if not, de-duplicate before splitting, or split on a group key.
+
+✨ Recommended models                                                          
+┌────────────────────────┬────────────────────────────────────────────────────┐
+│ Model                  │ Why                                                │
+├────────────────────────┼────────────────────────────────────────────────────┤
+│ LogisticRegression     │ Baseline model for binary classification           │
+│ RandomForestClassifier │ Balances performance and interpretability well     │
+│ XGBoost                │ Strong performance for complex datasets with many  │
+│                        │ features                                           │
+└────────────────────────┴────────────────────────────────────────────────────┘
+
+🔧 Feature engineering
+  • V3 → log, clip or normalize to reduce outliers
+     Logarithmic transformation can help manage extreme values
+  • V4 → log, clip or normalize to reduce outliers
+     Same reason as V3
+  • V5 → log, clip or normalize to reduce outliers
+     Same reason as V3 and V4
+  • V6 → log, clip or normalize to reduce outliers
+     Same reason as V3
+
+⚠ Pitfalls
+  • Class imbalance (71.36% vs 28.64%)
+     → Use AUC/F1, class_weight='balanced', or focal loss
+  • Exact duplicate rows detected
+     → Remove duplicates before training

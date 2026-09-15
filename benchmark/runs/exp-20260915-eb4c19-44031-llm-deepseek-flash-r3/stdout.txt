@@ -1,0 +1,134 @@
+(no .mlcompass/ project found in current path — running standalone; results 
+will not be persisted)
+
+┌──────────────────────────── 📊 Dataset analysis ────────────────────────────┐
+│ Path:                                                                       │
+│ C:\Users\SABUNIS\Desktop\ml-copilot\benchmark\data\44031_california.csv     │
+│ Shape:   20,640 rows × 9 columns                                            │
+│ Target:  price (explicit confidence)                                        │
+│ Task:    regression (range 0.14 → 1.79)                                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+Columns                                                                     
+┌────────────┬─────────┬─────────┬─────────────────────────────────────────┐
+│ Name       │ Type    │ Missing │ Notes                                   │
+├────────────┼─────────┼─────────┼─────────────────────────────────────────┤
+│ MedInc     │ numeric │      0% │ range [0.5, 15.0], 681 IQR outliers     │
+│ HouseAge   │ numeric │      0% │ range [1.0, 52.0]                       │
+│ AveRooms   │ numeric │      0% │ range [0.8, 141.9], 511 IQR outliers    │
+│ AveBedrms  │ numeric │      0% │ range [0.3, 34.1], 1424 IQR outliers    │
+│ Population │ numeric │      0% │ range [3.0, 35682.0], 1196 IQR outliers │
+│ AveOccup   │ numeric │      0% │ range [0.7, 1243.3], 711 IQR outliers   │
+│ Latitude   │ numeric │      0% │ range [32.5, 42.0]                      │
+│ Longitude  │ numeric │      0% │ range [-124.3, -114.3]                  │
+│ price      │ numeric │      0% │ range [0.1, 1.8]                        │
+└────────────┴─────────┴─────────┴─────────────────────────────────────────┘
+
+⚠ Warnings
+  • Target 'price' is piled up at its maximum: 965 row(s) (4.7%) sit at exactly
+1.79176. That usually means a censored or capped measurement rather than a real
+mode. A model fitted on it cannot predict beyond the cap, and its errors near 
+1.79176 are systematically biased. Check how the value was recorded before 
+treating it as ordinary regression.
+
+✨ Recommended models                                                          
+┌──────────────────────────────────────┬──────────────────────────────────────┐
+│ Model                                │ Why                                  │
+├──────────────────────────────────────┼──────────────────────────────────────┤
+│ Ridge / Linear Regression (on        │ With only 8 numeric predictors (all  │
+│ engineered features)                 │ zero-missing, no categoricals) a     │
+│                                      │ regularized linear model gives an    │
+│                                      │ interpretable sanity check, and the  │
+│                                      │ strong, near-linear MedInc-price     │
+│                                      │ relationship plus latitude/longitude │
+│                                      │ terms are usually captured well by a │
+│                                      │ linear baseline once engineered.     │
+│ LightGBM / XGBoost (gradient-boosted │ Tabular regression with clear        │
+│ trees)                               │ nonlinearity and interaction effects │
+│                                      │ (spatial price gradients from        │
+│                                      │ Latitude/Longitude, skewed MedInc,   │
+│                                      │ AveRooms) is the standard strong     │
+│                                      │ performer; boosting also tolerates   │
+│                                      │ the heavy-tailed outliers in         │
+│                                      │ AveOccup (max 1243.3) and AveRooms   │
+│                                      │ (max 141.9) better than plain linear │
+│                                      │ models.                              │
+│ Random Forest / ExtraTrees           │ A low-tuning, variance-reducing      │
+│                                      │ ensemble that is robust to the skew  │
+│                                      │ and outliers flagged in              │
+│                                      │ AveRooms/AveBedrms/Population and    │
+│                                      │ provides usable permutation/impurity │
+│                                      │ importances as a cross-check on the  │
+│                                      │ boosted-tree model.                  │
+└──────────────────────────────────────┴──────────────────────────────────────┘
+
+🔧 Feature engineering
+  • Latitude + Longitude → Derive distance-to-coast and distance to major 
+metros (LA, SF, San Diego, San Jose), KMeans cluster IDs, and/or rotated 
+coordinates (e.g. 45-degree rotation) instead of using raw lat/lon alone.
+     These two geo columns have no missing values and near-symmetric 
+distributions (Latitude 32.54-41.95, Longitude -124.35 to -114.31), and housing
+prices in California depend far more on proximity to coast/cities than on raw 
+degrees.
+  • MedInc → Add log(MedInc), percentile rank, and interactions with the geo 
+features (e.g. MedInc x distance-to-coast).
+     MedInc is right-skewed (mean 3.87 vs median 3.53, max 15.0, 681 IQR 
+outliers) and is typically the dominant single predictor of price, so 
+monotone/rank transforms and location interactions are high-value.
+  • AveRooms + AveBedrms → Create AveBedrms/AveRooms ratio, AveRooms minus 
+AveBedrms, and log-transformed versions; winsorize both at ~1st/99th 
+percentile.
+     Both are extreme-tailed (AveRooms max 141.9 vs median 5.23; AveBedrms max 
+34.07 vs median 1.05) and highly collinear, so ratios and robust transforms 
+carry more signal than the raw pair.
+  • AveOccup → Use log1p(AveOccup) or a rank transform, and optionally 
+cap/winsorize; consider a flag for extreme occupancy.
+     AveOccup has the worst tail in the dataset (max 1243.3 vs median 2.82, std
+10.39 versus a mean of 3.07), so raw values will dominate distance-based and 
+linear fits.
+  • Population → Add log(Population) and a derived household count = Population
+/ AveOccup, plus population density proxies.
+     Population is heavily right-skewed (max 35682 vs median 1166) and, 
+combined with AveOccup, lets you reconstruct approximate district size and 
+total-rooms totals.
+  • Population + AveRooms + AveOccup → Cross-column: total_rooms = AveRooms * 
+(Population / AveOccup) and rooms_per_person = AveRooms / AveOccup.
+     AveRooms, AveOccup and Population are district-level averages, so explicit
+count reconstructions expose absolute-scale effects that the raw averages hide.
+  • HouseAge → Bin into decade buckets or add HouseAge x geo interactions 
+rather than treating it as purely linear; keep the raw value for tree models.
+     HouseAge spans 1-52 with no outliers (IQR/z-score counts both 0) and is 
+symmetric (mean 28.6, median 29), so its value is likely interaction-driven 
+rather than linear in price.
+
+⚠ Pitfalls
+  • Target is piled up at its maximum: 965 rows (4.7%) sit at exactly 1.79176, 
+indicating a censored or capped price measurement rather than a true mode.
+     → Treat as censored regression (Tobit) or fit a two-stage model: a 
+classifier for 'at cap' plus a regressor on uncapped rows. At minimum, 
+winsorize, avoid metrics that are dominated by cap errors, and report hold-out 
+error separately for rows near 1.79176 so the systematic bias is visible.
+  • Heavy-tailed outliers in AveOccup (max 1243.3), AveRooms (max 141.9), 
+AveBedrms (max 34.1) and Population (max 35682).
+     → Winsorize at 1st/99th percentile, use log1p/rank transforms, and scale 
+with RobustScaler or quantile transformer before any linear or distance-based 
+model.
+  • Rows are census districts, so AveRooms/AveBedrms/AveOccup/Population are 
+aggregate averages, not household-level values (measurement error / ecological 
+fallacy).
+     → Interpret coefficients as district-level; consider population-weighted 
+fitting or adding reconstructed counts (total_rooms, households) as features 
+rather than relying on averages alone.
+  • Spatial autocorrelation and geographic leakage risk if you build 
+location-based encodings or use random KNN features over Latitude/Longitude.
+     → Use out-of-fold/KFold target encoding for any geo-derived feature, and 
+consider GroupKFold by geographic cluster so nearby districts do not leak 
+between train and validation.
+  • Possible duplicate district records (a known characteristic of this dataset
+family) and no explicit ID column.
+     → De-duplicate on the full feature set (or on rounded lat/lon plus 
+Population) before splitting, and verify the row count after de-duplication.
+  • Small feature count (8 predictors, 20640 rows) makes it easy to over-fit 
+via aggressive feature explosion or deep trees.
+     → Use k-fold cross-validation, keep tree depth/regularization tuned, and 
+check permutation importance stability across folds rather than trusting a 
+single train/test split.

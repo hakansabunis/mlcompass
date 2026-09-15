@@ -1,0 +1,104 @@
+(no .mlcompass/ project found in current path — running standalone; results 
+will not be persisted)
+
+┌──────────────────────────── 📊 Dataset analysis ────────────────────────────┐
+│ Path:                                                                       │
+│ C:\Users\SABUNIS\Desktop\ml-copilot\benchmark\data\44031_california.csv     │
+│ Shape:   20,640 rows × 9 columns                                            │
+│ Target:  price (explicit confidence)                                        │
+│ Task:    regression (range 0.14 → 1.79)                                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+Columns                                                                     
+┌────────────┬─────────┬─────────┬─────────────────────────────────────────┐
+│ Name       │ Type    │ Missing │ Notes                                   │
+├────────────┼─────────┼─────────┼─────────────────────────────────────────┤
+│ MedInc     │ numeric │      0% │ range [0.5, 15.0], 681 IQR outliers     │
+│ HouseAge   │ numeric │      0% │ range [1.0, 52.0]                       │
+│ AveRooms   │ numeric │      0% │ range [0.8, 141.9], 511 IQR outliers    │
+│ AveBedrms  │ numeric │      0% │ range [0.3, 34.1], 1424 IQR outliers    │
+│ Population │ numeric │      0% │ range [3.0, 35682.0], 1196 IQR outliers │
+│ AveOccup   │ numeric │      0% │ range [0.7, 1243.3], 711 IQR outliers   │
+│ Latitude   │ numeric │      0% │ range [32.5, 42.0]                      │
+│ Longitude  │ numeric │      0% │ range [-124.3, -114.3]                  │
+│ price      │ numeric │      0% │ range [0.1, 1.8]                        │
+└────────────┴─────────┴─────────┴─────────────────────────────────────────┘
+
+⚠ Warnings
+  • Target 'price' is piled up at its maximum: 965 row(s) (4.7%) sit at exactly
+1.79176. That usually means a censored or capped measurement rather than a real
+mode. A model fitted on it cannot predict beyond the cap, and its errors near 
+1.79176 are systematically biased. Check how the value was recorded before 
+treating it as ordinary regression.
+
+✨ Recommended models                                                          
+┌──────────────────────────────────────┬──────────────────────────────────────┐
+│ Model                                │ Why                                  │
+├──────────────────────────────────────┼──────────────────────────────────────┤
+│ Linear Regression / Elastic Net      │ Good interpretable baseline for the  │
+│                                      │ regression target 'price'; it will   │
+│                                      │ quickly show whether the numeric     │
+│                                      │ columns in the California housing    │
+│                                      │ data have mostly linear signal and   │
+│                                      │ provides a sanity check against more │
+│                                      │ complex models.                      │
+│ Random Forest Regressor              │ The features 'MedInc', 'HouseAge',   │
+│                                      │ 'AveRooms', 'AveBedrms',             │
+│                                      │ 'Population', 'AveOccup',            │
+│                                      │ 'Latitude', and 'Longitude' likely   │
+│                                      │ interact nonlinearly, and tree       │
+│                                      │ ensembles handle mixed               │
+│                                      │ nonlinearities and outliers without  │
+│                                      │ heavy preprocessing.                 │
+│ Gradient-Boosted Trees (XGBoost /    │ Strong choice for tabular regression │
+│ LightGBM / CatBoost)                 │ with the numeric housing features,   │
+│                                      │ especially when there are nonlinear  │
+│                                      │ effects and spatial interactions     │
+│                                      │ from 'Latitude' and 'Longitude'.     │
+└──────────────────────────────────────┴──────────────────────────────────────┘
+
+🔧 Feature engineering
+  • MedInc → consider log-transforming or winsorizing extreme values; 
+optionally add bins/quantiles
+     It has a wide range and outliers (IQR/z-score counts) in 'MedInc', so a 
+monotonic transform can stabilize the scale.
+  • AveRooms, AveBedrms, AveOccup, Population → create derived ratios such as 
+rooms_per_household proxy features if household count is available; otherwise 
+add AveRooms/AveBedrms, bedrooms_per_room, population_per_room, and log1p 
+transforms for the heavy-tailed columns
+     These columns show strong skew/outliers, and ratio features often capture 
+housing density/quality better than raw averages.
+  • Latitude + Longitude → engineer spatial features: grid/geohash clusters, 
+polynomial/interactions (lat^2, lon^2, lat*lon), or distance-to-coast / 
+regional cluster encodings if external geography is allowed
+     The target is California housing 'price', so location is likely a major 
+driver and simple raw coordinates may miss localized effects.
+  • HouseAge → try nonlinear encodings such as splines or age bins 
+(newer/mid/older/very old)
+     'HouseAge' is bounded (1 to 52) and may relate to price nonlinearly rather
+than linearly.
+  • All numeric predictors → standardize for linear models; for tree models, 
+keep raw and add transformed versions selectively
+     The numeric scales differ substantially across 'Population', 'Longitude', 
+and 'MedInc', which matters for linear/regularized models.
+
+⚠ Pitfalls
+  • Target censoring/capping at the maximum value
+     → Investigate why 'price' has 965 rows exactly at 1.79176; if it is a cap,
+consider censored-regression methods, separate modeling for capped vs. uncapped
+cases, or at minimum evaluate errors specifically near the ceiling.
+  • Heavy-tailed predictors and extreme outliers
+     → Inspect and possibly cap or transform 'AveRooms', 'AveBedrms', 
+'Population', and 'AveOccup'; compare robust scaling/log transforms against raw
+features.
+  • Potential leakage from inappropriate preprocessing
+     → Fit all transforms, scaling, and outlier thresholds only on training 
+folds, not the full dataset, to avoid optimistic validation on the 20,640-row 
+dataset.
+  • Spatial autocorrelation in California housing data
+     → Use spatially aware validation if possible, or at least inspect 
+residuals by geographic region; random splits can overstate generalization when
+nearby tracts appear in both train and test.
+  • Multicollinearity among density-related predictors
+     → Check correlations among 'AveRooms', 'AveBedrms', 'Population', and 
+'AveOccup'; regularization for linear models or feature selection can improve 
+stability.

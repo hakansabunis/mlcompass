@@ -1,0 +1,125 @@
+(no .mlcompass/ project found in current path — running standalone; results 
+will not be persisted)
+
+┌─────────────────────────── 📊 Dataset analysis ───────────────────────────┐
+│ Path:    C:\Users\SABUNIS\Desktop\ml-copilot\benchmark\data\1480_ilpd.csv │
+│ Shape:   583 rows × 11 columns                                            │
+│ Target:  Class (explicit confidence)                                      │
+│ Task:    binary classification (1=71%, 2=29%)                             │
+└───────────────────────────────────────────────────────────────────────────┘
+Columns                                                                  
+┌───────┬─────────────┬─────────┬───────────────────────────────────────┐
+│ Name  │ Type        │ Missing │ Notes                                 │
+├───────┼─────────────┼─────────┼───────────────────────────────────────┤
+│ V1    │ numeric     │      0% │ range [4.0, 90.0]                     │
+│ V2    │ categorical │      0% │ cardinality 2                         │
+│ V3    │ numeric     │      0% │ range [0.4, 75.0], 84 IQR outliers    │
+│ V4    │ numeric     │      0% │ range [0.1, 19.7], 81 IQR outliers    │
+│ V5    │ numeric     │      0% │ range [63.0, 2110.0], 69 IQR outliers │
+│ V6    │ numeric     │      0% │ range [10.0, 2000.0], 73 IQR outliers │
+│ V7    │ numeric     │      0% │ range [10.0, 4929.0], 66 IQR outliers │
+│ V8    │ numeric     │      0% │ range [2.7, 9.6], 8 IQR outliers      │
+│ V9    │ numeric     │      0% │ range [0.9, 5.5]                      │
+│ V10   │ numeric     │      0% │ range [0.3, 2.8], 10 IQR outliers     │
+│ Class │ categorical │      0% │ cardinality 2                         │
+└───────┴─────────────┴─────────┴───────────────────────────────────────┘
+
+⚠ Warnings
+  • 13 exact duplicate row(s) (2.2% of the data). A random split puts copies of
+the same row in both train and test, which inflates held-out scores without any
+metric looking wrong. Confirm they are genuine repeated observations before 
+training; if not, de-duplicate before splitting, or split on a group key.
+
+✨ Recommended models                                                          
+┌──────────────────────────────────────┬──────────────────────────────────────┐
+│ Model                                │ Why                                  │
+├──────────────────────────────────────┼──────────────────────────────────────┤
+│ Regularized logistic regression      │ 10 numeric/binary predictors and     │
+│ (L2/L1, standardized inputs,         │ only 583 rows (shape.rows=583) makes │
+│ class_weight='balanced')             │ a low-variance linear model a        │
+│                                      │ reliable sanity check; coefficients  │
+│                                      │ on V3–V7 are directly interpretable  │
+│                                      │ as per-biomarker risk direction,     │
+│                                      │ matching how liver panels are read   │
+│                                      │ clinically.                          │
+│ Random forest / ExtraTrees (500+     │ V3, V4, V5, V6 and V7 are heavily    │
+│ trees, min_samples_leaf>=2)          │ right-skewed with 60–90 IQR outliers │
+│                                      │ each, and trees are invariant to     │
+│                                      │ that skew and to feature scaling,    │
+│                                      │ while still handling the mixed       │
+│                                      │ numeric (V1, V5–V10) and binary (V2) │
+│                                      │ columns without distributional       │
+│                                      │ assumptions.                         │
+│ Gradient boosting (XGBoost/LightGBM, │ With 10 columns the signal likely    │
+│ shallow depth 2–3, strong L2,        │ lives in interactions between the    │
+│ subsample<1)                         │ enzyme columns (V6, V7) and the      │
+│                                      │ protein/albumin columns (V8, V9,     │
+│                                      │ V10); depth-limited boosting         │
+│                                      │ captures those with less overfitting │
+│                                      │ risk than a deep tree on this small  │
+│                                      │ row count.                           │
+└──────────────────────────────────────┴──────────────────────────────────────┘
+
+🔧 Feature engineering
+  • V3, V4 → log1p-transform both, then add direct/total bilirubin ratio = V4 /
+V3
+     V3 (q50=1.0, max=75.0, 84 IQR outliers) and V4 (q50=0.3, max=19.7, 81 IQR 
+outliers) are strongly right-skewed; the direct-fraction ratio is a standard 
+fractionation feature that is less scale-dependent than either raw value.
+  • V6, V7 → log1p-transform, then add AST/ALT (De Ritis) ratio = V7 / V6 and 
+their difference V7 - V6
+     V6 (max=2000, 73 IQR outliers) and V7 (max=4929, 66 IQR outliers) are the 
+widest-range columns in shape.columns; the ratio is a canonical clinical 
+discriminator and is far better behaved than the raw magnitudes.
+  • V8, V9, V10 → derive globulin = V8 - V9 and check it against V10 (= V9 / 
+(V8 - V9)); keep at most two of the three to avoid redundancy
+     V8 (total protein), V9 (albumin) and V10 (A/G ratio) are algebraically 
+related, so the trio is collinear by construction; a 
+consistency/derived-globulin feature adds information while one raw column can 
+be dropped.
+  • V5 → log1p-transform and/or quantile-bin into terciles; optionally combine 
+with V7 as V5/V7
+     V5 has mean=290.6 vs median=208.0 and 69 IQR outliers, so the raw scale is
+dominated by the upper tail; binning gives linear and distance-based models a 
+monotone, outlier-resistant encoding.
+  • V1 → keep raw and add an age bin (e.g. <30 / 30-60 / >60); optionally 
+interact with V2
+     V1 spans 4–90 with a symmetric spread (q25=33, q75=58) and no outliers, so
+it is a clean candidate for both a linear term and a coarse non-linearity.
+  • V2 → binary-encode (0/1) rather than one-hot; optionally interact with V1 
+and V5
+     V2 has cardinality 2 with 441 Male / 142 Female, so a single indicator is 
+sufficient and any sex-specific effect (e.g. on enzymes) is better captured as 
+an interaction than as a separate branch.
+
+⚠ Pitfalls
+  • 13 exact duplicate rows (2.2% of the data, flagged in warnings)
+     → De-duplicate before splitting, or use GroupKFold with the duplicate key 
+as the group; a plain random split would put identical rows in train and test 
+and silently inflate held-out scores.
+  • Severe right skew and heavy outlier counts in V3, V4, V5, V6, V7 (66–84 IQR
+outliers each)
+     → Do not apply plain standardization and then trust a linear model; use 
+log1p or rank/quantile transforms for linear and distance-based models, or 
+restrict to tree ensembles. Winsorizing at the 1st/99th percentile is a 
+conservative alternative.
+  • Class imbalance: 416 (71.4%) vs 167 (28.6%) in the Class column
+     → Use stratified train/test and stratified CV folds, 
+class_weight='balanced' or scale_pos_weight, and report ROC-AUC plus 
+minority-class recall/PR-AUC rather than accuracy, which a majority-only 
+predictor would already inflate.
+  • Ambiguous target polarity — Class is coded 1/2 rather than 0/1
+     → Explicitly set the positive class (e.g. map 1='liver patient') before 
+computing recall/precision/PR-AUC, since swapping the label order flips every 
+threshold-dependent metric.
+  • Very small sample (583 rows, 10 predictors) plus sex imbalance (441 Male / 
+142 Female)
+     → Use repeated stratified k-fold CV (e.g. 5x5) with reported 
+variance/confidence intervals instead of a single split, avoid deep models and 
+aggressive hyperparameter search, and inspect per-sex metric breakdowns since 
+the Female subgroup (n=142) will have wide uncertainty.
+  • Columns are anonymized (V1–V10), so derived-feature semantics depend on the
+assumed mapping to age, sex, bilirubin, enzymes and proteins
+     → Confirm the column-to-biomarker mapping and units with the data owner 
+before building clinical ratios (De Ritis, direct/total bilirubin, globulin); a
+mis-mapped ratio is worse than no ratio.

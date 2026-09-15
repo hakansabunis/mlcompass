@@ -1,0 +1,74 @@
+(no .mlcompass/ project found in current path — running standalone; results 
+will not be persisted)
+
+┌──────────────────────────── 📊 Dataset analysis ────────────────────────────┐
+│ Path:                                                                       │
+│ C:\Users\SABUNIS\Desktop\ml-copilot\benchmark\data\1464_blood-transfusion-s │
+│ ervice-center.csv                                                           │
+│ Shape:   748 rows × 5 columns                                               │
+│ Target:  Class (explicit confidence)                                        │
+│ Task:    binary classification (1=76%, 2=24%)                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+Columns                                                                    
+┌───────┬─────────────┬─────────┬─────────────────────────────────────────┐
+│ Name  │ Type        │ Missing │ Notes                                   │
+├───────┼─────────────┼─────────┼─────────────────────────────────────────┤
+│ V1    │ numeric     │      0% │ range [0.0, 74.0], 7 IQR outliers       │
+│ V2    │ numeric     │      0% │ range [1.0, 50.0], 45 IQR outliers      │
+│ V3    │ numeric     │      0% │ range [250.0, 12500.0], 45 IQR outliers │
+│ V4    │ numeric     │      0% │ range [2.0, 98.0]                       │
+│ Class │ categorical │      0% │ cardinality 2                           │
+└───────┴─────────────┴─────────┴─────────────────────────────────────────┘
+
+⚠ Warnings
+  • 215 exact duplicate row(s) (28.7% of the data). A random split puts copies 
+of the same row in both train and test, which inflates held-out scores without 
+any metric looking wrong. Confirm they are genuine repeated observations before
+training; if not, de-duplicate before splitting, or split on a group key.
+
+✨ Recommended models                                                          
+┌─────────────────────┬───────────────────────────────────────────────────────┐
+│ Model               │ Why                                                   │
+├─────────────────────┼───────────────────────────────────────────────────────┤
+│ Logistic Regression │ Interpretable baseline to establish sanity check and  │
+│                     │ baseline performance for this imbalanced binary       │
+│                     │ classification task                                   │
+│ XGBoost             │ Handles imbalanced classes well with built-in         │
+│                     │ class_weight and can capture non-linear relationships │
+│                     │ in features V1, V2, V3, and V4                        │
+│ Random Forest       │ Robust to outliers (noted in V2 and V3) and provides  │
+│                     │ feature importance insights for this small dataset    │
+└─────────────────────┴───────────────────────────────────────────────────────┘
+
+🔧 Feature engineering
+  • V1 → Apply log transformation or winsorization to reduce skew and outlier 
+impact
+     High zero_ratio (0.67%) and outliers (IQR/Z-score) suggest potential data 
+entry errors or skewed distribution
+  • V2 → Bin into quantiles (e.g., low/medium/high) or apply log transformation
+     Extreme outliers (45 IQR, 12 Z-score) and skewed distribution (min=1, 
+max=50) suggest non-linear relationships
+  • V3 → Apply log transformation or normalize by V4 (if domain-valid)
+     Extreme outliers (45 IQR, 12 Z-score) and wide range (250–12500) suggest 
+potential scale issues
+  • V4 → Check for domain-specific interactions with V1/V2/V3 (e.g., ratio 
+features)
+     No outliers but moderate spread; may act as a moderator for other features
+  • Class → Resample (oversample class 2 or undersample class 1) or use 
+class_weight='balanced'
+     Severe imbalance (76% vs. 24%) may bias model toward majority class
+
+⚠ Pitfalls
+  • Duplicate rows (215 exact duplicates, 28.7% of data)
+     → De-duplicate via a unique key (e.g., hash of V1–V4) or split on a group 
+key (e.g., patient ID if available) before training
+  • Class imbalance (76% vs. 24%)
+     → Use AUC-ROC, F1-score, or precision-recall curves instead of accuracy; 
+apply class_weight='balanced' or focal loss
+  • Outliers in V2 and V3
+     → Validate outliers (e.g., check for data entry errors) or apply robust 
+scaling (e.g., median/IQR) before modeling
+  • Small dataset size (748 rows)
+     → Use cross-validation (e.g., 5-fold) and avoid overfitting by 
+regularizing models (e.g., XGBoost: max_depth=3, Random Forest: 
+n_estimators=100)

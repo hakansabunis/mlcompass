@@ -1,0 +1,115 @@
+(no .mlcompass/ project found in current path — running standalone; results 
+will not be persisted)
+
+┌──────────────────────────── 📊 Dataset analysis ────────────────────────────┐
+│ Path:                                                                       │
+│ C:\Users\SABUNIS\Desktop\ml-copilot\benchmark\data\1464_blood-transfusion-s │
+│ ervice-center.csv                                                           │
+│ Shape:   748 rows × 5 columns                                               │
+│ Target:  Class (explicit confidence)                                        │
+│ Task:    binary classification (1=76%, 2=24%)                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+Columns                                                                    
+┌───────┬─────────────┬─────────┬─────────────────────────────────────────┐
+│ Name  │ Type        │ Missing │ Notes                                   │
+├───────┼─────────────┼─────────┼─────────────────────────────────────────┤
+│ V1    │ numeric     │      0% │ range [0.0, 74.0], 7 IQR outliers       │
+│ V2    │ numeric     │      0% │ range [1.0, 50.0], 45 IQR outliers      │
+│ V3    │ numeric     │      0% │ range [250.0, 12500.0], 45 IQR outliers │
+│ V4    │ numeric     │      0% │ range [2.0, 98.0]                       │
+│ Class │ categorical │      0% │ cardinality 2                           │
+└───────┴─────────────┴─────────┴─────────────────────────────────────────┘
+
+⚠ Warnings
+  • 215 exact duplicate row(s) (28.7% of the data). A random split puts copies 
+of the same row in both train and test, which inflates held-out scores without 
+any metric looking wrong. Confirm they are genuine repeated observations before
+training; if not, de-duplicate before splitting, or split on a group key.
+
+✨ Recommended models                                                          
+┌──────────────────────────────────────┬──────────────────────────────────────┐
+│ Model                                │ Why                                  │
+├──────────────────────────────────────┼──────────────────────────────────────┤
+│ Regularized Logistic Regression (L2, │ With only 4 numeric predictors       │
+│ on standardized + log-transformed    │ (V1-V4, all int64) and 748 rows, a   │
+│ features)                            │ linear model is the natural          │
+│                                      │ interpretable baseline; coefficients │
+│                                      │ on log-V3 and V3/V2 directly show    │
+│                                      │ whether donation volume/frequency    │
+│                                      │ drives the Class=1 vs Class=2        │
+│                                      │ separation.                          │
+│ Random Forest / ExtraTrees (with     │ Handles the non-linear, monotone-ish │
+│ class_weight='balanced')             │ relationships typical of             │
+│                                      │ recency/frequency/monetary variables │
+│                                      │ (V1, V2, V3), needs no scaling,      │
+│                                      │ tolerates the 45 IQR outliers        │
+│                                      │ flagged in V2 and V3, and gives      │
+│                                      │ feature importances that             │
+│                                      │ sanity-check the logistic            │
+│                                      │ coefficients.                        │
+│ Gradient Boosting (XGBoost /         │ Usually the strongest tabular        │
+│ LightGBM / HistGradientBoosting)     │ learner on this kind of small,       │
+│ with shallow trees                   │ low-dimensional clinical-style       │
+│                                      │ tabular data; keep depth low (2-4)   │
+│                                      │ and use early stopping because n=748 │
+│                                      │ with 4 features overfits quickly,    │
+│                                      │ and the 23.8% minority class in      │
+│                                      │ 'Class' needs scale_pos_weight or a  │
+│                                      │ balanced sampling scheme.            │
+└──────────────────────────────────────┴──────────────────────────────────────┘
+
+🔧 Feature engineering
+  • V3 → Apply log1p (or a rank/quantile transform); keep the raw value as a 
+tree-only variant.
+     V3 is strongly right-skewed (mean 1378.7 vs median 1000, max 12500, std 
+~1460) and has 45 IQR outliers, which will dominate distance/gradient-based 
+linear models.
+  • V2 → log1p(V2) and derive V3/V2 (average volume per donation).
+     V2 (frequency, median 4, max 50) and V3 (total volume) are on different 
+scales and highly correlated in this dataset; their ratio captures donation 
+intensity, which tree splits on raw columns represent only piecewise.
+  • V4 → Derive V4/V2 (average months between donations) and V1/V4 (recency as 
+a fraction of the observed history).
+     V4 is months since first donation (median 28, range 2-98) while V2 counts 
+donations; combining them normalizes V1 (recency, median 7) against each 
+donor's own observation window instead of against the cohort.
+  • V1 → Add a log1p(V1) version and a coarse bucket (e.g., 0-2, 3-6, 7-12, 13+
+months) plus an is_recent flag (V1 <= 6).
+     V1 (recency, q25=2.75, q50=7, q75=14, max 74) has a long tail and a 
+handful of zero values (zero_ratio 0.0067); a monotone linear term plus a 
+binary 'recent donor' split captures the likely non-linear drop-off.
+  • V1, V2, V3 → Add pairwise products/ratios of the log-transformed variables 
+(V2*logV3, V1*V2) and let a tree model prune them.
+     Only 4 raw features are available; recency, frequency and monetary volume 
+interact in donor-behaviour data, and explicit interactions give the logistic 
+baseline a fair chance against the tree ensembles.
+
+⚠ Pitfalls
+  • 215 exact duplicate rows (28.7% of 748) flagged in warnings.
+     → De-duplicate before splitting, or use GroupKFold/grouped split on a row 
+fingerprint; verify with a domain owner whether they are genuine repeat 
+donations - otherwise a random split leaks identical rows into train and test 
+and inflates held-out scores.
+  • Class imbalance: Class=2 is 178/748 (23.8%) vs Class=1 at 76.2%.
+     → Use stratified k-fold, report PR-AUC and F1 rather than plain accuracy, 
+and set class_weight='balanced' / scale_pos_weight in the tree models; don't 
+rely on the majority-class rate as a baseline.
+  • Target labels are 1 and 2, not 0 and 1.
+     → Remap Class to {0,1} before training so sklearn metrics (roc_auc, 
+average='binary' F1) and positive-class handling refer to the intended minority
+class.
+  • Outliers: 45 IQR outliers in V2 and V3 (and 7 in V1), with max V3 = 12500 
+far above q75 = 1750.
+     → Don't blindly trim - tree models are outlier-robust, but for 
+logistic/SVM/KNN apply log1p or a robust/quantile scaler and winsorize at the 
+1st/99th percentile; check whether these are data-entry errors.
+  • Small dataset (748 rows, 4 features) makes a single train/test split 
+high-variance.
+     → Use repeated stratified k-fold CV (e.g., 5x5) with a fixed seed and 
+compare models on the same folds; treat any single-split number as noise until 
+confirmed by CV.
+  • Feature scales differ by orders of magnitude (V1 ~0-74, V2 ~1-50, V3 
+~250-12500).
+     → Standardize or log-transform features inside a pipeline (fit on training
+folds only) for logistic regression, SVM, or KNN; tree ensembles can use raw 
+values as a comparison.

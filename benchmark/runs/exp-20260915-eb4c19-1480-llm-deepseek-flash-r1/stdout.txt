@@ -1,0 +1,123 @@
+(no .mlcompass/ project found in current path — running standalone; results 
+will not be persisted)
+
+┌─────────────────────────── 📊 Dataset analysis ───────────────────────────┐
+│ Path:    C:\Users\SABUNIS\Desktop\ml-copilot\benchmark\data\1480_ilpd.csv │
+│ Shape:   583 rows × 11 columns                                            │
+│ Target:  Class (explicit confidence)                                      │
+│ Task:    binary classification (1=71%, 2=29%)                             │
+└───────────────────────────────────────────────────────────────────────────┘
+Columns                                                                  
+┌───────┬─────────────┬─────────┬───────────────────────────────────────┐
+│ Name  │ Type        │ Missing │ Notes                                 │
+├───────┼─────────────┼─────────┼───────────────────────────────────────┤
+│ V1    │ numeric     │      0% │ range [4.0, 90.0]                     │
+│ V2    │ categorical │      0% │ cardinality 2                         │
+│ V3    │ numeric     │      0% │ range [0.4, 75.0], 84 IQR outliers    │
+│ V4    │ numeric     │      0% │ range [0.1, 19.7], 81 IQR outliers    │
+│ V5    │ numeric     │      0% │ range [63.0, 2110.0], 69 IQR outliers │
+│ V6    │ numeric     │      0% │ range [10.0, 2000.0], 73 IQR outliers │
+│ V7    │ numeric     │      0% │ range [10.0, 4929.0], 66 IQR outliers │
+│ V8    │ numeric     │      0% │ range [2.7, 9.6], 8 IQR outliers      │
+│ V9    │ numeric     │      0% │ range [0.9, 5.5]                      │
+│ V10   │ numeric     │      0% │ range [0.3, 2.8], 10 IQR outliers     │
+│ Class │ categorical │      0% │ cardinality 2                         │
+└───────┴─────────────┴─────────┴───────────────────────────────────────┘
+
+⚠ Warnings
+  • 13 exact duplicate row(s) (2.2% of the data). A random split puts copies of
+the same row in both train and test, which inflates held-out scores without any
+metric looking wrong. Confirm they are genuine repeated observations before 
+training; if not, de-duplicate before splitting, or split on a group key.
+
+✨ Recommended models                                                          
+┌──────────────────────────────────────┬──────────────────────────────────────┐
+│ Model                                │ Why                                  │
+├──────────────────────────────────────┼──────────────────────────────────────┤
+│ Logistic regression (L2 / elastic    │ With only 583 rows and 10 predictors │
+│ net) on log-transformed,             │ (V1-V10) against a binary Class      │
+│ standardized features                │ target, a regularized linear model   │
+│                                      │ is the natural interpretable         │
+│                                      │ baseline; coefficients on            │
+│                                      │ log-bilirubin and enzyme ratios are  │
+│                                      │ directly reviewable against clinical │
+│                                      │ intuition.                           │
+│ Gradient-boosted trees (XGBoost /    │ The labs V3-V7 are heavily           │
+│ LightGBM) with shallow depth and     │ right-skewed (e.g. V5 max 2110 vs    │
+│ strong regularization                │ median 208; V7 max 4929 vs median    │
+│                                      │ 42), and trees tolerate that plus    │
+│                                      │ the ratio interactions without       │
+│                                      │ manual scaling, though n=583 means   │
+│                                      │ depth and learning rate must be kept │
+│                                      │ conservative.                        │
+│ Random forest / ExtraTrees           │ Provides a low-tuning,               │
+│                                      │ variance-reducing counterpart to     │
+│                                      │ boosting on this small sample and    │
+│                                      │ yields feature importances that help │
+│                                      │ sanity-check which of the correlated │
+│                                      │ liver panels (V3-V10) actually carry │
+│                                      │ signal.                              │
+└──────────────────────────────────────┴──────────────────────────────────────┘
+
+🔧 Feature engineering
+  • V3 → Apply log1p transform; also compute indirect bilirubin = V3 - V4
+     V3 (total bilirubin) is strongly right-skewed (mean 3.30 vs median 1.0, 
+max 75, 84 IQR outliers) and V4 is a direct fraction of it, so the difference 
+is a physiologically meaningful derived signal.
+  • V4 → Apply log1p transform and consider V4/V3 as a fraction
+     V4 (direct bilirubin) shows the same skew (median 0.3, max 19.7, 81 IQR 
+outliers), and the direct-to-total fraction is a standard clinical 
+discriminator.
+  • V7 → Compute AST/ALT (De Ritis) ratio V7/V6 and log-transform both raw 
+columns
+     V6 and V7 are the two most outlier-laden columns (73 and 66 IQR outliers, 
+max 2000 and 4929); a ratio normalizes their shared scale and is a 
+well-established clinical index.
+  • V5 → Apply log1p transform (or rank/quantile transform); avoid raw values 
+in linear models
+     V5 has range 63-2110 with std 243 versus median 208 and 69 IQR outliers, 
+so it will dominate any distance- or coefficient-based fit if left unscaled.
+  • V8 → Derive globulin = V8 - V9 and keep the existing V10 ratio, checking 
+consistency with V9/V8
+     V8 (total protein) is tight (std 1.09, only 8 IQR outliers) while V9 
+(albumin) varies; the globulin gap and albumin/globulin ratio are the standard 
+derived panel, and V10 may already be V9/(V8-V9).
+  • V2 → Binary-encode Male/Female (0/1) rather than one-hot
+     V2 has cardinality 2 with a 441/142 split, so a single indicator captures 
+all the information with no dimensionality cost.
+  • V1 → Keep raw age plus optional bins (e.g. <30, 30-50, 50-70, 70+)
+     V1 is the only well-behaved column (no IQR or z-score outliers, median 45,
+near-symmetric), so it is safe to use directly; binning gives the linear 
+baseline a chance to capture non-linearity.
+
+⚠ Pitfalls
+  • 13 exact duplicate rows (2.2% of data)
+     → Confirm they are genuine repeat observations; if not, de-duplicate 
+before any split. Otherwise a random split leaks identical rows into train and 
+test and silently inflates held-out scores. Only split randomly after 
+de-duplication or use a group key.
+  • Moderate class imbalance (Class 1 = 71.4%, Class 2 = 28.6%)
+     → Use stratified k-fold and report AUC / PR-AUC / recall for the minority 
+class rather than accuracy; consider class_weight='balanced' or threshold 
+tuning on the validation folds.
+  • Severe skew and many flagged outliers in V3-V7 (66-84 IQR outliers each, 
+max values 10-100x the median)
+     → Do not blindly clip: these extremes are plausibly real clinical values 
+and may be the most informative rows. Instead use log/quantile transforms or 
+tree models, and fit scalers inside CV folds to avoid leakage.
+  • Wildly different feature scales (V5 up to 2110 vs V10 max 2.8)
+     → Standardize or robust-scale features for the logistic baseline and any 
+distance-based model; tree models do not require it but it does not hurt.
+  • Small sample (583 rows, 10 predictors) makes a single train/test split 
+high-variance
+     → Prefer repeated stratified k-fold cross-validation and report the spread
+across folds; treat any single-split score as unreliable and tune 
+hyperparameters in a nested loop.
+  • Target is coded 1/2 rather than 0/1
+     → Remap Class to 0/1 before training so it is not accidentally treated as 
+ordinal or fed to a regressor; verify the mapping direction once and record it.
+  • Potential definitional redundancy among V8, V9, V10 (albumin, total 
+protein, A/G ratio)
+     → Check pairwise correlation before training; if V10 is a deterministic 
+function of V8 and V9, drop one or use the ratio only to avoid unstable 
+coefficients in the linear baseline.

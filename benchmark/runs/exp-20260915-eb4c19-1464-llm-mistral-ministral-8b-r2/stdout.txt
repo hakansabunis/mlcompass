@@ -1,0 +1,82 @@
+(no .mlcompass/ project found in current path — running standalone; results 
+will not be persisted)
+
+┌──────────────────────────── 📊 Dataset analysis ────────────────────────────┐
+│ Path:                                                                       │
+│ C:\Users\SABUNIS\Desktop\ml-copilot\benchmark\data\1464_blood-transfusion-s │
+│ ervice-center.csv                                                           │
+│ Shape:   748 rows × 5 columns                                               │
+│ Target:  Class (explicit confidence)                                        │
+│ Task:    binary classification (1=76%, 2=24%)                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+Columns                                                                    
+┌───────┬─────────────┬─────────┬─────────────────────────────────────────┐
+│ Name  │ Type        │ Missing │ Notes                                   │
+├───────┼─────────────┼─────────┼─────────────────────────────────────────┤
+│ V1    │ numeric     │      0% │ range [0.0, 74.0], 7 IQR outliers       │
+│ V2    │ numeric     │      0% │ range [1.0, 50.0], 45 IQR outliers      │
+│ V3    │ numeric     │      0% │ range [250.0, 12500.0], 45 IQR outliers │
+│ V4    │ numeric     │      0% │ range [2.0, 98.0]                       │
+│ Class │ categorical │      0% │ cardinality 2                           │
+└───────┴─────────────┴─────────┴─────────────────────────────────────────┘
+
+⚠ Warnings
+  • 215 exact duplicate row(s) (28.7% of the data). A random split puts copies 
+of the same row in both train and test, which inflates held-out scores without 
+any metric looking wrong. Confirm they are genuine repeated observations before
+training; if not, de-duplicate before splitting, or split on a group key.
+
+✨ Recommended models                                                          
+┌─────────────────────┬───────────────────────────────────────────────────────┐
+│ Model               │ Why                                                   │
+├─────────────────────┼───────────────────────────────────────────────────────┤
+│ Logistic Regression │ Interpretable baseline for binary classification with │
+│                     │ class imbalance; provides feature importance and      │
+│                     │ sanity check for more complex models.                 │
+│ Random Forest       │ Handles non-linear relationships and feature          │
+│                     │ interactions well; robust to outliers and scales      │
+│                     │ naturally with feature engineering.                   │
+│ XGBoost             │ Optimized for structured data, handles class          │
+│                     │ imbalance via `scale_pos_weight`, and excels in       │
+│                     │ tabular benchmarks with proper hyperparameter tuning. │
+└─────────────────────┴───────────────────────────────────────────────────────┘
+
+🔧 Feature engineering
+  • V1 → Apply log transformation (e.g., `log(V1 + 1)`) or bin into quantiles 
+(e.g., 4–5 buckets) to reduce skewness and capture non-linear patterns.
+     High zero ratio (0.67%) and right-skewed distribution (mean > median) 
+suggest potential for transformation or discretization.
+  • V2 → Create interaction terms with `V1` (e.g., `V1 * V2`) or normalize by 
+`V3` (e.g., `V2 / V3`), as both exhibit high outlier counts and potential 
+collinearity.
+     Both `V2` and `V3` have extreme outliers (IQR-based) and may interact 
+meaningfully in the context of blood transfusion (e.g., donor frequency vs. 
+hemoglobin levels).
+  • V3 → Scale to a meaningful range (e.g., `V3 / 1000`) or flag extreme values
+(>Q75 + 1.5*IQR) as a binary feature, given its wide range (250–12500).
+     Extreme skewness and outliers may dominate model weights; scaling or 
+binning can improve interpretability and performance.
+  • V4 → No transformation needed, but consider binning into clinically 
+relevant ranges (e.g., 2–10, 11–20, etc.) if domain knowledge suggests 
+thresholds.
+     Normal distribution (no outliers) and moderate spread; binning could 
+capture non-linear effects if domain context supports it.
+  • Class → Resample (oversample class `2` or undersample class `1`) or use 
+class weights (`class_weight='balanced'`) during training.
+     Severe imbalance (76% vs. 24%) risks biased models; mitigation is critical
+for reliable performance.
+
+⚠ Pitfalls
+  • Duplicate rows (215 exact duplicates, 28.7% of data)
+     → De-duplicate using a unique key (e.g., `V1`, `V2`, `V3`, `V4`) or 
+stratify splits on a stable identifier before training to avoid data leakage.
+  • Class imbalance (76% vs. 24%)
+     → Use evaluation metrics like AUC-ROC, F1-score, or precision-recall 
+curves instead of accuracy; apply `class_weight` or focal loss in models.
+  • Outliers in `V2` and `V3` (IQR/z-score flags)
+     → Validate outliers clinically (e.g., are values >Q75 + 1.5*IQR 
+plausible?) before capping or transforming; otherwise, robust scaling (e.g., 
+quantile transform) may help.
+  • Lack of feature names/descriptions
+     → Document or infer feature meanings (e.g., `V1` = donor visits, `V3` = 
+hemoglobin) to guide engineering and avoid arbitrary transformations.

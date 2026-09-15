@@ -1,0 +1,89 @@
+(no .mlcompass/ project found in current path — running standalone; results 
+will not be persisted)
+
+┌──────────────────────────── 📊 Dataset analysis ────────────────────────────┐
+│ Path:                                                                       │
+│ C:\Users\SABUNIS\Desktop\ml-copilot\benchmark\data\44031_california.csv     │
+│ Shape:   20,640 rows × 9 columns                                            │
+│ Target:  price (explicit confidence)                                        │
+│ Task:    regression (range 0.14 → 1.79)                                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+Columns                                                                     
+┌────────────┬─────────┬─────────┬─────────────────────────────────────────┐
+│ Name       │ Type    │ Missing │ Notes                                   │
+├────────────┼─────────┼─────────┼─────────────────────────────────────────┤
+│ MedInc     │ numeric │      0% │ range [0.5, 15.0], 681 IQR outliers     │
+│ HouseAge   │ numeric │      0% │ range [1.0, 52.0]                       │
+│ AveRooms   │ numeric │      0% │ range [0.8, 141.9], 511 IQR outliers    │
+│ AveBedrms  │ numeric │      0% │ range [0.3, 34.1], 1424 IQR outliers    │
+│ Population │ numeric │      0% │ range [3.0, 35682.0], 1196 IQR outliers │
+│ AveOccup   │ numeric │      0% │ range [0.7, 1243.3], 711 IQR outliers   │
+│ Latitude   │ numeric │      0% │ range [32.5, 42.0]                      │
+│ Longitude  │ numeric │      0% │ range [-124.3, -114.3]                  │
+│ price      │ numeric │      0% │ range [0.1, 1.8]                        │
+└────────────┴─────────┴─────────┴─────────────────────────────────────────┘
+
+⚠ Warnings
+  • Target 'price' is piled up at its maximum: 965 row(s) (4.7%) sit at exactly
+1.79176. That usually means a censored or capped measurement rather than a real
+mode. A model fitted on it cannot predict beyond the cap, and its errors near 
+1.79176 are systematically biased. Check how the value was recorded before 
+treating it as ordinary regression.
+
+✨ Recommended models                                                          
+┌──────────────────────────────────────┬──────────────────────────────────────┐
+│ Model                                │ Why                                  │
+├──────────────────────────────────────┼──────────────────────────────────────┤
+│ Linear Regression                    │ Interpretable baseline for           │
+│                                      │ regression; helps validate if simple │
+│                                      │ linear relationships exist between   │
+│                                      │ features and price.                  │
+│ Random Forest                        │ Handles outliers and non-linear      │
+│                                      │ relationships well; robust to        │
+│                                      │ feature scale variations (e.g.,      │
+│                                      │ `AveRooms`, `Population` outliers).  │
+│ Gradient Boosting (XGBoost/LightGBM) │ Leverages feature importance and     │
+│                                      │ handles skewed distributions (e.g.,  │
+│                                      │ `AveOccup` outliers) effectively;    │
+│                                      │ often outperforms linear models for  │
+│                                      │ structured tabular data.             │
+└──────────────────────────────────────┴──────────────────────────────────────┘
+
+🔧 Feature engineering
+  • Latitude,Longitude → Create distance_to_coast feature (e.g., using 
+Euclidean distance to nearest coast boundary) or bin into coastal/non-coastal 
+categories.
+     Geospatial proximity may correlate with price (e.g., coastal properties 
+often command higher prices).
+  • AveRooms,AveBedrms → Derive `rooms_per_bedroom` ratio (AveRooms/AveBedrms) 
+or flag extreme values (e.g., >10 rooms/bedroom) as potential outliers.
+     Non-linear relationships between rooms and bedrooms may exist; ratios can 
+capture efficiency metrics.
+  • Population → Apply log transformation or bin into population density 
+categories (e.g., low/medium/high).
+     Highly skewed distribution (IQR outliers) suggests non-linear impact on 
+price; log scaling or binning may improve model fit.
+  • AveOccup → Flag unrealistic values (e.g., >5 occupants per bedroom) or 
+create a binary feature for high-density units.
+     Extreme outliers (e.g., 1243 occupants) likely indicate data errors or 
+anomalies; filtering or binning may help.
+  • MedInc → Bin into income quartiles or interact with `Latitude` (e.g., 
+high-income coastal areas).
+     Income is a strong predictor of housing prices; binning may capture 
+non-linear effects better than raw values.
+
+⚠ Pitfalls
+  • Censored/capped target (`price` at 1.79176 with 4.7% of data)
+     → Validate if `price` is truly capped (e.g., survey limits) or treat as 
+missing data. Use robust regression (e.g., Huber loss) or censored regression 
+models.
+  • Outliers in `AveRooms`, `AveBedrms`, `Population`, and `AveOccup`
+     → Apply winsorization (capping extreme values at P99) or use robust 
+scaling (e.g., median/IQR) to mitigate influence on models.
+  • No explicit target encoding or validation split
+     → Use stratified sampling (if class imbalance exists) or time-based splits
+(if temporal data) to ensure robust evaluation.
+  • Geospatial features (`Latitude`, `Longitude`) not leveraged for spatial 
+patterns
+     → Explore kernel density estimation or spatial clustering (e.g., DBSCAN) 
+to identify price clusters or hotspots.

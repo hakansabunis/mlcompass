@@ -1,0 +1,56 @@
+(no .mlcompass/ project found in current path — running standalone; results 
+will not be persisted)
+
+┌──────────────────────────── 📊 Dataset analysis ────────────────────────────┐
+│ Path:                                                                       │
+│ C:\Users\SABUNIS\Desktop\ml-copilot\benchmark\data\1464_blood-transfusion-s │
+│ ervice-center.csv                                                           │
+│ Shape:   748 rows × 5 columns                                               │
+│ Target:  Class (explicit confidence)                                        │
+│ Task:    binary classification (1=76%, 2=24%)                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+Columns                                                                    
+┌───────┬─────────────┬─────────┬─────────────────────────────────────────┐
+│ Name  │ Type        │ Missing │ Notes                                   │
+├───────┼─────────────┼─────────┼─────────────────────────────────────────┤
+│ V1    │ numeric     │      0% │ range [0.0, 74.0], 7 IQR outliers       │
+│ V2    │ numeric     │      0% │ range [1.0, 50.0], 45 IQR outliers      │
+│ V3    │ numeric     │      0% │ range [250.0, 12500.0], 45 IQR outliers │
+│ V4    │ numeric     │      0% │ range [2.0, 98.0]                       │
+│ Class │ categorical │      0% │ cardinality 2                           │
+└───────┴─────────────┴─────────┴─────────────────────────────────────────┘
+
+⚠ Warnings
+  • 215 exact duplicate row(s) (28.7% of the data). A random split puts copies 
+of the same row in both train and test, which inflates held-out scores without 
+any metric looking wrong. Confirm they are genuine repeated observations before
+training; if not, de-duplicate before splitting, or split on a group key.
+
+✨ Recommended models                                                          
+┌────────────────────────┬────────────────────────────────────────────────────┐
+│ Model                  │ Why                                                │
+├────────────────────────┼────────────────────────────────────────────────────┤
+│ LogisticRegression     │ Baseline model for binary classification.          │
+│ RandomForestClassifier │ Robust to overfitting and handles non-linear       │
+│                        │ relationships effectively.                         │
+│ XGBoost                │ Gradient boosting can capture complex patterns and │
+│                        │ is effective in many scenarios.                    │
+└────────────────────────┴────────────────────────────────────────────────────┘
+
+🔧 Feature engineering
+  • V1 → log(V1 + 1)
+     Log transformation can stabilize variance for skewed data.
+  • V2 → z_score(V2)
+     Z-score normalization helps in comparing variables with different scales.
+  • V3 → log(V3 + 1)
+     V3 has a wide range, log transformation can linearize the relationship and
+reduce skewness.
+  • V4 → z_score(V4)
+     Similar to V2, z-score normalization helps in handling scale differences 
+between variables.
+
+⚠ Pitfalls
+  • Class imbalance (76.2% vs 23.8%)
+     → Use AUC/F1, class_weight='balanced', or focal loss
+  • Possible duplicate rows (28.7%)
+     → Deduplicate data before splitting into train and test sets
