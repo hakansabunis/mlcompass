@@ -77,6 +77,14 @@ agent-claude-code = ["claude-agent-sdk>=0.2.0"]
 # `client.chat.completions.create` is stable across 1.x and 2.x, so the
 # lower floor is the honest one; raise it only with a tested reason.
 baselines = ["guardrails-ai==0.11.0", "openai>=1.40.0"]
+
+# The A/B benchmark harness only. It splits the pinned data, loads what a
+# model-written script saved, and scores it on the holdout — none of which
+# the package itself does. mlcompass deliberately has no scikit-learn
+# dependency: its statistics are hand-rolled precisely so an install stays
+# small, and pulling sklearn in for every user to support a benchmark nobody
+# but us runs would undo that.
+benchmark = ["scikit-learn>=1.3.0", "joblib>=1.3.0"]
 dev = [
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
@@ -89,6 +97,8 @@ dev = [
     "anthropic>=0.50.0",
     "openai>=1.40.0",
     "claude-agent-sdk>=0.2.0",
+    "scikit-learn>=1.3.0",  # benchmark harness; see the [benchmark] extra
+    "joblib>=1.3.0",
 ]
 
 [project.scripts]
