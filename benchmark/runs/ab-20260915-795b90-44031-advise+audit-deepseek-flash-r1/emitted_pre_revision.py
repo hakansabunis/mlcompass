@@ -1,0 +1,46 @@
+import numpy as np
+import pandas as pd
+import joblib
+from sklearn.ensemble import HistGradientBoostingRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+
+DATA_PATH = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed0-r1\train.csv"
+TARGET = "price"
+MODEL_PATH = "model.joblib"
+
+df = pd.read_csv(DATA_PATH)
+X = df.drop(columns=[TARGET])
+y = df[TARGET]
+
+X_train, X_valid, y_train, y_valid = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+model = HistGradientBoostingRegressor(
+    loss="squared_error",
+    learning_rate=0.05,
+    max_iter=500,
+    max_leaf_nodes=63,
+    min_samples_leaf=20,
+    l2_regularization=0.1,
+    random_state=42,
+    early_stopping=False,
+)
+
+model.fit(X_train, y_train)
+y_pred = model.predict(X_valid)
+
+rmse = np.sqrt(mean_squared_error(y_valid, y_pred))
+mae = mean_absolute_error(y_valid, y_pred)
+r2 = r2_score(y_valid, y_pred)
+
+print(f"Validation RMSE: {rmse:.6f}")
+print(f"Validation MAE: {mae:.6f}")
+print(f"Validation R2: {r2:.6f}")
+
+# Refit on the full dataset for the final saved model.
+model.fit(X, y)
+
+joblib.dump(model, MODEL_PATH)
+print(f"Saved model to {MODEL_PATH}")

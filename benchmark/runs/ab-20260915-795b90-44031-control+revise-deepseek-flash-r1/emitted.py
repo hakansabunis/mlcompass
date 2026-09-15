@@ -1,0 +1,24 @@
+import pandas as pd
+import joblib
+from sklearn.ensemble import HistGradientBoostingRegressor
+
+DATA_PATH = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed0-r1\train.csv"
+TARGET_COLUMN = "price"
+MODEL_PATH = "model.joblib"
+
+
+def main():
+    df = pd.read_csv(DATA_PATH)
+    df = df.dropna(subset=[TARGET_COLUMN])
+
+    X = df.drop(columns=[TARGET_COLUMN])
+    y = df[TARGET_COLUMN]
+
+    model = HistGradientBoostingRegressor(random_state=42)
+    model.fit(X, y)
+
+    joblib.dump(model, MODEL_PATH)
+
+
+if __name__ == "__main__":
+    main()

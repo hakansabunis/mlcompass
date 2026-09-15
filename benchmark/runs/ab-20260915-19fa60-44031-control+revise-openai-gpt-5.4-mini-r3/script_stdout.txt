@@ -1,0 +1,2 @@
+Validation RMSE: 0.137786
+Saved trained model to: C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed2-r3\trained_model.joblib

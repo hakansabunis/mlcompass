@@ -1,0 +1,34 @@
+(no .mlcompass/ project found in current path — running standalone; results 
+will not be persisted)
+
+┌──────────────────────────── 📊 Dataset analysis ────────────────────────────┐
+│ Path:                                                                       │
+│ C:\Users\SABUNIS\AppData\Local\Temp\mlcab_advise_7y_8wcw2\train.csv         │
+│ Shape:   439 rows × 11 columns                                              │
+│ Target:  Class (explicit confidence)                                        │
+│ Task:    binary classification (1=71%, 2=29%)                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+Columns                                                                  
+┌───────┬─────────────┬─────────┬───────────────────────────────────────┐
+│ Name  │ Type        │ Missing │ Notes                                 │
+├───────┼─────────────┼─────────┼───────────────────────────────────────┤
+│ V1    │ numeric     │      0% │ range [4.0, 90.0]                     │
+│ V2    │ categorical │      0% │ cardinality 2                         │
+│ V3    │ numeric     │      0% │ range [0.5, 75.0], 66 IQR outliers    │
+│ V4    │ numeric     │      0% │ range [0.1, 19.7], 65 IQR outliers    │
+│ V5    │ numeric     │      0% │ range [63.0, 1896.0], 54 IQR outliers │
+│ V6    │ numeric     │      0% │ range [10.0, 2000.0], 53 IQR outliers │
+│ V7    │ numeric     │      0% │ range [10.0, 2946.0], 51 IQR outliers │
+│ V8    │ numeric     │      0% │ range [2.8, 9.5], 1 IQR outliers      │
+│ V9    │ numeric     │      0% │ range [1.0, 5.5]                      │
+│ V10   │ numeric     │      0% │ range [0.3, 2.5], 7 IQR outliers      │
+│ Class │ categorical │      0% │ cardinality 2                         │
+└───────┴─────────────┴─────────┴───────────────────────────────────────┘
+
+⚠ Warnings
+  • 12 exact duplicate row(s) (2.7% of the data). A random split puts copies of
+the same row in both train and test, which inflates held-out scores without any
+metric looking wrong. Confirm they are genuine repeated observations before 
+training; if not, de-duplicate before splitting, or split on a group key.
+
+(deterministic analysis only; pass --llm to add the advisor)

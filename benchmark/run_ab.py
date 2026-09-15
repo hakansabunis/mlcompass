@@ -1265,6 +1265,87 @@ def _fit_lines(source: str, lines: list[str]) -> list[int]:
     return hits
 
 
+def _int_constant_expansion(source: str) -> str:
+    """The source with every name bound to an integer literal substituted.
+
+    A cheap way to let digit-seeking patterns see through one level of naming
+    without parsing. `RANDOM_STATE = 42` turns every later `RANDOM_STATE` into
+    `42`, so a later `random_state=RANDOM_STATE` matches the digit-seeking
+    pattern the seed rules use.
+
+    Appending the definitions instead of substituting them does not work, and
+    the reason is worth recording: the pattern is lower-case `random_state` and
+    the constant is upper-case `RANDOM_STATE`, so the definition never matches
+    the pattern no matter how it is spelled. The value has to reach the call
+    site.
+
+    One level only, and deliberately: chasing a chain of aliases buys nothing
+    real and costs the ability to say what this function does in a sentence.
+    """
+    bindings = re.findall(r"^\s*([A-Za-z_]\w*)\s*=\s*(\d+)\s*$", source, re.MULTILINE)
+    if not bindings:
+        return source
+    expanded = source
+    for name, value in bindings:
+        expanded = re.sub(rf"(?<![\w.]){re.escape(name)}(?![\w])", value, expanded)
+    return expanded
+
+
+def _named_list_excludes_target(source: str, target: str, tokens: str) -> bool:
+    """True if a named list of quoted column names omits the target and is used
+    to select the feature matrix.
+
+    Catches the shape a revised script tends to produce:
+
+        NUMERIC_COLS = ["V1", "V3"]
+        CATEGORICAL_COLS = ["V2"]
+        FEATURE_COLS = NUMERIC_COLS + CATEGORICAL_COLS
+        X = df[FEATURE_COLS]
+
+    Form 4 already accepts the same list written inline. Hoisting it to a
+    constant is the tidier version of identical code, and scoring the two
+    differently penalised the tidier one -- which is the style the models
+    produce *after* being asked to revise, so the bias fell on exactly the
+    arm under study (amendment A11).
+
+    Conservative on purpose: the name must be used in a `df[NAME]`-shaped
+    selection, and at least one resolved list must be non-empty. A bare
+    constant nobody selects with proves nothing about the feature matrix.
+    """
+    lists: dict[str, set[str]] = {}
+    for name, body in re.findall(
+        r"^\s*([A-Za-z_]\w*)\s*=\s*\[([^]]*)\]", source, re.MULTILINE
+    ):
+        # A comprehension is not a constant list. `[c for c in df.columns if
+        # c != "V1"]` has a quoted name in it and filters a DIFFERENT column,
+        # so reading its quotes as the feature list clears the flag on a
+        # script that really does leave the target in. Comprehensions are
+        # form 6 and handled separately.
+        if re.search(r"\bfor\b", body):
+            continue
+        items = re.findall(r"['\"]([^'\"]+)['\"]", body)
+        if items:
+            lists[name] = set(items)
+    # One level of concatenation: FEATURE_COLS = NUMERIC_COLS + CATEGORICAL_COLS
+    for name, body in re.findall(
+        r"^\s*([A-Za-z_]\w*)\s*=\s*([A-Za-z_]\w*(?:\s*\+\s*[A-Za-z_]\w*)+)\s*$",
+        source,
+        re.MULTILINE,
+    ):
+        parts = [p.strip() for p in body.split("+")]
+        if all(part in lists for part in parts):
+            lists[name] = set().union(*(lists[part] for part in parts))
+    if not lists:
+        return False
+    target_names = set(re.findall(tokens, target)) | {target}
+    for name, columns in lists.items():
+        if not columns or columns & target_names:
+            continue
+        if re.search(rf"\[\s*{re.escape(name)}\s*\]", source):
+            return True
+    return False
+
+
 def _comprehension_excludes_target(source: str, tokens: str) -> bool:
     """True if a comprehension over a column index filters the target out.
 
@@ -1353,7 +1434,12 @@ def check_defects(
     # script that imports nothing seedable is also caught, which is the right
     # side to err on for a reproducibility check.
     imported = {n for n, p in _FRAMEWORK_IMPORTS.items() if re.search(p, source, re.MULTILINE)}
-    seeded = {n for n in imported if re.search(_FRAMEWORK_SEEDS[n], source)}
+    # Resolve `RANDOM_STATE = 42` before matching, so `random_state=RANDOM_STATE`
+    # counts as seeded. The patterns want a digit; careful scripts hoist the
+    # value to a module constant, and scoring the digit rather than the seed
+    # marked exactly that style unseeded (amendment A11).
+    seed_source = _int_constant_expansion(source)
+    seeded = {n for n in imported if re.search(_FRAMEWORK_SEEDS[n], seed_source)}
     no_seed = not seeded
 
     # leak_fit_before_split — fitted before the split, or on the full frame.
@@ -1452,6 +1538,8 @@ def check_defects(
             if quoted_list and not quoted_target.search(listed):
                 target_in_features = False
                 break
+    if target_in_features and _named_list_excludes_target(source, target, tokens):
+        target_in_features = False
     if target_in_features and _comprehension_excludes_target(source, tokens):
         target_in_features = False
     if target_in_features and re.search(

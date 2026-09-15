@@ -1,0 +1,87 @@
+import os
+import pandas as pd
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, classification_report
+import joblib
+
+# Path to the training CSV file
+DATA_PATH = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed20260915-r3\train.csv"
+TARGET_COL = "Class"
+MODEL_FILENAME = "trained_model.joblib"
+
+def main():
+    # Load data and drop rows where the target is missing
+    df = pd.read_csv(DATA_PATH)
+    df = df.dropna(subset=[TARGET_COL])
+    
+    # Separate features and target
+    X = df.drop(columns=[TARGET_COL])
+    y = df[TARGET_COL]
+    
+    # V2 is the only categorical/string column; all others are numeric
+    categorical_cols = ["V2"]
+    numeric_cols = [c for c in X.columns if c not in categorical_cols]
+    
+    # Preprocessing for numeric columns
+    numeric_transformer = Pipeline(steps=[
+        ("imputer", SimpleImputer(strategy="median")),
+        ("scaler", StandardScaler())
+    ])
+    
+    # Preprocessing for categorical columns
+    categorical_transformer = Pipeline(steps=[
+        ("imputer", SimpleImputer(strategy="most_frequent")),
+        ("onehot", OneHotEncoder(handle_unknown="ignore", sparse_output=False))
+    ])
+    
+    # Combine preprocessing steps
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ("num", numeric_transformer, numeric_cols),
+            ("cat", categorical_transformer, categorical_cols)
+        ],
+        remainder="drop"
+    )
+    
+    # Define the model
+    model = RandomForestClassifier(
+        n_estimators=300,
+        random_state=42,
+        n_jobs=-1,
+        class_weight="balanced"
+    )
+    
+    # Create the full pipeline
+    clf = Pipeline(steps=[
+        ("preprocessor", preprocessor),
+        ("classifier", model)
+    ])
+    
+    # Optional train/validation split for reporting
+    min_class_count = y.value_counts().min()
+    stratify = y if min_class_count >= 2 else None
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42, stratify=stratify
+    )
+    
+    # Train on training split to report performance
+    clf.fit(X_train, y_train)
+    y_pred = clf.predict(X_test)
+    print("Validation Accuracy:", accuracy_score(y_test, y_pred))
+    print(classification_report(y_test, y_pred))
+    
+    # Refit on the entire dataset for the final model
+    clf.fit(X, y)
+    
+    # Save the fitted model to the current working directory
+    model_path = os.path.join(os.getcwd(), MODEL_FILENAME)
+    joblib.dump(clf, model_path)
+    print(f"Model saved to {model_path}")
+
+if __name__ == "__main__":
+    main()

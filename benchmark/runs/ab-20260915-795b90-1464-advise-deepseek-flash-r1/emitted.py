@@ -1,0 +1,45 @@
+import pandas as pd
+import joblib
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier, HistGradientBoostingClassifier, VotingClassifier
+
+INPUT_PATH = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed0-r1\train.csv"
+MODEL_PATH = "model.joblib"
+TARGET_COL = "Class"
+
+def main():
+    df = pd.read_csv(INPUT_PATH)
+    X = df.drop(columns=[TARGET_COL])
+    y = df[TARGET_COL]
+
+    log_reg = Pipeline([
+        ("imputer", SimpleImputer(strategy="median")),
+        ("scaler", StandardScaler()),
+        ("clf", LogisticRegression(max_iter=1000, random_state=42))
+    ])
+
+    rf = Pipeline([
+        ("imputer", SimpleImputer(strategy="median")),
+        ("clf", RandomForestClassifier(n_estimators=500, random_state=42, n_jobs=-1))
+    ])
+
+    hgb = Pipeline([
+        ("imputer", SimpleImputer(strategy="median")),
+        ("clf", HistGradientBoostingClassifier(max_iter=200, learning_rate=0.05, max_depth=3, random_state=42))
+    ])
+
+    model = VotingClassifier(
+        estimators=[("lr", log_reg), ("rf", rf), ("hgb", hgb)],
+        voting="soft",
+        n_jobs=None
+    )
+
+    model.fit(X, y)
+    joblib.dump(model, MODEL_PATH)
+    print(f"Model saved to {MODEL_PATH}")
+
+if __name__ == "__main__":
+    main()

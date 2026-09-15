@@ -1,0 +1,2 @@
+Validation Accuracy: 0.6932
+Model saved successfully to C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed0-r1\random_forest_model.joblib

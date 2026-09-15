@@ -1,0 +1,96 @@
+```python
+import os
+import warnings
+import joblib
+import pandas as pd
+
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.ensemble import HistGradientBoostingClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+
+warnings.filterwarnings("ignore")
+
+DATA_PATH = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed0-r1\train.csv"
+MODEL_PATH = "trained_model.joblib"
+
+
+def make_one_hot_encoder():
+    try:
+        return OneHotEncoder(handle_unknown="ignore", sparse_output=False)
+    except TypeError:
+        return OneHotEncoder(handle_unknown="ignore", sparse=False)
+
+
+def main():
+    df = pd.read_csv(DATA_PATH)
+
+    if "Class" not in df.columns:
+        raise ValueError("Target column 'Class' not found in the training data.")
+
+    X = df.drop(columns=["Class"])
+    y = df["Class"]
+
+    categorical_cols = [c for c in X.columns if X[c].dtype == "object"]
+    numeric_cols = [c for c in X.columns if c not in categorical_cols]
+
+    numeric_transformer = Pipeline(
+        steps=[
+            ("imputer", SimpleImputer(strategy="median")),
+        ]
+    )
+
+    categorical_transformer = Pipeline(
+        steps=[
+            ("imputer", SimpleImputer(strategy="most_frequent")),
+            ("onehot", make_one_hot_encoder()),
+        ]
+    )
+
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ("num", numeric_transformer, numeric_cols),
+            ("cat", categorical_transformer, categorical_cols),
+        ],
+        remainder="drop",
+        verbose_feature_names_out=False,
+    )
+
+    model = HistGradientBoostingClassifier(
+        learning_rate=0.05,
+        max_iter=300,
+        min_samples_leaf=20,
+        random_state=42,
+    )
+
+    clf = Pipeline(
+        steps=[
+            ("preprocess", preprocessor),
+            ("model", model),
+        ]
+    )
+
+    # Quick validation if possible, but always train final model on all data.
+    try:
+        stratify = y if y.nunique() > 1 else None
+        X_train, X_valid, y_train, y_valid = train_test_split(
+            X, y, test_size=0.2, random_state=42, stratify=stratify
+        )
+        clf.fit(X_train, y_train)
+        preds = clf.predict(X_valid)
+        acc = accuracy_score(y_valid, preds)
+        print(f"Validation accuracy: {acc:.6f}")
+    except Exception:
+        pass
+
+    clf.fit(X, y)
+    joblib.dump(clf, MODEL_PATH)
+    print(f"Saved model to: {os.path.abspath(MODEL_PATH)}")
+
+
+if __name__ == "__main__":
+    main()
+```

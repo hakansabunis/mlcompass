@@ -1,0 +1,29 @@
+Loading data...
+Training model...
+      Iter       Train Loss   Remaining Time 
+         1           0.0587            8.54s
+         2           0.0552            8.33s
+         3           0.0519            8.25s
+         4           0.0489            8.83s
+         5           0.0461            9.04s
+         6           0.0437            8.86s
+         7           0.0414            8.72s
+         8           0.0393            8.61s
+         9           0.0373            8.50s
+        10           0.0355            8.40s
+        20           0.0230            7.88s
+        30           0.0172            7.84s
+        40           0.0143            7.50s
+        50           0.0126            7.19s
+        60           0.0112            6.76s
+        70           0.0104            6.31s
+        80           0.0096            5.83s
+        90           0.0090            5.35s
+       100           0.0086            4.89s
+       200           0.0067            0.00s
+
+Model Evaluation:
+Validation MSE: 0.0223
+Validation R²: 0.8289
+
+Model saved to house_price_model.joblib

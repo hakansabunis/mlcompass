@@ -1,0 +1,2 @@
+Model Accuracy: 0.68
+Trained model saved to trained_model.pkl

@@ -154,3 +154,93 @@ def test_the_run_that_started_this() -> None:
         target_is_last_column=True,
     )
     assert not report["flags"]["target_in_features"]
+
+
+# --------------------------------------------------------------------------- #
+# Form 8 and the seed rule: constants the checker used to look straight past.  #
+#                                                                             #
+# Found running the A8 arm. Three of its 36 runs scored WORSE after the model  #
+# revised its own script, which read as a real finding until the scripts were  #
+# opened: two of the three were the checker missing a named constant, and only #
+# one was a genuine regression. The bias has a direction that matters — a      #
+# revised script is tidier, tidier code hoists lists and seeds to module       #
+# constants, so the rule penalised exactly the arm under study.                #
+# --------------------------------------------------------------------------- #
+
+NAMED_CONSTANT_EXCLUDES = {
+    # runs/ab-20260915-19fa60-1480-control+revise-deepseek-flash-r2/emitted.py
+    "concatenated_constants": (
+        'TARGET_COL = "Class"\n'
+        'NUMERIC_COLS = ["V1", "V3", "V4"]\n'
+        'CATEGORICAL_COLS = ["V2"]\n'
+        "FEATURE_COLS = NUMERIC_COLS + CATEGORICAL_COLS\n"
+        "X = df[FEATURE_COLS].copy()\n"
+        "y = df[TARGET_COL].copy()\n"
+    ),
+    "single_constant": (
+        'FEATURE_COLS = ["V1", "V2", "V3"]\nX = df[FEATURE_COLS]\ny = df["Class"]\n'
+    ),
+}
+
+
+@pytest.mark.parametrize("name", sorted(NAMED_CONSTANT_EXCLUDES))
+def test_a_named_feature_list_counts_as_excluding_the_target(name: str) -> None:
+    assert not _flag(NAMED_CONSTANT_EXCLUDES[name]), (
+        f"{name}: the named list omits the target, so the target is excluded. "
+        "Form 4 already accepts this list written inline; hoisting it to a "
+        "constant is the same code, tidier."
+    )
+
+
+def test_a_named_list_that_contains_the_target_is_still_flagged() -> None:
+    body = 'FEATURE_COLS = ["V1", "V2", "Class"]\nX = df[FEATURE_COLS]\ny = df["Class"]\n'
+    assert _flag(body)
+
+
+def test_a_named_list_nobody_selects_with_proves_nothing() -> None:
+    """A constant that is never used to build X says nothing about X."""
+    body = 'FEATURE_COLS = ["V1", "V2"]\nX = df\ny = df["Class"]\n'
+    assert _flag(body)
+
+
+SEED_VIA_CONSTANT = """import pandas as pd
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+RANDOM_STATE = 42
+df = pd.read_csv("train.csv")
+X = df.drop(columns=["Class"])
+y = df["Class"]
+X_tr, X_te, y_tr, y_te = train_test_split(X, y, random_state=RANDOM_STATE)
+model = RandomForestClassifier(random_state=RANDOM_STATE).fit(X_tr, y_tr)
+"""
+
+
+def test_a_seed_hoisted_to_a_constant_counts_as_seeded() -> None:
+    """runs/ab-20260915-19fa60-1480-control+revise-openai-gpt-5.4-mini-r3.
+
+    The seed patterns want a digit. This script sets RANDOM_STATE = 42 and
+    passes it in three places, and was scored unseeded.
+    """
+    report = check_defects(
+        SEED_VIA_CONSTANT,
+        target="Class",
+        duplicate_rows=0,
+        minority_fraction=None,
+        target_is_last_column=True,
+    )
+    assert not report["flags"]["no_seed"]
+
+
+def test_a_script_with_no_seed_anywhere_is_still_flagged() -> None:
+    """Widening the seed rule must not make it unable to fire."""
+    unseeded = SEED_VIA_CONSTANT.replace("RANDOM_STATE = 42\n", "").replace(
+        ", random_state=RANDOM_STATE", ""
+    ).replace("random_state=RANDOM_STATE", "")
+    report = check_defects(
+        unseeded,
+        target="Class",
+        duplicate_rows=0,
+        minority_fraction=None,
+        target_is_last_column=True,
+    )
+    assert report["flags"]["no_seed"]

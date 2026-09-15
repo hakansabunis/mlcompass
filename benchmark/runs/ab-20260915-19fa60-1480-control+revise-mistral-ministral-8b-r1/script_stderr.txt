@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed0-r1\emitted.py", line 63, in <module>
+    ('onehot', OneHotEncoder(handle_unknown='ignore', sparse=False))
+               ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: OneHotEncoder.__init__() got an unexpected keyword argument 'sparse'

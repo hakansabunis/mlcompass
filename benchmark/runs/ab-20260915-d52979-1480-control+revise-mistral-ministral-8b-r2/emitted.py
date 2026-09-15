@@ -1,0 +1,116 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report, accuracy_score
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+from sklearn.compose import ColumnTransformer
+from joblib import dump
+import os
+import warnings
+
+# Suppress warnings for cleaner output
+warnings.filterwarnings('ignore')
+
+def load_and_preprocess_data(file_path):
+    """Load and preprocess the data from CSV file."""
+    # Load the data
+    df = pd.read_csv(file_path)
+
+    # Check if all expected columns exist
+    expected_columns = ['V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8', 'V9', 'V10', 'Class']
+    if not all(col in df.columns for col in expected_columns):
+        missing = [col for col in expected_columns if col not in df.columns]
+        raise ValueError(f"Missing required columns: {missing}")
+
+    # Separate features and target
+    X = df.drop(columns=['Class'])
+    y = df['Class']
+
+    # Split into train and validation sets with stratification
+    X_train, X_val, y_train, y_val = train_test_split(
+        X, y,
+        test_size=0.2,
+        random_state=20260915,
+        stratify=y
+    )
+
+    return X_train, X_val, y_train, y_val
+
+def build_model():
+    """Build and return a preprocessing pipeline with a classifier."""
+    categorical_cols = ['V2']
+    numerical_cols = ['V1', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8', 'V9', 'V10']
+
+    # Preprocessing for numerical data
+    numerical_transformer = Pipeline(steps=[
+        ('imputer', SimpleImputer(strategy='median')),
+        ('scaler', StandardScaler())
+    ])
+
+    # Preprocessing for categorical data
+    categorical_transformer = Pipeline(steps=[
+        ('imputer', SimpleImputer(strategy='most_frequent')),
+        ('onehot', OneHotEncoder(handle_unknown='ignore'))
+    ])
+
+    # Combine preprocessing steps
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ('num', numerical_transformer, numerical_cols),
+            ('cat', categorical_transformer, categorical_cols)
+        ])
+
+    # Create classifier pipeline
+    model = Pipeline(steps=[
+        ('preprocessor', preprocessor),
+        ('classifier', RandomForestClassifier(
+            n_estimators=100,
+            random_state=20260915,
+            class_weight='balanced',
+            max_depth=10,
+            min_samples_split=5
+        ))
+    ])
+
+    return model
+
+def train_and_evaluate(model, X_train, X_val, y_train, y_val):
+    """Train the model and print evaluation metrics."""
+    model.fit(X_train, y_train)
+    y_pred = model.predict(X_val)
+
+    print("\nModel Evaluation on Validation Set:")
+    print(f"Accuracy: {accuracy_score(y_val, y_pred):.4f}")
+    print("\nClassification Report:")
+    print(classification_report(y_val, y_pred))
+
+    return model
+
+def main():
+    # Define file path
+    file_path = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed20260915-r2\train.csv"
+
+    try:
+        # Load and preprocess data
+        X_train, X_val, y_train, y_val = load_and_preprocess_data(file_path)
+
+        # Build model
+        model = build_model()
+
+        # Train and evaluate
+        trained_model = train_and_evaluate(model, X_train, X_val, y_train, y_val)
+
+        # Save the trained model
+        model_filename = "random_forest_classifier.joblib"
+        dump(trained_model, model_filename)
+        print(f"\nModel successfully saved to {os.path.abspath(model_filename)}")
+
+    except Exception as e:
+        print(f"Error occurred: {str(e)}")
+        raise
+
+if __name__ == "__main__":
+    main()

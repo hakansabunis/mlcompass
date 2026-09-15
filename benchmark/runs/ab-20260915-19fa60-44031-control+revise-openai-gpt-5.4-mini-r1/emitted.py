@@ -1,0 +1,75 @@
+import os
+import joblib
+import numpy as np
+import pandas as pd
+
+from sklearn.model_selection import train_test_split, RandomizedSearchCV
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+from sklearn.ensemble import HistGradientBoostingRegressor
+from sklearn.metrics import mean_squared_error
+
+
+def main():
+    train_path = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed0-r1\train.csv"
+    model_path = "trained_model.joblib"
+
+    df = pd.read_csv(train_path)
+
+    target_col = "price"
+    X = df.drop(columns=[target_col])
+    y = df[target_col]
+
+    # Basic train/validation split for model selection
+    X_train, X_val, y_train, y_val = train_test_split(
+        X, y, test_size=0.2, random_state=42
+    )
+
+    pipe = Pipeline(
+        steps=[
+            ("imputer", SimpleImputer(strategy="median")),
+            ("model", HistGradientBoostingRegressor(random_state=42)),
+        ]
+    )
+
+    param_distributions = {
+        "model__learning_rate": np.linspace(0.02, 0.2, 10),
+        "model__max_depth": [None, 3, 4, 5, 6, 8, 10],
+        "model__max_leaf_nodes": [15, 31, 63, 127, 255],
+        "model__min_samples_leaf": [5, 10, 20, 30, 50],
+        "model__l2_regularization": np.logspace(-6, 1, 20),
+        "model__max_bins": [64, 128, 255],
+    }
+
+    search = RandomizedSearchCV(
+        estimator=pipe,
+        param_distributions=param_distributions,
+        n_iter=40,
+        scoring="neg_root_mean_squared_error",
+        cv=5,
+        random_state=42,
+        n_jobs=-1,
+        verbose=0,
+    )
+
+    search.fit(X_train, y_train)
+
+    best_model = search.best_estimator_
+
+    # Optional validation check
+    val_pred = best_model.predict(X_val)
+    rmse = mean_squared_error(y_val, val_pred, squared=False)
+    print(f"Validation RMSE: {rmse:.6f}")
+    print(f"Best CV score (neg RMSE): {search.best_score_:.6f}")
+    print(f"Best params: {search.best_params_}")
+
+    # Refit best model on all data
+    best_model.fit(X, y)
+
+    # Save the fitted model
+    joblib.dump(best_model, model_path)
+    print(f"Saved model to: {os.path.abspath(model_path)}")
+
+
+if __name__ == "__main__":
+    main()

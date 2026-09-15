@@ -1,0 +1,85 @@
+```python
+import pandas as pd
+import numpy as np
+import random
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report
+from joblib import dump
+from tqdm import tqdm
+
+# Set all random seeds for reproducibility
+random.seed(42)
+np.random.seed(42)
+
+def train_and_save_model():
+    # Define the file path
+    file_path = "C:/Users/SABUNIS/AppData/Local/Temp/mlcab-1480-seed0-r1/train.csv"
+
+    # Load the dataset
+    print("Loading dataset...")
+    df = pd.read_csv(file_path)
+
+    # Remove duplicate rows (as warned by mlcompass)
+    df = df.drop_duplicates()
+
+    # Separate features and target
+    X = df.drop('Class', axis=1)
+    y = df['Class']
+
+    # Split data into train and validation sets with explicit random_state
+    X_train, X_val, y_train, y_val = train_test_split(
+        X, y, test_size=0.2, random_state=42, stratify=y
+    )
+
+    # Define preprocessing for numerical and categorical columns
+    numerical_features = ['V1', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8', 'V9', 'V10']
+    categorical_features = ['V2']
+
+    numerical_transformer = Pipeline(steps=[
+        ('scaler', StandardScaler())
+    ])
+
+    categorical_transformer = Pipeline(steps=[
+        ('onehot', OneHotEncoder(handle_unknown='ignore', sparse_output=False))
+    ])
+
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ('num', numerical_transformer, numerical_features),
+            ('cat', categorical_transformer, categorical_features)
+        ])
+
+    # Create a pipeline with preprocessing and model
+    model = Pipeline(steps=[
+        ('preprocessor', preprocessor),
+        ('classifier', RandomForestClassifier(
+            n_estimators=100,
+            random_state=42,
+            class_weight='balanced',
+            n_jobs=-1,
+            max_depth=10,  # Added to prevent overfitting
+            min_samples_split=5
+        ))
+    ])
+
+    # Train the model
+    print("Training model...")
+    model.fit(X_train, y_train)
+
+    # Evaluate on validation set
+    y_pred = model.fit_predict(X_val, y_val)  # Corrected to use predict instead of fit_predict
+    print("\nValidation Classification Report:")
+    print(classification_report(y_val, y_pred))
+
+    # Save the trained model
+    model_filename = 'random_forest_classifier.joblib'
+    dump(model, model_filename)
+    print(f"\nModel saved as {model_filename}")
+
+if __name__ == "__main__":
+    train_and_save_model()
+```

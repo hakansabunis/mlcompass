@@ -1,0 +1,61 @@
+import pandas as pd
+import joblib
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.ensemble import RandomForestClassifier
+
+# Path to the training data
+csv_path = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed0-r1\train.csv"
+
+# Load the dataset
+df = pd.read_csv(csv_path)
+
+# Separate features and target
+X = df.drop(columns=['Class'])
+y = df['Class']
+
+# Identify categorical and numerical columns
+categorical_cols = ['V2']
+numerical_cols = [col for col in X.columns if col not in categorical_cols]
+
+# Preprocessing for numerical features
+numerical_transformer = Pipeline(steps=[
+    ('imputer', SimpleImputer(strategy='median')),
+])
+
+# Preprocessing for categorical features
+categorical_transformer = Pipeline(steps=[
+    ('imputer', SimpleImputer(strategy='most_frequent')),
+    ('onehot', OneHotEncoder(handle_unknown='ignore', sparse_output=True)),
+])
+
+# Combine preprocessing steps
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('num', numerical_transformer, numerical_cols),
+        ('cat', categorical_transformer, categorical_cols),
+    ],
+    remainder='drop'
+)
+
+# Define the model
+model = RandomForestClassifier(
+    n_estimators=300,
+    random_state=42,
+    n_jobs=-1,
+    class_weight='balanced',
+)
+
+# Create the full pipeline
+pipeline = Pipeline(steps=[
+    ('preprocessor', preprocessor),
+    ('classifier', model),
+])
+
+# Train the model
+pipeline.fit(X, y)
+
+# Save the fitted model to the current working directory
+joblib.dump(pipeline, 'model.joblib')

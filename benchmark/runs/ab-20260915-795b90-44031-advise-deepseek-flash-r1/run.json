@@ -1,0 +1,113 @@
+{
+  "dataset_id": "openml-44031",
+  "arm": "advise",
+  "panel_id": "deepseek-flash",
+  "provider": "openai",
+  "model": "deepseek-flash",
+  "endpoint": "https://api.deepseek.com",
+  "control_prompt_sha256": "2370b9247c832276060b5dc951756cc35e8b2f25eff137579f0a75e4da9c0f00",
+  "prompt_sha256": "87ff58056091754b566cbdf1832e7f998f0454bbf7d90a4f6eb3025cf038e56a",
+  "advise_prompt_sha256": "87ff58056091754b566cbdf1832e7f998f0454bbf7d90a4f6eb3025cf038e56a",
+  "started_at_utc": "2026-09-15T20:16:59Z",
+  "status": "completed",
+  "script_exit_code": 0,
+  "runtime_seconds": 33.68,
+  "temperature": {
+    "requested": 1.0,
+    "status": "sent",
+    "used": 1.0,
+    "frozen_by": "ab_protocol.md \u00a75 (\u00a79 A3)"
+  },
+  "turns": [
+    {
+      "turn": 1,
+      "label": "advise first turn",
+      "prompt_sha256": "87ff58056091754b566cbdf1832e7f998f0454bbf7d90a4f6eb3025cf038e56a",
+      "ok": true,
+      "error": "",
+      "finish_reason": "stop",
+      "input_tokens": 990,
+      "output_tokens": 6424,
+      "seconds": 26.017,
+      "temperature_requested": 1.0,
+      "temperature_status": "sent",
+      "temperature_used": 1.0,
+      "temperature_rejection": ""
+    }
+  ],
+  "usage": {
+    "input_tokens": 990,
+    "output_tokens": 6424
+  },
+  "split": {
+    "train_csv": "C:\\Users\\SABUNIS\\Desktop\\ml-copilot\\benchmark\\runs\\ab-20260915-795b90\\_splits\\openml-44031-seed0\\train.csv",
+    "holdout_csv": "C:\\Users\\SABUNIS\\Desktop\\ml-copilot\\benchmark\\runs\\ab-20260915-795b90\\_splits\\openml-44031-seed0\\holdout.csv",
+    "columns": "  - MedInc (float64)\n  - HouseAge (float64)\n  - AveRooms (float64)\n  - AveBedrms (float64)\n  - Population (float64)\n  - AveOccup (float64)\n  - Latitude (float64)\n  - Longitude (float64)\n  - price (float64)",
+    "seed": 0,
+    "holdout_fraction": 0.25,
+    "stratified": false,
+    "train_rows": 15480,
+    "holdout_rows": 5160,
+    "source_sha256": "4815da3fa6b1766150bcc7ed862296cb7968733386883549a94b19b86889d233",
+    "train_sha256": "baee2349d6cf6de2ce7353c6ce57bb9cf09a2cee7288978b3552b72484e76679",
+    "holdout_sha256": "a337d6f5171350d5ff6ef6a4b55427bfc1aaa0084f2740a7bbe65d209ec7999f",
+    "grouped_on_duplicates": true,
+    "holdout_rows_present_in_train": 0,
+    "duplicate_rows": 0,
+    "duplicate_groups": 20640,
+    "train_groups": 15480,
+    "holdout_groups": 5160,
+    "source_rows": 20640,
+    "source_duplicate_rows": 0,
+    "minority_fraction": null,
+    "target_is_last_column": true
+  },
+  "holdout": {
+    "status": "scored",
+    "metric": "r2",
+    "score": 0.85835108975601,
+    "artifact": "model.joblib",
+    "attempts": []
+  },
+  "defects": {
+    "flags": {
+      "no_seed": false,
+      "leak_fit_before_split": false,
+      "leak_duplicate_rows": false,
+      "wrong_metric_for_imbalance": false,
+      "no_validation": false,
+      "target_in_features": false
+    },
+    "defect_count": 0,
+    "frameworks_imported": [
+      "numpy",
+      "sklearn"
+    ],
+    "frameworks_seeded": [
+      "sklearn"
+    ],
+    "split_line": 21,
+    "dedupe_deadline": 17,
+    "transformer_fit_lines": [],
+    "input_duplicate_rows": 0,
+    "input_minority_fraction": null,
+    "target_is_last_column": true
+  },
+  "defects_pre_revision": null,
+  "audit": null,
+  "execution": {
+    "workspace": "fresh temp dir, seeded with train.csv only, deleted after the run",
+    "containment": "separate subprocess, wall-clock timeout, holdout outside the workspace",
+    "python": "3.13.3",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "environment_stated_to_every_arm": {
+      "interpreter": "C:\\Users\\SABUNIS\\Desktop\\ml-copilot\\.venv\\Scripts\\python.exe",
+      "python": "3.13.3",
+      "packages_stated": "  - numpy 2.4.6\n  - pandas 3.0.3\n  - scipy 1.18.1\n  - sklearn (scikit-learn 1.9.1)\n  - joblib 1.6.0\n  - cloudpickle 3.1.2\n  - xlsxwriter 3.2.9\n  - tqdm 4.70.1\n  - yaml (PyYAML 6.0.3)",
+      "packages_sha256": "b86cae3362eb29f92974d1d5083b7c354b883abd70b3544b66619535535c88e9",
+      "scope": "packages importable by that interpreter, from a frozen roster of 36 ML-relevant names; measured at prompt time, not a complete pip list"
+    }
+  },
+  "mlcompass_commit": "7c7bb35a2d92f075ca8ed3f1d6851b847824b7dd",
+  "tree_dirty": true
+}

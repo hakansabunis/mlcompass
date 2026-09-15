@@ -1,0 +1,57 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
+from sklearn.metrics import mean_squared_error
+from joblib import dump
+import os
+
+def train_and_save_model(csv_path, target_column='price', random_state=42):
+    # Load the dataset
+    df = pd.read_csv(csv_path)
+
+    # Separate features and target
+    X = df.drop(columns=[target_column])
+    y = df[target_column]
+
+    # Split into train and test sets
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=random_state
+    )
+
+    # Create a preprocessing pipeline with scaling
+    # (Note: For regression with RandomForest, scaling may not be necessary,
+    # but we include it for demonstration purposes)
+    pipeline = Pipeline([
+        ('scaler', StandardScaler()),
+        ('regressor', RandomForestRegressor(
+            n_estimators=100,
+            random_state=random_state,
+            max_depth=10,
+            min_samples_split=5
+        ))
+    ])
+
+    # Train the model
+    pipeline.fit(X_train, y_train)
+
+    # Evaluate on test set
+    y_pred = pipeline.predict(X_test)
+    rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+    print(f"Test RMSE: {rmse:.2f}")
+
+    # Save the model to current working directory
+    model_filename = 'house_price_regressor.joblib'
+    dump(pipeline, model_filename)
+    print(f"Model saved as {os.path.abspath(model_filename)}")
+
+    return pipeline, rmse
+
+if __name__ == "__main__":
+    # Define the path to your CSV file
+    csv_path = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed0-r1\train.csv"
+
+    # Train and save the model
+    model, rmse = train_and_save_model(csv_path)

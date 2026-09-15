@@ -1,0 +1,34 @@
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import RandomForestClassifier
+from joblib import dump
+
+# Load the dataset
+file_path = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed0-r1\train.csv"
+df = pd.read_csv(file_path)
+
+# Drop duplicate rows to avoid inflating held-out scores
+df.drop_duplicates(inplace=True)
+
+# Separate features and target variable
+X = df.drop(columns=['Class'])
+y = df['Class']
+
+# Split the data into training and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Feature scaling
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+# Initialize and train the model
+model = RandomForestClassifier(random_state=42)
+model.fit(X_train_scaled, y_train)
+
+# Save the fitted model to a file in the current working directory
+model_filename = 'model.joblib'
+dump(model, model_filename)
+
+print(f"Model saved as {model_filename}")

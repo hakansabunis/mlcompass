@@ -1,0 +1,16 @@
+
+Model Evaluation on Validation Set:
+Accuracy: 0.6818
+
+Classification Report:
+              precision    recall  f1-score   support
+
+           1       0.86      0.67      0.75        63
+           2       0.46      0.72      0.56        25
+
+    accuracy                           0.68        88
+   macro avg       0.66      0.69      0.66        88
+weighted avg       0.74      0.68      0.70        88
+
+
+Model successfully saved to C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed20260915-r2\random_forest_classifier.joblib

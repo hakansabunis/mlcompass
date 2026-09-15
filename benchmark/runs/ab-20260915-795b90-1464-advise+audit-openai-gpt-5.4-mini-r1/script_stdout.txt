@@ -1,0 +1,3 @@
+Validation Accuracy: 0.1949
+Validation ROC AUC:  0.7101
+Saved model to: C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed0-r1\trained_model.joblib

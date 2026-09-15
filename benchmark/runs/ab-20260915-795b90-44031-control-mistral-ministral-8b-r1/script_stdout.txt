@@ -1,0 +1,6 @@
+Loading data...
+Training model...
+
+Validation RMSE: 0.15
+
+Model and scaler saved to house_price_model.joblib and house_price_scaler.joblib

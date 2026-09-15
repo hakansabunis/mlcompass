@@ -454,3 +454,48 @@ that is labelled. They carry experiment id
 `ab-20260915-795b90-UNPLANNED` and a note stating what happened, so no
 analysis can pick them up as the A8 result by accident. **A8 therefore
 remains unrun**, and the claim it was built to test remains open.
+
+**A11 — two more checker rules blind to a named constant, found the same
+way and biased the same direction.** Running A8 produced what looked like a
+finding: 3 of its 36 runs scored *worse* after the model revised its own
+script, 33 unchanged, none better. Opening the three scripts, **two were the
+checker and one was real.**
+
+| run | flag that flipped | verdict |
+| --- | --- | --- |
+| `1480-…-deepseek-flash-r2` | `target_in_features` | **false positive** — `FEATURE_COLS = NUMERIC_COLS + CATEGORICAL_COLS`, then `X = df[FEATURE_COLS]`. The target is not in either list. |
+| `1480-…-gpt-5.4-mini-r3` | `no_seed` | **false positive** — `RANDOM_STATE = 42`, passed in three places. The seed patterns want a digit. |
+| `1464-…-gpt-5.4-mini-r2` | `no_validation` | **genuine** — no split, no cross-validation, nothing. |
+
+The direction is the part that matters and it is not random. **A revised
+script is a tidier script**, and tidier code hoists column lists and seeds to
+module constants — exactly the forms a regex list misses. So the checker
+systematically penalised the coding style that revision produces, which is
+the style of the arm under study. Every rule scored by the *absence* of an
+enumerated form carries this bias; A7 was the first instance, not the only
+one.
+
+Fixed: `_named_list_excludes_target` resolves a list of quoted names, and one
+level of `A + B` concatenation, when the name is used in a `df[NAME]`
+selection (form 8); `_int_constant_expansion` substitutes names bound to
+integer literals before the seed patterns run. Both are narrow on purpose —
+a comprehension is not a constant list, and a constant nobody selects with
+proves nothing about the feature matrix. `tests/test_ab_target_exclusion.py`
+grows to 24 cases, each accepted form paired with a script that genuinely
+commits the defect.
+
+Rescored as `ab-20260915-3b0221-rescored-v2`. The three scorings now read:
+
+| scoring | control | advise | advise+audit |
+| --- | ---: | ---: | ---: |
+| original | 40 | 31 | 15 |
+| rescored (A7) | 35 | 27 | 9 |
+| **rescored-v2 (A7+A11)** | **33** | **26** | **8** |
+
+The direction survives all three. It has now moved toward the hypothesis
+three times running, and that is worth saying plainly rather than burying:
+every correction so far has helped us. The mechanism is understood and
+checkable — false positives concentrate in careful code, and the treatment
+arms produce more careful code — but anyone reading this should confirm it
+rather than accept it. **The next correction that moves the numbers the
+other way will be the one that tells us the scorer is finally unbiased.**

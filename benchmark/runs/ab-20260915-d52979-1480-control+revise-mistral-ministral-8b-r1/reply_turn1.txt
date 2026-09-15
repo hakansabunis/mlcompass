@@ -1,0 +1,84 @@
+```python
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report
+from joblib import dump
+from tqdm import tqdm
+import os
+
+# Set random seeds for reproducibility
+np.random.seed(20260915)
+SEED = 20260915
+
+def load_and_preprocess_data(filepath):
+    """Load and preprocess the data from CSV file."""
+    # Load data
+    df = pd.read_csv(filepath)
+
+    # Separate features and target
+    X = df.drop(columns=['Class'])
+    y = df['Class']
+
+    # Convert categorical feature (V2) to numerical using one-hot encoding
+    X = pd.get_dummies(X, columns=['V2'], drop_first=True)
+
+    return X, y
+
+def train_and_evaluate_model(X, y):
+    """Train a RandomForestClassifier and evaluate it."""
+    # Split data into train and validation sets
+    X_train, X_val, y_train, y_val = train_test_split(
+        X, y, test_size=0.2, random_state=SEED, stratify=y
+    )
+
+    # Initialize and train the model
+    model = RandomForestClassifier(
+        n_estimators=100,
+        random_state=SEED,
+        n_jobs=-1,
+        verbose=1
+    )
+
+    # Train the model (with progress bar)
+    model.fit(X_train, y_train)
+
+    # Make predictions on validation set
+    y_pred = model.predict(X_val)
+
+    # Calculate and print evaluation metrics
+    accuracy = accuracy_score(y_val, y_pred)
+    print(f"Validation Accuracy: {accuracy:.4f}")
+    print("\nClassification Report:")
+    print(classification_report(y_val, y_pred))
+
+    return model, X_train, X_val, y_train, y_val
+
+def save_model(model, filepath='random_forest_model.joblib'):
+    """Save the trained model to a file."""
+    dump(model, filepath)
+    print(f"\nModel saved to {filepath}")
+
+def main():
+    # Define file path
+    csv_path = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed20260915-r1\train.csv"
+
+    # Check if file exists
+    if not os.path.exists(csv_path):
+        raise FileNotFoundError(f"The file {csv_path} does not exist.")
+
+    # Load and preprocess data
+    print("Loading and preprocessing data...")
+    X, y = load_and_preprocess_data(csv_path)
+
+    # Train and evaluate model
+    print("\nTraining model...")
+    model, X_train, X_val, y_train, y_val = train_and_evaluate_model(X, y)
+
+    # Save the model
+    save_model(model)
+
+if __name__ == "__main__":
+    main()
+```

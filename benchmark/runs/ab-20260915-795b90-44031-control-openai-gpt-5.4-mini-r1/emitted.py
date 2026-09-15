@@ -1,0 +1,114 @@
+import os
+import joblib
+import numpy as np
+import pandas as pd
+
+from sklearn.compose import TransformedTargetRegressor
+from sklearn.ensemble import HistGradientBoostingRegressor, ExtraTreesRegressor, StackingRegressor
+from sklearn.impute import SimpleImputer
+from sklearn.metrics import mean_absolute_error
+from sklearn.model_selection import KFold, cross_val_score
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import FunctionTransformer, StandardScaler
+
+# Path to training data
+DATA_PATH = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed0-r1\train.csv"
+MODEL_PATH = "trained_model.joblib"
+
+# Load data
+df = pd.read_csv(DATA_PATH)
+
+target_col = "price"
+feature_cols = [c for c in df.columns if c != target_col]
+
+X = df[feature_cols].copy()
+y = df[target_col].copy()
+
+# Basic preprocessing pipeline
+# Log-transform target to stabilize training on potentially skewed prices
+target_transformer = FunctionTransformer(np.log1p, inverse_func=np.expm1, validate=True)
+
+# Base models
+hgb = HistGradientBoostingRegressor(
+    learning_rate=0.05,
+    max_iter=500,
+    max_leaf_nodes=31,
+    min_samples_leaf=20,
+    l2_regularization=0.1,
+    random_state=42
+)
+
+et = ExtraTreesRegressor(
+    n_estimators=500,
+    random_state=42,
+    n_jobs=-1,
+    min_samples_leaf=2,
+    max_features=0.8
+)
+
+# Pipelines for models that benefit from scaling/imputation
+hgb_pipe = Pipeline([
+    ("imputer", SimpleImputer(strategy="median")),
+    ("model", hgb),
+])
+
+et_pipe = Pipeline([
+    ("imputer", SimpleImputer(strategy="median")),
+    ("model", et),
+])
+
+# Stacking ensemble for better performance
+estimators = [
+    ("hgb", hgb_pipe),
+    ("et", et_pipe),
+]
+
+final_estimator = HistGradientBoostingRegressor(
+    learning_rate=0.05,
+    max_iter=200,
+    max_leaf_nodes=15,
+    min_samples_leaf=10,
+    l2_regularization=0.1,
+    random_state=42
+)
+
+stack = StackingRegressor(
+    estimators=estimators,
+    final_estimator=final_estimator,
+    passthrough=False,
+    n_jobs=-1,
+    cv=KFold(n_splits=5, shuffle=True, random_state=42)
+)
+
+model = TransformedTargetRegressor(
+    regressor=stack,
+    transformer=target_transformer
+)
+
+# Optional quick CV check (MAE on original scale)
+cv = KFold(n_splits=5, shuffle=True, random_state=42)
+scores = cross_val_score(
+    model,
+    X,
+    y,
+    scoring="neg_mean_absolute_error",
+    cv=cv,
+    n_jobs=-1
+)
+mae_scores = -scores
+print(f"Cross-validated MAE: {mae_scores.mean():.6f} +/- {mae_scores.std():.6f}")
+
+# Fit on full data
+model.fit(X, y)
+
+# Save fitted model
+joblib.dump(
+    {
+        "model": model,
+        "feature_cols": feature_cols,
+        "target_col": target_col
+    },
+    MODEL_PATH
+)
+
+print(f"Saved model to: {os.path.abspath(MODEL_PATH)}")

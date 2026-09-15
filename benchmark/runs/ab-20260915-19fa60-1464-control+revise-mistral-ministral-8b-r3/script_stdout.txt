@@ -1,0 +1,19 @@
+Loading dataset...
+Splitting data...
+Training model...
+Evaluating model...
+Validation accuracy: 0.7589
+
+Classification Report:
+              precision    recall  f1-score   support
+
+           1       0.86      0.81      0.84        85
+           2       0.50      0.59      0.54        27
+
+    accuracy                           0.76       112
+   macro avg       0.68      0.70      0.69       112
+weighted avg       0.78      0.76      0.77       112
+
+
+Saving model to: C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed2-r3\rf_classifier.joblib
+Training completed successfully!

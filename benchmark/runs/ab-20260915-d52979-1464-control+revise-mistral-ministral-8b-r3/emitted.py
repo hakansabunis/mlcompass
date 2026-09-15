@@ -1,0 +1,87 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report, accuracy_score
+from joblib import dump
+from pathlib import Path
+import os
+
+def train_and_save_model():
+    # Define the file path - handle potential path issues with forward slashes
+    csv_path = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed20260915-r3\train.csv"
+
+    try:
+        # Verify file exists before loading
+        if not os.path.exists(csv_path):
+            raise FileNotFoundError(f"Training data file not found at: {csv_path}")
+
+        # Load the dataset with error handling
+        print("Loading dataset...")
+        data = pd.read_csv(csv_path)
+
+        # Check if required columns exist
+        required_columns = {'V1', 'V2', 'V3', 'V4', 'Class'}
+        missing_cols = required_columns - set(data.columns)
+        if missing_cols:
+            raise ValueError(f"Missing required columns: {missing_cols}")
+
+        # Check for empty dataset
+        if len(data) == 0:
+            raise ValueError("Dataset is empty")
+
+        # Separate features and target
+        X = data[['V1', 'V2', 'V3', 'V4']]
+        y = data['Class']
+
+        # Split data into training and validation sets with stratification
+        print("Splitting data...")
+        X_train, X_val, y_train, y_val = train_test_split(
+            X, y,
+            test_size=0.2,
+            random_state=20260915,
+            stratify=y
+        )
+
+        # Initialize and train the model with more robust parameters
+        print("Training model...")
+        model = RandomForestClassifier(
+            n_estimators=200,
+            max_depth=10,
+            min_samples_split=5,
+            random_state=20260915,
+            n_jobs=-1,
+            class_weight='balanced',
+            warm_start=False
+        )
+        model.fit(X_train, y_train)
+
+        # Evaluate on validation set
+        print("Evaluating model...")
+        y_pred = model.predict(X_val)
+        accuracy = accuracy_score(y_val, y_pred)
+        print(f"Validation Accuracy: {accuracy:.4f}")
+        print(classification_report(y_val, y_pred, zero_division=0))
+
+        # Create directory if it doesn't exist
+        model_dir = Path.cwd() / "models"
+        model_dir.mkdir(exist_ok=True)
+
+        # Save the model with version info in filename
+        model_path = model_dir / f"rf_classifier_{len(data)}_rows_v1.joblib"
+        print(f"Saving model to {model_path}")
+        dump(model, model_path)
+
+        return str(model_path)
+
+    except Exception as e:
+        print(f"Error during training: {str(e)}")
+        raise
+
+if __name__ == "__main__":
+    try:
+        model_path = train_and_save_model()
+        print(f"\nTraining complete. Model saved to: {model_path}")
+    except Exception as e:
+        print(f"Script failed: {str(e)}")
+        exit(1)

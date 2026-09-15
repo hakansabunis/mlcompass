@@ -1,0 +1,10 @@
+Test RMSE: 0.15
+Model successfully saved to C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed1-r2\house_price_model.joblib
+
+Top 5 most important features:
+     Feature  Importance
+0     MedInc    0.510520
+5   AveOccup    0.125442
+7  Longitude    0.109217
+6   Latitude    0.102982
+2   AveRooms    0.054229

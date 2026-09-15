@@ -1,0 +1,19 @@
+Starting data processing and model training...
+Loading data from: C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed20260915-r1\train.csv
+
+Validation Accuracy: 0.7273
+
+Classification Report:
+              precision    recall  f1-score   support
+
+           1       0.87      0.73      0.79        63
+           2       0.51      0.72      0.60        25
+
+    accuracy                           0.73        88
+   macro avg       0.69      0.73      0.70        88
+weighted avg       0.77      0.73      0.74        88
+
+
+Model successfully saved to C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed20260915-r1\trained_model.joblib
+
+Training process completed successfully.

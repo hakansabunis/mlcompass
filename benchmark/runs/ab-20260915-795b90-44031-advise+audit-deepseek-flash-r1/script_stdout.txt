@@ -1,0 +1,4 @@
+Validation RMSE: 0.138279
+Validation MAE: 0.095196
+Validation R2: 0.853514
+Saved model to model.joblib

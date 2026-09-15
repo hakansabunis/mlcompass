@@ -1,0 +1,2 @@
+Test set R^2 score: 0.6237957136039347
+Model saved to house_price_model.joblib

@@ -1,0 +1,23 @@
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from joblib import dump
+
+# Load the dataset
+file_path = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed2-r3\train.csv"
+data = pd.read_csv(file_path)
+
+# Define features and target
+features = data.drop(columns=['price'])
+target = data['price']
+
+# Split the dataset into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(features, target, test_size=0.2, random_state=42)
+
+# Initialize and train the model
+model = LinearRegression()
+model.fit(X_train, y_train)
+
+# Save the trained model
+model_file_path = 'price_prediction_model.joblib'
+dump(model, model_file_path)

@@ -1,0 +1,23 @@
+Validation Set Performance:
+              precision    recall  f1-score   support
+
+           1       0.83      0.66      0.73        29
+           2       0.41      0.64      0.50        11
+
+    accuracy                           0.65        40
+   macro avg       0.62      0.65      0.62        40
+weighted avg       0.71      0.65      0.67        40
+
+
+Model saved to C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed0-r1\random_forest_classifier.joblib
+
+Test Set Performance (for demonstration only):
+              precision    recall  f1-score   support
+
+           1       0.83      0.66      0.73        29
+           2       0.41      0.64      0.50        11
+
+    accuracy                           0.65        40
+   macro avg       0.62      0.65      0.62        40
+weighted avg       0.71      0.65      0.67        40
+

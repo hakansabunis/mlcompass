@@ -1,0 +1,14 @@
+Training model...
+
+Model Evaluation:
+              precision    recall  f1-score   support
+
+           1       0.75      0.86      0.80        64
+           2       0.31      0.18      0.23        22
+
+    accuracy                           0.69        86
+   macro avg       0.53      0.52      0.52        86
+weighted avg       0.64      0.69      0.66        86
+
+
+Model saved to trained_classifier.joblib

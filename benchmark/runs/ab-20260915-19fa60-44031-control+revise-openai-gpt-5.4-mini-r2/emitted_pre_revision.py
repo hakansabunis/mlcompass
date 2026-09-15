@@ -1,0 +1,105 @@
+import os
+import json
+import joblib
+import numpy as np
+import pandas as pd
+
+from sklearn.model_selection import train_test_split, KFold, cross_val_score
+from sklearn.pipeline import Pipeline
+from sklearn.compose import TransformedTargetRegressor
+from sklearn.impute import SimpleImputer
+from sklearn.ensemble import HistGradientBoostingRegressor
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+
+
+DATA_PATH = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed1-r2\train.csv"
+MODEL_PATH = "trained_model.joblib"
+
+
+def main():
+    # Load data
+    df = pd.read_csv(DATA_PATH)
+
+    target_col = "price"
+    feature_cols = [c for c in df.columns if c != target_col]
+
+    X = df[feature_cols].copy()
+    y = df[target_col].copy()
+
+    # Simple validation split for a quick sanity check
+    X_train, X_valid, y_train, y_valid = train_test_split(
+        X, y, test_size=0.2, random_state=42
+    )
+
+    # Pipeline: impute missing values, then train a strong tree-based regressor
+    base_model = Pipeline(
+        steps=[
+            ("imputer", SimpleImputer(strategy="median")),
+            (
+                "regressor",
+                HistGradientBoostingRegressor(
+                    learning_rate=0.05,
+                    max_depth=8,
+                    max_iter=500,
+                    min_samples_leaf=20,
+                    l2_regularization=0.0,
+                    random_state=42,
+                ),
+            ),
+        ]
+    )
+
+    # Wrap with target transform to improve regression stability if target is skewed.
+    # Using identity via log1p/expm1 only if all targets are non-negative.
+    if (y_train >= 0).all():
+        model = TransformedTargetRegressor(
+            regressor=base_model,
+            func=np.log1p,
+            inverse_func=np.expm1,
+            check_inverse=False,
+        )
+    else:
+        model = base_model
+
+    # Optional cross-validation on the full dataset for a quick quality estimate
+    cv = KFold(n_splits=5, shuffle=True, random_state=42)
+    try:
+        cv_scores = cross_val_score(
+            model,
+            X,
+            y,
+            cv=cv,
+            scoring="neg_root_mean_squared_error",
+            n_jobs=-1,
+        )
+        print(f"CV RMSE: {-cv_scores.mean():.5f} ± {cv_scores.std():.5f}")
+    except Exception as e:
+        print(f"Cross-validation skipped due to: {e}")
+
+    # Fit on training split and evaluate on validation split
+    model.fit(X_train, y_train)
+    preds = model.predict(X_valid)
+
+    rmse = mean_squared_error(y_valid, preds, squared=False)
+    mae = mean_absolute_error(y_valid, preds)
+    r2 = r2_score(y_valid, preds)
+
+    print(f"Holdout RMSE: {rmse:.5f}")
+    print(f"Holdout MAE : {mae:.5f}")
+    print(f"Holdout R2  : {r2:.5f}")
+
+    # Refit on all data before saving
+    model.fit(X, y)
+
+    # Save model and metadata
+    payload = {
+        "model": model,
+        "feature_cols": feature_cols,
+        "target_col": target_col,
+    }
+    joblib.dump(payload, MODEL_PATH)
+    print(f"Saved model to: {os.path.abspath(MODEL_PATH)}")
+
+
+if __name__ == "__main__":
+    main()

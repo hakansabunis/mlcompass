@@ -1,0 +1,28 @@
+C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\model_selection\_validation.py:493: FitFailedWarning: 
+5 fits failed out of a total of 15.
+The score on these train-test partitions for these parameters will be set to nan.
+If these failures are not expected, you can try to debug them by setting error_score='raise'.
+
+Below are more details about the failures:
+--------------------------------------------------------------------------------
+5 fits failed with the following error:
+Traceback (most recent call last):
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\model_selection\_validation.py", line 855, in _fit_and_score
+    estimator.fit(X_train, y_train, **fit_params)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\base.py", line 1403, in wrapper
+    return fit_method(estimator, *args, **kwargs)
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\pipeline.py", line 645, in fit
+    self._final_estimator.fit(Xt, y, **last_step_params["fit"])
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\base.py", line 1403, in wrapper
+    return fit_method(estimator, *args, **kwargs)
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\discriminant_analysis.py", line 1142, in fit
+    raise linalg.LinAlgError(
+    ...<3 lines>...
+    )
+numpy.linalg.LinAlgError: The covariance matrix of class 1 is not full rank. Increase the value of `reg_param` to reduce the collinearity.
+
+  warnings.warn(some_fits_failed_message, FitFailedWarning)
+C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\model_selection\_search.py:1237: UserWarning: One or more of the test scores are non-finite: [       nan 0.57526855 0.57471936]
+  warnings.warn(

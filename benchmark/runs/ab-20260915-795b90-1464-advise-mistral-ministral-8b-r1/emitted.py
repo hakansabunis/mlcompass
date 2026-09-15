@@ -1,0 +1,62 @@
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+from sklearn.metrics import classification_report
+import joblib
+import os
+
+# Load the dataset
+file_path = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed0-r1\train.csv"
+data = pd.read_csv(file_path)
+
+# Remove duplicate rows (as advised by mlcompass)
+data = data.drop_duplicates()
+
+# Separate features and target
+X = data.drop(columns=['Class'])
+y = data['Class']
+
+# Split the data into training and temporary validation sets (80-20 split)
+X_train, X_temp, y_train, y_temp = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+
+# Further split the temporary validation set into validation and test sets (10% of original)
+X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=0.5, random_state=42, stratify=y_temp)
+
+# Create a preprocessing pipeline
+preprocessor = Pipeline([
+    ('imputer', SimpleImputer(strategy='median')),  # Handle any potential missing values
+    ('scaler', StandardScaler())  # Standardize features
+])
+
+# Create a full pipeline with preprocessing and model
+model = Pipeline([
+    ('preprocessor', preprocessor),
+    ('classifier', RandomForestClassifier(
+        n_estimators=100,
+        random_state=42,
+        class_weight='balanced',
+        max_depth=10,
+        min_samples_split=5
+    ))
+])
+
+# Train the model
+model.fit(X_train, y_train)
+
+# Evaluate on validation set
+y_val_pred = model.predict(X_val)
+print("Validation Set Performance:")
+print(classification_report(y_val, y_val_pred))
+
+# Save the trained model to a file
+model_filename = "random_forest_classifier.joblib"
+joblib.dump(model, model_filename)
+print(f"\nModel saved to {os.path.abspath(model_filename)}")
+
+# Optional: Evaluate on test set (for demonstration only - in practice you might want to keep this separate)
+y_test_pred = model.predict(X_test)
+print("\nTest Set Performance (for demonstration only):")
+print(classification_report(y_val, y_val_pred))

@@ -1,0 +1,16 @@
+Traceback (most recent call last):
+  File "C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed0-r1\emitted.py", line 75, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed0-r1\emitted.py", line 61, in main
+    rmse = mean_squared_error(y_val, val_pred, squared=False)
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\utils\_param_validation.py", line 196, in wrapper
+    params = func_sig.bind(*args, **kwargs)
+  File "C:\Users\SABUNIS\AppData\Local\Programs\Python\Python313\Lib\inspect.py", line 3269, in bind
+    return self._bind(args, kwargs)
+           ~~~~~~~~~~^^^^^^^^^^^^^^
+  File "C:\Users\SABUNIS\AppData\Local\Programs\Python\Python313\Lib\inspect.py", line 3258, in _bind
+    raise TypeError(
+        'got an unexpected keyword argument {arg!r}'.format(
+            arg=next(iter(kwargs))))
+TypeError: got an unexpected keyword argument 'squared'

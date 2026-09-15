@@ -1,0 +1,7 @@
+random_forest: CV accuracy = 0.6440 (+/- 0.0298)
+gradient_boosting: CV accuracy = 0.7094 (+/- 0.0378)
+hist_gradient_boosting: CV accuracy = 0.7095 (+/- 0.0355)
+logistic_regression: CV accuracy = 0.6099 (+/- 0.0767)
+Best model by CV: hist_gradient_boosting (CV accuracy = 0.7095)
+Validation accuracy for hist_gradient_boosting: 0.7045
+Model saved to: C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed0-r1\model.joblib

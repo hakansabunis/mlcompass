@@ -1,0 +1,155 @@
+{
+  "dataset_id": "openml-1464",
+  "arm": "control+revise",
+  "panel_id": "openai-gpt-5.4-mini",
+  "provider": "openai",
+  "model": "gpt-5.4-mini",
+  "endpoint": "https://api.openai.com/v1",
+  "control_prompt_sha256": "0a52e65bc502b8d764d013112572b9fff3f7a86a194d14490a69049cd3a877a6",
+  "prompt_sha256": "5db42c359c092c5c11539c4dcee894dfd7ef9d37d121aabf27590ddf223a63e6",
+  "revision_prompt_sha256": "6467ebe629d91fe6718b77cab5615164b4310d93b36c86abbcf7b1220ff96855",
+  "started_at_utc": "2026-09-15T20:33:16Z",
+  "status": "completed",
+  "script_exit_code": 0,
+  "runtime_seconds": 9.384,
+  "temperature": {
+    "requested": 1.0,
+    "status": "sent",
+    "used": 1.0,
+    "frozen_by": "ab_protocol.md \u00a75 (\u00a79 A3)"
+  },
+  "turns": [
+    {
+      "turn": 1,
+      "label": "control+revise first turn",
+      "prompt_sha256": "5db42c359c092c5c11539c4dcee894dfd7ef9d37d121aabf27590ddf223a63e6",
+      "ok": true,
+      "error": "",
+      "finish_reason": "stop",
+      "input_tokens": 355,
+      "output_tokens": 399,
+      "seconds": 2.085,
+      "temperature_requested": 1.0,
+      "temperature_status": "sent",
+      "temperature_used": 1.0,
+      "temperature_rejection": ""
+    },
+    {
+      "turn": 2,
+      "label": "control+revise self-revision",
+      "prompt_sha256": "6467ebe629d91fe6718b77cab5615164b4310d93b36c86abbcf7b1220ff96855",
+      "ok": true,
+      "error": "",
+      "finish_reason": "stop",
+      "input_tokens": 758,
+      "output_tokens": 258,
+      "seconds": 1.534,
+      "temperature_requested": 1.0,
+      "temperature_status": "sent",
+      "temperature_used": 1.0,
+      "temperature_rejection": ""
+    }
+  ],
+  "usage": {
+    "input_tokens": 1113,
+    "output_tokens": 657
+  },
+  "split": {
+    "train_csv": "C:\\Users\\SABUNIS\\Desktop\\ml-copilot\\benchmark\\runs\\ab-20260915-19fa60\\_splits\\openml-1464-seed1\\train.csv",
+    "holdout_csv": "C:\\Users\\SABUNIS\\Desktop\\ml-copilot\\benchmark\\runs\\ab-20260915-19fa60\\_splits\\openml-1464-seed1\\holdout.csv",
+    "columns": "  - V1 (int64)\n  - V2 (int64)\n  - V3 (int64)\n  - V4 (int64)\n  - Class (int64)",
+    "seed": 1,
+    "holdout_fraction": 0.25,
+    "stratified": true,
+    "train_rows": 554,
+    "holdout_rows": 194,
+    "source_sha256": "5ef21d22cd52e907a616c2a85c25841035e9e69b093516c9232042cc78e13027",
+    "train_sha256": "733494d2aa391c8046e2d9f7cecd0b7793d19926bcfa3ecc9a13c32f054d3155",
+    "holdout_sha256": "42127c796839aa04c8313e77fc3419af9d3d3a5c1844a19375af8c58be6e36a1",
+    "grouped_on_duplicates": true,
+    "holdout_rows_present_in_train": 0,
+    "duplicate_rows": 155,
+    "duplicate_groups": 533,
+    "train_groups": 399,
+    "holdout_groups": 134,
+    "source_rows": 748,
+    "source_duplicate_rows": 215,
+    "minority_fraction": 0.2328519855595668,
+    "target_is_last_column": true
+  },
+  "holdout": {
+    "status": "unscorable",
+    "metric": "",
+    "score": "",
+    "artifact": "",
+    "attempts": [
+      {
+        "artifact": "trained_model.joblib",
+        "error": "loaded object has no .predict (dict)"
+      }
+    ],
+    "reason": "no saved artefact could be loaded and used to predict on the holdout"
+  },
+  "defects": {
+    "flags": {
+      "no_seed": false,
+      "leak_fit_before_split": false,
+      "leak_duplicate_rows": true,
+      "wrong_metric_for_imbalance": false,
+      "no_validation": true,
+      "target_in_features": false
+    },
+    "defect_count": 2,
+    "frameworks_imported": [
+      "sklearn"
+    ],
+    "frameworks_seeded": [
+      "sklearn"
+    ],
+    "split_line": null,
+    "dedupe_deadline": null,
+    "transformer_fit_lines": [],
+    "input_duplicate_rows": 155,
+    "input_minority_fraction": 0.2328519855595668,
+    "target_is_last_column": true
+  },
+  "defects_pre_revision": {
+    "flags": {
+      "no_seed": false,
+      "leak_fit_before_split": false,
+      "leak_duplicate_rows": true,
+      "wrong_metric_for_imbalance": false,
+      "no_validation": false,
+      "target_in_features": false
+    },
+    "defect_count": 1,
+    "frameworks_imported": [
+      "sklearn"
+    ],
+    "frameworks_seeded": [
+      "sklearn"
+    ],
+    "split_line": 25,
+    "dedupe_deadline": 21,
+    "transformer_fit_lines": [],
+    "input_duplicate_rows": 155,
+    "input_minority_fraction": 0.2328519855595668,
+    "target_is_last_column": true
+  },
+  "audit": null,
+  "execution": {
+    "workspace": "fresh temp dir, seeded with train.csv only, deleted after the run",
+    "containment": "separate subprocess, wall-clock timeout, holdout outside the workspace",
+    "python": "3.13.3",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "environment_stated_to_every_arm": {
+      "interpreter": "C:\\Users\\SABUNIS\\Desktop\\ml-copilot\\.venv\\Scripts\\python.exe",
+      "python": "3.13.3",
+      "packages_stated": "  - numpy 2.4.6\n  - pandas 3.0.3\n  - scipy 1.18.1\n  - sklearn (scikit-learn 1.9.1)\n  - joblib 1.6.0\n  - cloudpickle 3.1.2\n  - xlsxwriter 3.2.9\n  - tqdm 4.70.1\n  - yaml (PyYAML 6.0.3)",
+      "packages_sha256": "b86cae3362eb29f92974d1d5083b7c354b883abd70b3544b66619535535c88e9",
+      "scope": "packages importable by that interpreter, from a frozen roster of 36 ML-relevant names; measured at prompt time, not a complete pip list"
+    }
+  },
+  "mlcompass_commit": "594dd1e90e9909cacf883cc7f05e10d17ca3547f",
+  "tree_dirty": true
+}

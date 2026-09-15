@@ -1,0 +1,3 @@
+Holdout MAE: 0.096794
+5-fold CV MAE: 0.093585 ± 0.002113
+Saved trained model to: C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed0-r1\trained_model.joblib

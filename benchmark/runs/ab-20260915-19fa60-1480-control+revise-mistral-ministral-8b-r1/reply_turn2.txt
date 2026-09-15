@@ -1,0 +1,118 @@
+```python
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.impute import SimpleImputer
+from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
+from sklearn.metrics import classification_report
+from sklearn.base import BaseEstimator, TransformerMixin
+import joblib
+import os
+from tqdm import tqdm
+
+# Custom transformer for handling categorical features properly
+class CategoricalTransformer(BaseEstimator, TransformerMixin):
+    def __init__(self, categorical_features):
+        self.categorical_features = categorical_features
+
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X):
+        # Create dummy variables for each categorical feature
+        dummies = pd.get_dummies(X[self.categorical_features], prefix=self.categorical_features)
+        # Drop the original categorical columns
+        X_transformed = X.drop(columns=self.categorical_features)
+        # Concatenate with dummy variables
+        return pd.concat([X_transformed, dummies], axis=1)
+
+# Define file path
+csv_path = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed0-r1\train.csv"
+
+# Load data
+print("Loading data...")
+df = pd.read_csv(csv_path)
+
+# Separate features and target
+X = df.drop(columns=['Class'])
+y = df['Class']
+
+# Split data
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y,
+    test_size=0.2,
+    random_state=42,
+    stratify=y,
+    shuffle=True
+)
+
+# Define feature types
+numerical_features = ['V1', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8', 'V9', 'V10']
+categorical_features = ['V2']
+
+# Preprocessing pipelines
+numerical_transformer = Pipeline(steps=[
+    ('imputer', SimpleImputer(strategy='median')),
+    ('scaler', StandardScaler())
+])
+
+categorical_transformer = Pipeline(steps=[
+    ('imputer', SimpleImputer(strategy='most_frequent')),
+    ('onehot', OneHotEncoder(handle_unknown='ignore', sparse=False))
+])
+
+# Create preprocessing object
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('num', numerical_transformer, numerical_features),
+        ('cat', categorical_transformer, categorical_features)
+    ])
+
+# Create and train model
+model = Pipeline(steps=[
+    ('preprocessor', preprocessor),
+    ('classifier', RandomForestClassifier(
+        n_estimators=100,
+        random_state=42,
+        n_jobs=-1,
+        class_weight='balanced'
+    ))
+])
+
+# Train model
+print("Training model...")
+model.fit(X_train, y_train)
+
+# Evaluate model
+y_pred = model.predict(X_test)
+print("\nClassification Report:")
+print(classification_report(y_test, y_pred))
+
+# Save model
+model_path = os.path.join(os.getcwd(), 'trained_model.joblib')
+joblib.dump(model, model_path)
+print(f"\nModel saved to {model_path}")
+
+# Optional: Print feature importances (if model supports it)
+if hasattr(model.named_steps['classifier'], 'feature_importances_'):
+    # Get feature names after one-hot encoding
+    ohe = model.named_steps['preprocessor'].named_transformers_['cat'].named_steps['onehot']
+    feature_names = numerical_features.copy()
+    for col in ohe.get_feature_names_out(categorical_features):
+        feature_names.append(col)
+
+    # Get importances
+    importances = model.named_steps['classifier'].feature_importances_
+
+    # Create DataFrame and sort
+    feature_importance = pd.DataFrame({
+        'Feature': feature_names,
+        'Importance': importances
+    }).sort_values('Importance', ascending=False)
+
+    print("\nTop 10 Feature Importances:")
+    print(feature_importance.head(10))
+```

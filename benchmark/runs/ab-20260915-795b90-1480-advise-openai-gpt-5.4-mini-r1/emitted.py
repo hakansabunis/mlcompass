@@ -1,0 +1,84 @@
+import json
+from pathlib import Path
+
+import joblib
+import numpy as np
+import pandas as pd
+from sklearn.compose import ColumnTransformer
+from sklearn.impute import SimpleImputer
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+
+
+DATA_PATH = Path(r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed0-r1\train.csv")
+MODEL_PATH = Path.cwd() / "trained_model.joblib"
+
+
+def main():
+    df = pd.read_csv(DATA_PATH)
+
+    target_col = "Class"
+    X = df.drop(columns=[target_col])
+    y = df[target_col]
+
+    # Identify column types
+    categorical_cols = X.select_dtypes(include=["object", "string", "category"]).columns.tolist()
+    numeric_cols = X.columns.difference(categorical_cols).tolist()
+
+    # Preprocessing for numeric and categorical data
+    numeric_transformer = Pipeline(
+        steps=[
+            ("imputer", SimpleImputer(strategy="median")),
+            ("scaler", StandardScaler()),
+        ]
+    )
+
+    categorical_transformer = Pipeline(
+        steps=[
+            ("imputer", SimpleImputer(strategy="most_frequent")),
+            ("onehot", OneHotEncoder(handle_unknown="ignore")),
+        ]
+    )
+
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ("num", numeric_transformer, numeric_cols),
+            ("cat", categorical_transformer, categorical_cols),
+        ],
+        remainder="drop",
+    )
+
+    # A robust classifier for a small binary dataset
+    clf = LogisticRegression(
+        max_iter=2000,
+        class_weight="balanced",
+        random_state=42,
+    )
+
+    model = Pipeline(
+        steps=[
+            ("preprocessor", preprocessor),
+            ("classifier", clf),
+        ]
+    )
+
+    model.fit(X, y)
+
+    # Save fitted model
+    joblib.dump(
+        {
+            "model": model,
+            "feature_columns": X.columns.tolist(),
+            "target_col": target_col,
+            "numeric_cols": numeric_cols,
+            "categorical_cols": categorical_cols,
+        },
+        MODEL_PATH,
+    )
+
+    print(f"Saved model to: {MODEL_PATH}")
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,3 @@
+Validation RMSE: 0.1337
+Validation R2: 0.8602
+Saved fitted model to: C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed1-r2\model.joblib

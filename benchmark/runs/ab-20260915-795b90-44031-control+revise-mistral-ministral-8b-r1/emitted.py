@@ -1,0 +1,80 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
+from sklearn.metrics import mean_squared_error
+from joblib import dump
+import os
+
+def train_and_save_model(csv_path, target_column='price', random_state=42):
+    try:
+        # Load the dataset
+        df = pd.read_csv(csv_path)
+
+        # Check if required columns exist
+        required_cols = [target_column] + [col for col in df.columns if col != target_column]
+        assert all(col in df.columns for col in required_cols), "Dataset doesn't contain all expected columns"
+
+        # Separate features and target
+        X = df.drop(columns=[target_column])
+        y = df[target_column]
+
+        # Split into train and test sets (stratified sampling not needed for regression)
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.2, random_state=random_state
+        )
+
+        # Create a more robust pipeline - RandomForest doesn't need scaling, but we'll keep it
+        # for potential future model types
+        pipeline = Pipeline([
+            ('scaler', StandardScaler()),  # Included for consistency with future models
+            ('regressor', RandomForestRegressor(
+                n_estimators=200,  # Increased from 100 for better generalization
+                random_state=random_state,
+                max_depth=15,      # Increased depth for better fit
+                min_samples_split=2,  # More conservative split threshold
+                min_samples_leaf=4,  # Minimum samples per leaf node
+                n_jobs=-1           # Use all available cores
+            ))
+        ])
+
+        # Train the model
+        pipeline.fit(X_train, y_train)
+
+        # Evaluate on test set
+        y_pred = pipeline.predict(X_test)
+        rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+        print(f"Test RMSE: {rmse:.2f}")
+
+        # Create a more descriptive filename with current timestamp
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        model_filename = f'house_price_regressor_{timestamp}.joblib'
+
+        # Save the model to current working directory
+        dump(pipeline, model_filename)
+        print(f"Model saved as {os.path.abspath(model_filename)}")
+        print(f"Model parameters: {pipeline.named_steps['regressor'].get_params()}")
+
+        return pipeline, rmse
+
+    except Exception as e:
+        print(f"Error during model training: {str(e)}")
+        raise
+
+if __name__ == "__main__":
+    # Define the path to your CSV file with proper escaping
+    csv_path = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed0-r1\train.csv"
+
+    # Verify file exists before proceeding
+    if not os.path.exists(csv_path):
+        raise FileNotFoundError(f"Dataset file not found at {csv_path}")
+
+    # Train and save the model
+    try:
+        model, rmse = train_and_save_model(csv_path)
+    except Exception as e:
+        print(f"Failed to train model: {str(e)}")
+        exit(1)

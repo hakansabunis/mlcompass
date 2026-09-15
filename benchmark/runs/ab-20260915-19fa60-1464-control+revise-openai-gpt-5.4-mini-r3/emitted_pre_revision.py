@@ -1,0 +1,102 @@
+import os
+import json
+import joblib
+import numpy as np
+import pandas as pd
+
+from sklearn.model_selection import train_test_split, StratifiedKFold, GridSearchCV
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report
+
+
+DATA_PATH = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed2-r3\train.csv"
+MODEL_PATH = "trained_model.joblib"
+
+
+def main():
+    # Load data
+    df = pd.read_csv(DATA_PATH)
+
+    target_col = "Class"
+    feature_cols = [c for c in df.columns if c != target_col]
+
+    X = df[feature_cols]
+    y = df[target_col]
+
+    # Basic sanity cleanup
+    X = X.replace([np.inf, -np.inf], np.nan)
+
+    # Hold-out split for a quick validation check
+    X_train, X_valid, y_train, y_valid = train_test_split(
+        X,
+        y,
+        test_size=0.2,
+        random_state=42,
+        stratify=y if y.nunique() > 1 else None,
+    )
+
+    # Pipeline: impute missing values + classifier
+    pipe = Pipeline(
+        steps=[
+            ("imputer", SimpleImputer(strategy="median")),
+            ("model", RandomForestClassifier(
+                random_state=42,
+                n_jobs=-1,
+                class_weight="balanced"
+            )),
+        ]
+    )
+
+    # Small hyperparameter search for robustness
+    param_grid = {
+        "model__n_estimators": [200, 400],
+        "model__max_depth": [None, 5, 10, 20],
+        "model__min_samples_split": [2, 5, 10],
+        "model__min_samples_leaf": [1, 2, 4],
+    }
+
+    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42) if y.nunique() > 1 else 3
+
+    search = GridSearchCV(
+        estimator=pipe,
+        param_grid=param_grid,
+        scoring="accuracy",
+        cv=cv,
+        n_jobs=-1,
+        verbose=0,
+        refit=True,
+    )
+
+    search.fit(X_train, y_train)
+
+    # Validate
+    y_pred = search.predict(X_valid)
+    acc = accuracy_score(y_valid, y_pred)
+
+    print(f"Validation accuracy: {acc:.6f}")
+    try:
+        print(classification_report(y_valid, y_pred))
+    except Exception:
+        pass
+
+    # Refit best model on full dataset for final training
+    best_model = search.best_estimator_
+    best_model.fit(X, y)
+
+    # Save fitted model
+    joblib.dump(
+        {
+            "model": best_model,
+            "feature_cols": feature_cols,
+            "target_col": target_col,
+        },
+        MODEL_PATH,
+    )
+
+    print(f"Saved model to: {os.path.abspath(MODEL_PATH)}")
+
+
+if __name__ == "__main__":
+    main()

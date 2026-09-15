@@ -1,0 +1,10 @@
+Saved model to: C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed0-r1\trained_model.joblib
+Saved metadata to: C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed0-r1\trained_model_metadata.json
+Cross-validation summary:
+  accuracy_mean: 0.609899
+  accuracy_std: 0.076710
+  roc_auc_mean: 0.725095
+  roc_auc_std: 0.065255
+Hold-out validation metrics:
+  accuracy: 0.693182
+  roc_auc: 0.720635

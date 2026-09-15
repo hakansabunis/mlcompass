@@ -1,0 +1,62 @@
+import os
+import joblib
+import pandas as pd
+
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score
+from sklearn.model_selection import train_test_split
+
+
+DATA_PATH = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed1-r2\train.csv"
+MODEL_PATH = "trained_model.joblib"
+
+
+def main():
+    # Load data
+    df = pd.read_csv(DATA_PATH)
+
+    target_col = "Class"
+    feature_cols = [c for c in df.columns if c != target_col]
+
+    X = df[feature_cols]
+    y = df[target_col]
+
+    # Train/validation split for a light sanity check
+    X_train, X_val, y_train, y_val = train_test_split(
+        X,
+        y,
+        test_size=0.2,
+        random_state=42,
+        stratify=y if y.nunique() > 1 else None,
+    )
+
+    # Strong default model for small tabular integer-feature datasets
+    model = RandomForestClassifier(
+        n_estimators=300,
+        random_state=42,
+        n_jobs=-1,
+        class_weight=None,
+    )
+
+    model.fit(X_train, y_train)
+
+    # Optional validation metric
+    if len(y_val) > 0:
+        preds = model.predict(X_val)
+        acc = accuracy_score(y_val, preds)
+        print(f"Validation accuracy: {acc:.6f}")
+
+    # Refit on full dataset before saving
+    model.fit(X, y)
+
+    artifact = {
+        "model": model,
+        "feature_cols": feature_cols,
+        "target_col": target_col,
+    }
+    joblib.dump(artifact, MODEL_PATH)
+    print(f"Saved model to: {os.path.abspath(MODEL_PATH)}")
+
+
+if __name__ == "__main__":
+    main()

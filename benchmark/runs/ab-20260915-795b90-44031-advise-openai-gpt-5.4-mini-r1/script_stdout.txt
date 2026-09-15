@@ -1,0 +1,2 @@
+CV RMSE: mean=0.137901, std=0.002725
+Saved model to: C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed0-r1\trained_model.joblib

@@ -1,0 +1,5 @@
+CV RMSE: 0.13802 ± 0.00155
+Holdout RMSE: 0.13606
+Holdout MAE : 0.09513
+Holdout R2  : 0.85528
+Saved model to: C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed1-r2\trained_model.joblib

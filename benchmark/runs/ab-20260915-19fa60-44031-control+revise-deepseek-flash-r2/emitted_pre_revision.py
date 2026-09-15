@@ -1,0 +1,65 @@
+import joblib
+import numpy as np
+import pandas as pd
+from pathlib import Path
+from sklearn.ensemble import HistGradientBoostingRegressor
+from sklearn.impute import SimpleImputer
+from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+
+CSV_PATH = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed1-r2\train.csv"
+TARGET_COL = "price"
+MODEL_PATH = Path.cwd() / "model.joblib"
+
+
+def main():
+    df = pd.read_csv(CSV_PATH)
+
+    if TARGET_COL not in df.columns:
+        raise ValueError(f"Target column {TARGET_COL!r} not found in {CSV_PATH}")
+
+    X = df.drop(columns=[TARGET_COL])
+    y = df[TARGET_COL].astype(float)
+
+    X_train, X_valid, y_train, y_valid = train_test_split(
+        X, y, test_size=0.2, random_state=42
+    )
+
+    model = Pipeline(
+        steps=[
+            ("imputer", SimpleImputer(strategy="median")),
+            (
+                "regressor",
+                HistGradientBoostingRegressor(
+                    max_iter=400,
+                    learning_rate=0.05,
+                    max_leaf_nodes=31,
+                    l2_regularization=0.1,
+                    early_stopping=True,
+                    validation_fraction=0.1,
+                    n_iter_no_change=20,
+                    random_state=42,
+                ),
+            ),
+        ]
+    )
+
+    model.fit(X_train, y_train)
+
+    preds = model.predict(X_valid)
+    rmse = np.sqrt(mean_squared_error(y_valid, preds))
+    r2 = r2_score(y_valid, preds)
+
+    print(f"Validation RMSE: {rmse:.4f}")
+    print(f"Validation R2: {r2:.4f}")
+
+    # Refit on the full training data before saving the final model.
+    model.fit(X, y)
+
+    joblib.dump(model, MODEL_PATH)
+    print(f"Saved fitted model to: {MODEL_PATH}")
+
+
+if __name__ == "__main__":
+    main()

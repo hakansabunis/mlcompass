@@ -1,0 +1,170 @@
+{
+  "dataset_id": "openml-1480",
+  "arm": "advise+audit",
+  "panel_id": "mistral-ministral-8b",
+  "provider": "openai",
+  "model": "ministral-8b-latest",
+  "endpoint": "https://api.mistral.ai/v1",
+  "control_prompt_sha256": "0d3a9a60ef1908f5b07f4837ba5525a0627f464d044d355c604c5adbec55ec4c",
+  "prompt_sha256": "52c06011b57c4e81396738125f03766f237fd78282023c14bcc09f0152b6545f",
+  "advise_prompt_sha256": "52c06011b57c4e81396738125f03766f237fd78282023c14bcc09f0152b6545f",
+  "revision_prompt_sha256": "265d1d6a1616e6baaeff25ec9edd7b9e160b6bf9c82f46ccbd74d93e824633e9",
+  "started_at_utc": "2026-09-15T20:10:54Z",
+  "status": "script_failed",
+  "script_exit_code": 1,
+  "runtime_seconds": 13.418,
+  "temperature": {
+    "requested": 1.0,
+    "status": "sent",
+    "used": 1.0,
+    "frozen_by": "ab_protocol.md \u00a75 (\u00a79 A3)"
+  },
+  "turns": [
+    {
+      "turn": 1,
+      "label": "advise+audit first turn",
+      "prompt_sha256": "52c06011b57c4e81396738125f03766f237fd78282023c14bcc09f0152b6545f",
+      "ok": true,
+      "error": "",
+      "finish_reason": "stop",
+      "input_tokens": 1114,
+      "output_tokens": 568,
+      "seconds": 4.571,
+      "temperature_requested": 1.0,
+      "temperature_status": "sent",
+      "temperature_used": 1.0,
+      "temperature_rejection": ""
+    },
+    {
+      "turn": 2,
+      "label": "advise+audit revision",
+      "prompt_sha256": "265d1d6a1616e6baaeff25ec9edd7b9e160b6bf9c82f46ccbd74d93e824633e9",
+      "ok": true,
+      "error": "",
+      "finish_reason": "stop",
+      "input_tokens": 2064,
+      "output_tokens": 639,
+      "seconds": 5.447,
+      "temperature_requested": 1.0,
+      "temperature_status": "sent",
+      "temperature_used": 1.0,
+      "temperature_rejection": ""
+    }
+  ],
+  "usage": {
+    "input_tokens": 3178,
+    "output_tokens": 1207
+  },
+  "split": {
+    "train_csv": "C:\\Users\\SABUNIS\\Desktop\\ml-copilot\\benchmark\\runs\\ab-20260915-795b90\\_splits\\openml-1480-seed0\\train.csv",
+    "holdout_csv": "C:\\Users\\SABUNIS\\Desktop\\ml-copilot\\benchmark\\runs\\ab-20260915-795b90\\_splits\\openml-1480-seed0\\holdout.csv",
+    "columns": "  - V1 (int64)\n  - V2 (str)\n  - V3 (float64)\n  - V4 (float64)\n  - V5 (int64)\n  - V6 (int64)\n  - V7 (int64)\n  - V8 (float64)\n  - V9 (float64)\n  - V10 (float64)\n  - Class (int64)",
+    "seed": 0,
+    "holdout_fraction": 0.25,
+    "stratified": true,
+    "train_rows": 439,
+    "holdout_rows": 144,
+    "source_sha256": "8a3a32776f0341286f16ba78816dc4cf196bb26ed547ec831d10ab43cda92277",
+    "train_sha256": "d4219f27109888e947a242883952b85363d2442d1d8b6ede1952b537bf0f1f93",
+    "holdout_sha256": "4f657f8c2285fa2b877b4f5ad44e8c38728cb4a5056de8c080d7c938aa3c4711",
+    "grouped_on_duplicates": true,
+    "holdout_rows_present_in_train": 0,
+    "duplicate_rows": 12,
+    "duplicate_groups": 570,
+    "train_groups": 427,
+    "holdout_groups": 143,
+    "source_rows": 583,
+    "source_duplicate_rows": 13,
+    "minority_fraction": 0.2870159453302961,
+    "target_is_last_column": true
+  },
+  "holdout": {
+    "status": "unscorable",
+    "metric": "",
+    "score": "",
+    "artifact": "",
+    "attempts": [],
+    "reason": "script did not complete (script_failed); nothing to load"
+  },
+  "defects": {
+    "flags": {
+      "no_seed": false,
+      "leak_fit_before_split": false,
+      "leak_duplicate_rows": false,
+      "wrong_metric_for_imbalance": false,
+      "no_validation": false,
+      "target_in_features": false
+    },
+    "defect_count": 0,
+    "frameworks_imported": [
+      "numpy",
+      "random",
+      "sklearn"
+    ],
+    "frameworks_seeded": [
+      "numpy",
+      "random",
+      "sklearn"
+    ],
+    "split_line": 33,
+    "dedupe_deadline": 29,
+    "transformer_fit_lines": [],
+    "input_duplicate_rows": 12,
+    "input_minority_fraction": 0.2870159453302961,
+    "target_is_last_column": true
+  },
+  "defects_pre_revision": {
+    "flags": {
+      "no_seed": false,
+      "leak_fit_before_split": false,
+      "leak_duplicate_rows": false,
+      "wrong_metric_for_imbalance": false,
+      "no_validation": false,
+      "target_in_features": false
+    },
+    "defect_count": 0,
+    "frameworks_imported": [
+      "numpy",
+      "sklearn"
+    ],
+    "frameworks_seeded": [
+      "sklearn"
+    ],
+    "split_line": 28,
+    "dedupe_deadline": 24,
+    "transformer_fit_lines": [],
+    "input_duplicate_rows": 12,
+    "input_minority_fraction": 0.2870159453302961,
+    "target_is_last_column": true
+  },
+  "audit": {
+    "audit_status": "ok",
+    "audit_stderr": "",
+    "audit_command": [
+      "C:\\Users\\SABUNIS\\Desktop\\ml-copilot\\.venv\\Scripts\\python.exe",
+      "-X",
+      "utf8",
+      "-m",
+      "mlcompass.cli",
+      "audit",
+      "C:\\Users\\SABUNIS\\AppData\\Local\\Temp\\mlcab_audit_sotkrzzs\\train_model.py"
+    ],
+    "audited_sha256": "6bf9c81a7dda01ecc7fe8227f1a8a95ba86bfde0f615598f210ca66e53d5b76e",
+    "audited_as": "train_model.py in a throwaway directory, to keep the run's identity out of audit's stdout and therefore out of the revision prompt"
+  },
+  "execution": {
+    "workspace": "fresh temp dir, seeded with train.csv only, deleted after the run",
+    "containment": "separate subprocess, wall-clock timeout, holdout outside the workspace",
+    "python": "3.13.3",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "environment_stated_to_every_arm": {
+      "interpreter": "C:\\Users\\SABUNIS\\Desktop\\ml-copilot\\.venv\\Scripts\\python.exe",
+      "python": "3.13.3",
+      "packages_stated": "  - numpy 2.4.6\n  - pandas 3.0.3\n  - scipy 1.18.1\n  - sklearn (scikit-learn 1.9.1)\n  - joblib 1.6.0\n  - cloudpickle 3.1.2\n  - xlsxwriter 3.2.9\n  - tqdm 4.70.1\n  - yaml (PyYAML 6.0.3)",
+      "packages_sha256": "b86cae3362eb29f92974d1d5083b7c354b883abd70b3544b66619535535c88e9",
+      "scope": "packages importable by that interpreter, from a frozen roster of 36 ML-relevant names; measured at prompt time, not a complete pip list"
+    }
+  },
+  "mlcompass_commit": "7c7bb35a2d92f075ca8ed3f1d6851b847824b7dd",
+  "tree_dirty": true
+}

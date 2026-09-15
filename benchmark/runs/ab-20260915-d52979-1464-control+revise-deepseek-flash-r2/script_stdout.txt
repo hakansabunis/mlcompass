@@ -1,0 +1,13 @@
+logreg: 0.6551
+svc: 0.6397
+random_forest: 0.6923
+extra_trees: 0.6856
+gradient_boosting: 0.6379
+hist_gradient_boosting: 0.6639
+knn: 0.6854
+decision_tree: 0.6519
+lda: 0.5393
+qda: 0.5753
+gaussian_nb: 0.5647
+Best model: random_forest (CV f1_macro: 0.6923)
+Saved model to C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed20260915-r2\model.joblib

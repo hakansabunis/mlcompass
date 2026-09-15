@@ -1,0 +1,96 @@
+```python
+import pandas as pd
+import numpy as np
+import random
+from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error
+from sklearn.preprocessing import StandardScaler
+from joblib import dump
+from tqdm import tqdm
+
+# Set random seeds for reproducibility
+random.seed(42)
+np.random.seed(42)
+
+def load_and_preprocess_data(filepath):
+    """Load data and handle potential outliers using IQR method"""
+    df = pd.read_csv(filepath)
+
+    # Define IQR thresholds based on mlcompass analysis
+    q1 = df.quantile(0.25)
+    q3 = df.quantile(0.75)
+    iqr = q3 - q1
+
+    # Cap outliers for features with significant outliers
+    features_with_outliers = ['MedInc', 'AveRooms', 'AveBedrms', 'Population', 'AveOccup']
+    for feature in features_with_outliers:
+        lower_bound = q1[feature] - 1.5 * iqr[feature]
+        upper_bound = q3[feature] + 1.5 * iqr[feature]
+        df[feature] = np.where(df[feature] < lower_bound, lower_bound,
+                              np.where(df[feature] > upper_bound, upper_bound, df[feature]))
+
+    return df
+
+def train_model(df):
+    """Train and return a Gradient Boosting model"""
+    X = df.drop('price', axis=1)
+    y = df['price']
+
+    # Split data with fixed random state
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42
+    )
+
+    # Scale features (important for GB)
+    scaler = StandardScaler(random_state=42)
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
+
+    # Create and train model with early stopping
+    model = GradientBoostingRegressor(
+        n_estimators=200,
+        learning_rate=0.05,
+        max_depth=5,
+        random_state=42,
+        loss='huber',
+        validation_fraction=0.1,
+        n_iter_no_change=5,
+        tol=1e-4
+    )
+
+    model.fit(
+        X_train_scaled, y_train,
+        verbose=1,
+        early_stopping=True,
+        eval_set=[(X_test_scaled, y_test)]
+    )
+
+    # Evaluate
+    y_pred = model.predict(X_test_scaled)
+    rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+    print(f"\nModel trained with RMSE: {rmse:.4f}")
+
+    return model, scaler
+
+def main():
+    # File path (adjust if needed)
+    filepath = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed0-r1\train.csv"
+
+    # Load and preprocess data
+    print("Loading and preprocessing data...")
+    df = load_and_preprocess_data(filepath)
+
+    # Train model
+    print("\nTraining model...")
+    model, scaler = train_model(df)
+
+    # Save model and scaler
+    print("\nSaving model and scaler...")
+    dump(model, 'house_price_model.joblib')
+    dump(scaler, 'feature_scaler.joblib')
+    print("Model and scaler saved successfully!")
+
+if __name__ == "__main__":
+    main()
+```

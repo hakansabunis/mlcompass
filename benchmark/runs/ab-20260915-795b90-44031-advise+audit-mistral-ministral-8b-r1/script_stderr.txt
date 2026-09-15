@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed0-r1\emitted.py", line 94, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed0-r1\emitted.py", line 85, in main
+    model, scaler = train_model(df)
+                    ~~~~~~~~~~~^^^^
+  File "C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed0-r1\emitted.py", line 45, in train_model
+    scaler = StandardScaler(random_state=42)
+TypeError: StandardScaler.__init__() got an unexpected keyword argument 'random_state'

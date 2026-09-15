@@ -1,0 +1,2 @@
+Cross-validated MAE: 0.095798 +/- 0.001556
+Saved model to: C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed0-r1\trained_model.joblib

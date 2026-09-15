@@ -1,0 +1,45 @@
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.ensemble import RandomForestClassifier
+from joblib import dump
+
+# Load the dataset
+file_path = r'C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed0-r1\train.csv'
+df = pd.read_csv(file_path)
+
+# Define features and target variable
+X = df.drop(columns='Class')
+y = df['Class']
+
+# Identify numeric and categorical columns
+numeric_features = X.select_dtypes(include=['float64', 'int64']).columns
+categorical_features = X.select_dtypes(include=['str']).columns
+
+# Create a preprocessing pipeline
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('num', StandardScaler(), numeric_features),
+        ('cat', OneHotEncoder(), categorical_features)
+    ])
+
+# Define the model
+model = RandomForestClassifier(random_state=42)
+
+# Create the full pipeline
+pipeline = Pipeline([
+    ('preprocess', preprocessor),
+    ('classifier', model)])
+
+# Split data into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Train the model
+pipeline.fit(X_train, y_train)
+
+# Save the fitted model to a file in the current working directory
+model_file_path = 'trained_model.joblib'
+dump(pipeline, model_file_path)
+print(f'Model saved to {model_file_path}')

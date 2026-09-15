@@ -1,0 +1,17 @@
+Loading dataset...
+Splitting data...
+Training model...
+Evaluating model...
+Validation Accuracy: 0.7714
+              precision    recall  f1-score   support
+
+           1       0.88      0.81      0.84        79
+           2       0.53      0.65      0.59        26
+
+    accuracy                           0.77       105
+   macro avg       0.70      0.73      0.71       105
+weighted avg       0.79      0.77      0.78       105
+
+Saving model to C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed20260915-r3\models\rf_classifier_524_rows_v1.joblib
+
+Training complete. Model saved to: C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed20260915-r3\models\rf_classifier_524_rows_v1.joblib

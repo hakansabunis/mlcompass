@@ -1,0 +1,11 @@
+Validation Accuracy: 0.6818181818181818
+              precision    recall  f1-score   support
+
+           1       0.80      0.75      0.77        63
+           2       0.45      0.52      0.48        25
+
+    accuracy                           0.68        88
+   macro avg       0.62      0.63      0.63        88
+weighted avg       0.70      0.68      0.69        88
+
+Model saved to C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed20260915-r3\trained_model.joblib

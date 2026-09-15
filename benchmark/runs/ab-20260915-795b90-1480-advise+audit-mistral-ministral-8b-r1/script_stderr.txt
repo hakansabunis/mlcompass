@@ -1,0 +1,23 @@
+Traceback (most recent call last):
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\utils\_available_if.py", line 32, in _check
+    check_result = self.check(obj)
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\pipeline.py", line 47, in check
+    getattr(self._final_estimator, attr)
+    ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'RandomForestClassifier' object has no attribute 'fit_predict'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed0-r1\emitted.py", line 83, in <module>
+    train_and_save_model()
+    ~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed0-r1\emitted.py", line 73, in train_and_save_model
+    y_pred = model.fit_predict(X_val, y_val)  # Corrected to use predict instead of fit_predict
+             ^^^^^^^^^^^^^^^^^
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\utils\_available_if.py", line 43, in __get__
+    self._check(obj, owner=owner)
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\utils\_available_if.py", line 34, in _check
+    raise AttributeError(attr_err_msg) from e
+AttributeError: This 'Pipeline' has no attribute 'fit_predict'

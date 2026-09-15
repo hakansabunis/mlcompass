@@ -1,0 +1,168 @@
+{
+  "dataset_id": "openml-1464",
+  "arm": "advise+audit",
+  "panel_id": "ollama-qwen2.5-7b",
+  "provider": "openai",
+  "model": "qwen2.5:7b",
+  "endpoint": "http://localhost:11434/v1",
+  "control_prompt_sha256": "4b24110a15f5564220f153f2c25273c3bc86e9208120b2a8e29ae69fff3f1256",
+  "prompt_sha256": "a6c3d32217a0936383d8a2abbfc8a784a17439084343a6dc01dcd8c080f97657",
+  "advise_prompt_sha256": "a6c3d32217a0936383d8a2abbfc8a784a17439084343a6dc01dcd8c080f97657",
+  "revision_prompt_sha256": "e54a666ffde9d350b196197ff59e3c5694f566c6799f84542c65823e71840fc6",
+  "started_at_utc": "2026-09-15T20:02:45Z",
+  "status": "completed",
+  "script_exit_code": 0,
+  "runtime_seconds": 79.906,
+  "temperature": {
+    "requested": 1.0,
+    "status": "sent",
+    "used": 1.0,
+    "frozen_by": "ab_protocol.md \u00a75 (\u00a79 A3)"
+  },
+  "turns": [
+    {
+      "turn": 1,
+      "label": "advise+audit first turn",
+      "prompt_sha256": "a6c3d32217a0936383d8a2abbfc8a784a17439084343a6dc01dcd8c080f97657",
+      "ok": true,
+      "error": "",
+      "finish_reason": "stop",
+      "input_tokens": 844,
+      "output_tokens": 260,
+      "seconds": 33.225,
+      "temperature_requested": 1.0,
+      "temperature_status": "sent",
+      "temperature_used": 1.0,
+      "temperature_rejection": ""
+    },
+    {
+      "turn": 2,
+      "label": "advise+audit revision",
+      "prompt_sha256": "e54a666ffde9d350b196197ff59e3c5694f566c6799f84542c65823e71840fc6",
+      "ok": true,
+      "error": "",
+      "finish_reason": "stop",
+      "input_tokens": 1456,
+      "output_tokens": 290,
+      "seconds": 39.353,
+      "temperature_requested": 1.0,
+      "temperature_status": "sent",
+      "temperature_used": 1.0,
+      "temperature_rejection": ""
+    }
+  ],
+  "usage": {
+    "input_tokens": 2300,
+    "output_tokens": 550
+  },
+  "split": {
+    "train_csv": "C:\\Users\\SABUNIS\\Desktop\\ml-copilot\\benchmark\\runs\\ab-20260915-795b90\\_splits\\openml-1464-seed0\\train.csv",
+    "holdout_csv": "C:\\Users\\SABUNIS\\Desktop\\ml-copilot\\benchmark\\runs\\ab-20260915-795b90\\_splits\\openml-1464-seed0\\holdout.csv",
+    "columns": "  - V1 (int64)\n  - V2 (int64)\n  - V3 (int64)\n  - V4 (int64)\n  - Class (int64)",
+    "seed": 0,
+    "holdout_fraction": 0.25,
+    "stratified": true,
+    "train_rows": 588,
+    "holdout_rows": 160,
+    "source_sha256": "5ef21d22cd52e907a616c2a85c25841035e9e69b093516c9232042cc78e13027",
+    "train_sha256": "f54ba7852d87749882b19e45088bec8638e207beb0bb68335a5216386b8fb054",
+    "holdout_sha256": "430d15d002b0702ef74fa45ee27d96abfb2ed8165f7808919258290366c1ca1b",
+    "grouped_on_duplicates": true,
+    "holdout_rows_present_in_train": 0,
+    "duplicate_rows": 189,
+    "duplicate_groups": 533,
+    "train_groups": 399,
+    "holdout_groups": 134,
+    "source_rows": 748,
+    "source_duplicate_rows": 215,
+    "minority_fraction": 0.23469387755102042,
+    "target_is_last_column": true
+  },
+  "holdout": {
+    "status": "scored",
+    "metric": "roc_auc",
+    "score": 0.4488541666666666,
+    "artifact": "model.joblib",
+    "attempts": []
+  },
+  "defects": {
+    "flags": {
+      "no_seed": false,
+      "leak_fit_before_split": false,
+      "leak_duplicate_rows": false,
+      "wrong_metric_for_imbalance": false,
+      "no_validation": false,
+      "target_in_features": false
+    },
+    "defect_count": 0,
+    "frameworks_imported": [
+      "sklearn"
+    ],
+    "frameworks_seeded": [
+      "sklearn"
+    ],
+    "split_line": 19,
+    "dedupe_deadline": 15,
+    "transformer_fit_lines": [
+      23
+    ],
+    "input_duplicate_rows": 189,
+    "input_minority_fraction": 0.23469387755102042,
+    "target_is_last_column": true
+  },
+  "defects_pre_revision": {
+    "flags": {
+      "no_seed": false,
+      "leak_fit_before_split": false,
+      "leak_duplicate_rows": false,
+      "wrong_metric_for_imbalance": false,
+      "no_validation": false,
+      "target_in_features": false
+    },
+    "defect_count": 0,
+    "frameworks_imported": [
+      "sklearn"
+    ],
+    "frameworks_seeded": [
+      "sklearn"
+    ],
+    "split_line": 19,
+    "dedupe_deadline": 15,
+    "transformer_fit_lines": [
+      23
+    ],
+    "input_duplicate_rows": 189,
+    "input_minority_fraction": 0.23469387755102042,
+    "target_is_last_column": true
+  },
+  "audit": {
+    "audit_status": "ok",
+    "audit_stderr": "",
+    "audit_command": [
+      "C:\\Users\\SABUNIS\\Desktop\\ml-copilot\\.venv\\Scripts\\python.exe",
+      "-X",
+      "utf8",
+      "-m",
+      "mlcompass.cli",
+      "audit",
+      "C:\\Users\\SABUNIS\\AppData\\Local\\Temp\\mlcab_audit_eva7rdcd\\train_model.py"
+    ],
+    "audited_sha256": "3ce71fdd27ee5585924542749c376d72b4203cde7e45bf9c627da8e12141e8f0",
+    "audited_as": "train_model.py in a throwaway directory, to keep the run's identity out of audit's stdout and therefore out of the revision prompt"
+  },
+  "execution": {
+    "workspace": "fresh temp dir, seeded with train.csv only, deleted after the run",
+    "containment": "separate subprocess, wall-clock timeout, holdout outside the workspace",
+    "python": "3.13.3",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "environment_stated_to_every_arm": {
+      "interpreter": "C:\\Users\\SABUNIS\\Desktop\\ml-copilot\\.venv\\Scripts\\python.exe",
+      "python": "3.13.3",
+      "packages_stated": "  - numpy 2.4.6\n  - pandas 3.0.3\n  - scipy 1.18.1\n  - sklearn (scikit-learn 1.9.1)\n  - joblib 1.6.0\n  - cloudpickle 3.1.2\n  - xlsxwriter 3.2.9\n  - tqdm 4.70.1\n  - yaml (PyYAML 6.0.3)",
+      "packages_sha256": "b86cae3362eb29f92974d1d5083b7c354b883abd70b3544b66619535535c88e9",
+      "scope": "packages importable by that interpreter, from a frozen roster of 36 ML-relevant names; measured at prompt time, not a complete pip list"
+    }
+  },
+  "mlcompass_commit": "e7ffa179cdb556d087a9f0e306d506b20f83862f",
+  "tree_dirty": true
+}

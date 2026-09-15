@@ -1,0 +1,20 @@
+Loading data...
+Data loaded successfully. Shape: (436, 11)
+
+Training model...
+
+Evaluating model...
+
+Validation Classification Report:
+              precision    recall  f1-score   support
+
+           1       0.87      0.71      0.78        63
+           2       0.50      0.72      0.59        25
+
+    accuracy                           0.72        88
+   macro avg       0.68      0.72      0.69        88
+weighted avg       0.76      0.72      0.73        88
+
+
+Saving model to: C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed2-r3\random_forest_model.joblib
+Model saved successfully!

@@ -1,0 +1,54 @@
+import joblib
+import pandas as pd
+from sklearn.compose import ColumnTransformer
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.impute import SimpleImputer
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+
+CSV_PATH = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed20260915-r1\train.csv"
+TARGET = "Class"
+MODEL_PATH = "model.joblib"
+
+def main():
+    df = pd.read_csv(CSV_PATH)
+
+    X = df.drop(columns=[TARGET])
+    y = df[TARGET]
+
+    numeric_features = ["V1", "V3", "V4", "V5", "V6", "V7", "V8", "V9", "V10"]
+    categorical_features = ["V2"]
+
+    numeric_transformer = Pipeline(steps=[
+        ("imputer", SimpleImputer(strategy="median")),
+        ("scaler", StandardScaler()),
+    ])
+
+    categorical_transformer = Pipeline(steps=[
+        ("imputer", SimpleImputer(strategy="most_frequent")),
+        ("onehot", OneHotEncoder(handle_unknown="ignore")),
+    ])
+
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ("num", numeric_transformer, numeric_features),
+            ("cat", categorical_transformer, categorical_features),
+        ],
+        remainder="drop",
+    )
+
+    model = Pipeline(steps=[
+        ("preprocessor", preprocessor),
+        ("classifier", RandomForestClassifier(
+            n_estimators=500,
+            random_state=42,
+            n_jobs=-1,
+            class_weight="balanced_subsample",
+        )),
+    ])
+
+    model.fit(X, y)
+    joblib.dump(model, MODEL_PATH)
+
+if __name__ == "__main__":
+    main()

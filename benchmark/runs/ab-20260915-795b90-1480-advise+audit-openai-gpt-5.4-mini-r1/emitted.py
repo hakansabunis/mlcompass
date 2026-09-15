@@ -1,0 +1,167 @@
+import os
+import json
+import random
+import joblib
+import numpy as np
+import pandas as pd
+
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.impute import SimpleImputer
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import StratifiedKFold, cross_val_score, train_test_split
+from sklearn.metrics import accuracy_score, roc_auc_score
+
+
+# Reproducibility
+RANDOM_STATE = 42
+np.random.seed(RANDOM_STATE)
+random.seed(RANDOM_STATE)
+
+DATA_PATH = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed0-r1\train.csv"
+MODEL_PATH = "trained_model.joblib"
+META_PATH = "trained_model_metadata.json"
+
+
+def make_one_hot_encoder():
+    try:
+        return OneHotEncoder(handle_unknown="ignore", sparse_output=False)
+    except TypeError:
+        return OneHotEncoder(handle_unknown="ignore", sparse=False)
+
+
+def build_pipeline():
+    numeric_features = [c for c in FEATURES if c != "V2"]
+    categorical_features = ["V2"]
+
+    numeric_transformer = Pipeline(
+        steps=[
+            ("imputer", SimpleImputer(strategy="median")),
+            ("scaler", StandardScaler()),
+        ]
+    )
+
+    categorical_transformer = Pipeline(
+        steps=[
+            ("imputer", SimpleImputer(strategy="most_frequent")),
+            ("onehot", make_one_hot_encoder()),
+        ]
+    )
+
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ("num", numeric_transformer, numeric_features),
+            ("cat", categorical_transformer, categorical_features),
+        ],
+        remainder="drop",
+        verbose_feature_names_out=False,
+    )
+
+    model = LogisticRegression(
+        max_iter=5000,
+        class_weight="balanced",
+        random_state=RANDOM_STATE,
+    )
+
+    return Pipeline(
+        steps=[
+            ("preprocess", preprocessor),
+            ("model", model),
+        ]
+    )
+
+
+def main():
+    df = pd.read_csv(DATA_PATH)
+
+    target_col = "Class"
+    X = df.drop(columns=[target_col]).copy()
+    y = df[target_col].copy()
+
+    # Ensure the categorical feature is treated consistently.
+    X["V2"] = X["V2"].astype(str)
+
+    global FEATURES
+    FEATURES = list(X.columns)
+
+    # Hold-out validation split for a real validation check.
+    X_train, X_val, y_train, y_val = train_test_split(
+        X,
+        y,
+        test_size=0.2,
+        random_state=RANDOM_STATE,
+        stratify=y,
+    )
+
+    clf = build_pipeline()
+
+    # Cross-validation on the training split.
+    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=RANDOM_STATE)
+    try:
+        cv_acc = cross_val_score(clf, X_train, y_train, cv=cv, scoring="accuracy")
+        cv_auc = cross_val_score(clf, X_train, y_train, cv=cv, scoring="roc_auc")
+        cv_summary = {
+            "accuracy_mean": float(np.mean(cv_acc)),
+            "accuracy_std": float(np.std(cv_acc)),
+            "roc_auc_mean": float(np.mean(cv_auc)),
+            "roc_auc_std": float(np.std(cv_auc)),
+        }
+    except Exception:
+        cv_acc = cross_val_score(clf, X_train, y_train, cv=cv, scoring="accuracy")
+        cv_summary = {
+            "accuracy_mean": float(np.mean(cv_acc)),
+            "accuracy_std": float(np.std(cv_acc)),
+        }
+
+    # Fit and validate on the hold-out set.
+    clf.fit(X_train, y_train)
+    val_pred = clf.predict(X_val)
+    val_proba = None
+    try:
+        val_proba = clf.predict_proba(X_val)[:, 1]
+    except Exception:
+        pass
+
+    val_metrics = {
+        "accuracy": float(accuracy_score(y_val, val_pred)),
+    }
+    if val_proba is not None:
+        try:
+            val_metrics["roc_auc"] = float(roc_auc_score(y_val, val_proba))
+        except Exception:
+            pass
+
+    # Refit on the full dataset for final deployment.
+    final_model = build_pipeline()
+    final_model.fit(X, y)
+
+    joblib.dump(final_model, MODEL_PATH)
+
+    metadata = {
+        "data_path": DATA_PATH,
+        "target_col": target_col,
+        "features": FEATURES,
+        "numeric_features": [c for c in FEATURES if c != "V2"],
+        "categorical_features": ["V2"],
+        "random_state": RANDOM_STATE,
+        "cv_summary": cv_summary,
+        "validation_metrics": val_metrics,
+        "classes_": [int(c) if hasattr(c, "__int__") else c for c in final_model.named_steps["model"].classes_],
+    }
+
+    with open(META_PATH, "w", encoding="utf-8") as f:
+        json.dump(metadata, f, indent=2)
+
+    print(f"Saved model to: {os.path.abspath(MODEL_PATH)}")
+    print(f"Saved metadata to: {os.path.abspath(META_PATH)}")
+    print("Cross-validation summary:")
+    for k, v in cv_summary.items():
+        print(f"  {k}: {v:.6f}")
+    print("Hold-out validation metrics:")
+    for k, v in val_metrics.items():
+        print(f"  {k}: {v:.6f}")
+
+
+if __name__ == "__main__":
+    main()

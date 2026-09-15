@@ -1,0 +1,19 @@
+Loading data...
+Splitting data...
+Training model...
+Evaluating model...
+
+Validation Accuracy: 0.7748
+
+Classification Report:
+              precision    recall  f1-score   support
+
+           1       0.86      0.85      0.85        85
+           2       0.52      0.54      0.53        26
+
+    accuracy                           0.77       111
+   macro avg       0.69      0.69      0.69       111
+weighted avg       0.78      0.77      0.78       111
+
+Saving model...
+Model successfully saved to C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed1-r2\random_forest_model.joblib

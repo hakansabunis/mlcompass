@@ -1,0 +1,48 @@
+import os
+import pandas as pd
+import joblib
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report
+
+DATA_PATH = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed0-r1\train.csv"
+TARGET_COL = "Class"
+MODEL_PATH = "model.joblib"
+
+def main():
+    df = pd.read_csv(DATA_PATH)
+    
+    if TARGET_COL not in df.columns:
+        raise ValueError(f"Target column '{TARGET_COL}' not found in the dataset.")
+    
+    X = df.drop(columns=[TARGET_COL])
+    y = df[TARGET_COL]
+    
+    pipeline = Pipeline([
+        ("imputer", SimpleImputer(strategy="median")),
+        ("classifier", RandomForestClassifier(
+            n_estimators=500,
+            random_state=42,
+            n_jobs=-1
+        ))
+    ])
+    
+    if len(df) > 10:
+        X_train, X_val, y_train, y_val = train_test_split(
+            X, y, test_size=0.2, random_state=42,
+            stratify=y if y.nunique() > 1 else None
+        )
+        pipeline.fit(X_train, y_train)
+        y_pred = pipeline.predict(X_val)
+        print("Validation Accuracy:", accuracy_score(y_val, y_pred))
+        print(classification_report(y_val, y_pred))
+    
+    pipeline.fit(X, y)
+    
+    joblib.dump(pipeline, MODEL_PATH)
+    print(f"Model saved to {os.path.abspath(MODEL_PATH)}")
+
+if __name__ == "__main__":
+    main()

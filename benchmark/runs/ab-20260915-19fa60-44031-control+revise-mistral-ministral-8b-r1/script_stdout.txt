@@ -1,0 +1,12 @@
+Validation RMSE: 0.1605
+Validation R² Score: 0.8027
+
+Top 5 Important Features:
+     Feature  Importance
+0     MedInc    0.387217
+6   Latitude    0.148777
+7  Longitude    0.140133
+2   AveRooms    0.115790
+5   AveOccup    0.109206
+
+Model successfully saved as C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed0-r1\house_price_model.joblib

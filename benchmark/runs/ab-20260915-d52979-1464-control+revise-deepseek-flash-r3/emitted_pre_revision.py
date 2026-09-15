@@ -1,0 +1,34 @@
+import os
+import pandas as pd
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.impute import SimpleImputer
+from sklearn.pipeline import Pipeline
+import joblib
+
+# Path to the training data
+data_path = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed20260915-r3\train.csv"
+
+# Load the dataset
+df = pd.read_csv(data_path)
+
+# Identify target and feature columns
+target_col = 'Class'
+feature_cols = [col for col in df.columns if col != target_col]
+
+X = df[feature_cols]
+y = df[target_col]
+
+# Build a pipeline with imputation and a Random Forest classifier
+model = Pipeline([
+    ('imputer', SimpleImputer(strategy='median')),
+    ('classifier', RandomForestClassifier(n_estimators=500, random_state=42, n_jobs=-1))
+])
+
+# Train the model
+model.fit(X, y)
+
+# Save the fitted model to the current working directory
+model_path = os.path.join(os.getcwd(), 'model.joblib')
+joblib.dump(model, model_path)
+
+print(f"Model saved to {model_path}")

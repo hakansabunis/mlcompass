@@ -1,0 +1,42 @@
+import os
+import joblib
+import pandas as pd
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.impute import SimpleImputer
+from sklearn.pipeline import Pipeline
+
+INPUT_PATH = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed0-r1\train.csv"
+OUTPUT_PATH = os.path.join(os.getcwd(), "model.joblib")
+
+def main():
+    df = pd.read_csv(INPUT_PATH)
+
+    if "Class" not in df.columns:
+        raise ValueError("Target column 'Class' not found in the dataset.")
+
+    df = df.dropna(subset=["Class"])
+    X = df.drop(columns=["Class"])
+    y = df["Class"]
+
+    model = Pipeline(
+        steps=[
+            ("imputer", SimpleImputer(strategy="median")),
+            (
+                "classifier",
+                RandomForestClassifier(
+                    n_estimators=300,
+                    random_state=42,
+                    n_jobs=-1,
+                    class_weight="balanced",
+                    max_features="sqrt",
+                ),
+            ),
+        ]
+    )
+
+    model.fit(X, y)
+    joblib.dump(model, OUTPUT_PATH)
+    print(f"Saved trained model to: {OUTPUT_PATH}")
+
+if __name__ == "__main__":
+    main()

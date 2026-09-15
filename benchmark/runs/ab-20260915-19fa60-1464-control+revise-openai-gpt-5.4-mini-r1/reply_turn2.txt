@@ -1,0 +1,43 @@
+```python
+import joblib
+import pandas as pd
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+
+DATA_PATH = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed0-r1\train.csv"
+MODEL_PATH = "trained_model.joblib"
+
+
+def main():
+    # Load data
+    df = pd.read_csv(DATA_PATH)
+
+    # Separate features and target
+    X = df.drop(columns=["Class"])
+    y = df["Class"]
+
+    # Build a robust, reproducible model pipeline
+    model = Pipeline(
+        steps=[
+            ("scaler", StandardScaler()),
+            (
+                "clf",
+                LogisticRegression(
+                    max_iter=1000,
+                    random_state=42,
+                ),
+            ),
+        ]
+    )
+
+    # Fit model
+    model.fit(X, y)
+
+    # Save fitted model to current working directory
+    joblib.dump(model, MODEL_PATH)
+
+
+if __name__ == "__main__":
+    main()
+```

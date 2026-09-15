@@ -1,0 +1,19 @@
+Loading dataset...
+Splitting data...
+Training model...
+Evaluating model...
+Validation accuracy: 0.7333
+
+Classification Report:
+              precision    recall  f1-score   support
+
+           1       0.86      0.77      0.81        79
+           2       0.47      0.62      0.53        26
+
+    accuracy                           0.73       105
+   macro avg       0.66      0.69      0.67       105
+weighted avg       0.76      0.73      0.74       105
+
+Model successfully saved to C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed20260915-r1\mlcab_model.joblib
+
+Training pipeline completed successfully!

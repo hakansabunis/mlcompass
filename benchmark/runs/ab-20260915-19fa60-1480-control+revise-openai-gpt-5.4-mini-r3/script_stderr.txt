@@ -1,0 +1,102 @@
+Traceback (most recent call last):
+  File "C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed2-r3\emitted.py", line 157, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed2-r3\emitted.py", line 138, in main
+    best_model.fit(X, y)
+    ~~~~~~~~~~~~~~^^^^^^
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\base.py", line 1403, in wrapper
+    return fit_method(estimator, *args, **kwargs)
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\pipeline.py", line 632, in fit
+    Xt = self._fit(
+        X, y, routed_params, raw_params=params, callback_ctx=callback_ctx
+    )
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\pipeline.py", line 561, in _fit
+    X, fitted_transformer = fit_transform_one_cached(
+                            ~~~~~~~~~~~~~~~~~~~~~~~~^
+        cloned_transformer,
+        ^^^^^^^^^^^^^^^^^^^
+    ...<7 lines>...
+        callback_ctx=subcontext,
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\joblib\memory.py", line 331, in __call__
+    return self.func(*args, **kwargs)
+           ~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\pipeline.py", line 1593, in _fit_transform_one_with_callbacks
+    Xt, transformer = _fit_transform_one(
+                      ~~~~~~~~~~~~~~~~~~^
+        transformer, X, y, weight, message_clsname, message, params
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\pipeline.py", line 1566, in _fit_transform_one
+    res = transformer.fit_transform(X, y, **params.get("fit_transform", {}))
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\utils\_set_output.py", line 327, in wrapped
+    data_to_wrap = f(self, X, *args, **kwargs)
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\base.py", line 1403, in wrapper
+    return fit_method(estimator, *args, **kwargs)
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\compose\_column_transformer.py", line 977, in fit_transform
+    result = self._call_func_on_transformers(
+        X,
+    ...<3 lines>...
+        routed_params=routed_params,
+    )
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\compose\_column_transformer.py", line 887, in _call_func_on_transformers
+    return Parallel(n_jobs=self.n_jobs)(jobs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\utils\parallel.py", line 91, in __call__
+    return super().__call__(iterable_with_config_and_warning_filters)
+           ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\joblib\parallel.py", line 2012, in __call__
+    return output if self.return_generator else list(output)
+                                                ~~~~^^^^^^^^
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\joblib\parallel.py", line 1940, in _get_sequential_output
+    res = func(*args, **kwargs)
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\utils\parallel.py", line 184, in __call__
+    return self.function(*args, **kwargs)
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\pipeline.py", line 1566, in _fit_transform_one
+    res = transformer.fit_transform(X, y, **params.get("fit_transform", {}))
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\base.py", line 1403, in wrapper
+    return fit_method(estimator, *args, **kwargs)
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\pipeline.py", line 712, in fit_transform
+    Xt = self._fit(
+        X, y, routed_params, raw_params=params, callback_ctx=callback_ctx
+    )
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\pipeline.py", line 561, in _fit
+    X, fitted_transformer = fit_transform_one_cached(
+                            ~~~~~~~~~~~~~~~~~~~~~~~~^
+        cloned_transformer,
+        ^^^^^^^^^^^^^^^^^^^
+    ...<7 lines>...
+        callback_ctx=subcontext,
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\joblib\memory.py", line 331, in __call__
+    return self.func(*args, **kwargs)
+           ~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\pipeline.py", line 1593, in _fit_transform_one_with_callbacks
+    Xt, transformer = _fit_transform_one(
+                      ~~~~~~~~~~~~~~~~~~^
+        transformer, X, y, weight, message_clsname, message, params
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\pipeline.py", line 1566, in _fit_transform_one
+    res = transformer.fit_transform(X, y, **params.get("fit_transform", {}))
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\utils\_set_output.py", line 327, in wrapped
+    data_to_wrap = f(self, X, *args, **kwargs)
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\base.py", line 972, in fit_transform
+    return self.fit(X, y, **fit_params).transform(X)
+           ~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\base.py", line 1403, in wrapper
+    return fit_method(estimator, *args, **kwargs)
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\impute\_base.py", line 448, in fit
+    X = self._validate_input(X, in_fit=True)
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\impute\_base.py", line 373, in _validate_input
+    raise new_ve from None
+ValueError: Cannot use median strategy with non-numeric data:
+could not convert string to float: 'Female'
