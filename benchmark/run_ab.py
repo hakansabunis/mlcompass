@@ -2336,6 +2336,104 @@ def append_result(row: dict[str, Any]) -> None:
         writer.writerow({k: row.get(k, "") for k in RESULT_COLUMNS})
 
 
+class PlanViolation(RuntimeError):
+    """What is about to run is not what the frozen plan says will run."""
+
+
+def read_plan_cells(plan_path: Path) -> dict[str, Any]:
+    """Parse the frozen plan's cell table back into what it commits to.
+
+    The plan's `## Cells` table IS the pre-registration: it names every
+    (dataset, arm, model) cell, the repetitions and the seeds. Parsing it back
+    is what turns it from a document into a constraint.
+
+    This exists because for one run it was not a constraint. `--experiment-id`
+    checked only that `plan.md` EXISTED, then ran whatever the command line
+    said. A plan froze 12 `control+revise` cells at 3 repetitions -- 36 runs --
+    and the execution did 48 across all four arms at 1 repetition, appended
+    them under the plan's own id, and reported success. The harness's own
+    suggested command line was the cause: it printed `--experiment-id` and
+    `--panel-id` and dropped `--arm` and `--repeats`, so following the
+    instruction guaranteed the mismatch.
+
+    A pre-registration nobody checks is a paragraph, not a method.
+    """
+    rows: list[tuple[str, str, str]] = []
+    repeats: set[int] = set()
+    seeds: set[tuple[int, ...]] = set()
+    in_table = False
+    for line in plan_path.read_text(encoding="utf-8").splitlines():
+        if line.startswith("| dataset | arm | model |"):
+            in_table = True
+            continue
+        if in_table:
+            if not line.startswith("|"):
+                break
+            cells = [c.strip() for c in line.strip().strip("|").split("|")]
+            if len(cells) < 5 or set(cells[0]) <= set("- "):
+                continue
+            rows.append((cells[0], cells[1], cells[2]))
+            try:
+                repeats.add(int(cells[3]))
+                seeds.add(tuple(int(s) for s in cells[4].split(",")))
+            except ValueError:
+                continue
+    if not rows:
+        raise PlanViolation(
+            f"{plan_path} has no readable cell table, so it cannot be enforced. "
+            "Re-freeze the plan with --plan."
+        )
+    return {
+        "cells": sorted(set(rows)),
+        "datasets": sorted({d for d, _, _ in rows}),
+        "arms": sorted({a for _, a, _ in rows}),
+        "panel_ids": sorted({m for _, _, m in rows}),
+        "repeats": sorted(repeats),
+        "seeds": sorted(seeds),
+    }
+
+
+def enforce_plan(
+    plan_path: Path,
+    *,
+    datasets: list[dict[str, Any]],
+    arms: tuple[str, ...],
+    panel_ids: list[str],
+    repeats: int,
+    seeds: list[int],
+) -> None:
+    """Abort unless the run about to start is the one the plan froze."""
+    plan = read_plan_cells(plan_path)
+    about_to_run: dict[str, Any] = {
+        "datasets": sorted({d["dataset_id"] for d in datasets}),
+        "arms": sorted(arms),
+        "panel_ids": sorted(panel_ids),
+        "repeats": [repeats],
+        "seeds": [tuple(seeds[:repeats])],
+    }
+    differences = []
+    for field in ("datasets", "arms", "panel_ids", "repeats", "seeds"):
+        if about_to_run[field] != plan[field]:
+            differences.append(
+                f"  {field}:"
+                + "\n"
+                + f"    plan says  {plan[field]}"
+                + "\n"
+                + f"    run would  {about_to_run[field]}"
+            )
+    if differences:
+        raise PlanViolation(
+            f"the run does not match the frozen plan at {plan_path}."
+            + "\n"
+            + "\n".join(differences)
+            + "\n"
+            + "\n"
+            + "The plan is the pre-registration. Either pass the flags that "
+            "reproduce it, or freeze a new plan with --plan for the run you "
+            "actually want. Nothing was executed and nothing was written."
+        )
+
+
 def write_plan(
     experiment_id: str,
     gt: dict[str, Any],
@@ -2569,6 +2667,24 @@ def main() -> int:
             print(f"{dataset['dataset_id']}: no metric is fixed for task {dataset['task']!r}.")
             return 1
 
+    # The plan check runs BEFORE the dry-run listing, not after it. A
+    # violation you can only discover by spending money is not a check.
+    if args.experiment_id:
+        _planned = RUNS / args.experiment_id / "plan.md"
+        if _planned.exists():
+            try:
+                enforce_plan(
+                    _planned,
+                    datasets=datasets,
+                    arms=arms,
+                    panel_ids=panel_ids,
+                    repeats=args.repeats,
+                    seeds=seeds,
+                )
+            except PlanViolation as exc:
+                print(f"\nPLAN VIOLATION: {exc}", file=sys.stderr)
+                return 1
+
     if args.dry_run:
         for dataset in datasets:
             for arm in arms:
@@ -2596,9 +2712,18 @@ def main() -> int:
             (args.timeout, args.script_timeout, args.score_timeout),
         )
         print(f"Plan frozen: {path.relative_to(BENCH)}")
+        # Every selection flag, not just the panel. A suggested command that
+        # drops --arm or --repeats silently runs a different experiment under
+        # the plan's id; that is how the 795b90 mismatch happened, and
+        # enforce_plan now refuses such a command rather than let it repeat.
         print(
-            f"\nRun it with:\n  python benchmark/run_ab.py --experiment-id {experiment_id} "
-            + " ".join(f"--panel-id {p}" for p in panel_ids)
+            "\nRun it with:\n  python benchmark/run_ab.py"
+            f" --experiment-id {experiment_id}"
+            + "".join(f" --dataset {d['dataset_id']}" for d in datasets)
+            + "".join(f" --arm {a}" for a in arms)
+            + "".join(f" --panel-id {p}" for p in panel_ids)
+            + f" --repeats {args.repeats}"
+            + "".join(f" --seed {s}" for s in seeds[: args.repeats])
         )
         return 0
 
@@ -2606,7 +2731,19 @@ def main() -> int:
         print(f"No frozen plan at {plan_path.relative_to(BENCH)}.")
         print("The plan comes before execution. Freeze one with --plan.")
         return 1
-    print(f"Using frozen plan: {plan_path.relative_to(BENCH)}\n")
+    try:
+        enforce_plan(
+            plan_path,
+            datasets=datasets,
+            arms=arms,
+            panel_ids=panel_ids,
+            repeats=args.repeats,
+            seeds=seeds,
+        )
+    except PlanViolation as exc:
+        print(f"\nPLAN VIOLATION: {exc}", file=sys.stderr)
+        return 1
+    print(f"Using frozen plan: {plan_path.relative_to(BENCH)} (cells match)\n")
 
     split_root = RUNS / experiment_id / "_splits"
     splits: dict[tuple[str, int], dict[str, Any]] = {}

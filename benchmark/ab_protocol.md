@@ -416,3 +416,41 @@ can carry. The claim in §6 stands as a pre-registered *prediction* that was
 not refuted; it is not a measured null. Everywhere a result is reported it
 now reads **no consistent improvement in held-out score could be shown**,
 which is what 70 unevenly distributed scores support.
+
+**A10 — the frozen plan was not enforced, and the harness's own instructions
+caused the violation.** Found while running A8. `--experiment-id` checked
+only that `plan.md` *existed* and then ran whatever the command line said.
+
+Experiment `ab-20260915-795b90` froze **12 `control+revise` cells at 3
+repetitions — 36 runs**. The execution did **48 runs across all four arms at
+1 repetition**, appended them to `ab_results.csv` under the plan's own id,
+and exited 0.
+
+The cause is worth naming precisely, because it is not carelessness at the
+keyboard. `--plan` printed:
+
+```
+Run it with:
+  python benchmark/run_ab.py --experiment-id <id> --panel-id <p> ...
+```
+
+That line carries neither `--arm` nor `--repeats`. **Following the harness's
+own instruction produced the mismatch.** A pre-registration whose tooling
+hands you the command that breaks it is not a method; it is a paragraph.
+
+Both halves are fixed. `read_plan_cells` parses the `## Cells` table back
+into the arms, datasets, models, repetitions and seeds it commits to;
+`enforce_plan` compares that against the run about to start and aborts,
+naming every divergence, before anything executes or is written. The check
+runs **before** `--dry-run` returns, because a violation you can only find by
+spending money is not a check. The suggested command now carries every
+selection flag, and `tests/test_ab_plan_enforcement.py` asserts both — the
+parser against the real 795b90 plan on disk, and the refusal against the
+exact combination that ran.
+
+The 48 rows are **not deleted**. §7 keeps evidence, including evidence of our
+own mistakes, and an experiment id that quietly disappears is worse than one
+that is labelled. They carry experiment id
+`ab-20260915-795b90-UNPLANNED` and a note stating what happened, so no
+analysis can pick them up as the A8 result by accident. **A8 therefore
+remains unrun**, and the claim it was built to test remains open.
