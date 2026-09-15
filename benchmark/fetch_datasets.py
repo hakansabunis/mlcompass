@@ -118,7 +118,11 @@ def fetch_one(dataset_id: int, *, force: bool = False) -> dict[str, Any]:
         if not url:
             raise ValueError(f"dataset {dataset_id} has no download url")
         payload = _get_bytes(url)
-        df = _read_arff(payload) if url.lower().endswith(".arff") else pd.read_csv(io.BytesIO(payload))
+        df = (
+            _read_arff(payload)
+            if url.lower().endswith(".arff")
+            else pd.read_csv(io.BytesIO(payload))
+        )
         out.parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(out, index=False)
         raw = out.read_bytes()
@@ -148,7 +152,11 @@ def verify(manifest: dict[str, Any]) -> int:
             continue
         actual = _sha256(path.read_bytes())
         if actual != entry["sha256"]:
-            print(f"  CHANGED  {entry['csv_path']}\n           manifest {entry['sha256'][:16]}…  on disk {actual[:16]}…")
+            print(
+                f"  CHANGED  {entry['csv_path']}\n"
+                f"           manifest {entry['sha256'][:16]}"
+                f"  on disk {actual[:16]}"
+            )
             bad += 1
         else:
             print(f"  ok       {entry['csv_path']}  {entry['rows']}x{entry['columns']}")
@@ -181,7 +189,10 @@ def main() -> int:
             print(f"  FAILED   {dataset_id}: {exc}")
             continue
         entries.append(entry)
-        print(f"  ok       {entry['csv_path']}  {entry['rows']}x{entry['columns']}  sha {entry['sha256'][:12]}…")
+        print(
+            f"  ok       {entry['csv_path']}  {entry['rows']}x{entry['columns']}"
+            f"  sha {entry['sha256'][:12]}…"
+        )
 
     MANIFEST.write_text(
         json.dumps({"source": "openml", "api": API, "datasets": entries}, indent=2) + "\n",

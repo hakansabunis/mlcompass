@@ -1,0 +1,97 @@
+{
+  "registry_version": "1.0",
+  "frozen_at_utc": "2026-09-15",
+  "protocol_version": "1.0",
+  "reviewers": 1,
+  "reviewer_limitation": "Single reviewer. protocol.md section 4 asks for two independent reviewers where feasible and requires the limitation to be stated when only one is available. Every issue below is derived from a deterministic property of the pinned file rather than from judgement, so it is recomputable by anyone holding the same sha256; the counts that do need judgement (false_positives, hallucinations) are therefore left unscored by the automated runner rather than assigned by one reviewer.",
+  "matching": {
+    "rule": "An issue counts as detected when its match_pattern (case-insensitive regex) occurs in the scoring scope, AND every value in required_values appears in the same output. The value requirement is what makes a detection specific rather than topical: naming the defect without its magnitude does not identify the defect.",
+    "scope": "Combined stdout of the frozen command.",
+    "frozen_before_first_scored_run": true
+  },
+  "datasets": [
+    {
+      "dataset_id": "openml-1464",
+      "name": "blood-transfusion-service-center",
+      "openml_id": 1464,
+      "csv_path": "data/1464_blood-transfusion-service-center.csv",
+      "sha256": "5ef21d22cd52e907a616c2a85c25841035e9e69b093516c9232042cc78e13027",
+      "rows": 748,
+      "columns": 5,
+      "target": "Class",
+      "task": "binary_classification",
+      "cases": [
+        {
+          "case_id": "1464-duplicates",
+          "issue_id": "DUP-1464",
+          "category": "duplicate_rows",
+          "summary": "215 exact duplicate rows in 748 (28.7%).",
+          "why_it_matters": "A random train/test split places copies of the same row on both sides. The model recognises rows it has already seen and the held-out score is inflated, with no metric indicating a problem.",
+          "evidence": "pandas: df.duplicated().sum() == 215 on the pinned file.",
+          "recomputation": "python -c \"import pandas as pd; print(pd.read_csv('benchmark/data/1464_blood-transfusion-service-center.csv').duplicated().sum())\"",
+          "match_pattern": "duplicate row",
+          "required_values": [
+            "215"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_id": "openml-1480",
+      "name": "ilpd",
+      "openml_id": 1480,
+      "csv_path": "data/1480_ilpd.csv",
+      "sha256": "8a3a32776f0341286f16ba78816dc4cf196bb26ed547ec831d10ab43cda92277",
+      "rows": 583,
+      "columns": 11,
+      "target": "Class",
+      "task": "binary_classification",
+      "notes": "The widely cited ILPD has four missing values in its A/G ratio column. This OpenML version has none; the missing-value issue is therefore NOT part of this registry. Verified on the pinned file rather than assumed from the literature.",
+      "cases": [
+        {
+          "case_id": "1480-duplicates",
+          "issue_id": "DUP-1480",
+          "category": "duplicate_rows",
+          "summary": "13 exact duplicate rows in 583 (2.2%).",
+          "why_it_matters": "Same split-contamination mechanism as DUP-1464, at a smaller scale. Included deliberately as a lower-magnitude instance of the same category, so a detector that only fires on extreme cases is distinguishable from one that is calibrated.",
+          "evidence": "pandas: df.duplicated().sum() == 13 on the pinned file.",
+          "recomputation": "python -c \"import pandas as pd; print(pd.read_csv('benchmark/data/1480_ilpd.csv').duplicated().sum())\"",
+          "match_pattern": "duplicate row",
+          "required_values": [
+            "13"
+          ]
+        }
+      ]
+    },
+    {
+      "dataset_id": "openml-44031",
+      "name": "california",
+      "openml_id": 44031,
+      "csv_path": "data/44031_california.csv",
+      "sha256": "4815da3fa6b1766150bcc7ed862296cb7968733386883549a94b19b86889d233",
+      "rows": 20640,
+      "columns": 9,
+      "target": "price",
+      "task": "regression",
+      "cases": [
+        {
+          "case_id": "44031-censored-target",
+          "issue_id": "CENSOR-44031",
+          "category": "censored_target",
+          "summary": "965 of 20640 rows (4.7%) sit at the target's exact maximum.",
+          "why_it_matters": "A continuous target stacked at an extreme indicates a measurement limit or a clipped cap rather than a real mode. A model fitted on it cannot predict beyond the cap and its errors near the boundary are systematically biased; no accuracy metric reveals either.",
+          "evidence": "pandas: (df['price'] == df['price'].max()).sum() == 965, with 3842 distinct target values, so the target is continuous rather than ordinal.",
+          "recomputation": "python -c \"import pandas as pd; d=pd.read_csv('benchmark/data/44031_california.csv'); print((d['price']==d['price'].max()).sum(), d['price'].nunique())\"",
+          "match_pattern": "piled up at its maximum|censor|capped|clipped",
+          "required_values": [
+            "965"
+          ]
+        }
+      ]
+    }
+  ],
+  "out_of_scope": [
+    "Class imbalance on 1464 (23.8% minority) and 1480 (28.6% minority) is real but mild, and calling it a defect would inflate the recall denominator with cases no reasonable tool must flag. Excluded deliberately, recorded here so the exclusion is visible rather than silent.",
+    "false_positives and hallucinations are defined in protocol.md section 4 but are not scored automatically: refuting a reported issue requires judgement the runner does not have. The runner records every unmatched finding under unverified_findings, which protocol.md section 4 states is the correct bucket when a claim can be neither confirmed nor refuted."
+  ]
+}
