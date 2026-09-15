@@ -1779,16 +1779,62 @@ def _metric(metric: str, k: int, n: int) -> MetricResult:
     )
 
 
+def evidence_name_set(evidence: dict[str, Any]) -> set[str]:
+    """Every string that appears anywhere in the evidence dict, key or value.
+
+    Deliberately over-broad. Its only job is to answer one question -- could
+    the narrator have read this name here? -- and for that a false positive
+    (a name that happens to collide with an unrelated string in the evidence)
+    is far cheaper than a false negative, which would report an invention
+    that never happened.
+    """
+    found: set[str] = set()
+
+    def walk(node: Any) -> None:
+        if isinstance(node, dict):
+            for key, value in node.items():
+                found.add(str(key))
+                walk(value)
+        elif isinstance(node, list):
+            for value in node:
+                walk(value)
+        elif isinstance(node, str):
+            found.add(node)
+
+    walk(evidence)
+    return found
+
+
 def score_one(
     response: dict[str, Any],
     allowed_set: set[str],
     corr_map: dict[str, float],
     anchor: str | None,
+    evidence_names: set[str] | None = None,
 ) -> dict[str, bool]:
     """Score a single response on the three contract channels.
 
     entity — references >= 1 column (in columns_referenced or a claim)
         outside the evidence set.
+
+    When ``evidence_names`` is supplied, the entity channel is additionally
+    split in two, because the 2026-09-15 baseline battery showed the blended
+    rate does not mean what the paper calls it. Across 1,400 live responses
+    every out-of-domain entity was ``r2`` -- the suspicious metric's own name,
+    written into ``columns_referenced``. Nothing was invented.
+
+    entity_invented  — a name that appears NOWHERE in the evidence dict. This
+        is phantom-entity fabrication as the paper defines it: "a column the
+        data does not contain".
+    entity_misfiled  — a name that IS in the evidence but is not a column, put
+        in a field that holds only columns. A real contract violation (a
+        consumer that drops or correlates "r2" acts on something that is not
+        a column) and NOT a hallucination.
+
+    ``entity`` keeps its old meaning -- their disjunction -- so the contract's
+    behaviour and every existing comparison are unchanged. What changes is
+    that a reader can now see which of the two a rate is made of, instead of
+    having to take a blended number on trust.
     value  — carries >= 1 claim whose column IS in the evidence but whose
         value differs from the measured one by > VALUE_TOLERANCE.
     omission — commits to a verdict other than cannot_determine yet never
@@ -1798,7 +1844,8 @@ def score_one(
     cols = list(response.get("columns") or [])
     claims = [c for c in (response.get("claims") or []) if isinstance(c, dict)]
     claim_cols = [str(c.get("column", "")) for c in claims]
-    entity = any(c not in allowed_set for c in cols + claim_cols)
+    outside = [c for c in cols + claim_cols if c not in allowed_set]
+    entity = bool(outside)
     value = False
     for c in claims:
         col = str(c.get("column", ""))
@@ -1816,7 +1863,11 @@ def score_one(
             "cannot_determine",
         )
         omission = committed and anchor is not None and anchor not in set(cols) | set(claim_cols)
-    return {"entity": entity, "value": value, "omission": omission}
+    flags = {"entity": entity, "value": value, "omission": omission}
+    if evidence_names is not None:
+        flags["entity_invented"] = any(c not in evidence_names for c in outside)
+        flags["entity_misfiled"] = any(c in evidence_names for c in outside)
+    return flags
 
 
 def score_responses(
