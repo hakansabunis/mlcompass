@@ -1,0 +1,28 @@
+Running live sweep, task=synthetic, N=100 (evidence columns: 10, anchor: log_target_v2)...
+  evidence dumped: C:\Users\SABUNIS\Desktop\ml-copilot\scripts\runs\evidence_618bd74a.json
+  plan: 6 cell(s) x N=100 -> ~600 calls, ESTIMATED cost ~$0.16 (model=deepseek-chat; rough token estimate, not a bill)
+  sweep: provider=deepseek model=deepseek-chat, 6 variants, temperature=1.0
+  terse: 25/100
+  terse: 50/100
+  terse: 75/100
+  terse: 100/100
+  baseline: 25/100
+  baseline: 50/100
+  baseline: 75/100
+  baseline: 100/100
+  helpful: 25/100
+  helpful: 50/100
+  helpful: 75/100
+  helpful: 100/100
+  expert: 25/100
+  expert: 50/100
+  expert: 75/100
+  expert: 100/100
+  mechanical: 25/100
+  mechanical: 50/100
+  mechanical: 75/100
+  mechanical: 100/100
+  cautious: 25/100
+  cautious: 50/100
+  cautious: 75/100
+  cautious: 100/100
