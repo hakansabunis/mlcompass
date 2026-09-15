@@ -1,0 +1,29 @@
+Dataset loaded successfully with shape: (15480, 9)
+
+Missing values per column:
+MedInc        0
+HouseAge      0
+AveRooms      0
+AveBedrms     0
+Population    0
+AveOccup      0
+Latitude      0
+Longitude     0
+price         0
+dtype: int64
+
+Training model...
+
+Model evaluation:
+Test MSE: 0.02
+Test R² Score: 0.8026
+
+Model saved successfully to C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed20260915-r3\house_price_model.joblib
+
+Top 5 most important features:
+     Feature  Importance
+0     MedInc    0.560989
+5   AveOccup    0.118724
+7  Longitude    0.101713
+6   Latitude    0.092134
+2   AveRooms    0.054743

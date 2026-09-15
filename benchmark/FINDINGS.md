@@ -7,7 +7,10 @@ Two benchmarks, two reports, one set of shared machinery. Start here.
 | [`REPORT_2026-09-15.md`](REPORT_2026-09-15.md) | **Detection benchmark** — does mlcompass find known defects in a dataset? Also carries the correction of four scoring defects found in review, and the A/B leak finding in §9. |
 | [`REPORT_AB_2026-09-15.md`](REPORT_AB_2026-09-15.md) | **A/B benchmark** — does an LLM write better training code when given mlcompass's findings? 108 runs, four models. |
 | [`protocol.md`](protocol.md) | Detection protocol (v1.0, written by Yusuf Ünlü) |
-| [`ab_protocol.md`](ab_protocol.md) | A/B protocol (v1.3, amendments A1–A5 in §9) |
+| [`REPORT_A8_2026-09-16.md`](REPORT_A8_2026-09-16.md) | **A8** — was the defect reduction mlcompass, or just a second attempt? |
+| [`ablation_2026-09-15/REPORT.md`](ablation_2026-09-15/REPORT.md) | **Baseline battery** — our contract against Guardrails AI and provider strict mode, 1,400 live responses |
+| [`ablation_2026-09-15/SWEEP.md`](ablation_2026-09-15/SWEEP.md) | **Paraphrase sweep**, decomposed into invented vs misfiled |
+| [`ab_protocol.md`](ab_protocol.md) | A/B protocol (v1.3, amendments A1–A11 in §9) |
 | [`ground_truth.json`](ground_truth.json) | The issue registry the detection benchmark scores against (v1.1) |
 
 ---

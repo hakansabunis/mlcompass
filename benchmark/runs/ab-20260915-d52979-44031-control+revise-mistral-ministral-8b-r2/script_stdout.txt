@@ -1,0 +1,10 @@
+Loading dataset...
+
+Training model...
+
+Model evaluation on test set:
+Mean Squared Error (MSE): 0.02
+Root Mean Squared Error (RMSE): 0.15
+Mean Absolute Error (MAE): 0.10
+
+Model successfully saved as 'house_price_regressor.joblib' in the current directory.

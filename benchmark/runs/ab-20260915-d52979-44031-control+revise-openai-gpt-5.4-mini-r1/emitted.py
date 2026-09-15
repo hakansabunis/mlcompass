@@ -1,0 +1,95 @@
+import os
+import joblib
+import numpy as np
+import pandas as pd
+
+from sklearn.model_selection import KFold, cross_val_score
+from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
+from sklearn.impute import SimpleImputer
+from sklearn.ensemble import HistGradientBoostingRegressor
+
+
+TRAIN_PATH = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed20260915-r1\train.csv"
+MODEL_PATH = "trained_model.joblib"
+
+
+def main():
+    # Load data
+    df = pd.read_csv(TRAIN_PATH)
+
+    target_col = "price"
+    feature_cols = [c for c in df.columns if c != target_col]
+
+    X = df[feature_cols].copy()
+    y = pd.to_numeric(df[target_col], errors="coerce")
+
+    # Ensure numeric feature types and handle any non-numeric values robustly
+    for c in feature_cols:
+        X[c] = pd.to_numeric(X[c], errors="coerce")
+
+    # Drop rows with missing target, if any
+    mask = y.notna()
+    X = X.loc[mask].reset_index(drop=True)
+    y = y.loc[mask].reset_index(drop=True)
+
+    # Preprocessing + model
+    numeric_preprocess = Pipeline(
+        steps=[
+            ("imputer", SimpleImputer(strategy="median")),
+        ]
+    )
+
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ("num", numeric_preprocess, feature_cols),
+        ],
+        remainder="drop",
+        verbose_feature_names_out=False,
+    )
+
+    model = HistGradientBoostingRegressor(
+        loss="squared_error",
+        learning_rate=0.05,
+        max_depth=6,
+        max_iter=500,
+        min_samples_leaf=20,
+        l2_regularization=0.0,
+        random_state=42,
+    )
+
+    pipeline = Pipeline(
+        steps=[
+            ("preprocess", preprocessor),
+            ("model", model),
+        ]
+    )
+
+    # Optional quick CV evaluation for sanity
+    cv = KFold(n_splits=5, shuffle=True, random_state=42)
+    scores = cross_val_score(
+        pipeline,
+        X,
+        y,
+        cv=cv,
+        scoring="neg_root_mean_squared_error",
+        n_jobs=-1,
+    )
+    rmse = -scores
+    print(f"CV RMSE: mean={rmse.mean():.6f}, std={rmse.std():.6f}")
+
+    # Fit final model on all data
+    pipeline.fit(X, y)
+
+    # Save model artifact
+    artifact = {
+        "model": pipeline,
+        "feature_cols": feature_cols,
+        "target_col": target_col,
+    }
+    joblib.dump(artifact, MODEL_PATH)
+    print(f"Saved model to: {os.path.abspath(MODEL_PATH)}")
+
+
+if __name__ == "__main__":
+    main()

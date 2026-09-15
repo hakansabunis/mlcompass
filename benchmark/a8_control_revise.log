@@ -1,0 +1,56 @@
+Protocol constants confirmed against ab_protocol.md: holdout 0.25, stratified True, grouped on duplicates True, temperature 1.0, package list in the prompt True.
+Execution environment stated to every arm: 9 of 36 rostered packages importable by python.exe (Python 3.13.3), digest b86cae3362eb.
+Inputs verified: 3 dataset(s) match the registry.
+
+Using frozen plan: runs\ab-20260915-795b90\plan.md
+
+  ok              ab-20260915-795b90-1464-control-deepseek-flash-r1      33.3s  roc_auc=0.5556, defects=1/6
+  ok              ab-20260915-795b90-1464-control-mistral-ministral-8b-r1    8.4s  roc_auc=0.5795, defects=1/6
+  ok              ab-20260915-795b90-1464-control-ollama-qwen2.5-7b-r1   42.2s  roc_auc=0.5643, defects=1/6
+  ok              ab-20260915-795b90-1464-control-openai-gpt-5.4-mini-r1   15.9s  roc_auc=blank, defects=1/6
+  ok              ab-20260915-795b90-1464-control+revise-deepseek-flash-r1   19.2s  roc_auc=0.5513, defects=2->2/6
+  ok              ab-20260915-795b90-1464-control+revise-mistral-ministral-8b-r1   13.7s  roc_auc=0.5448, defects=1->1/6
+  ok              ab-20260915-795b90-1464-control+revise-ollama-qwen2.5-7b-r1   54.5s  roc_auc=0.5643, defects=1->1/6
+  ok              ab-20260915-795b90-1464-control+revise-openai-gpt-5.4-mini-r1   19.0s  roc_auc=blank, defects=1->1/6
+  ok              ab-20260915-795b90-1464-advise-deepseek-flash-r1       43.1s  roc_auc=0.6830, defects=2/6
+  ok              ab-20260915-795b90-1464-advise-mistral-ministral-8b-r1   11.9s  roc_auc=0.6653, defects=0/6
+  ok              ab-20260915-795b90-1464-advise-ollama-qwen2.5-7b-r1    41.3s  roc_auc=0.7599, defects=0/6
+  ok              ab-20260915-795b90-1464-advise-openai-gpt-5.4-mini-r1    9.0s  roc_auc=blank, defects=1/6
+  ok              ab-20260915-795b90-1464-advise+audit-deepseek-flash-r1   24.3s  roc_auc=0.5436, defects=2->1/6
+  ok              ab-20260915-795b90-1464-advise+audit-mistral-ministral-8b-r1   17.6s  roc_auc=0.6995, defects=0->0/6
+  ok              ab-20260915-795b90-1464-advise+audit-ollama-qwen2.5-7b-r1   79.9s  roc_auc=0.4489, defects=0->0/6
+  ok              ab-20260915-795b90-1464-advise+audit-openai-gpt-5.4-mini-r1   17.5s  roc_auc=blank, defects=1->1/6
+  ok              ab-20260915-795b90-1480-control-deepseek-flash-r1      30.4s  roc_auc=0.8006, defects=2/6
+  ok              ab-20260915-795b90-1480-control-mistral-ministral-8b-r1   13.4s  roc_auc=0.8209, defects=1/6
+  ok              ab-20260915-795b90-1480-control-ollama-qwen2.5-7b-r1   44.0s  roc_auc=0.7318, defects=1/6
+  ok              ab-20260915-795b90-1480-control-openai-gpt-5.4-mini-r1   11.4s  roc_auc=blank, defects=1/6
+  ok              ab-20260915-795b90-1480-control+revise-deepseek-flash-r1   82.5s  roc_auc=0.7552, defects=2->2/6
+  ok              ab-20260915-795b90-1480-control+revise-mistral-ministral-8b-r1   13.9s  roc_auc=0.8193, defects=1->1/6
+  script_failed   ab-20260915-795b90-1480-control+revise-ollama-qwen2.5-7b-r1   55.1s  roc_auc=blank, defects=1->1/6
+  ok              ab-20260915-795b90-1480-control+revise-openai-gpt-5.4-mini-r1   19.1s  roc_auc=blank, defects=1->1/6
+  ok              ab-20260915-795b90-1480-advise-deepseek-flash-r1       31.4s  roc_auc=0.7953, defects=2/6
+  ok              ab-20260915-795b90-1480-advise-mistral-ministral-8b-r1    9.5s  roc_auc=0.7804, defects=0/6
+  script_failed   ab-20260915-795b90-1480-advise-ollama-qwen2.5-7b-r1    30.7s  roc_auc=blank, defects=0/6
+  ok              ab-20260915-795b90-1480-advise-openai-gpt-5.4-mini-r1    8.0s  roc_auc=blank, defects=2/6
+  ok              ab-20260915-795b90-1480-advise+audit-deepseek-flash-r1   38.7s  roc_auc=0.7552, defects=1->1/6
+  script_failed   ab-20260915-795b90-1480-advise+audit-mistral-ministral-8b-r1   13.4s  roc_auc=blank, defects=0->0/6
+  script_failed   ab-20260915-795b90-1480-advise+audit-ollama-qwen2.5-7b-r1   61.5s  roc_auc=blank, defects=0->0/6
+  ok              ab-20260915-795b90-1480-advise+audit-openai-gpt-5.4-mini-r1   17.1s  roc_auc=0.8125, defects=2->1/6
+  ok              ab-20260915-795b90-44031-control-deepseek-flash-r1     20.4s  r2=0.8527, defects=1/6
+  ok              ab-20260915-795b90-44031-control-mistral-ministral-8b-r1   10.2s  r2=-2.3361, defects=0/6
+  ok              ab-20260915-795b90-44031-control-ollama-qwen2.5-7b-r1   28.6s  r2=-8260.1799, defects=0/6
+  ok              ab-20260915-795b90-44031-control-openai-gpt-5.4-mini-r1   92.9s  r2=blank, defects=0/6
+  ok              ab-20260915-795b90-44031-control+revise-deepseek-flash-r1   35.9s  r2=0.8445, defects=1->1/6
+  ok              ab-20260915-795b90-44031-control+revise-mistral-ministral-8b-r1   18.8s  r2=0.8092, defects=1->1/6
+  ok              ab-20260915-795b90-44031-control+revise-ollama-qwen2.5-7b-r1   46.8s  r2=0.6100, defects=0->0/6
+  ok              ab-20260915-795b90-44031-control+revise-openai-gpt-5.4-mini-r1   15.9s  r2=0.8244, defects=0->0/6
+  ok              ab-20260915-795b90-44031-advise-deepseek-flash-r1      33.7s  r2=0.8584, defects=0/6
+  ok              ab-20260915-795b90-44031-advise-mistral-ministral-8b-r1   27.0s  r2=0.8269, defects=0/6
+  ok              ab-20260915-795b90-44031-advise-ollama-qwen2.5-7b-r1   31.7s  r2=0.6100, defects=0/6
+  ok              ab-20260915-795b90-44031-advise-openai-gpt-5.4-mini-r1   17.6s  r2=blank, defects=0/6
+  ok              ab-20260915-795b90-44031-advise+audit-deepseek-flash-r1   32.6s  r2=0.8630, defects=0->0/6
+  script_failed   ab-20260915-795b90-44031-advise+audit-mistral-ministral-8b-r1   22.7s  r2=blank, defects=0->0/6
+  ok              ab-20260915-795b90-44031-advise+audit-ollama-qwen2.5-7b-r1   71.3s  r2=-8260.1799, defects=0->0/6
+  ok              ab-20260915-795b90-44031-advise+audit-openai-gpt-5.4-mini-r1   25.4s  r2=blank, defects=0->0/6
+
+48 run(s). Results appended to ab_results.csv; evidence under runs/. Holdout splits kept under runs/ab-20260915-795b90/_splits/.
