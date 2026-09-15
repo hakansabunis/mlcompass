@@ -1,0 +1,3 @@
+Saved model to: C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed20260915-r2\trained_model.joblib
+Saved metadata to: C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed20260915-r2\trained_model_metadata.json
+CV accuracy: 0.7729 ± 0.0170

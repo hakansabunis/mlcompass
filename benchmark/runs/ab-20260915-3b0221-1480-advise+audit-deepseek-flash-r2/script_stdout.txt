@@ -1,0 +1,11 @@
+Train rows: 371, Validation rows: 66
+rf: CV roc_auc = 0.7749 (+/- 0.0755)
+et: CV roc_auc = 0.7827 (+/- 0.0579)
+gb: CV roc_auc = 0.7414 (+/- 0.0649)
+hgb: CV roc_auc = 0.7386 (+/- 0.0599)
+lr: CV roc_auc = 0.7757 (+/- 0.0530)
+svc: CV roc_auc = 0.7635 (+/- 0.0558)
+Best model by CV: et (roc_auc = 0.7827)
+Validation roc_auc : 0.6853
+Validation accuracy: 0.6970
+Saved fitted model to C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed20260915-r2\model.joblib

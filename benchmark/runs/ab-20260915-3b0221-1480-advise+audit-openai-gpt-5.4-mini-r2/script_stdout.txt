@@ -1,0 +1,5 @@
+Saved model to: C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed20260915-r2\trained_model.joblib
+Saved metadata to: C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed20260915-r2\trained_model_metadata.json
+Holdout accuracy: 0.647727
+Holdout ROC AUC: 0.646984
+Mean CV ROC AUC: 0.707777

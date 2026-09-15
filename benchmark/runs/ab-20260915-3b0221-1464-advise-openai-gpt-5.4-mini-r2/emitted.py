@@ -1,0 +1,73 @@
+import os
+import json
+import joblib
+import numpy as np
+import pandas as pd
+
+from sklearn.model_selection import StratifiedKFold, cross_val_score
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score
+
+
+CSV_PATH = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed20260915-r2\train.csv"
+MODEL_PATH = "trained_model.joblib"
+META_PATH = "trained_model_metadata.json"
+
+
+def main():
+    # Load data
+    df = pd.read_csv(CSV_PATH)
+
+    target_col = "Class"
+    feature_cols = [c for c in df.columns if c != target_col]
+
+    X = df[feature_cols].copy()
+    y = df[target_col].copy()
+
+    # Basic preprocessing pipeline:
+    # - impute any missing values if present
+    # - scale features
+    # - logistic regression for binary classification
+    model = Pipeline(
+        steps=[
+            ("imputer", SimpleImputer(strategy="median")),
+            ("scaler", StandardScaler()),
+            ("clf", LogisticRegression(
+                solver="lbfgs",
+                max_iter=5000,
+                random_state=42
+            )),
+        ]
+    )
+
+    # Fit and evaluate with stratified CV for a stable estimate
+    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+    cv_scores = cross_val_score(model, X, y, cv=cv, scoring="accuracy")
+
+    # Train final model on all data
+    model.fit(X, y)
+
+    # Save fitted model
+    joblib.dump(model, MODEL_PATH)
+
+    # Save simple metadata for later reference
+    metadata = {
+        "feature_columns": feature_cols,
+        "target_column": target_col,
+        "cv_accuracy_mean": float(np.mean(cv_scores)),
+        "cv_accuracy_std": float(np.std(cv_scores)),
+        "classes_": model.named_steps["clf"].classes_.tolist(),
+    }
+    with open(META_PATH, "w", encoding="utf-8") as f:
+        json.dump(metadata, f, indent=2)
+
+    print(f"Saved model to: {os.path.abspath(MODEL_PATH)}")
+    print(f"Saved metadata to: {os.path.abspath(META_PATH)}")
+    print(f"CV accuracy: {metadata['cv_accuracy_mean']:.4f} ± {metadata['cv_accuracy_std']:.4f}")
+
+
+if __name__ == "__main__":
+    main()

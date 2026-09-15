@@ -1,0 +1,2 @@
+Test set R^2 score: 0.6039435883129116
+Model saved to trained_model.joblib

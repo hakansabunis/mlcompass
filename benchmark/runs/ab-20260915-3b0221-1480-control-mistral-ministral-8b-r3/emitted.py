@@ -1,0 +1,87 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+from joblib import dump
+import os
+
+def load_and_preprocess_data(filepath):
+    """Load and preprocess the CSV data for modeling."""
+    # Load the data
+    df = pd.read_csv(filepath)
+
+    # Separate features and target
+    X = df.drop(columns=['Class'])
+    y = df['Class']
+
+    # Identify categorical and numerical columns
+    categorical_cols = X.select_dtypes(include=['object', 'category']).columns
+    numerical_cols = X.select_dtypes(include=['int64', 'float64']).columns
+
+    # Preprocessing for numerical data
+    numerical_transformer = Pipeline(steps=[
+        ('imputer', SimpleImputer(strategy='median')),
+        ('scaler', StandardScaler())])
+
+    # Preprocessing for categorical data
+    categorical_transformer = Pipeline(steps=[
+        ('imputer', SimpleImputer(strategy='most_frequent')),
+        ('onehot', OneHotEncoder(handle_unknown='ignore'))])
+
+    # Combine preprocessing steps
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ('num', numerical_transformer, numerical_cols),
+            ('cat', categorical_transformer, categorical_cols)])
+
+    return X, y, preprocessor
+
+def train_model(X, y, preprocessor):
+    """Train a RandomForest classifier with the preprocessed data."""
+    # Split data into training and validation sets
+    X_train, X_val, y_train, y_val = train_test_split(
+        X, y, test_size=0.2, random_state=20260915, stratify=y)
+
+    # Create a pipeline with preprocessing and model
+    model = Pipeline(steps=[
+        ('preprocessor', preprocessor),
+        ('classifier', RandomForestClassifier(
+            n_estimators=100,
+            random_state=20260915,
+            class_weight='balanced',
+            n_jobs=-1))])
+
+    # Train the model
+    model.fit(X_train, y_train)
+
+    # Evaluate on validation set
+    val_score = model.score(X_val, y_val)
+    print(f"Validation accuracy: {val_score:.4f}")
+
+    return model
+
+def main():
+    # Define file path
+    file_path = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed20260915-r3\train.csv"
+
+    # Check if file exists
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"The file {file_path} does not exist.")
+
+    # Load and preprocess data
+    X, y, preprocessor = load_and_preprocess_data(file_path)
+
+    # Train model
+    model = train_model(X, y, preprocessor)
+
+    # Save the trained model
+    model_filename = os.path.join(os.getcwd(), 'trained_model.joblib')
+    dump(model, model_filename)
+    print(f"Model saved to {model_filename}")
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,2 @@
+Validation MSE: 0.0221
+Model and scaler saved successfully.

@@ -1,0 +1,39 @@
+Below is the verbatim output of mlcompass run on the script you just wrote.
+
+--- mlcompass audit ---
+(no .mlcompass/ project found in current path — running standalone; results 
+will not be persisted)
+
+┌────────────────────────────── 🔎 Script audit ──────────────────────────────┐
+│ Path:                                                                       │
+│ C:\Users\SABUNIS\AppData\Local\Temp\mlcab_audit_fcpklq09\train_model.py     │
+│ Lines:       51                                                             │
+│ Frameworks:  numpy, sklearn                                                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Findings                                                                       
+┌──────────┬───────────────┬──────┬───────────────────────────────────────────┐
+│ Severity │ Rule          │ Line │ Message                                   │
+├──────────┼───────────────┼──────┼───────────────────────────────────────────┤
+│ ✗ error  │ seed          │      │ No random seed is set anywhere in the     │
+│          │               │      │ script.                                   │
+│ ℹ info   │ metric_choice │   42 │ `accuracy_score` is the only              │
+│          │               │      │ classification metric this script         │
+│          │               │      │ computes. A static read cannot see the    │
+│          │               │      │ label distribution, so this is a caution  │
+│          │               │      │ rather than a verdict: if the target is   │
+│          │               │      │ imbalanced, accuracy stays high while the │
+│          │               │      │ minority class is never predicted.        │
+└──────────┴───────────────┴──────┴───────────────────────────────────────────┘
+
+Summary: 1 error   1 info
+
+💡 Suggested fixes
+  • seed: Add `torch.manual_seed(42)` (and `np.random.seed(42)`, 
+`random.seed(42)`) near the top so runs are reproducible.
+  • metric_choice: Check the class balance, and report `roc_auc_score`, 
+`f1_score` or `classification_report` next to accuracy if it is skewed.
+
+--- end mlcompass audit ---
+
+Revise the script if that output gives you reason to. Reply with the complete final script inside a single ```python code block, and nothing else.

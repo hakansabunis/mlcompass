@@ -1,0 +1,2 @@
+Saved model to: C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed20260915-r3\trained_model.joblib
+CV accuracy: 0.7118 ± 0.0302

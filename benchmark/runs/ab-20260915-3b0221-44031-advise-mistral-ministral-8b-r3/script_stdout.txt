@@ -1,0 +1,2 @@
+Model Evaluation - Mean Squared Error: 0.025403
+Model saved to house_price_model.joblib

@@ -1,0 +1,150 @@
+```python
+import os
+import random
+import joblib
+import numpy as np
+import pandas as pd
+
+from sklearn.compose import ColumnTransformer
+from sklearn.impute import SimpleImputer
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report, roc_auc_score
+from sklearn.model_selection import train_test_split, StratifiedKFold, cross_val_score
+
+
+DATA_PATH = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed20260915-r3\train.csv"
+TARGET_COL = "Class"
+MODEL_PATH = "trained_model.joblib"
+RANDOM_SEED = 42
+
+
+def set_seed(seed: int = RANDOM_SEED) -> None:
+    random.seed(seed)
+    np.random.seed(seed)
+
+
+def make_one_hot_encoder():
+    try:
+        return OneHotEncoder(handle_unknown="ignore", sparse_output=False)
+    except TypeError:
+        return OneHotEncoder(handle_unknown="ignore", sparse=False)
+
+
+def load_data(path: str) -> pd.DataFrame:
+    df = pd.read_csv(path)
+    if TARGET_COL not in df.columns:
+        raise ValueError(f"Target column '{TARGET_COL}' not found in data.")
+    return df
+
+
+def build_pipeline(X: pd.DataFrame) -> Pipeline:
+    categorical_cols = X.select_dtypes(include=["object", "string", "category"]).columns.tolist()
+    numeric_cols = [c for c in X.columns if c not in categorical_cols]
+
+    numeric_transformer = Pipeline(
+        steps=[
+            ("imputer", SimpleImputer(strategy="median")),
+        ]
+    )
+
+    categorical_transformer = Pipeline(
+        steps=[
+            ("imputer", SimpleImputer(strategy="most_frequent")),
+            ("onehot", make_one_hot_encoder()),
+        ]
+    )
+
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ("num", numeric_transformer, numeric_cols),
+            ("cat", categorical_transformer, categorical_cols),
+        ],
+        remainder="drop",
+        verbose_feature_names_out=False,
+    )
+
+    model = RandomForestClassifier(
+        n_estimators=500,
+        random_state=RANDOM_SEED,
+        class_weight="balanced",
+        min_samples_leaf=1,
+        min_samples_split=2,
+        n_jobs=-1,
+    )
+
+    return Pipeline(
+        steps=[
+            ("preprocess", preprocessor),
+            ("model", model),
+        ]
+    )
+
+
+def main():
+    set_seed(RANDOM_SEED)
+
+    df = load_data(DATA_PATH)
+    df = df.copy().drop_duplicates().reset_index(drop=True)
+
+    X = df.drop(columns=[TARGET_COL])
+    y = df[TARGET_COL].astype(int)
+
+    # Hold out a validation split for a final unbiased estimate
+    X_train, X_val, y_train, y_val = train_test_split(
+        X,
+        y,
+        test_size=0.2,
+        random_state=RANDOM_SEED,
+        stratify=y,
+    )
+
+    pipeline = build_pipeline(X_train)
+
+    # Cross-validated performance on the training split
+    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=RANDOM_SEED)
+    try:
+        cv_scores = cross_val_score(pipeline, X_train, y_train, cv=cv, scoring="accuracy", n_jobs=-1)
+        print(f"CV accuracy (train split): {cv_scores.mean():.4f} ± {cv_scores.std():.4f}")
+    except Exception as e:
+        print(f"Cross-validation skipped due to error: {e}")
+
+    # Fit on train split
+    pipeline.fit(X_train, y_train)
+
+    # Validate on held-out data
+    val_preds = pipeline.predict(X_val)
+    val_acc = accuracy_score(y_val, val_preds)
+    print(f"Validation accuracy: {val_acc:.4f}")
+    print("Validation classification report:")
+    print(classification_report(y_val, val_preds))
+
+    # ROC AUC if available
+    try:
+        val_proba = pipeline.predict_proba(X_val)
+        if val_proba.shape[1] == 2:
+            val_auc = roc_auc_score(y_val, val_proba[:, 1])
+            print(f"Validation ROC AUC: {val_auc:.4f}")
+    except Exception as e:
+        print(f"ROC AUC skipped due to error: {e}")
+
+    # Refit on all data for final production model
+    final_pipeline = build_pipeline(X)
+    final_pipeline.fit(X, y)
+
+    artifact = {
+        "pipeline": final_pipeline,
+        "feature_names": X.columns.tolist(),
+        "target_col": TARGET_COL,
+        "random_seed": RANDOM_SEED,
+        "classes_": final_pipeline.named_steps["model"].classes_.tolist(),
+        "dropped_duplicates": int(len(df) - len(pd.read_csv(DATA_PATH))),
+    }
+    joblib.dump(artifact, MODEL_PATH)
+    print(f"Saved model to: {os.path.abspath(MODEL_PATH)}")
+
+
+if __name__ == "__main__":
+    main()
+```

@@ -1,0 +1,75 @@
+import os
+import json
+import joblib
+import numpy as np
+import pandas as pd
+
+from sklearn.model_selection import StratifiedKFold, cross_val_score
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import make_scorer, accuracy_score
+
+
+def main():
+    train_path = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed20260915-r3\train.csv"
+    model_path = "trained_model.joblib"
+
+    # Load data
+    df = pd.read_csv(train_path)
+
+    target_col = "Class"
+    feature_cols = [c for c in df.columns if c != target_col]
+
+    X = df[feature_cols].copy()
+    y = df[target_col].copy()
+
+    # Basic preprocessing: handle any missing values if present
+    # and train a robust tree-based classifier.
+    model = Pipeline(
+        steps=[
+            ("imputer", SimpleImputer(strategy="median")),
+            (
+                "classifier",
+                RandomForestClassifier(
+                    n_estimators=500,
+                    random_state=42,
+                    n_jobs=-1,
+                    class_weight="balanced",
+                    min_samples_leaf=1,
+                    min_samples_split=2,
+                ),
+            ),
+        ]
+    )
+
+    # Optional quick validation for sanity
+    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+    scores = cross_val_score(
+        model,
+        X,
+        y,
+        cv=cv,
+        scoring=make_scorer(accuracy_score),
+        n_jobs=-1,
+    )
+
+    # Fit on full dataset
+    model.fit(X, y)
+
+    # Save trained model and metadata
+    artifact = {
+        "model": model,
+        "feature_columns": feature_cols,
+        "target_column": target_col,
+        "cv_accuracy_mean": float(np.mean(scores)),
+        "cv_accuracy_std": float(np.std(scores)),
+    }
+    joblib.dump(artifact, model_path)
+
+    print(f"Saved model to: {os.path.abspath(model_path)}")
+    print(f"CV accuracy: {artifact['cv_accuracy_mean']:.4f} ± {artifact['cv_accuracy_std']:.4f}")
+
+
+if __name__ == "__main__":
+    main()

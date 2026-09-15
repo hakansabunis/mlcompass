@@ -1,0 +1,6 @@
+rf: CV ROC AUC = 0.7756 (+/- 0.0628)
+gb: CV ROC AUC = 0.7289 (+/- 0.0729)
+hgb: CV ROC AUC = 0.7511 (+/- 0.0323)
+lr: CV ROC AUC = 0.7740 (+/- 0.0847)
+Hold-out test accuracy (rf): 0.6932
+Saved best model (rf) to model.joblib

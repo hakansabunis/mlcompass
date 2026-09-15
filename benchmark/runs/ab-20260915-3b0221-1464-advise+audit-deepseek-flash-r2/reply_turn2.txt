@@ -1,0 +1,132 @@
+```python
+import os
+import random
+import numpy as np
+import pandas as pd
+import joblib
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split, StratifiedKFold, cross_val_score
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import (
+    RandomForestClassifier,
+    ExtraTreesClassifier,
+    GradientBoostingClassifier,
+    HistGradientBoostingClassifier,
+)
+from sklearn.svm import SVC
+from sklearn.metrics import accuracy_score, classification_report
+
+# ---------------------------------------------------------------------------
+# Reproducibility
+# ---------------------------------------------------------------------------
+SEED = 42
+os.environ["PYTHONHASHSEED"] = str(SEED)
+random.seed(SEED)
+np.random.seed(SEED)
+
+# ---------------------------------------------------------------------------
+# Paths
+# ---------------------------------------------------------------------------
+csv_path = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed20260915-r2\train.csv"
+model_path = os.path.join(os.getcwd(), "model.joblib")
+
+# ---------------------------------------------------------------------------
+# Load data
+# ---------------------------------------------------------------------------
+df = pd.read_csv(csv_path)
+X = df.drop(columns=["Class"])
+y = df["Class"].values
+
+# ---------------------------------------------------------------------------
+# Held-out validation split (stratified)
+# ---------------------------------------------------------------------------
+X_train, X_val, y_train, y_val = train_test_split(
+    X, y, test_size=0.2, random_state=SEED, stratify=y
+)
+
+# ---------------------------------------------------------------------------
+# Preprocessing
+# ---------------------------------------------------------------------------
+preprocessor = Pipeline(
+    steps=[
+        ("imputer", SimpleImputer(strategy="median")),
+        ("scaler", StandardScaler()),
+    ]
+)
+
+# ---------------------------------------------------------------------------
+# Candidate models
+# ---------------------------------------------------------------------------
+candidates = {
+    "logreg": LogisticRegression(max_iter=5000, random_state=SEED),
+    "logreg_balanced": LogisticRegression(
+        max_iter=5000, class_weight="balanced", random_state=SEED
+    ),
+    "rf": RandomForestClassifier(n_estimators=500, random_state=SEED, n_jobs=-1),
+    "rf_balanced": RandomForestClassifier(
+        n_estimators=500,
+        class_weight="balanced_subsample",
+        random_state=SEED,
+        n_jobs=-1,
+    ),
+    "extra_trees": ExtraTreesClassifier(
+        n_estimators=500, random_state=SEED, n_jobs=-1
+    ),
+    "gb": GradientBoostingClassifier(random_state=SEED),
+    "hgb": HistGradientBoostingClassifier(random_state=SEED),
+    "svc": SVC(probability=True, random_state=SEED),
+}
+
+cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=SEED)
+best_score = -np.inf
+best_pipeline = None
+best_name = None
+
+for name, clf in candidates.items():
+    pipeline = Pipeline(
+        steps=[
+            ("preprocessor", preprocessor),
+            ("classifier", clf),
+        ]
+    )
+    # Cross-validated accuracy on the training split only
+    cv_scores = cross_val_score(
+        pipeline, X_train, y_train, cv=cv, scoring="accuracy", n_jobs=-1
+    )
+    cv_mean = cv_scores.mean()
+
+    # Holdout validation accuracy
+    pipeline.fit(X_train, y_train)
+    val_pred = pipeline.predict(X_val)
+    val_acc = accuracy_score(y_val, val_pred)
+
+    print(
+        f"{name}: CV acc = {cv_mean:.4f} (+/- {cv_scores.std():.4f}), "
+        f"holdout acc = {val_acc:.4f}"
+    )
+
+    # Rank primarily by holdout accuracy, tie-break with CV
+    if val_acc > best_score:
+        best_score = val_acc
+        best_pipeline = pipeline
+        best_name = name
+
+print(f"\nBest model: {best_name} (holdout accuracy: {best_score:.4f})")
+print(classification_report(y_val, best_pipeline.predict(X_val)))
+
+# ---------------------------------------------------------------------------
+# Refit best pipeline on the full dataset and save
+# ---------------------------------------------------------------------------
+final_pipeline = Pipeline(
+    steps=[
+        ("preprocessor", preprocessor),
+        ("classifier", candidates[best_name]),
+    ]
+)
+final_pipeline.fit(X, y)
+
+joblib.dump(final_pipeline, model_path)
+print(f"Model saved to {model_path}")
+```

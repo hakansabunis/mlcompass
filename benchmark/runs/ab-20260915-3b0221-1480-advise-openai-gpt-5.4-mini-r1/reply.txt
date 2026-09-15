@@ -1,0 +1,119 @@
+```python
+import os
+import json
+import joblib
+import numpy as np
+import pandas as pd
+
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.impute import SimpleImputer
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import StratifiedKFold, cross_val_score
+from sklearn.metrics import roc_auc_score, accuracy_score
+from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.utils.validation import check_is_fitted
+
+
+DATA_PATH = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed20260915-r1\train.csv"
+MODEL_PATH = "trained_model.joblib"
+
+
+class FeatureNameCleaner(BaseEstimator, TransformerMixin):
+    """
+    Optional helper to ensure object columns are clean strings.
+    """
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X):
+        X = X.copy()
+        if isinstance(X, pd.DataFrame):
+            for col in X.columns:
+                if X[col].dtype == "object":
+                    X[col] = X[col].astype(str).fillna("")
+        return X
+
+
+def main():
+    # Load data
+    df = pd.read_csv(DATA_PATH)
+
+    target_col = "Class"
+    X = df.drop(columns=[target_col])
+    y = df[target_col]
+
+    # Basic cleanup for categorical feature
+    if "V2" in X.columns:
+        X["V2"] = X["V2"].astype(str)
+
+    numeric_features = [c for c in X.columns if c != "V2"]
+    categorical_features = ["V2"] if "V2" in X.columns else []
+
+    numeric_transformer = Pipeline(steps=[
+        ("imputer", SimpleImputer(strategy="median")),
+        ("scaler", StandardScaler()),
+    ])
+
+    categorical_transformer = Pipeline(steps=[
+        ("imputer", SimpleImputer(strategy="most_frequent")),
+        ("onehot", OneHotEncoder(handle_unknown="ignore", sparse_output=False)),
+    ])
+
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ("num", numeric_transformer, numeric_features),
+            ("cat", categorical_transformer, categorical_features),
+        ],
+        remainder="drop",
+        verbose_feature_names_out=False,
+    )
+
+    # Strong baseline for small tabular binary classification
+    model = LogisticRegression(
+        max_iter=5000,
+        class_weight="balanced",
+        solver="lbfgs",
+        random_state=42,
+    )
+
+    clf = Pipeline(steps=[
+        ("cleaner", FeatureNameCleaner()),
+        ("preprocessor", preprocessor),
+        ("model", model),
+    ])
+
+    # Cross-validation for a quick sanity check
+    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+    try:
+        auc_scores = cross_val_score(clf, X, y, cv=cv, scoring="roc_auc")
+        acc_scores = cross_val_score(clf, X, y, cv=cv, scoring="accuracy")
+        print(f"CV ROC AUC: {auc_scores.mean():.4f} ± {auc_scores.std():.4f}")
+        print(f"CV Accuracy: {acc_scores.mean():.4f} ± {acc_scores.std():.4f}")
+    except Exception as e:
+        print(f"Cross-validation failed, proceeding to train on full data. Reason: {e}")
+
+    # Fit on full dataset
+    clf.fit(X, y)
+
+    # Persist model
+    joblib.dump(clf, MODEL_PATH)
+    print(f"Saved model to: {os.path.abspath(MODEL_PATH)}")
+
+    # Save minimal metadata for convenience
+    metadata = {
+        "target": target_col,
+        "features": list(X.columns),
+        "categorical_features": categorical_features,
+        "numeric_features": numeric_features,
+    }
+    meta_path = "trained_model_metadata.json"
+    with open(meta_path, "w", encoding="utf-8") as f:
+        json.dump(metadata, f, indent=2)
+    print(f"Saved metadata to: {os.path.abspath(meta_path)}")
+
+
+if __name__ == "__main__":
+    main()
+```

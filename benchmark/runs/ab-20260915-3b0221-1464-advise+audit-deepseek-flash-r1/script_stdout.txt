@@ -1,0 +1,12 @@
+Rows: 524 (unique: 399) | Features: ['V1', 'V2', 'V3', 'V4']
+Class counts: {1: 393, 2: 131}
+Held-out validation split: train=319 val=80 (test_size=0.2)
+  logreg  cv_balanced_accuracy=0.5761 val_balanced_accuracy=0.7750  best_params={'clf__C': 10.0}
+  svc     cv_balanced_accuracy=0.6207 val_balanced_accuracy=0.7375  best_params={'clf__C': 5.0, 'clf__gamma': 0.5}
+  knn     cv_balanced_accuracy=0.6498 val_balanced_accuracy=0.7750  best_params={'clf__n_neighbors': 11, 'clf__weights': 'uniform'}
+  rf      cv_balanced_accuracy=0.6286 val_balanced_accuracy=0.7750  best_params={'max_depth': 4, 'max_features': 'sqrt', 'min_samples_leaf': 4, 'n_estimators': 600}
+  et      cv_balanced_accuracy=0.5973 val_balanced_accuracy=0.7500  best_params={'max_depth': 8, 'max_features': 'sqrt', 'min_samples_leaf': 2, 'n_estimators': 300}
+  gb      cv_balanced_accuracy=0.5898 val_balanced_accuracy=0.7750  best_params={'learning_rate': 0.03, 'max_depth': 3, 'n_estimators': 100}
+
+Selected model: knn (cv=0.6498, held-out val=0.7750)
+Saved fitted model to: C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed20260915-r1\model.joblib

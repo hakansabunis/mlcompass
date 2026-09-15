@@ -1,0 +1,125 @@
+```python
+import os
+import json
+import joblib
+import numpy as np
+import pandas as pd
+
+from sklearn.compose import ColumnTransformer
+from sklearn.impute import SimpleImputer
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import OneHotEncoder, FunctionTransformer
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, roc_auc_score, classification_report
+from sklearn.model_selection import StratifiedKFold, cross_val_score
+
+
+DATA_PATH = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed20260915-r3\train.csv"
+TARGET_COL = "Class"
+MODEL_PATH = "trained_model.joblib"
+
+
+def make_one_hot_encoder():
+    try:
+        return OneHotEncoder(handle_unknown="ignore", sparse_output=False)
+    except TypeError:
+        return OneHotEncoder(handle_unknown="ignore", sparse=False)
+
+
+def load_data(path: str) -> pd.DataFrame:
+    df = pd.read_csv(path)
+    if TARGET_COL not in df.columns:
+        raise ValueError(f"Target column '{TARGET_COL}' not found in data.")
+    return df
+
+
+def build_pipeline(X: pd.DataFrame) -> Pipeline:
+    categorical_cols = X.select_dtypes(include=["object", "string", "category"]).columns.tolist()
+    numeric_cols = [c for c in X.columns if c not in categorical_cols]
+
+    numeric_transformer = Pipeline(
+        steps=[
+            ("imputer", SimpleImputer(strategy="median")),
+        ]
+    )
+
+    categorical_transformer = Pipeline(
+        steps=[
+            ("imputer", SimpleImputer(strategy="most_frequent")),
+            ("onehot", make_one_hot_encoder()),
+        ]
+    )
+
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ("num", numeric_transformer, numeric_cols),
+            ("cat", categorical_transformer, categorical_cols),
+        ],
+        remainder="drop",
+        verbose_feature_names_out=False,
+    )
+
+    model = RandomForestClassifier(
+        n_estimators=500,
+        random_state=42,
+        class_weight="balanced",
+        min_samples_leaf=1,
+        min_samples_split=2,
+        n_jobs=-1,
+    )
+
+    pipeline = Pipeline(
+        steps=[
+            ("preprocess", preprocessor),
+            ("model", model),
+        ]
+    )
+    return pipeline
+
+
+def main():
+    df = load_data(DATA_PATH)
+
+    # Basic cleanup
+    df = df.copy()
+    df = df.drop_duplicates().reset_index(drop=True)
+
+    X = df.drop(columns=[TARGET_COL])
+    y = df[TARGET_COL].astype(int)
+
+    pipeline = build_pipeline(X)
+
+    # Cross-validated check (optional but helpful)
+    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+    try:
+        cv_scores = cross_val_score(pipeline, X, y, cv=cv, scoring="accuracy", n_jobs=-1)
+        print(f"CV accuracy: {cv_scores.mean():.4f} ± {cv_scores.std():.4f}")
+    except Exception as e:
+        print(f"Cross-validation skipped due to error: {e}")
+
+    # Fit on all data
+    pipeline.fit(X, y)
+
+    # Training-set evaluation for quick sanity check
+    preds = pipeline.predict(X)
+    acc = accuracy_score(y, preds)
+    print(f"Train accuracy: {acc:.4f}")
+    print("Classification report:")
+    print(classification_report(y, preds))
+
+    # Save model and metadata
+    artifact = {
+        "pipeline": pipeline,
+        "feature_names": X.columns.tolist(),
+        "target_col": TARGET_COL,
+        "classes_": getattr(pipeline.named_steps["model"], "classes_", None).tolist()
+        if hasattr(pipeline.named_steps["model"], "classes_")
+        else None,
+    }
+    joblib.dump(artifact, MODEL_PATH)
+    print(f"Saved model to: {os.path.abspath(MODEL_PATH)}")
+
+
+if __name__ == "__main__":
+    main()
+```

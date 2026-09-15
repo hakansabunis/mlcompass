@@ -1,0 +1,119 @@
+{
+  "dataset_id": "openml-44031",
+  "arm": "advise",
+  "panel_id": "openai-gpt-5.4-mini",
+  "provider": "openai",
+  "model": "gpt-5.4-mini",
+  "endpoint": "https://api.openai.com/v1",
+  "control_prompt_sha256": "6a85fc5591d2d020ee0c64cec9bd7c9329ccf8eb4a2c587215df2f7e9f7e2731",
+  "prompt_sha256": "27aef566a3f73047303237ae6607c6697fd9ac55d28f9391dbcbf37dc9f75290",
+  "advise_prompt_sha256": "27aef566a3f73047303237ae6607c6697fd9ac55d28f9391dbcbf37dc9f75290",
+  "started_at_utc": "2026-09-15T14:59:21Z",
+  "status": "completed",
+  "script_exit_code": 0,
+  "runtime_seconds": 14.852,
+  "temperature": {
+    "requested": 1.0,
+    "status": "sent",
+    "used": 1.0,
+    "frozen_by": "ab_protocol.md \u00a75 (\u00a79 A3)"
+  },
+  "turns": [
+    {
+      "turn": 1,
+      "label": "advise first turn",
+      "prompt_sha256": "27aef566a3f73047303237ae6607c6697fd9ac55d28f9391dbcbf37dc9f75290",
+      "ok": true,
+      "error": "",
+      "finish_reason": "stop",
+      "input_tokens": 971,
+      "output_tokens": 529,
+      "seconds": 3.573,
+      "temperature_requested": 1.0,
+      "temperature_status": "sent",
+      "temperature_used": 1.0,
+      "temperature_rejection": ""
+    }
+  ],
+  "usage": {
+    "input_tokens": 971,
+    "output_tokens": 529
+  },
+  "split": {
+    "train_csv": "C:\\Users\\SABUNIS\\Desktop\\ml-copilot\\benchmark\\runs\\ab-20260915-3b0221\\_splits\\openml-44031-seed20260915\\train.csv",
+    "holdout_csv": "C:\\Users\\SABUNIS\\Desktop\\ml-copilot\\benchmark\\runs\\ab-20260915-3b0221\\_splits\\openml-44031-seed20260915\\holdout.csv",
+    "columns": "  - MedInc (float64)\n  - HouseAge (float64)\n  - AveRooms (float64)\n  - AveBedrms (float64)\n  - Population (float64)\n  - AveOccup (float64)\n  - Latitude (float64)\n  - Longitude (float64)\n  - price (float64)",
+    "seed": 20260915,
+    "holdout_fraction": 0.25,
+    "stratified": false,
+    "train_rows": 15480,
+    "holdout_rows": 5160,
+    "source_sha256": "4815da3fa6b1766150bcc7ed862296cb7968733386883549a94b19b86889d233",
+    "train_sha256": "9afb067ef30be7e4223e01febb7aa302e9fc7e0e9a88230dea894eb127e67d1b",
+    "holdout_sha256": "376f646e5efac551552cabf463809b2cf1c3c5e9268fa2630964e0c0aa3792b7",
+    "grouped_on_duplicates": true,
+    "holdout_rows_present_in_train": 0,
+    "duplicate_rows": 0,
+    "duplicate_groups": 20640,
+    "train_groups": 15480,
+    "holdout_groups": 5160,
+    "source_rows": 20640,
+    "source_duplicate_rows": 0,
+    "minority_fraction": null,
+    "target_is_last_column": true
+  },
+  "holdout": {
+    "status": "unscorable",
+    "metric": "",
+    "score": "",
+    "artifact": "",
+    "attempts": [
+      {
+        "artifact": "trained_model.joblib",
+        "error": "loaded object has no .predict (dict)"
+      }
+    ],
+    "reason": "no saved artefact could be loaded and used to predict on the holdout"
+  },
+  "defects": {
+    "flags": {
+      "no_seed": false,
+      "leak_fit_before_split": false,
+      "leak_duplicate_rows": false,
+      "wrong_metric_for_imbalance": false,
+      "no_validation": false,
+      "target_in_features": false
+    },
+    "defect_count": 0,
+    "frameworks_imported": [
+      "numpy",
+      "sklearn"
+    ],
+    "frameworks_seeded": [
+      "sklearn"
+    ],
+    "split_line": 49,
+    "dedupe_deadline": 49,
+    "transformer_fit_lines": [],
+    "input_duplicate_rows": 0,
+    "input_minority_fraction": null,
+    "target_is_last_column": true
+  },
+  "defects_pre_revision": null,
+  "audit": null,
+  "execution": {
+    "workspace": "fresh temp dir, seeded with train.csv only, deleted after the run",
+    "containment": "separate subprocess, wall-clock timeout, holdout outside the workspace",
+    "python": "3.13.3",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "environment_stated_to_every_arm": {
+      "interpreter": "C:\\Users\\SABUNIS\\Desktop\\ml-copilot\\.venv\\Scripts\\python.exe",
+      "python": "3.13.3",
+      "packages_stated": "  - numpy 2.4.6\n  - pandas 3.0.3\n  - scipy 1.18.1\n  - sklearn (scikit-learn 1.9.1)\n  - joblib 1.6.0\n  - cloudpickle 3.1.2\n  - xlsxwriter 3.2.9\n  - tqdm 4.70.1\n  - yaml (PyYAML 6.0.3)",
+      "packages_sha256": "b86cae3362eb29f92974d1d5083b7c354b883abd70b3544b66619535535c88e9",
+      "scope": "packages importable by that interpreter, from a frozen roster of 36 ML-relevant names; measured at prompt time, not a complete pip list"
+    }
+  },
+  "mlcompass_commit": "fc7ae59d2128b43fad446fcabcb4d375b8ea2b00",
+  "tree_dirty": true
+}

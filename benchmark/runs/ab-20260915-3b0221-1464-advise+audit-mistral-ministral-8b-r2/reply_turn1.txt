@@ -1,0 +1,64 @@
+```python
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+from joblib import dump
+from tqdm import tqdm
+
+def train_and_save_model(csv_path, model_save_path='model.joblib'):
+    # Load the dataset
+    print("Loading dataset...")
+    data = pd.read_csv(csv_path)
+
+    # Remove duplicate rows (as advised by mlcompass)
+    print("Deduplicating data...")
+    data = data.drop_duplicates()
+
+    # Separate features and target
+    X = data.drop('Class', axis=1)
+    y = data['Class']
+
+    # Split data into train and validation sets
+    X_train, X_val, y_train, y_val = train_test_split(
+        X, y, test_size=0.2, random_state=20260915, stratify=y
+    )
+
+    # Create a preprocessing pipeline
+    preprocessing = Pipeline([
+        ('imputer', SimpleImputer(strategy='mean')),  # Though no missing values, good practice
+        ('scaler', StandardScaler())
+    ])
+
+    # Create a full pipeline with preprocessing and model
+    model = Pipeline([
+        ('preprocessor', preprocessing),
+        ('classifier', RandomForestClassifier(
+            random_state=20260915,
+            n_estimators=100,
+            max_depth=10,
+            class_weight='balanced'
+        ))
+    ])
+
+    # Train the model
+    print("Training model...")
+    model.fit(X_train, y_train)
+
+    # Evaluate on validation set
+    val_score = model.score(X_val, y_val)
+    print(f"Validation accuracy: {val_score:.4f}")
+
+    # Save the model
+    dump(model, model_save_path)
+    print(f"Model saved to {model_save_path}")
+
+    return model
+
+if __name__ == "__main__":
+    csv_path = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed20260915-r2\train.csv"
+    train_and_save_model(csv_path)
+```

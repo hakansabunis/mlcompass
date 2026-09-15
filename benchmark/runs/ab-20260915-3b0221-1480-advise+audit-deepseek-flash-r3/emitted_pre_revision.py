@@ -1,0 +1,98 @@
+import pandas as pd
+import numpy as np
+import joblib
+
+from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.impute import SimpleImputer
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, HistGradientBoostingClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import StratifiedKFold, cross_val_score
+
+# Path to the training data
+data_path = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed20260915-r3\train.csv"
+
+# Load data
+df = pd.read_csv(data_path)
+
+# Separate features and target
+y = df["Class"].astype(int)
+X = df.drop(columns=["Class"])
+
+# Identify numeric and categorical columns
+numeric_features = X.select_dtypes(include=["number"]).columns.tolist()
+categorical_features = X.select_dtypes(exclude=["number"]).columns.tolist()
+
+# Preprocessing pipelines
+numeric_transformer = Pipeline(steps=[
+    ("imputer", SimpleImputer(strategy="median")),
+    ("scaler", StandardScaler())
+])
+
+categorical_transformer = Pipeline(steps=[
+    ("imputer", SimpleImputer(strategy="most_frequent")),
+    ("onehot", OneHotEncoder(handle_unknown="ignore"))
+])
+
+preprocessor = ColumnTransformer(
+    transformers=[
+        ("num", numeric_transformer, numeric_features),
+        ("cat", categorical_transformer, categorical_features)
+    ]
+)
+
+# Candidate models
+models = {
+    "rf": RandomForestClassifier(
+        n_estimators=500,
+        random_state=42,
+        class_weight="balanced"
+    ),
+    "gb": GradientBoostingClassifier(
+        n_estimators=200,
+        random_state=42
+    ),
+    "hgb": HistGradientBoostingClassifier(
+        random_state=42,
+        max_iter=200
+    ),
+    "lr": LogisticRegression(
+        max_iter=2000,
+        class_weight="balanced",
+        random_state=42
+    )
+}
+
+# Cross-validation setup
+cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+
+best_score = -np.inf
+best_model = None
+best_name = None
+
+# Evaluate each model
+for name, model in models.items():
+    pipe = Pipeline(steps=[
+        ("preprocessor", preprocessor),
+        ("classifier", model)
+    ])
+    scores = cross_val_score(
+        pipe, X, y,
+        cv=cv,
+        scoring="roc_auc",
+        n_jobs=-1
+    )
+    mean_score = scores.mean()
+    print(f"{name}: {mean_score:.4f} (+/- {scores.std():.4f})")
+    if mean_score > best_score:
+        best_score = mean_score
+        best_model = pipe
+        best_name = name
+
+# Fit the best model on the full dataset
+best_model.fit(X, y)
+
+# Save the fitted model to the current working directory
+joblib.dump(best_model, "model.joblib")
+print(f"Saved best model ({best_name}) to model.joblib with CV ROC AUC = {best_score:.4f}")

@@ -1,0 +1,76 @@
+You are given a tabular dataset saved as a CSV file at this path:
+
+C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed20260915-r3\train.csv
+
+The target column is: Class
+
+The columns in the file are:
+  - V1 (int64)
+  - V2 (str)
+  - V3 (float64)
+  - V4 (float64)
+  - V5 (int64)
+  - V6 (int64)
+  - V7 (int64)
+  - V8 (float64)
+  - V9 (float64)
+  - V10 (float64)
+  - Class (int64)
+
+The script will be run by Python 3.13.3. These third-party packages can be imported in that environment:
+
+  - numpy 2.4.6
+  - pandas 3.0.3
+  - scipy 1.18.1
+  - sklearn (scikit-learn 1.9.1)
+  - joblib 1.6.0
+  - cloudpickle 3.1.2
+  - xlsxwriter 3.2.9
+  - tqdm 4.70.1
+  - yaml (PyYAML 6.0.3)
+
+The Python standard library is there as well. Nothing is installed before the script runs, so an import of anything not listed above may fail.
+
+Write a complete Python training script that trains a model to predict the target column from the other columns in that file, and saves the fitted model to a file in the current working directory so it can be loaded and used to predict on new rows later.
+
+Reply with the script inside a single ```python code block, and nothing else.
+
+Below is the verbatim output of mlcompass run on the same inputs.
+
+--- mlcompass advise ---
+(no .mlcompass/ project found in current path — running standalone; results 
+will not be persisted)
+
+┌──────────────────────────── 📊 Dataset analysis ────────────────────────────┐
+│ Path:                                                                       │
+│ C:\Users\SABUNIS\AppData\Local\Temp\mlcab_advise_lim214iu\train.csv         │
+│ Shape:   437 rows × 11 columns                                              │
+│ Target:  Class (explicit confidence)                                        │
+│ Task:    binary classification (1=71%, 2=29%)                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+Columns                                                                  
+┌───────┬─────────────┬─────────┬───────────────────────────────────────┐
+│ Name  │ Type        │ Missing │ Notes                                 │
+├───────┼─────────────┼─────────┼───────────────────────────────────────┤
+│ V1    │ numeric     │      0% │ range [4.0, 90.0]                     │
+│ V2    │ categorical │      0% │ cardinality 2                         │
+│ V3    │ numeric     │      0% │ range [0.4, 75.0], 68 IQR outliers    │
+│ V4    │ numeric     │      0% │ range [0.1, 19.7], 60 IQR outliers    │
+│ V5    │ numeric     │      0% │ range [63.0, 2110.0], 55 IQR outliers │
+│ V6    │ numeric     │      0% │ range [10.0, 2000.0], 55 IQR outliers │
+│ V7    │ numeric     │      0% │ range [10.0, 4929.0], 52 IQR outliers │
+│ V8    │ numeric     │      0% │ range [2.7, 9.6], 4 IQR outliers      │
+│ V9    │ numeric     │      0% │ range [0.9, 5.5]                      │
+│ V10   │ numeric     │      0% │ range [0.3, 2.8], 9 IQR outliers      │
+│ Class │ categorical │      0% │ cardinality 2                         │
+└───────┴─────────────┴─────────┴───────────────────────────────────────┘
+
+⚠ Warnings
+  • 10 exact duplicate row(s) (2.3% of the data). A random split puts copies of
+the same row in both train and test, which inflates held-out scores without any
+metric looking wrong. Confirm they are genuine repeated observations before 
+training; if not, de-duplicate before splitting, or split on a group key.
+
+(deterministic analysis only; pass --llm to add the advisor)
+
+--- end mlcompass advise ---

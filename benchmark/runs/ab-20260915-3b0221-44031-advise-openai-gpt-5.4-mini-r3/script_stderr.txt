@@ -1,0 +1,105 @@
+C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\model_selection\_validation.py:978: UserWarning: Scoring failed. The score on this train-test partition for these parameters will be set to nan. Details: 
+Traceback (most recent call last):
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\metrics\_scorer.py", line 174, in __call__
+    score = scorer._score(
+        cached_call, estimator, *args, **routed_params.get(name).score
+    )
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\metrics\_scorer.py", line 469, in _score
+    return self._sign * self._score_func(y_true, y_pred, **scoring_kwargs)
+                        ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\utils\_param_validation.py", line 196, in wrapper
+    params = func_sig.bind(*args, **kwargs)
+  File "C:\Users\SABUNIS\AppData\Local\Programs\Python\Python313\Lib\inspect.py", line 3269, in bind
+    return self._bind(args, kwargs)
+           ~~~~~~~~~~^^^^^^^^^^^^^^
+  File "C:\Users\SABUNIS\AppData\Local\Programs\Python\Python313\Lib\inspect.py", line 3258, in _bind
+    raise TypeError(
+        'got an unexpected keyword argument {arg!r}'.format(
+            arg=next(iter(kwargs))))
+TypeError: got an unexpected keyword argument 'squared'
+
+  warnings.warn(
+C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\model_selection\_validation.py:978: UserWarning: Scoring failed. The score on this train-test partition for these parameters will be set to nan. Details: 
+Traceback (most recent call last):
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\metrics\_scorer.py", line 174, in __call__
+    score = scorer._score(
+        cached_call, estimator, *args, **routed_params.get(name).score
+    )
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\metrics\_scorer.py", line 469, in _score
+    return self._sign * self._score_func(y_true, y_pred, **scoring_kwargs)
+                        ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\utils\_param_validation.py", line 196, in wrapper
+    params = func_sig.bind(*args, **kwargs)
+  File "C:\Users\SABUNIS\AppData\Local\Programs\Python\Python313\Lib\inspect.py", line 3269, in bind
+    return self._bind(args, kwargs)
+           ~~~~~~~~~~^^^^^^^^^^^^^^
+  File "C:\Users\SABUNIS\AppData\Local\Programs\Python\Python313\Lib\inspect.py", line 3258, in _bind
+    raise TypeError(
+        'got an unexpected keyword argument {arg!r}'.format(
+            arg=next(iter(kwargs))))
+TypeError: got an unexpected keyword argument 'squared'
+
+  warnings.warn(
+C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\model_selection\_validation.py:978: UserWarning: Scoring failed. The score on this train-test partition for these parameters will be set to nan. Details: 
+Traceback (most recent call last):
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\metrics\_scorer.py", line 174, in __call__
+    score = scorer._score(
+        cached_call, estimator, *args, **routed_params.get(name).score
+    )
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\metrics\_scorer.py", line 469, in _score
+    return self._sign * self._score_func(y_true, y_pred, **scoring_kwargs)
+                        ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\utils\_param_validation.py", line 196, in wrapper
+    params = func_sig.bind(*args, **kwargs)
+  File "C:\Users\SABUNIS\AppData\Local\Programs\Python\Python313\Lib\inspect.py", line 3269, in bind
+    return self._bind(args, kwargs)
+           ~~~~~~~~~~^^^^^^^^^^^^^^
+  File "C:\Users\SABUNIS\AppData\Local\Programs\Python\Python313\Lib\inspect.py", line 3258, in _bind
+    raise TypeError(
+        'got an unexpected keyword argument {arg!r}'.format(
+            arg=next(iter(kwargs))))
+TypeError: got an unexpected keyword argument 'squared'
+
+  warnings.warn(
+C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\model_selection\_validation.py:978: UserWarning: Scoring failed. The score on this train-test partition for these parameters will be set to nan. Details: 
+Traceback (most recent call last):
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\metrics\_scorer.py", line 174, in __call__
+    score = scorer._score(
+        cached_call, estimator, *args, **routed_params.get(name).score
+    )
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\metrics\_scorer.py", line 469, in _score
+    return self._sign * self._score_func(y_true, y_pred, **scoring_kwargs)
+                        ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\utils\_param_validation.py", line 196, in wrapper
+    params = func_sig.bind(*args, **kwargs)
+  File "C:\Users\SABUNIS\AppData\Local\Programs\Python\Python313\Lib\inspect.py", line 3269, in bind
+    return self._bind(args, kwargs)
+           ~~~~~~~~~~^^^^^^^^^^^^^^
+  File "C:\Users\SABUNIS\AppData\Local\Programs\Python\Python313\Lib\inspect.py", line 3258, in _bind
+    raise TypeError(
+        'got an unexpected keyword argument {arg!r}'.format(
+            arg=next(iter(kwargs))))
+TypeError: got an unexpected keyword argument 'squared'
+
+  warnings.warn(
+C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\model_selection\_validation.py:978: UserWarning: Scoring failed. The score on this train-test partition for these parameters will be set to nan. Details: 
+Traceback (most recent call last):
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\metrics\_scorer.py", line 174, in __call__
+    score = scorer._score(
+        cached_call, estimator, *args, **routed_params.get(name).score
+    )
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\metrics\_scorer.py", line 469, in _score
+    return self._sign * self._score_func(y_true, y_pred, **scoring_kwargs)
+                        ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\SABUNIS\Desktop\ml-copilot\.venv\Lib\site-packages\sklearn\utils\_param_validation.py", line 196, in wrapper
+    params = func_sig.bind(*args, **kwargs)
+  File "C:\Users\SABUNIS\AppData\Local\Programs\Python\Python313\Lib\inspect.py", line 3269, in bind
+    return self._bind(args, kwargs)
+           ~~~~~~~~~~^^^^^^^^^^^^^^
+  File "C:\Users\SABUNIS\AppData\Local\Programs\Python\Python313\Lib\inspect.py", line 3258, in _bind
+    raise TypeError(
+        'got an unexpected keyword argument {arg!r}'.format(
+            arg=next(iter(kwargs))))
+TypeError: got an unexpected keyword argument 'squared'
+
+  warnings.warn(

@@ -1,0 +1,22 @@
+import pandas as pd
+import joblib
+from sklearn.ensemble import RandomForestClassifier
+
+def main():
+    data_path = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed20260915-r2\train.csv"
+    df = pd.read_csv(data_path)
+
+    X = df.drop(columns=["Class"])
+    y = df["Class"]
+
+    model = RandomForestClassifier(
+        n_estimators=500,
+        random_state=42,
+        n_jobs=-1
+    )
+    model.fit(X, y)
+
+    joblib.dump(model, "model.joblib")
+
+if __name__ == "__main__":
+    main()

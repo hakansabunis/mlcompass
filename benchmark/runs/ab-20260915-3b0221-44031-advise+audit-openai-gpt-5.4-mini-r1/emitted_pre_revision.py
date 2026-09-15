@@ -1,0 +1,139 @@
+import os
+import json
+import joblib
+import numpy as np
+import pandas as pd
+
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import FunctionTransformer
+from sklearn.impute import SimpleImputer
+from sklearn.ensemble import HistGradientBoostingRegressor
+from sklearn.model_selection import KFold, cross_val_score
+from sklearn.metrics import mean_squared_error
+
+
+DATA_PATH = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed20260915-r1\train.csv"
+MODEL_PATH = "trained_model.joblib"
+
+
+def add_features(X):
+    X = np.asarray(X, dtype=np.float64)
+    medinc = X[:, 0]
+    houseage = X[:, 1]
+    averooms = X[:, 2]
+    avebedrms = X[:, 3]
+    population = X[:, 4]
+    aveoccup = X[:, 5]
+    latitude = X[:, 6]
+    longitude = X[:, 7]
+
+    eps = 1e-6
+    rooms_per_bedroom = averooms / (avebedrms + eps)
+    bedrooms_per_room = avebedrms / (averooms + eps)
+    population_per_household = population / (aveoccup + eps)
+    rooms_per_person = averooms / (population + eps)
+    log_population = np.log1p(np.maximum(population, 0))
+    log_occup = np.log1p(np.maximum(aveoccup, 0))
+    log_rooms = np.log1p(np.maximum(averooms, 0))
+    log_bedrooms = np.log1p(np.maximum(avebedrms, 0))
+    lat_lon_sum = latitude + longitude
+    lat_lon_diff = latitude - longitude
+    income_age = medinc * houseage
+    income_rooms = medinc * averooms
+    income_occup = medinc / (aveoccup + eps)
+
+    return np.column_stack(
+        [
+            X,
+            rooms_per_bedroom,
+            bedrooms_per_room,
+            population_per_household,
+            rooms_per_person,
+            log_population,
+            log_occup,
+            log_rooms,
+            log_bedrooms,
+            lat_lon_sum,
+            lat_lon_diff,
+            income_age,
+            income_rooms,
+            income_occup,
+        ]
+    )
+
+
+def main():
+    df = pd.read_csv(DATA_PATH)
+
+    target = "price"
+    feature_cols = [c for c in df.columns if c != target]
+
+    X = df[feature_cols].to_numpy(dtype=np.float64)
+    y = df[target].to_numpy(dtype=np.float64)
+
+    preprocessor = ColumnTransformer(
+        transformers=[
+            (
+                "num",
+                Pipeline(
+                    steps=[
+                        ("imputer", SimpleImputer(strategy="median")),
+                        ("feat", FunctionTransformer(add_features, validate=False)),
+                    ]
+                ),
+                feature_cols,
+            )
+        ],
+        remainder="drop",
+        verbose_feature_names_out=False,
+    )
+
+    model = HistGradientBoostingRegressor(
+        loss="squared_error",
+        learning_rate=0.05,
+        max_iter=500,
+        max_depth=8,
+        min_samples_leaf=20,
+        l2_regularization=0.0,
+        random_state=42,
+        early_stopping=True,
+        validation_fraction=0.1,
+    )
+
+    pipeline = Pipeline(
+        steps=[
+            ("preprocess", preprocessor),
+            ("model", model),
+        ]
+    )
+
+    # Quick internal validation for sanity
+    cv = KFold(n_splits=5, shuffle=True, random_state=42)
+    neg_rmse = cross_val_score(
+        pipeline,
+        X,
+        y,
+        scoring="neg_root_mean_squared_error",
+        cv=cv,
+        n_jobs=-1,
+    )
+    rmse = -neg_rmse.mean()
+    print(f"CV RMSE: {rmse:.6f}")
+
+    # Fit final model on all data
+    pipeline.fit(X, y)
+
+    # Save fitted model and metadata
+    artifact = {
+        "model": pipeline,
+        "feature_cols": feature_cols,
+        "target_col": target,
+        "cv_rmse": float(rmse),
+    }
+    joblib.dump(artifact, MODEL_PATH)
+    print(f"Saved model to: {os.path.abspath(MODEL_PATH)}")
+
+
+if __name__ == "__main__":
+    main()

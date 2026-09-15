@@ -1,0 +1,78 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report
+from joblib import dump
+import warnings
+
+# Suppress warnings for cleaner output
+warnings.filterwarnings('ignore')
+
+# Define file path
+csv_path = r'C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed20260915-r2\train.csv'
+
+# Load the dataset
+try:
+    df = pd.read_csv(csv_path)
+    print(f"Dataset loaded successfully. Shape: {df.shape}")
+except Exception as e:
+    print(f"Error loading dataset: {e}")
+    raise
+
+# Drop duplicate rows (as advised by mlcompass)
+df = df.drop_duplicates()
+print(f"After removing duplicates: {df.shape}")
+
+# Separate features and target
+X = df.drop('Class', axis=1)
+y = df['Class']
+
+# Define feature types
+numeric_features = ['V1', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8', 'V9', 'V10']
+categorical_features = ['V2']
+
+# Create transformers
+numeric_transformer = Pipeline(steps=[
+    ('scaler', StandardScaler())
+])
+
+categorical_transformer = Pipeline(steps=[
+    ('onehot', OneHotEncoder(handle_unknown='ignore'))
+])
+
+# Combine transformers
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('num', numeric_transformer, numeric_features),
+        ('cat', categorical_transformer, categorical_features)
+    ])
+
+# Create and train the model pipeline
+model = Pipeline(steps=[
+    ('preprocessor', preprocessor),
+    ('classifier', RandomForestClassifier(random_state=20260915))
+])
+
+# Split data into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=20260915, stratify=y
+)
+
+# Train the model
+model.fit(X_train, y_train)
+
+# Evaluate the model
+y_pred = model.predict(X_test)
+print("\nModel Evaluation:")
+print(f"Accuracy: {accuracy_score(y_test, y_pred):.4f}")
+print("\nClassification Report:")
+print(classification_report(y_test, y_pred))
+
+# Save the trained model
+model_filename = 'binary_classifier_model.joblib'
+dump(model, model_filename)
+print(f"\nModel saved to {model_filename}")

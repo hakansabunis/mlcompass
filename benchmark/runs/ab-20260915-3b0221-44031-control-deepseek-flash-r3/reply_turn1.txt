@@ -1,0 +1,41 @@
+```python
+import pandas as pd
+import joblib
+from pathlib import Path
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+from sklearn.ensemble import HistGradientBoostingRegressor
+
+DATA_PATH = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed20260915-r3\train.csv"
+TARGET_COL = "price"
+MODEL_PATH = Path.cwd() / "trained_price_model.joblib"
+
+df = pd.read_csv(DATA_PATH)
+
+if TARGET_COL not in df.columns:
+    raise ValueError(f"Target column {TARGET_COL!r} not found in dataset.")
+
+X = df.drop(columns=[TARGET_COL])
+y = df[TARGET_COL]
+
+model = Pipeline(
+    steps=[
+        ("imputer", SimpleImputer(strategy="median")),
+        (
+            "regressor",
+            HistGradientBoostingRegressor(
+                learning_rate=0.05,
+                max_iter=500,
+                max_leaf_nodes=31,
+                l2_regularization=0.0,
+                random_state=42,
+            ),
+        ),
+    ]
+)
+
+model.fit(X, y)
+joblib.dump(model, MODEL_PATH)
+
+print(f"Saved trained model to: {MODEL_PATH}")
+```

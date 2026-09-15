@@ -1,0 +1,144 @@
+import os
+import random
+import joblib
+import numpy as np
+import pandas as pd
+
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import FunctionTransformer
+from sklearn.impute import SimpleImputer
+from sklearn.ensemble import HistGradientBoostingRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error
+
+
+DATA_PATH = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed20260915-r1\train.csv"
+MODEL_PATH = "trained_model.joblib"
+RANDOM_STATE = 42
+
+np.random.seed(RANDOM_STATE)
+random.seed(RANDOM_STATE)
+
+
+def add_features(X):
+    X = np.asarray(X, dtype=np.float64)
+    medinc = X[:, 0]
+    houseage = X[:, 1]
+    averooms = X[:, 2]
+    avebedrms = X[:, 3]
+    population = X[:, 4]
+    aveoccup = X[:, 5]
+    latitude = X[:, 6]
+    longitude = X[:, 7]
+
+    eps = 1e-6
+    rooms_per_bedroom = averooms / (avebedrms + eps)
+    bedrooms_per_room = avebedrms / (averooms + eps)
+    population_per_household = population / (aveoccup + eps)
+    rooms_per_person = averooms / (population + eps)
+    log_population = np.log1p(np.maximum(population, 0))
+    log_occup = np.log1p(np.maximum(aveoccup, 0))
+    log_rooms = np.log1p(np.maximum(averooms, 0))
+    log_bedrooms = np.log1p(np.maximum(avebedrms, 0))
+    lat_lon_sum = latitude + longitude
+    lat_lon_diff = latitude - longitude
+    income_age = medinc * houseage
+    income_rooms = medinc * averooms
+    income_occup = medinc / (aveoccup + eps)
+
+    return np.column_stack(
+        [
+            X,
+            rooms_per_bedroom,
+            bedrooms_per_room,
+            population_per_household,
+            rooms_per_person,
+            log_population,
+            log_occup,
+            log_rooms,
+            log_bedrooms,
+            lat_lon_sum,
+            lat_lon_diff,
+            income_age,
+            income_rooms,
+            income_occup,
+        ]
+    )
+
+
+def main():
+    df = pd.read_csv(DATA_PATH)
+
+    target = "price"
+    feature_cols = [c for c in df.columns if c != target]
+
+    X = df[feature_cols].to_numpy(dtype=np.float64)
+    y = df[target].to_numpy(dtype=np.float64)
+
+    X_train, X_val, y_train, y_val = train_test_split(
+        X,
+        y,
+        test_size=0.15,
+        random_state=RANDOM_STATE,
+        shuffle=True,
+    )
+
+    preprocessor = ColumnTransformer(
+        transformers=[
+            (
+                "num",
+                Pipeline(
+                    steps=[
+                        ("imputer", SimpleImputer(strategy="median")),
+                        ("feat", FunctionTransformer(add_features, validate=False)),
+                    ]
+                ),
+                feature_cols,
+            )
+        ],
+        remainder="drop",
+        verbose_feature_names_out=False,
+    )
+
+    model = HistGradientBoostingRegressor(
+        loss="squared_error",
+        learning_rate=0.05,
+        max_iter=700,
+        max_depth=8,
+        min_samples_leaf=20,
+        l2_regularization=0.0,
+        random_state=RANDOM_STATE,
+        early_stopping=True,
+        validation_fraction=0.1,
+    )
+
+    pipeline = Pipeline(
+        steps=[
+            ("preprocess", preprocessor),
+            ("model", model),
+        ]
+    )
+
+    pipeline.fit(X_train, y_train)
+
+    val_pred = pipeline.predict(X_val)
+    rmse = mean_squared_error(y_val, val_pred, squared=False)
+    print(f"Holdout RMSE: {rmse:.6f}")
+
+    # Fit final model on all data
+    pipeline.fit(X, y)
+
+    artifact = {
+        "model": pipeline,
+        "feature_cols": feature_cols,
+        "target_col": target,
+        "holdout_rmse": float(rmse),
+        "random_state": RANDOM_STATE,
+    }
+    joblib.dump(artifact, MODEL_PATH)
+    print(f"Saved model to: {os.path.abspath(MODEL_PATH)}")
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,5 @@
+logreg: macro_f1=0.6868 acc=0.6977
+rf: macro_f1=0.7139 acc=0.7442
+gb: macro_f1=0.6040 acc=0.7326
+Best model: rf (val macro_f1=0.7139)
+Model saved to C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed20260915-r1\model.joblib

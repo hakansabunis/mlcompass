@@ -1,0 +1,3 @@
+CV accuracy: 0.2952
+CV ROC AUC:   0.7578
+Saved model to: C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed20260915-r3\trained_model.joblib

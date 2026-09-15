@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed20260915-r1\emitted.py", line 52, in <module>
+    os.makedirs(os.path.dirname('random_forest_model.joblib'), exist_ok=True)
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen os>", line 227, in makedirs
+FileNotFoundError: [WinError 3] Sistem belirtilen yolu bulamıyor: ''

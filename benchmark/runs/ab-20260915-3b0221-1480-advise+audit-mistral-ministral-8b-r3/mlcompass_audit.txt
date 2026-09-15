@@ -1,0 +1,22 @@
+(no .mlcompass/ project found in current path — running standalone; results 
+will not be persisted)
+
+┌────────────────────────────── 🔎 Script audit ──────────────────────────────┐
+│ Path:                                                                       │
+│ C:\Users\SABUNIS\AppData\Local\Temp\mlcab_audit_tssnuiop\train_model.py     │
+│ Lines:       70                                                             │
+│ Frameworks:  numpy, sklearn                                                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Findings                                                                  
+┌──────────┬──────┬──────┬───────────────────────────────────────────────┐
+│ Severity │ Rule │ Line │ Message                                       │
+├──────────┼──────┼──────┼───────────────────────────────────────────────┤
+│ ✗ error  │ seed │      │ No random seed is set anywhere in the script. │
+└──────────┴──────┴──────┴───────────────────────────────────────────────┘
+
+Summary: 1 error
+
+💡 Suggested fixes
+  • seed: Add `torch.manual_seed(42)` (and `np.random.seed(42)`, 
+`random.seed(42)`) near the top so runs are reproducible.

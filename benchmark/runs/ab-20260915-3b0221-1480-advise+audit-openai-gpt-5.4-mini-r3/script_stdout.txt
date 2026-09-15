@@ -1,0 +1,14 @@
+CV accuracy (train split): 0.6306 ± 0.0381
+Validation accuracy: 0.7442
+Validation classification report:
+              precision    recall  f1-score   support
+
+           1       0.87      0.75      0.81        61
+           2       0.55      0.72      0.62        25
+
+    accuracy                           0.74        86
+   macro avg       0.71      0.74      0.71        86
+weighted avg       0.77      0.74      0.75        86
+
+Validation ROC AUC: 0.7957
+Saved model to: C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed20260915-r3\trained_model.joblib

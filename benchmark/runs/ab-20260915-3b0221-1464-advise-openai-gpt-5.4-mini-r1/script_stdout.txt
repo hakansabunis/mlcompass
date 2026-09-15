@@ -1,0 +1,5 @@
+Training rows: 524
+Features: ['V1', 'V2', 'V3', 'V4']
+CV Accuracy: 0.2595
+CV ROC AUC: 0.7470
+Saved model to: C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed20260915-r1\trained_model.joblib

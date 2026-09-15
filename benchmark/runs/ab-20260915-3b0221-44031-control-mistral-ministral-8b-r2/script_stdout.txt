@@ -1,0 +1,3 @@
+Model trained with MSE: 0.02
+Model saved as 'house_price_model.joblib'
+Scaler saved as 'house_price_scaler.joblib'

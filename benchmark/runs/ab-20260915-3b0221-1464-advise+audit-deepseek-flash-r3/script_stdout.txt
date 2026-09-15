@@ -1,0 +1,6 @@
+logistic: cv=0.6445  val=0.6857
+random_forest: cv=0.7303  val=0.8000
+gradient_boosting: cv=0.7613  val=0.8286
+hist_gradient_boosting: cv=0.7637  val=0.8286
+Best model: gradient_boosting with validation accuracy 0.8286
+Model saved to model.joblib

@@ -1,0 +1,5 @@
+Saved model to: C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed20260915-r2\trained_model.joblib
+{
+  "validation_accuracy": 0.6363636363636364,
+  "validation_auc": 0.6533333333333333
+}

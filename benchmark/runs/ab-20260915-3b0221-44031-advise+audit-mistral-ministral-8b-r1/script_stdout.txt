@@ -1,0 +1,2 @@
+Validation MSE: 0.020358
+Model saved to house_price_regressor.joblib

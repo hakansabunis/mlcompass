@@ -1,0 +1,8 @@
+Starting model training...
+Fitting 5 folds for each of 36 candidates, totalling 180 fits
+
+Best parameters: {'regressor__max_depth': 20, 'regressor__min_samples_split': 2, 'regressor__n_estimators': 300}
+Validation MSE: 0.02
+Validation R²: 0.82
+
+Model saved to house_price_model.joblib

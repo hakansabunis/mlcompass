@@ -1,0 +1,22 @@
+(no .mlcompass/ project found in current path — running standalone; results 
+will not be persisted)
+
+┌────────────────────────────── 🔎 Script audit ──────────────────────────────┐
+│ Path:                                                                       │
+│ C:\Users\SABUNIS\AppData\Local\Temp\mlcab_audit_n41lb9hd\train_model.py     │
+│ Lines:       34                                                             │
+│ Frameworks:  sklearn                                                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Findings                                                                      
+┌───────────┬───────────┬──────┬─────────────────────────────────────────────┐
+│ Severity  │ Rule      │ Line │ Message                                     │
+├───────────┼───────────┼──────┼─────────────────────────────────────────────┤
+│ ⚠ warning │ val_split │      │ No validation split detected in the script. │
+└───────────┴───────────┴──────┴─────────────────────────────────────────────┘
+
+Summary: 1 warning
+
+💡 Suggested fixes
+  • val_split: Use `train_test_split` or `torch.utils.data.random_split` to 
+hold out 10–20% of the data.

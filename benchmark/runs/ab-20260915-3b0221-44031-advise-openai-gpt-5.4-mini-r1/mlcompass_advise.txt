@@ -1,0 +1,33 @@
+(no .mlcompass/ project found in current path — running standalone; results 
+will not be persisted)
+
+┌──────────────────────────── 📊 Dataset analysis ────────────────────────────┐
+│ Path:                                                                       │
+│ C:\Users\SABUNIS\AppData\Local\Temp\mlcab_advise_igb1wi8y\train.csv         │
+│ Shape:   15,480 rows × 9 columns                                            │
+│ Target:  price (explicit confidence)                                        │
+│ Task:    regression (range 0.14 → 1.79)                                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+Columns                                                                    
+┌────────────┬─────────┬─────────┬────────────────────────────────────────┐
+│ Name       │ Type    │ Missing │ Notes                                  │
+├────────────┼─────────┼─────────┼────────────────────────────────────────┤
+│ MedInc     │ numeric │      0% │ range [0.5, 15.0], 518 IQR outliers    │
+│ HouseAge   │ numeric │      0% │ range [1.0, 52.0]                      │
+│ AveRooms   │ numeric │      0% │ range [0.8, 132.5], 381 IQR outliers   │
+│ AveBedrms  │ numeric │      0% │ range [0.4, 34.1], 1073 IQR outliers   │
+│ Population │ numeric │      0% │ range [5.0, 28566.0], 915 IQR outliers │
+│ AveOccup   │ numeric │      0% │ range [1.1, 1243.3], 538 IQR outliers  │
+│ Latitude   │ numeric │      0% │ range [32.5, 42.0]                     │
+│ Longitude  │ numeric │      0% │ range [-124.3, -114.5]                 │
+│ price      │ numeric │      0% │ range [0.1, 1.8]                       │
+└────────────┴─────────┴─────────┴────────────────────────────────────────┘
+
+⚠ Warnings
+  • Target 'price' is piled up at its maximum: 717 row(s) (4.6%) sit at exactly
+1.79176. That usually means a censored or capped measurement rather than a real
+mode. A model fitted on it cannot predict beyond the cap, and its errors near 
+1.79176 are systematically biased. Check how the value was recorded before 
+treating it as ordinary regression.
+
+(deterministic analysis only; pass --llm to add the advisor)

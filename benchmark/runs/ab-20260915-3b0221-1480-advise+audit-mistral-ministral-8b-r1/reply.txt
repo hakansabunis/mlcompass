@@ -1,0 +1,98 @@
+```python
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report, accuracy_score
+from joblib import dump
+from tqdm import tqdm
+import warnings
+
+# Suppress warnings for cleaner output
+warnings.filterwarnings('ignore')
+
+# Set random seed for reproducibility
+SEED = 20260915
+np.random.seed(SEED)
+
+def load_and_preprocess_data(file_path):
+    """Load and preprocess the dataset"""
+    data = pd.read_csv(file_path)
+
+    # Remove duplicate rows as advised
+    data = data.drop_duplicates()
+
+    # Separate features and target
+    X = data.drop('Class', axis=1)
+    y = data['Class']
+
+    return X, y
+
+def create_model_pipeline():
+    """Create and configure the model pipeline"""
+    numeric_features = ['V1', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8', 'V9', 'V10']
+    categorical_features = ['V2']
+
+    numeric_transformer = Pipeline(steps=[
+        ('scaler', StandardScaler())
+    ])
+
+    categorical_transformer = Pipeline(steps=[
+        ('onehot', OneHotEncoder(handle_unknown='ignore', sparse_output=False))
+    ])
+
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ('num', numeric_transformer, numeric_features),
+            ('cat', categorical_transformer, categorical_features)
+        ])
+
+    return Pipeline(steps=[
+        ('preprocessor', preprocessor),
+        ('classifier', RandomForestClassifier(
+            random_state=SEED,
+            n_estimators=100,
+            class_weight='balanced',
+            max_depth=10,
+            min_samples_split=5
+        ))
+    ])
+
+def main():
+    # File path
+    file_path = r'C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed20260915-r1\train.csv'
+
+    # Load and preprocess data
+    X, y = load_and_preprocess_data(file_path)
+
+    # Split data
+    X_train, X_val, y_train, y_val = train_test_split(
+        X, y, test_size=0.2, random_state=SEED, stratify=y
+    )
+
+    # Create and train model
+    model = create_model_pipeline()
+
+    print("Training model...")
+    model.fit(X_train, y_train)
+
+    # Evaluate
+    y_pred = model.predict(X_val)
+    accuracy = accuracy_score(y_val, y_pred)
+
+    print("\nModel Evaluation:")
+    print(f"Accuracy: {accuracy:.4f}")
+    print("\nClassification Report:")
+    print(classification_report(y_val, y_pred))
+
+    # Save model
+    model_filename = 'trained_model.joblib'
+    dump(model, model_filename)
+    print(f"\nModel saved successfully as: {model_filename}")
+
+if __name__ == "__main__":
+    main()
+```

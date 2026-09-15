@@ -1,0 +1,75 @@
+```python
+import os
+import json
+import joblib
+import numpy as np
+import pandas as pd
+
+from sklearn.model_selection import KFold, cross_val_score
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+from sklearn.ensemble import HistGradientBoostingRegressor
+from sklearn.metrics import make_scorer, mean_squared_error
+
+
+def main():
+    train_path = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed20260915-r3\train.csv"
+    model_path = "trained_model.joblib"
+
+    # Load data
+    df = pd.read_csv(train_path)
+
+    target_col = "price"
+    X = df.drop(columns=[target_col])
+    y = df[target_col].astype(float)
+
+    # Model: robust, strong baseline for tabular regression
+    model = Pipeline(
+        steps=[
+            ("imputer", SimpleImputer(strategy="median")),
+            (
+                "regressor",
+                HistGradientBoostingRegressor(
+                    loss="squared_error",
+                    learning_rate=0.05,
+                    max_iter=800,
+                    max_depth=None,
+                    max_leaf_nodes=31,
+                    min_samples_leaf=20,
+                    l2_regularization=0.0,
+                    max_bins=255,
+                    random_state=42,
+                ),
+            ),
+        ]
+    )
+
+    # Optional quick validation for sanity
+    rmse_scorer = make_scorer(mean_squared_error, greater_is_better=False, squared=False)
+    cv = KFold(n_splits=5, shuffle=True, random_state=42)
+    scores = cross_val_score(model, X, y, cv=cv, scoring=rmse_scorer, n_jobs=-1)
+    mean_rmse = -float(np.mean(scores))
+    std_rmse = float(np.std(scores))
+
+    # Fit final model on all available data
+    model.fit(X, y)
+
+    # Save fitted model
+    joblib.dump(
+        {
+            "model": model,
+            "feature_names": list(X.columns),
+            "target": target_col,
+            "cv_rmse_mean": mean_rmse,
+            "cv_rmse_std": std_rmse,
+        },
+        model_path,
+    )
+
+    print(f"Saved model to: {os.path.abspath(model_path)}")
+    print(f"5-fold CV RMSE: {mean_rmse:.6f} ± {std_rmse:.6f}")
+
+
+if __name__ == "__main__":
+    main()
+```

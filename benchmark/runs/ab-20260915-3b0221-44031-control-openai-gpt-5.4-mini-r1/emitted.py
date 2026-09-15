@@ -1,0 +1,93 @@
+import os
+import json
+import joblib
+import numpy as np
+import pandas as pd
+
+from sklearn.pipeline import Pipeline
+from sklearn.compose import TransformedTargetRegressor
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import StandardScaler, PowerTransformer
+from sklearn.ensemble import HistGradientBoostingRegressor
+from sklearn.model_selection import KFold, cross_val_score
+
+
+TRAIN_PATH = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed20260915-r1\train.csv"
+MODEL_PATH = "trained_model.joblib"
+
+
+def main():
+    # Load data
+    df = pd.read_csv(TRAIN_PATH)
+
+    target_col = "price"
+    feature_cols = [c for c in df.columns if c != target_col]
+
+    X = df[feature_cols].copy()
+    y = df[target_col].copy()
+
+    # Basic cleanup: ensure numeric types
+    for col in feature_cols:
+        X[col] = pd.to_numeric(X[col], errors="coerce")
+    y = pd.to_numeric(y, errors="coerce")
+
+    # Drop rows where target is missing
+    mask = y.notna()
+    X = X.loc[mask].reset_index(drop=True)
+    y = y.loc[mask].reset_index(drop=True)
+
+    # Model pipeline:
+    # - Impute missing values
+    # - Scale features
+    # - Use a strong tree-based regressor that handles nonlinear relationships well
+    base_model = Pipeline(
+        steps=[
+            ("imputer", SimpleImputer(strategy="median")),
+            ("scaler", StandardScaler()),
+            (
+                "regressor",
+                HistGradientBoostingRegressor(
+                    learning_rate=0.05,
+                    max_depth=7,
+                    max_iter=600,
+                    min_samples_leaf=20,
+                    l2_regularization=0.0,
+                    random_state=42,
+                ),
+            ),
+        ]
+    )
+
+    # Transform target to stabilize training; invert automatically at prediction time
+    model = TransformedTargetRegressor(
+        regressor=base_model,
+        transformer=PowerTransformer(method="yeo-johnson", standardize=True),
+    )
+
+    # Optional quick cross-validation to get a sanity check during training
+    cv = KFold(n_splits=5, shuffle=True, random_state=42)
+    scores = cross_val_score(
+        model,
+        X,
+        y,
+        cv=cv,
+        scoring="neg_root_mean_squared_error",
+        n_jobs=-1,
+    )
+    print(f"CV RMSE: mean={-scores.mean():.6f}, std={scores.std():.6f}")
+
+    # Fit on full data
+    model.fit(X, y)
+
+    # Save fitted model and metadata
+    artifact = {
+        "model": model,
+        "feature_cols": feature_cols,
+        "target_col": target_col,
+    }
+    joblib.dump(artifact, MODEL_PATH)
+    print(f"Saved model to: {os.path.abspath(MODEL_PATH)}")
+
+
+if __name__ == "__main__":
+    main()

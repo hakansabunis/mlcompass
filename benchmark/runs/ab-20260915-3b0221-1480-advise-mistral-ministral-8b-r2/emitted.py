@@ -1,0 +1,74 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.impute import SimpleImputer
+from sklearn.metrics import accuracy_score
+from joblib import dump
+import os
+
+def train_and_save_model():
+    # Define the file path
+    csv_path = "C:/Users/SABUNIS/AppData/Local/Temp/mlcab-1480-seed20260915-r2/train.csv"
+
+    # Load the data
+    df = pd.read_csv(csv_path)
+
+    # Remove duplicate rows as advised
+    df = df.drop_duplicates()
+
+    # Separate features and target
+    X = df.drop(columns=['Class'])
+    y = df['Class']
+
+    # Define preprocessing for numerical and categorical columns
+    numerical_cols = ['V1', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8', 'V9', 'V10']
+    categorical_cols = ['V2']
+
+    numerical_transformer = Pipeline(steps=[
+        ('imputer', SimpleImputer(strategy='median')),
+        ('scaler', StandardScaler())
+    ])
+
+    categorical_transformer = Pipeline(steps=[
+        ('imputer', SimpleImputer(strategy='most_frequent')),
+        ('onehot', OneHotEncoder(handle_unknown='ignore'))
+    ])
+
+    # Combine preprocessing steps
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ('num', numerical_transformer, numerical_cols),
+            ('cat', categorical_transformer, categorical_cols)
+        ])
+
+    # Create a pipeline with preprocessing and model
+    model = Pipeline(steps=[
+        ('preprocessor', preprocessor),
+        ('classifier', RandomForestClassifier(random_state=20260915))
+    ])
+
+    # Split the data into training and validation sets
+    X_train, X_val, y_train, y_val = train_test_split(
+        X, y, test_size=0.2, random_state=20260915, stratify=y
+    )
+
+    # Train the model
+    model.fit(X_train, y_train)
+
+    # Evaluate on validation set
+    y_pred = model.predict(X_val)
+    accuracy = accuracy_score(y_val, y_pred)
+
+    print(f"Validation accuracy: {accuracy:.4f}")
+
+    # Save the model to a file
+    model_filename = "random_forest_model.joblib"
+    dump(model, model_filename)
+    print(f"Model saved to {os.path.abspath(model_filename)}")
+
+if __name__ == "__main__":
+    train_and_save_model()

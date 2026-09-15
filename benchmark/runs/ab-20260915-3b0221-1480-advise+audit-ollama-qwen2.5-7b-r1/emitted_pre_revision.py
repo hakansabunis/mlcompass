@@ -1,0 +1,38 @@
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report
+from sklearn.externals import joblib
+
+# Load the dataset
+file_path = r'C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed20260915-r1\train.csv'
+data = pd.read_csv(file_path)
+
+# Ensure there are no duplicate rows
+duplicates = data.duplicated().sum()
+if duplicates > 0:
+    print(f"Warning: {duplicates} duplicate rows found. Consider dropping them before training.")
+
+# Select features and target variable
+X = data.drop(columns='Class')
+y = data['Class']
+
+# Split the dataset into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Initialize the model
+model = RandomForestClassifier(random_state=42)
+
+# Train the model
+model.fit(X_train, y_train)
+
+# Predict on the test set
+y_pred = model.predict(X_test)
+
+# Print classification report
+print(classification_report(y_test, y_pred))
+
+# Save the trained model to a file in the current working directory
+model_filename = 'trained_model.pkl'
+joblib.dump(model, model_filename)
+print(f"Trained model saved as {model_filename}")

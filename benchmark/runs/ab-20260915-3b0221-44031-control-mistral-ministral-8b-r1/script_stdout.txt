@@ -1,0 +1,3 @@
+Data loaded successfully. Shape: (15480, 9)
+Model RMSE on test set: 0.15
+Model saved successfully to house_price_model.joblib

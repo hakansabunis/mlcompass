@@ -1,0 +1,20 @@
+Loading data...
+Found 125 duplicate rows. Removing them...
+Training model...
+
+Model Evaluation:
+Accuracy: 0.6750
+
+Classification Report:
+              precision    recall  f1-score   support
+
+           1       0.81      0.72      0.76        58
+           2       0.43      0.55      0.48        22
+
+    accuracy                           0.68        80
+   macro avg       0.62      0.63      0.62        80
+weighted avg       0.70      0.68      0.69        80
+
+
+Saving model and scaler...
+Model saved to random_forest_model.joblib

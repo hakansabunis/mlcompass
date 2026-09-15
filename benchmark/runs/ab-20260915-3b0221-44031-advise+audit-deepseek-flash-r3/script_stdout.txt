@@ -1,0 +1,3 @@
+Validation MAE: 0.0928
+Validation R2:  0.8620
+Model successfully trained and saved as 'model.joblib'

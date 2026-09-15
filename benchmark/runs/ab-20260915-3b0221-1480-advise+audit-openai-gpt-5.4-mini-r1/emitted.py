@@ -1,0 +1,155 @@
+import os
+import json
+import random
+import joblib
+import numpy as np
+import pandas as pd
+
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.ensemble import HistGradientBoostingClassifier
+from sklearn.model_selection import StratifiedKFold, train_test_split
+from sklearn.metrics import roc_auc_score, accuracy_score
+
+
+SEED = 42
+random.seed(SEED)
+np.random.seed(SEED)
+
+DATA_PATH = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed20260915-r1\train.csv"
+MODEL_PATH = os.path.join(os.getcwd(), "trained_model.joblib")
+META_PATH = os.path.join(os.getcwd(), "trained_model_meta.json")
+
+
+def build_model():
+    categorical_features = ["V2"]
+    numeric_features = ["V1", "V3", "V4", "V5", "V6", "V7", "V8", "V9", "V10"]
+
+    numeric_transformer = Pipeline(
+        steps=[
+            ("imputer", SimpleImputer(strategy="median")),
+        ]
+    )
+
+    categorical_transformer = Pipeline(
+        steps=[
+            ("imputer", SimpleImputer(strategy="most_frequent")),
+            ("onehot", OneHotEncoder(handle_unknown="ignore", sparse_output=False)),
+        ]
+    )
+
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ("num", numeric_transformer, numeric_features),
+            ("cat", categorical_transformer, categorical_features),
+        ],
+        remainder="drop",
+        verbose_feature_names_out=False,
+    )
+
+    clf = HistGradientBoostingClassifier(
+        learning_rate=0.05,
+        max_depth=4,
+        max_iter=300,
+        min_samples_leaf=10,
+        l2_regularization=0.1,
+        early_stopping=False,
+        random_state=SEED,
+    )
+
+    return Pipeline(
+        steps=[
+            ("preprocess", preprocessor),
+            ("classifier", clf),
+        ]
+    )
+
+
+def main():
+    df = pd.read_csv(DATA_PATH)
+    n_original = len(df)
+
+    # Remove exact duplicates to avoid leakage from repeated rows
+    df = df.drop_duplicates().reset_index(drop=True)
+    n_dropped = n_original - len(df)
+
+    X = df.drop(columns=["Class"])
+    y = df["Class"].astype(int)
+
+    # Validation split for a quick holdout estimate
+    X_train, X_val, y_train, y_val = train_test_split(
+        X,
+        y,
+        test_size=0.2,
+        random_state=SEED,
+        stratify=y,
+    )
+
+    model = build_model()
+    model.fit(X_train, y_train)
+
+    # Holdout evaluation
+    val_pred = model.predict(X_val)
+    val_acc = accuracy_score(y_val, val_pred)
+
+    val_auc = None
+    if hasattr(model, "predict_proba"):
+        try:
+            val_proba = model.predict_proba(X_val)[:, 1]
+            classes = sorted(y.unique())
+            positive_label = classes[1] if len(classes) > 1 else classes[0]
+            y_val_bin = (y_val == positive_label).astype(int)
+            val_auc = roc_auc_score(y_val_bin, val_proba)
+        except Exception:
+            val_auc = None
+
+    print(f"Validation accuracy: {val_acc:.4f}")
+    if val_auc is not None:
+        print(f"Validation ROC AUC: {val_auc:.4f}")
+
+    # Fit final model on all available data
+    final_model = build_model()
+    final_model.fit(X, y)
+
+    # Optional training-set sanity metrics
+    train_pred = final_model.predict(X)
+    train_acc = accuracy_score(y, train_pred)
+    print(f"Training accuracy: {train_acc:.4f}")
+
+    if hasattr(final_model, "predict_proba"):
+        try:
+            train_proba = final_model.predict_proba(X)[:, 1]
+            classes = sorted(y.unique())
+            positive_label = classes[1] if len(classes) > 1 else classes[0]
+            y_bin = (y == positive_label).astype(int)
+            train_auc = roc_auc_score(y_bin, train_proba)
+            print(f"Training ROC AUC: {train_auc:.4f}")
+        except Exception:
+            pass
+
+    # Save fitted model
+    joblib.dump(final_model, MODEL_PATH)
+
+    # Save metadata
+    meta = {
+        "model_path": MODEL_PATH,
+        "target": "Class",
+        "feature_columns": list(X.columns),
+        "random_state": SEED,
+        "n_rows_original": int(n_original),
+        "n_duplicates_dropped": int(n_dropped),
+        "validation_accuracy": float(val_acc),
+        "validation_roc_auc": float(val_auc) if val_auc is not None else None,
+        "training_accuracy": float(train_acc),
+    }
+    with open(META_PATH, "w", encoding="utf-8") as f:
+        json.dump(meta, f, indent=2)
+
+    print(f"Saved model to: {MODEL_PATH}")
+    print(f"Saved metadata to: {META_PATH}")
+
+
+if __name__ == "__main__":
+    main()

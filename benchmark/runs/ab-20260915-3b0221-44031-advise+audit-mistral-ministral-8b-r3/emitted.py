@@ -1,0 +1,84 @@
+import pandas as pd
+import numpy as np
+from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+from joblib import dump
+import warnings
+import random
+
+# Set all random seeds for reproducibility
+random.seed(20260915)
+np.random.seed(20260915)
+
+def preprocess_data(df):
+    """Handle outliers and preprocessing"""
+    # Define bounds for IQR outliers (based on mlcompass output)
+    bounds = {
+        'MedInc': (0.5, 15.0),
+        'AveRooms': (0.8, 132.5),
+        'AveBedrms': (0.4, 34.1),
+        'Population': (5.0, 28566.0),
+        'AveOccup': (1.1, 1243.3)
+    }
+
+    # Cap outliers for features with known ranges
+    for col, (lower, upper) in bounds.items():
+        if col in df.columns:
+            df[col] = np.where(df[col] < lower, lower, df[col])
+            df[col] = np.where(df[col] > upper, upper, df[col])
+
+    return df
+
+def main():
+    # Load data
+    file_path = r'C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed20260915-r3\train.csv'
+    try:
+        df = pd.read_csv(file_path)
+    except Exception as e:
+        print(f"Error loading data: {e}")
+        return
+
+    # Preprocess data
+    df = preprocess_data(df)
+
+    # Separate features and target
+    X = df.drop('price', axis=1)
+    y = df['price']
+
+    # Split data
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=20260915
+    )
+
+    # Create pipeline with preprocessing and model
+    pipeline = Pipeline([
+        ('imputer', SimpleImputer(strategy='median')),
+        ('scaler', StandardScaler()),
+        ('regressor', GradientBoostingRegressor(
+            n_estimators=200,
+            learning_rate=0.05,
+            max_depth=4,
+            random_state=20260915,
+            loss='huber'
+        ))
+    ])
+
+    # Train model
+    pipeline.fit(X_train, y_train)
+
+    # Evaluate on test set
+    test_score = pipeline.score(X_test, y_test)
+    print(f"Test R² score: {test_score:.4f}")
+
+    # Save model
+    try:
+        dump(pipeline, 'house_price_model.joblib')
+        print("Model trained, evaluated, and saved successfully as 'house_price_model.joblib'")
+    except Exception as e:
+        print(f"Error saving model: {e}")
+
+if __name__ == "__main__":
+    main()

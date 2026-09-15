@@ -1,0 +1,91 @@
+import os
+import random
+import joblib
+import numpy as np
+import pandas as pd
+
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, classification_report
+
+
+SEED = 42
+DATA_PATH = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed20260915-r1\train.csv"
+TARGET_COL = "Class"
+MODEL_PATH = "trained_model.joblib"
+
+
+def set_seed(seed: int = SEED) -> None:
+    random.seed(seed)
+    np.random.seed(seed)
+
+
+def load_data(path: str) -> pd.DataFrame:
+    df = pd.read_csv(path)
+    if TARGET_COL not in df.columns:
+        raise ValueError(f"Target column '{TARGET_COL}' not found in dataset.")
+    return df
+
+
+def build_model() -> Pipeline:
+    return Pipeline(
+        steps=[
+            ("imputer", SimpleImputer(strategy="median")),
+            (
+                "clf",
+                RandomForestClassifier(
+                    n_estimators=500,
+                    random_state=SEED,
+                    class_weight="balanced",
+                    n_jobs=-1,
+                    min_samples_leaf=1,
+                ),
+            ),
+        ]
+    )
+
+
+def main():
+    set_seed(SEED)
+
+    df = load_data(DATA_PATH)
+    X = df.drop(columns=[TARGET_COL])
+    y = df[TARGET_COL].astype(int)
+
+    # Hold-out validation split for a more realistic estimate and to satisfy audit guidance.
+    X_train, X_val, y_train, y_val = train_test_split(
+        X,
+        y,
+        test_size=0.2,
+        random_state=SEED,
+        stratify=y,
+    )
+
+    model = build_model()
+    model.fit(X_train, y_train)
+
+    val_pred = model.predict(X_val)
+    acc = accuracy_score(y_val, val_pred)
+    print(f"Validation accuracy: {acc:.4f}")
+    print("Classification report:")
+    print(classification_report(y_val, val_pred, digits=4))
+
+    # Fit final model on all available data before saving.
+    final_model = build_model()
+    final_model.fit(X, y)
+
+    artifact = {
+        "model": final_model,
+        "feature_names": list(X.columns),
+        "target_col": TARGET_COL,
+        "classes_": sorted(y.unique().tolist()),
+        "seed": SEED,
+    }
+    joblib.dump(artifact, MODEL_PATH)
+    print(f"Saved model to: {os.path.abspath(MODEL_PATH)}")
+
+
+if __name__ == "__main__":
+    main()

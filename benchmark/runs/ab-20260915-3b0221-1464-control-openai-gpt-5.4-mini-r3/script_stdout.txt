@@ -1,0 +1,8 @@
+{
+  "saved_model": "C:\\Users\\SABUNIS\\AppData\\Local\\Temp\\mlcab-1464-seed20260915-r3\\trained_model.joblib",
+  "best_model": "svc_rbf",
+  "cv_accuracy": 0.7633516483516483,
+  "train_accuracy": 0.7862595419847328,
+  "n_rows": 524,
+  "n_features": 4
+}

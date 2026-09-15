@@ -1,0 +1,2 @@
+Model score on test data: 0.6039435883129116
+Model saved to fitted_model.joblib

@@ -1,0 +1,53 @@
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.pipeline import Pipeline
+from sklearn.metrics import accuracy_score, classification_report
+import joblib
+import os
+
+def train_and_save_model(csv_path, model_save_path='trained_model.joblib'):
+    # Load the dataset
+    df = pd.read_csv(csv_path)
+
+    # Remove duplicate rows (based on mlcompass warning)
+    df = df.drop_duplicates()
+
+    # Separate features and target
+    X = df.drop('Class', axis=1)
+    y = df['Class']
+
+    # Split data into training and test sets (80-20 split)
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=20260915, stratify=y
+    )
+
+    # Create a pipeline with RandomForest classifier
+    model = Pipeline([
+        ('classifier', RandomForestClassifier(
+            n_estimators=100,
+            random_state=20260915,
+            class_weight='balanced'
+        ))
+    ])
+
+    # Train the model
+    model.fit(X_train, y_train)
+
+    # Evaluate on test set
+    y_pred = model.predict(X_test)
+    test_accuracy = accuracy_score(y_test, y_pred)
+    print(f"Test accuracy: {test_accuracy:.4f}")
+    print("\nClassification Report:")
+    print(classification_report(y_test, y_pred))
+
+    # Save the trained model to a file
+    joblib.dump(model, model_save_path)
+    print(f"Model saved to {os.path.abspath(model_save_path)}")
+
+    return model, test_accuracy
+
+# Execute the training and saving
+if __name__ == "__main__":
+    csv_path = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed20260915-r3\train.csv"
+    train_and_save_model(csv_path)

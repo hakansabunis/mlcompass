@@ -1,0 +1,64 @@
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+import joblib
+import os
+
+def train_and_save_model(csv_path, model_save_path='trained_model.joblib'):
+    # Load the dataset
+    df = pd.read_csv(csv_path)
+
+    # Remove duplicate rows (based on mlcompass warning)
+    df = df.drop_duplicates()
+
+    # Separate features and target
+    X = df.drop('Class', axis=1)
+    y = df['Class']
+
+    # Split data into training and temporary validation sets (80-20 split)
+    X_train, X_temp, y_train, y_temp = train_test_split(
+        X, y, test_size=0.2, random_state=20260915, stratify=y
+    )
+
+    # Further split the temp set into validation and test (80-20 split of the 20%)
+    X_val, X_test, y_val, y_test = train_test_split(
+        X_temp, y_temp, test_size=0.5, random_state=20260915, stratify=y_temp
+    )
+
+    # Create a preprocessing pipeline with scaling and imputation (though no missing values exist)
+    # RandomForest doesn't need scaling but we'll include it for demonstration
+    preprocessor = Pipeline([
+        ('imputer', SimpleImputer(strategy='constant')),  # handles any potential future missing values
+        ('scaler', StandardScaler())  # scales features to have mean=0 and variance=1
+    ])
+
+    # Create a pipeline with preprocessing and RandomForest classifier
+    model = Pipeline([
+        ('preprocessor', preprocessor),
+        ('classifier', RandomForestClassifier(
+            n_estimators=100,
+            random_state=20260915,
+            class_weight='balanced'  # handles class imbalance (75%-25%)
+        ))
+    ])
+
+    # Train the model
+    model.fit(X_train, y_train)
+
+    # Evaluate on validation set (optional but good practice)
+    val_accuracy = model.score(X_val, y_val)
+    print(f"Validation accuracy: {val_accuracy:.4f}")
+
+    # Save the trained model to a file
+    joblib.dump(model, model_save_path)
+    print(f"Model saved to {os.path.abspath(model_save_path)}")
+
+    return model, val_accuracy
+
+# Execute the training and saving
+if __name__ == "__main__":
+    csv_path = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed20260915-r3\train.csv"
+    train_and_save_model(csv_path)

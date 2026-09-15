@@ -1,0 +1,9 @@
+logreg: 0.7618 (+/- 0.0386)
+rf: 0.6666 (+/- 0.0467)
+et: 0.6541 (+/- 0.0497)
+gb: 0.7016 (+/- 0.0400)
+hgb: 0.7017 (+/- 0.0576)
+svc: 0.7368 (+/- 0.0214)
+knn: 0.7417 (+/- 0.0488)
+Best model: logreg with CV accuracy 0.7618
+Model saved to C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed20260915-r2\model.joblib

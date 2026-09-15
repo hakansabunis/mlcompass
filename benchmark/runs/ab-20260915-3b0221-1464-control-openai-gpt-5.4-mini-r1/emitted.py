@@ -1,0 +1,65 @@
+import os
+import json
+import joblib
+import numpy as np
+import pandas as pd
+
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import StratifiedKFold, cross_val_score
+
+
+DATA_PATH = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed20260915-r1\train.csv"
+MODEL_PATH = "trained_model.joblib"
+
+
+def main():
+    # Load data
+    df = pd.read_csv(DATA_PATH)
+
+    # Basic validation
+    if "Class" not in df.columns:
+        raise ValueError("Target column 'Class' not found in the dataset.")
+
+    X = df.drop(columns=["Class"])
+    y = df["Class"]
+
+    # Build a robust pipeline
+    model = Pipeline(
+        steps=[
+            ("imputer", SimpleImputer(strategy="median")),
+            (
+                "classifier",
+                RandomForestClassifier(
+                    n_estimators=300,
+                    random_state=42,
+                    n_jobs=-1,
+                    class_weight=None,
+                ),
+            ),
+        ]
+    )
+
+    # Optional quick CV to ensure the model trains properly
+    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+    _ = cross_val_score(model, X, y, cv=cv, scoring="accuracy", n_jobs=-1)
+
+    # Fit on full data
+    model.fit(X, y)
+
+    # Save model
+    joblib.dump(
+        {
+            "model": model,
+            "feature_columns": list(X.columns),
+            "target_column": "Class",
+        },
+        MODEL_PATH,
+    )
+
+    print(f"Model saved to: {os.path.abspath(MODEL_PATH)}")
+
+
+if __name__ == "__main__":
+    main()

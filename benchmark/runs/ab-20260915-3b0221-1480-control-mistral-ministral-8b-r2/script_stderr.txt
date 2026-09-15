@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed20260915-r2\emitted.py", line 78, in <module>
+    train_and_save_model(csv_path)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed20260915-r2\emitted.py", line 39, in train_and_save_model
+    ('onehot', pd.get_dummies(columns=[c for c in categorical_cols]))
+               ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: get_dummies() missing 1 required positional argument: 'data'

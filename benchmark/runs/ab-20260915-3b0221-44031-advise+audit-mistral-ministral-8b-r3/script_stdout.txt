@@ -1,0 +1,2 @@
+Test R² score: 0.8111
+Model trained, evaluated, and saved successfully as 'house_price_model.joblib'

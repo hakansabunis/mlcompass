@@ -1,0 +1,3 @@
+Validation RMSE: 0.132312
+Validation R2: 0.862201
+Saved fitted model to: C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed20260915-r2\price_model.joblib

@@ -1,0 +1,36 @@
+```python
+import pandas as pd
+from sklearn.ensemble import HistGradientBoostingRegressor
+import joblib
+
+# Path to the training data
+DATA_PATH = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed20260915-r3\train.csv"
+
+# Load the dataset
+df = pd.read_csv(DATA_PATH)
+
+# Separate features and target
+target_col = "price"
+X = df.drop(columns=[target_col])
+y = df[target_col]
+
+# Initialize a robust gradient boosting regressor
+model = HistGradientBoostingRegressor(
+    max_iter=500,
+    learning_rate=0.05,
+    max_leaf_nodes=31,
+    min_samples_leaf=20,
+    l2_regularization=1.0,
+    early_stopping=True,
+    validation_fraction=0.1,
+    n_iter_no_change=20,
+    random_state=42,
+)
+
+# Train the model
+model.fit(X, y)
+
+# Save the fitted model to the current working directory
+joblib.dump(model, "model.joblib")
+print("Model successfully trained and saved as 'model.joblib'")
+```

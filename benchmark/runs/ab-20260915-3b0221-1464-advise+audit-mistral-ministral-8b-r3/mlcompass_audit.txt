@@ -1,0 +1,25 @@
+(no .mlcompass/ project found in current path — running standalone; results 
+will not be persisted)
+
+┌────────────────────────────── 🔎 Script audit ──────────────────────────────┐
+│ Path:                                                                       │
+│ C:\Users\SABUNIS\AppData\Local\Temp\mlcab_audit_wj5hi3wd\train_model.py     │
+│ Lines:       64                                                             │
+│ Frameworks:  sklearn                                                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Findings                                                                       
+┌───────────┬────────────────┬──────┬─────────────────────────────────────────┐
+│ Severity  │ Rule           │ Line │ Message                                 │
+├───────────┼────────────────┼──────┼─────────────────────────────────────────┤
+│ ⚠ warning │ unused_holdout │   27 │ `train_test_split` assigns `X_test`,    │
+│           │                │      │ `y_test`, which is never read again;    │
+│           │                │      │ the data was held out and then never    │
+│           │                │      │ scored.                                 │
+└───────────┴────────────────┴──────┴─────────────────────────────────────────┘
+
+Summary: 1 warning
+
+💡 Suggested fixes
+  • unused_holdout: Score the held-out half before saving the model, or name 
+the outputs you genuinely do not want `_`.

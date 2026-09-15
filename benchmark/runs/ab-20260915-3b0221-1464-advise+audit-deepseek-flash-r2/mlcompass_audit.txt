@@ -1,0 +1,26 @@
+(no .mlcompass/ project found in current path — running standalone; results 
+will not be persisted)
+
+┌────────────────────────────── 🔎 Script audit ──────────────────────────────┐
+│ Path:                                                                       │
+│ C:\Users\SABUNIS\AppData\Local\Temp\mlcab_audit_bawz6cj7\train_model.py     │
+│ Lines:       83                                                             │
+│ Frameworks:  numpy, sklearn                                                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Findings                                                                       
+┌───────────┬───────────┬──────┬──────────────────────────────────────────────┐
+│ Severity  │ Rule      │ Line │ Message                                      │
+├───────────┼───────────┼──────┼──────────────────────────────────────────────┤
+│ ✗ error   │ seed      │      │ No random seed is set anywhere in the        │
+│           │           │      │ script.                                      │
+│ ⚠ warning │ val_split │      │ No validation split detected in the script.  │
+└───────────┴───────────┴──────┴──────────────────────────────────────────────┘
+
+Summary: 1 error   1 warning
+
+💡 Suggested fixes
+  • seed: Add `torch.manual_seed(42)` (and `np.random.seed(42)`, 
+`random.seed(42)`) near the top so runs are reproducible.
+  • val_split: Use `train_test_split` or `torch.utils.data.random_split` to 
+hold out 10–20% of the data.

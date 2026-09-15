@@ -1,0 +1,75 @@
+import os
+import json
+import joblib
+import numpy as np
+import pandas as pd
+
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import StratifiedKFold, cross_val_score
+
+
+DATA_PATH = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed20260915-r2\train.csv"
+MODEL_PATH = "trained_model.joblib"
+
+
+def main():
+    # Load data
+    df = pd.read_csv(DATA_PATH)
+
+    target_col = "Class"
+    feature_cols = [c for c in df.columns if c != target_col]
+
+    X = df[feature_cols].copy()
+    y = df[target_col].copy()
+
+    # Remove exact duplicate rows to reduce leakage from duplicated records
+    # while preserving one representative of each repeated observation.
+    train_df = pd.concat([X, y], axis=1).drop_duplicates()
+    X = train_df[feature_cols]
+    y = train_df[target_col]
+
+    # Build a robust classification pipeline
+    model = Pipeline(
+        steps=[
+            ("imputer", SimpleImputer(strategy="median")),
+            (
+                "classifier",
+                RandomForestClassifier(
+                    n_estimators=500,
+                    random_state=42,
+                    class_weight="balanced",
+                    min_samples_leaf=1,
+                    min_samples_split=2,
+                    n_jobs=-1,
+                ),
+            ),
+        ]
+    )
+
+    # Optional quick validation for sanity
+    # Use at most 5 folds, but not more than the smallest class count.
+    class_counts = y.value_counts()
+    min_class_count = int(class_counts.min())
+    n_splits = max(2, min(5, min_class_count))
+    if n_splits >= 2 and len(y) >= n_splits:
+        cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
+        scores = cross_val_score(model, X, y, cv=cv, scoring="accuracy", n_jobs=-1)
+        print(f"CV accuracy: {scores.mean():.4f} ± {scores.std():.4f}")
+
+    # Fit final model on all available data
+    model.fit(X, y)
+
+    # Save model and feature metadata for later inference
+    artifact = {
+        "model": model,
+        "feature_columns": feature_cols,
+        "target_column": target_col,
+    }
+    joblib.dump(artifact, MODEL_PATH)
+    print(f"Saved trained model to: {os.path.abspath(MODEL_PATH)}")
+
+
+if __name__ == "__main__":
+    main()

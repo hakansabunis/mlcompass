@@ -1,0 +1,20 @@
+logreg: CV acc = 0.7709 (+/- 0.0096), holdout acc = 0.7714
+logreg_balanced: CV acc = 0.6398 (+/- 0.0745), holdout acc = 0.6952
+rf: CV acc = 0.7494 (+/- 0.0264), holdout acc = 0.7905
+rf_balanced: CV acc = 0.7422 (+/- 0.0238), holdout acc = 0.8000
+extra_trees: CV acc = 0.7327 (+/- 0.0147), holdout acc = 0.7810
+gb: CV acc = 0.7518 (+/- 0.0442), holdout acc = 0.8000
+hgb: CV acc = 0.7374 (+/- 0.0421), holdout acc = 0.8095
+svc: CV acc = 0.7613 (+/- 0.0142), holdout acc = 0.7524
+
+Best model: hgb (holdout accuracy: 0.8095)
+              precision    recall  f1-score   support
+
+           1       0.86      0.90      0.88        79
+           2       0.64      0.54      0.58        26
+
+    accuracy                           0.81       105
+   macro avg       0.75      0.72      0.73       105
+weighted avg       0.80      0.81      0.80       105
+
+Model saved to C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed20260915-r2\model.joblib

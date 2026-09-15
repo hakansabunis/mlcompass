@@ -1,0 +1,2 @@
+Early stopping selected 495 boosting iterations.
+Saved fitted model to C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed20260915-r1\model.joblib

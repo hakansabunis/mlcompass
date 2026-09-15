@@ -1,0 +1,2 @@
+Validation Accuracy: 0.7045
+Model saved to trained_model.joblib

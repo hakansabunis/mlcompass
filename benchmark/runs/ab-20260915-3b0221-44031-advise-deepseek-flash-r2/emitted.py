@@ -1,0 +1,45 @@
+import os
+import pandas as pd
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+from sklearn.ensemble import HistGradientBoostingRegressor
+import joblib
+
+DATA_PATH = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed20260915-r2\train.csv"
+TARGET_COLUMN = "price"
+MODEL_FILENAME = "trained_model.joblib"
+
+def main():
+    df = pd.read_csv(DATA_PATH)
+
+    X = df.drop(columns=[TARGET_COLUMN])
+    y = df[TARGET_COLUMN]
+
+    model = Pipeline(
+        steps=[
+            ("imputer", SimpleImputer(strategy="median")),
+            (
+                "regressor",
+                HistGradientBoostingRegressor(
+                    loss="squared_error",
+                    learning_rate=0.05,
+                    max_iter=1000,
+                    max_leaf_nodes=31,
+                    l2_regularization=0.1,
+                    early_stopping=True,
+                    validation_fraction=0.1,
+                    n_iter_no_change=20,
+                    random_state=42,
+                ),
+            ),
+        ]
+    )
+
+    model.fit(X, y)
+
+    model_path = os.path.join(os.getcwd(), MODEL_FILENAME)
+    joblib.dump(model, model_path)
+    print(f"Model saved to {model_path}")
+
+if __name__ == "__main__":
+    main()

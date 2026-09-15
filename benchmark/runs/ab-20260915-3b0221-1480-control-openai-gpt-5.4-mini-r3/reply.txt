@@ -1,0 +1,114 @@
+```python
+import os
+import re
+import json
+import joblib
+import numpy as np
+import pandas as pd
+
+from sklearn.compose import ColumnTransformer
+from sklearn.impute import SimpleImputer
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.ensemble import HistGradientBoostingClassifier
+from sklearn.model_selection import StratifiedKFold, cross_val_score
+
+# Path to the training CSV
+DATA_PATH = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed20260915-r3\train.csv"
+MODEL_PATH = "trained_model.joblib"
+
+TARGET_COL = "Class"
+
+
+def build_model():
+    """
+    Build a preprocessing + model pipeline.
+    Handles:
+      - numeric columns with imputation + scaling
+      - categorical columns with imputation + one-hot encoding
+    """
+    numeric_features = ["V1", "V3", "V4", "V5", "V6", "V7", "V8", "V9", "V10"]
+    categorical_features = ["V2"]
+
+    numeric_transformer = Pipeline(
+        steps=[
+            ("imputer", SimpleImputer(strategy="median")),
+            ("scaler", StandardScaler()),
+        ]
+    )
+
+    categorical_transformer = Pipeline(
+        steps=[
+            ("imputer", SimpleImputer(strategy="most_frequent")),
+            ("onehot", OneHotEncoder(handle_unknown="ignore")),
+        ]
+    )
+
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ("num", numeric_transformer, numeric_features),
+            ("cat", categorical_transformer, categorical_features),
+        ],
+        remainder="drop",
+        sparse_threshold=0.3,
+    )
+
+    model = HistGradientBoostingClassifier(
+        learning_rate=0.05,
+        max_depth=None,
+        max_iter=300,
+        min_samples_leaf=20,
+        l2_regularization=0.0,
+        random_state=42,
+    )
+
+    pipeline = Pipeline(
+        steps=[
+            ("preprocessor", preprocessor),
+            ("model", model),
+        ]
+    )
+
+    return pipeline
+
+
+def main():
+    if not os.path.exists(DATA_PATH):
+        raise FileNotFoundError(f"Training file not found: {DATA_PATH}")
+
+    df = pd.read_csv(DATA_PATH)
+
+    if TARGET_COL not in df.columns:
+        raise ValueError(f"Target column '{TARGET_COL}' not found in CSV.")
+
+    # Separate features and target
+    X = df.drop(columns=[TARGET_COL])
+    y = df[TARGET_COL]
+
+    # Ensure expected dtypes where possible
+    # V2 is categorical/string; others are numeric
+    if "V2" in X.columns:
+        X["V2"] = X["V2"].astype("string")
+
+    # Build and optionally evaluate with cross-validation
+    pipeline = build_model()
+
+    # Cross-validation for a quick sanity check; does not affect final training
+    try:
+        cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+        scores = cross_val_score(pipeline, X, y, cv=cv, scoring="accuracy", n_jobs=-1)
+        print(f"CV accuracy: {scores.mean():.5f} ± {scores.std():.5f}")
+    except Exception as e:
+        print(f"Cross-validation skipped due to error: {e}")
+
+    # Fit on full dataset
+    pipeline.fit(X, y)
+
+    # Save the fitted pipeline
+    joblib.dump(pipeline, MODEL_PATH)
+    print(f"Model saved to: {os.path.abspath(MODEL_PATH)}")
+
+
+if __name__ == "__main__":
+    main()
+```

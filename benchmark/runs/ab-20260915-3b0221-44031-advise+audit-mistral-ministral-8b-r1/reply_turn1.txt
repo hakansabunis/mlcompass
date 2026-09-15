@@ -1,0 +1,59 @@
+```python
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
+from sklearn.metrics import mean_squared_error
+from joblib import dump
+import warnings
+
+# Suppress warnings for cleaner output
+warnings.filterwarnings('ignore')
+
+def main():
+    # Load the dataset
+    file_path = r'C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed20260915-r1\train.csv'
+    data = pd.read_csv(file_path)
+
+    # Separate features and target
+    X = data.drop('price', axis=1)
+    y = data['price']
+
+    # Split data into train and validation sets
+    X_train, X_val, y_train, y_val = train_test_split(
+        X, y, test_size=0.2, random_state=20260915
+    )
+
+    # Create preprocessing pipeline with scaling
+    preprocessor = Pipeline([
+        ('scaler', StandardScaler())
+    ])
+
+    # Create and train the model pipeline
+    model = Pipeline([
+        ('preprocessor', preprocessor),
+        ('regressor', GradientBoostingRegressor(
+            n_estimators=200,
+            learning_rate=0.05,
+            max_depth=6,
+            random_state=20260915
+        ))
+    ])
+
+    model.fit(X_train, y_train)
+
+    # Evaluate on validation set
+    y_pred = model.predict(X_val)
+    mse = mean_squared_error(y_val, y_pred)
+    print(f"Validation MSE: {mse:.6f}")
+
+    # Save the trained model
+    model_file = 'house_price_regressor.joblib'
+    dump(model, model_file)
+    print(f"Model saved to {model_file}")
+
+if __name__ == "__main__":
+    main()
+```
