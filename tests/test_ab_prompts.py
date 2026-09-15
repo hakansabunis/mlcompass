@@ -410,16 +410,79 @@ AUDIT = """\
 """
 
 
-def test_the_three_arms_are_control_advise_and_advise_plus_audit() -> None:
-    """§2 since 1.1 names three arms; `treatment` is a retired 1.0 name.
+def test_the_four_arms_and_what_separates_them() -> None:
+    """§2 since 1.1 names three arms; §9 A8 adds the fourth. `treatment` is a
+    retired 1.0 name.
 
     The arm list is deliberately not tied to the protocol version here. 1.2
     changed the split and left §2 alone, and a test that re-asserted the
     version on every unrelated amendment would have to be edited each time —
     which is how a test stops being read. The version has its own assertion in
     the A4 section below.
+
+    Order matters and is asserted: the tuple reads as the design. `control`
+    and `control+revise` differ only by a second turn; `control` and `advise`
+    differ only by the findings block; `advise` and `advise+audit` differ only
+    by a second turn. Every neighbouring pair isolates exactly one thing,
+    which is what lets the battery say which one did the work.
     """
-    assert run_ab.ARMS == ("control", "advise", "advise+audit")
+    assert run_ab.ARMS == ("control", "control+revise", "advise", "advise+audit")
+    # The two arms that take a second turn, and the two that receive mlcompass
+    # advice in their first, are different pairs. `control+revise` is in the
+    # first and not the second: that is the whole point of it.
+    assert frozenset({"control+revise", "advise+audit"}) == run_ab.REVISION_ARMS
+    assert frozenset({"advise", "advise+audit"}) == run_ab.ADVISE_ARMS
+    assert run_ab.SELF_REVISE_ARM not in run_ab.ADVISE_ARMS
+
+
+def test_the_self_revision_prompt_carries_no_mlcompass_content() -> None:
+    """§9 A8: the fourth arm exists to hold the second turn and remove the
+    findings, so any mlcompass content in its prompt destroys the comparison.
+
+    Also asserts the prompt names no specific concern. Saying "check for
+    leakage" would smuggle in the advice this arm withholds, and the contrast
+    against `advise+audit` would then measure prompt wording rather than
+    mlcompass output.
+    """
+    prompt = run_ab.SELF_REVISION_PROMPT
+    lowered = prompt.lower()
+    assert "mlcompass" not in lowered
+    assert "{audit}" not in prompt and "audit" not in lowered
+    for smuggled in ("leak", "seed", "duplicate", "imbalance", "metric", "holdout", "split"):
+        assert smuggled not in lowered, f"the self-revision prompt names {smuggled!r}"
+    # The closing instruction is shared with the audit arm's prompt, so the two
+    # second turns differ only in the presence of the findings block.
+    tail = (
+        "Reply with the complete final script inside a single ```python code block, "
+        "and nothing else."
+    )
+    assert tail in " ".join(prompt.split())
+    assert tail in " ".join(run_ab.REVISION_PROMPT.split())
+
+
+def test_self_revision_messages_start_from_the_control_prompt() -> None:
+    """The mirror of A1's comparability claim, for A8.
+
+    `advise+audit`'s first turn is the `advise` prompt byte for byte;
+    `control+revise`'s first turn must be the `control` prompt the same way,
+    or `control` -> `control+revise` measures two differences instead of one.
+    """
+    control, advise = run_ab.build_prompts(
+        csv_path="train.csv",
+        target="Class",
+        columns="  - V1 (int64)\n  - Class (int64)",
+        advise_stdout="some advice",
+        packages="pandas, scikit-learn",
+    )
+    messages = run_ab.build_self_revision_messages(
+        control_prompt=control,
+        first_reply="```python\nprint(1)\n```",
+    )
+    assert len(messages) == 3
+    assert messages[0] == {"role": "user", "content": control}
+    assert messages[0]["content"] != advise
+    assert messages[1]["role"] == "assistant"
+    assert messages[2]["content"] == run_ab.SELF_REVISION_PROMPT
 
 
 def test_the_advise_audit_arms_first_turn_is_byte_identical_to_the_advise_arms_only_turn() -> None:

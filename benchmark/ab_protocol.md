@@ -377,12 +377,31 @@ attempt, and this is not yet resolved.** Raised by Yusuf Ünlü. In
 is mlcompass telling the model what is wrong, and some part is simply
 getting a second go, and **this experiment cannot separate them.**
 
-Closing it needs a fourth arm at equal budget: a second turn that says
-*review your script and fix any problems you find*, carrying no mlcompass
-output. Until that arm runs, the defensible claim is that **the arm
+The fourth arm is now **built** and named `control+revise`: the control
+prompt as its first turn, then a second turn saying only *review the script
+you just wrote and fix any problems you find in it*. No findings, no
+checklist, and no concern named — saying "check for leakage" would smuggle
+in the content this arm exists to withhold, and the contrast would measure
+prompt wording instead of mlcompass output. Its closing instruction is
+byte-identical to the audit arm's, so the two second turns differ only in
+the presence of the findings block. Two assertions run at execution time: the
+first turn must equal the control prompt, and the second must contain no
+mlcompass content.
+
+`ARMS` is ordered so the tuple reads as the design, each neighbouring pair
+isolating one thing:
+
+| pair | what it isolates |
+| --- | --- |
+| `control` → `control+revise` | what a second attempt is worth on its own |
+| `control` → `advise` | what the advice block is worth on one turn |
+| `control+revise` → `advise+audit` | what mlcompass adds on top of a second attempt |
+| `advise` → `advise+audit` | what the audit and its turn add to the advice |
+
+Until the arm has **run**, the defensible claim stays as it was: **the arm
 combining mlcompass findings with a revision turn produces fewer flagged
-defects**, and not that the findings are what caused it. The reports are
-written to say that, and no stronger.
+defects**, and not that the findings are what caused it. A built arm is not
+a result, and the reports say no more than the data supports.
 
 **A9 — 70 of 108 runs carry a held-out score; the report's conclusion is
 weakened to match.** Also raised in the same review. 21 scripts failed to

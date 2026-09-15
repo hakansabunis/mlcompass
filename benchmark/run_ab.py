@@ -200,7 +200,7 @@ MAX_COMPLETION_TOKENS = 4096
 # ab_protocol.md §2 under 1.1. `treatment` was the 1.0 name for what is now
 # `advise`; rows carrying it belong to the 1.0 validation pair and are kept in
 # `ab_results_v1.0.csv`, not renamed.
-ARMS = ("control", "advise", "advise+audit")
+ARMS = ("control", "control+revise", "advise", "advise+audit")
 
 # The arms that receive `mlcompass advise` output in their first turn. Kept as
 # a set rather than tested with `arm != "control"` so that adding a fourth arm
@@ -209,6 +209,18 @@ ADVISE_ARMS = frozenset({"advise", "advise+audit"})
 
 # The arm that runs the §9 A1 revision round.
 AUDIT_ARM = "advise+audit"
+
+# The §9 A8 arm: a second turn with no mlcompass content in it. It exists
+# because `advise+audit` differs from `control` in two ways at once - it is
+# told what is wrong AND it gets another attempt - and the battery could not
+# say which one produced the fall in defect count. This arm holds the second
+# attempt and removes everything mlcompass, so `control` -> `control+revise`
+# measures what a second look is worth on its own and `control+revise` ->
+# `advise+audit` measures what mlcompass adds on top of one.
+SELF_REVISE_ARM = "control+revise"
+
+# Every arm that takes a second turn, whatever is in it.
+REVISION_ARMS = frozenset({AUDIT_ARM, SELF_REVISE_ARM})
 
 
 class ProtocolDrift(RuntimeError):
@@ -650,6 +662,39 @@ Below is the verbatim output of mlcompass run on the script you just wrote.
 Revise the script if that output gives you reason to. Reply with the complete \
 final script inside a single ```python code block, and nothing else.
 """
+
+
+# §9 A8. Deliberately says less than the audit prompt, and the difference is
+# the whole point: no findings, no checklist, no hint about what to look for.
+# Naming even one concern - leakage, a seed, a metric - would smuggle in the
+# content this arm exists to withhold, and the comparison against
+# `advise+audit` would measure prompt wording rather than mlcompass output.
+#
+# The closing instruction is byte-identical to the audit arm's, so the two
+# second turns differ only in the presence of the findings block.
+SELF_REVISION_PROMPT = """Review the script you just wrote and fix any problems you find in it.
+
+Reply with the complete final script inside a single ```python code block, and nothing else.
+"""
+
+
+def build_self_revision_messages(
+    *,
+    control_prompt: str,
+    first_reply: str,
+) -> list[dict[str, str]]:
+    """Build the `control+revise` arm's second turn (§9 A8).
+
+    Same three-message shape as `build_revision_messages`, with the control
+    prompt as the first turn and no mlcompass content anywhere. The parallel
+    is what makes the pair readable: against `advise+audit` this isolates the
+    findings, and against `control` it isolates the extra attempt.
+    """
+    return [
+        {"role": "user", "content": control_prompt},
+        {"role": "assistant", "content": first_reply},
+        {"role": "user", "content": SELF_REVISION_PROMPT},
+    ]
 
 
 def build_prompts(
@@ -1826,6 +1871,60 @@ def run_cell(
     if source is None:
         return finish("no_code", f"no script to run: {how}")
 
+    # ---- The self-revision round, `control+revise` only (§9 A8) ------------ #
+    if arm == SELF_REVISE_ARM:
+        # Preserved under the same name the audit arm uses, so the two arms'
+        # first-turn scripts are compared by reading the same file.
+        (run_dir / "emitted_pre_revision.py").write_text(source, encoding="utf-8")
+        outcome["defects_pre_revision"] = check_defects(
+            source,
+            target=dataset["target"],
+            duplicate_rows=split["duplicate_rows"],
+            minority_fraction=split["minority_fraction"],
+            target_is_last_column=split["target_is_last_column"],
+        )
+
+        messages = build_self_revision_messages(
+            control_prompt=control,
+            first_reply=reply["text"],
+        )
+        if messages[0]["content"] != control:
+            raise RuntimeError(
+                "the self-revision round's first turn is not the control prompt; "
+                "ab_protocol.md section 9 A8 makes this arm interpretable only if "
+                "it begins from the identical first turn as control."
+            )
+        # mlcompass must not have been anywhere near this arm. Asserted rather
+        # than assumed, because the whole value of the comparison is that the
+        # second turn carries none of it, and a copy-paste from the audit
+        # branch would be invisible in the numbers.
+        if "mlcompass" in messages[2]["content"].lower():
+            raise RuntimeError(
+                "the self-revision prompt mentions mlcompass; §9 A8 requires this "
+                "arm's second turn to carry no mlcompass content at all."
+            )
+        (run_dir / "prompt_revision.txt").write_text(messages[2]["content"], encoding="utf-8")
+        prompt_hashes["revision_prompt_sha256"] = hashlib.sha256(
+            messages[2]["content"].encode("utf-8")
+        ).hexdigest()
+
+        revision = call_model(member, messages, llm_timeout)
+        outcome["turns"].append(
+            _turn_record(2, "control+revise self-revision", messages[2]["content"], revision)
+        )
+        (run_dir / "reply_turn2.txt").write_text(revision["text"], encoding="utf-8")
+        (run_dir / "reply.txt").write_text(revision["text"], encoding="utf-8")
+        outcome["input_tokens"] = tally(outcome["turns"], "input_tokens")
+        outcome["output_tokens"] = tally(outcome["turns"], "output_tokens")
+
+        if not revision["ok"]:
+            return finish("llm_failed_revision", f"revision call failed: {revision['error']}")
+
+        revised, how = extract_python(revision["text"])
+        if revised is None:
+            return finish("no_code_revision", f"no revised script to run: {how}")
+        source, reply = revised, revision
+
     # ---- The revision round, `advise+audit` only (§9 A1) ------------------- #
     if arm == AUDIT_ARM:
         # The audited script is this arm's own first turn and nothing else:
@@ -2096,14 +2195,25 @@ def _write_scoring(
         temperature_line,
         "",
     ]
-    if arm == AUDIT_ARM:
+    if arm in REVISION_ARMS:
         pre = outcome["defects_pre_revision"]
+        audited = arm == AUDIT_ARM
         lines += [
-            "## Revision round (ab_protocol.md section 2, §9 A1)",
+            (
+                "## Revision round (ab_protocol.md section 2, §9 A1)"
+                if audited
+                else "## Self-revision round (ab_protocol.md §9 A8)"
+            ),
             "",
-            f"- Turns: {len(outcome['turns'])} (first turn identical to the `advise` arm's)",
-            f"- `mlcompass audit` on this arm's own first-turn script:"
-            f" {(outcome['audit'] or {}).get('audit_status', 'not reached')}",
+            f"- Turns: {len(outcome['turns'])} (first turn identical to the "
+            f"`{'advise' if audited else 'control'}` arm's)",
+            (
+                f"- `mlcompass audit` on this arm's own first-turn script:"
+                f" {(outcome['audit'] or {}).get('audit_status', 'not reached')}"
+                if audited
+                else "- Second turn carries no mlcompass content: it asks the model to "
+                "review and fix its own script, naming no concern"
+            ),
             f"- Pre-revision defect count: {pre['defect_count'] if pre else 'n/a'} of 6",
             f"- Post-revision defect count:"
             f" {defects['defect_count'] if defects else 'n/a'} of 6"
@@ -2589,7 +2699,9 @@ def main() -> int:
                             "defect_count": defects["defect_count"] if defects else "",
                             "defect_count_pre_revision": pre["defect_count"] if pre else "",
                             "defect_count_post_revision": (
-                                defects["defect_count"] if (defects and arm == AUDIT_ARM) else ""
+                                defects["defect_count"]
+                                if (defects and arm in REVISION_ARMS)
+                                else ""
                             ),
                             **{
                                 d: (int(defects["flags"][d]) if defects else "") for d in DEFECT_IDS
