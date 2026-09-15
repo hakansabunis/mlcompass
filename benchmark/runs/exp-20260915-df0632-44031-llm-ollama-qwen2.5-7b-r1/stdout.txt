@@ -1,0 +1,64 @@
+(no .mlcompass/ project found in current path — running standalone; results 
+will not be persisted)
+
+┌──────────────────────────── 📊 Dataset analysis ────────────────────────────┐
+│ Path:                                                                       │
+│ C:\Users\SABUNIS\Desktop\ml-copilot\benchmark\data\44031_california.csv     │
+│ Shape:   20,640 rows × 9 columns                                            │
+│ Target:  price (explicit confidence)                                        │
+│ Task:    regression (range 0.14 → 1.79)                                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+Columns                                                                     
+┌────────────┬─────────┬─────────┬─────────────────────────────────────────┐
+│ Name       │ Type    │ Missing │ Notes                                   │
+├────────────┼─────────┼─────────┼─────────────────────────────────────────┤
+│ MedInc     │ numeric │      0% │ range [0.5, 15.0], 681 IQR outliers     │
+│ HouseAge   │ numeric │      0% │ range [1.0, 52.0]                       │
+│ AveRooms   │ numeric │      0% │ range [0.8, 141.9], 511 IQR outliers    │
+│ AveBedrms  │ numeric │      0% │ range [0.3, 34.1], 1424 IQR outliers    │
+│ Population │ numeric │      0% │ range [3.0, 35682.0], 1196 IQR outliers │
+│ AveOccup   │ numeric │      0% │ range [0.7, 1243.3], 711 IQR outliers   │
+│ Latitude   │ numeric │      0% │ range [32.5, 42.0]                      │
+│ Longitude  │ numeric │      0% │ range [-124.3, -114.3]                  │
+│ price      │ numeric │      0% │ range [0.1, 1.8]                        │
+└────────────┴─────────┴─────────┴─────────────────────────────────────────┘
+
+⚠ Warnings
+  • Target 'price' is piled up at its maximum: 965 row(s) (4.7%) sit at exactly
+1.79176. That usually means a censored or capped measurement rather than a real
+mode. A model fitted on it cannot predict beyond the cap, and its errors near 
+1.79176 are systematically biased. Check how the value was recorded before 
+treating it as ordinary regression.
+
+✨ Recommended models                                                          
+┌───────────────────────────┬─────────────────────────────────────────────────┐
+│ Model                     │ Why                                             │
+├───────────────────────────┼─────────────────────────────────────────────────┤
+│ LinearRegression          │ Baseline linear model to provide initial        │
+│                           │ performance benchmark.                          │
+│ RandomForestRegressor     │ Good balance between interpretability and       │
+│                           │ predictive power for a large set of numerical   │
+│                           │ features.                                       │
+│ GradientBoostingRegressor │ Often effective in capturing non-linear         │
+│                           │ relationships, especially with the high number  │
+│                           │ of continuous features.                         │
+└───────────────────────────┴─────────────────────────────────────────────────┘
+
+🔧 Feature engineering
+  • AveRooms → Create interaction terms with other numeric variables to capture
+complex relationships.
+     Interaction features can enhance model fit by considering combined effects
+of multiple predictors.
+  • AveBedrms → Interact with latitude and longitude to include geographical 
+context in feature space.
+     Location might have a non-linear relationship with the target.
+  • Population → Examine interactions with other predictors like house age or 
+area mean income for richer representation.
+     Population alone may not fully capture its impact; it should be considered
+in combination with other variables.
+
+⚠ Pitfalls
+  • Outliers and potential censored target values
+     → Use robust loss functions, transform outliers to reduce their impact 
+(e.g., Winsorization), or address the potential censoring issue before 
+modeling.

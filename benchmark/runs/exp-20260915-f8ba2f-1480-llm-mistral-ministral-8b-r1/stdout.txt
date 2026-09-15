@@ -1,0 +1,87 @@
+(no .mlcompass/ project found in current path — running standalone; results 
+will not be persisted)
+
+┌─────────────────────────── 📊 Dataset analysis ───────────────────────────┐
+│ Path:    C:\Users\SABUNIS\Desktop\ml-copilot\benchmark\data\1480_ilpd.csv │
+│ Shape:   583 rows × 11 columns                                            │
+│ Target:  Class (explicit confidence)                                      │
+│ Task:    binary classification (1=71%, 2=29%)                             │
+└───────────────────────────────────────────────────────────────────────────┘
+Columns                                                                  
+┌───────┬─────────────┬─────────┬───────────────────────────────────────┐
+│ Name  │ Type        │ Missing │ Notes                                 │
+├───────┼─────────────┼─────────┼───────────────────────────────────────┤
+│ V1    │ numeric     │      0% │ range [4.0, 90.0]                     │
+│ V2    │ categorical │      0% │ cardinality 2                         │
+│ V3    │ numeric     │      0% │ range [0.4, 75.0], 84 IQR outliers    │
+│ V4    │ numeric     │      0% │ range [0.1, 19.7], 81 IQR outliers    │
+│ V5    │ numeric     │      0% │ range [63.0, 2110.0], 69 IQR outliers │
+│ V6    │ numeric     │      0% │ range [10.0, 2000.0], 73 IQR outliers │
+│ V7    │ numeric     │      0% │ range [10.0, 4929.0], 66 IQR outliers │
+│ V8    │ numeric     │      0% │ range [2.7, 9.6], 8 IQR outliers      │
+│ V9    │ numeric     │      0% │ range [0.9, 5.5]                      │
+│ V10   │ numeric     │      0% │ range [0.3, 2.8], 10 IQR outliers     │
+│ Class │ categorical │      0% │ cardinality 2                         │
+└───────┴─────────────┴─────────┴───────────────────────────────────────┘
+
+⚠ Warnings
+  • 13 exact duplicate row(s) (2.2% of the data). A random split puts copies of
+the same row in both train and test, which inflates held-out scores without any
+metric looking wrong. Confirm they are genuine repeated observations before 
+training; if not, de-duplicate before splitting, or split on a group key.
+
+✨ Recommended models                                                          
+┌─────────────────────┬───────────────────────────────────────────────────────┐
+│ Model               │ Why                                                   │
+├─────────────────────┼───────────────────────────────────────────────────────┤
+│ Logistic Regression │ Baseline for interpretability and linear              │
+│                     │ relationships; useful for sanity-checking feature     │
+│                     │ importance (e.g., V1, V5) given their wide value      │
+│                     │ ranges and outliers.                                  │
+│ Random Forest       │ Handles non-linear patterns and interactions well;    │
+│                     │ robust to outliers in features like V3, V4, and V5,   │
+│                     │ which show high IQR counts.                           │
+│ XGBoost             │ Optimized for structured tabular data; can leverage   │
+│                     │ feature importance and handle class imbalance (28.6%  │
+│                     │ minority class) via built-in weighting.               │
+└─────────────────────┴───────────────────────────────────────────────────────┘
+
+🔧 Feature engineering
+  • V1 → Standardize or normalize (e.g., MinMaxScaler) to mitigate scale 
+differences with other features like V5/V6.
+     V1’s range (4–90) overlaps with V5/V6’s lower quartiles (175.5–23), but 
+V1’s mean (44.7) is closer to the target’s likely decision boundary.
+  • ['V3', 'V4'] → Bin outliers (e.g., IQR-based) into separate categories or 
+cap at 99th percentile; explore log-transform for skewed distributions.
+     V3 and V4 show 84/81 IQR outliers and high zero-ratio-adjacent medians 
+(0.8/0.2), suggesting heavy tails that may dominate models.
+  • ['V5', 'V6', 'V7'] → Derive ratios (e.g., V5/V6) or interaction terms 
+(e.g., V5*V9) to capture multiplicative effects; log-transform if relationships
+appear exponential.
+     V5/V6/V7 exhibit extreme skewness (IQR counts: 69/73/66) and wide ranges 
+(63–2110), hinting at potential non-linear interactions with other features.
+  • V2 → Encode as one-hot (e.g., `is_Male`) and check for interaction effects 
+with numeric features (e.g., V1*is_Male).
+     Gender imbalance (441:142) may interact with numeric predictors (e.g., 
+V1’s mean differs by group: ~45 vs. ~40).
+  • ['V8', 'V9', 'V10'] → Group into quantiles (e.g., 4 bins) to reduce noise; 
+test for ordinal relationships (e.g., V8’s range 2.7–9.6).
+     These features have narrow ranges (std < 1.1) but may encode subtle 
+ordinal patterns (e.g., V8’s Q25=5.8 vs. Q75=7.2).
+
+⚠ Pitfalls
+  • Duplicate rows (13 exact copies, 2.2% of data)
+     → Remove duplicates before splitting or use a group key (e.g., `V1+V2`) to
+ensure splits preserve uniqueness. Validate duplicates are not genuine repeats 
+via domain knowledge.
+  • Class imbalance (28.6% minority class)
+     → Use `class_weight='balanced'` in scikit-learn or focal loss in XGBoost; 
+report AUC-ROC/F1 instead of accuracy to avoid bias.
+  • Outliers in V3–V7 (IQR/z-score counts: 6–84)
+     → Robust scalers (e.g., `RobustScaler`) or outlier caps (e.g., 99th 
+percentile) to prevent feature dominance in distance-based models (e.g., KNN, 
+SVM).
+  • Lack of temporal/sequential context
+     → If `V1`–`V10` represent time-series features (e.g., lab values), 
+consider lag features or rolling statistics (e.g., 30-day averages) to capture 
+trends.

@@ -39,6 +39,7 @@ import argparse
 import csv
 import hashlib
 import json
+import os
 import platform
 import re
 import shutil
@@ -75,6 +76,61 @@ CONFIGURATIONS: dict[str, dict[str, Any]] = {
         "uses_llm": True,
     },
 }
+
+# The model panel. A model is a *configuration*, not a footnote to one: the
+# same command against a different model is a different cell, so each panel
+# member produces its own `configuration_id` (`llm:<panel_id>`) rather than
+# being folded into a single `llm` row whose provider column happens to
+# differ. That keeps `results.csv` honest when the panel grows.
+#
+# Every member speaks OpenAI-compatible chat completions, which is why one
+# provider value covers all four. `key_name` is looked up in `api_keys.txt`;
+# a member with none needs no credential, which is the point of having a
+# local lane at all.
+PANEL: dict[str, dict[str, Any]] = {
+    "ollama-qwen2.5-7b": {
+        "provider": "openai",
+        "base_url": "http://localhost:11434/v1",
+        "model": "qwen2.5:7b",
+        "key_name": None,
+        "note": "local, free, no credential",
+    },
+    "deepseek-flash": {
+        "provider": "openai",
+        "base_url": "https://api.deepseek.com",
+        "model": "deepseek-flash",
+        "key_name": "deepseek_api",
+        "note": "the published battery's provider family",
+    },
+    "openai-gpt-5.4-mini": {
+        "provider": "openai",
+        "base_url": None,
+        "model": "gpt-5.4-mini",
+        "key_name": "chatgpt_api",
+        "note": "the pre-registered strict-capable closed lane",
+    },
+    "mistral-ministral-8b": {
+        "provider": "openai",
+        "base_url": "https://api.mistral.ai/v1",
+        "model": "ministral-8b-latest",
+        "key_name": "mistral_api",
+        "note": "fourth provider, small hosted model",
+    },
+}
+
+KEY_FILE = BENCH.parent / "api_keys.txt"
+
+
+def load_keys() -> dict[str, str]:
+    """Read credentials from the gitignored key file. Values are never logged."""
+    keys: dict[str, str] = {}
+    if KEY_FILE.exists():
+        for line in KEY_FILE.read_text(encoding="utf-8", errors="replace").splitlines():
+            if "=" in line and not line.strip().startswith("#"):
+                name, _, value = line.partition("=")
+                keys[name.strip()] = value.strip().strip("\"'")
+    return keys
+
 
 RESULT_COLUMNS = [
     "run_id",
@@ -211,6 +267,29 @@ def score(output: str, cases: list[dict[str, Any]]) -> dict[str, Any]:
 # --------------------------------------------------------------------------- #
 
 
+def split_config(config_id: str) -> tuple[str, dict[str, Any] | None]:
+    """Split ``llm:<panel_id>`` into its configuration and panel member."""
+    base, _, panel_id = config_id.partition(":")
+    if not panel_id:
+        return base, None
+    if panel_id not in PANEL:
+        raise KeyError(f"unknown panel member {panel_id!r}; known: {sorted(PANEL)}")
+    return base, PANEL[panel_id]
+
+
+def _describe_config(config_id: str) -> str:
+    """One plan line per configuration, naming the model when there is one."""
+    base_id, member = split_config(config_id)
+    line = f"- `{config_id}`: {CONFIGURATIONS[base_id]['description']}"
+    if member is not None:
+        endpoint = member["base_url"] or "the provider's default endpoint"
+        line += (
+            f" Model `{member['model']}` via `{member['provider']}` at {endpoint}"
+            f" — {member['note']}."
+        )
+    return line
+
+
 def execute(
     dataset: dict[str, Any],
     config_id: str,
@@ -220,9 +299,23 @@ def execute(
     seed: int,
 ) -> dict[str, Any]:
     """Run one cell in a fresh workspace and preserve its evidence."""
-    config = CONFIGURATIONS[config_id]
+    base_id, member = split_config(config_id)
+    config = CONFIGURATIONS[base_id]
     csv_path = (BENCH / dataset["csv_path"]).resolve()
     argv = [a.format(csv=str(csv_path), target=dataset["target"]) for a in config["argv"]]
+
+    env = dict(os.environ)
+    if member is not None:
+        argv += ["--provider", member["provider"], "--model", member["model"]]
+        if member["base_url"]:
+            argv += ["--base-url", member["base_url"]]
+        # The CLI reads the credential from the provider's own variable, so
+        # the key is placed in the child's environment rather than on the
+        # command line — an argv ends up in `command.json`, and a run record
+        # that leaks a key is worse than no record.
+        key = load_keys().get(member["key_name"], "") if member["key_name"] else "local"
+        env["OPENAI_API_KEY"] = key or "local"
+
     command = [sys.executable, "-X", "utf8", "-m", "mlcompass.cli", *argv]
 
     workspace = Path(tempfile.mkdtemp(prefix="mlcbench_"))
@@ -237,6 +330,7 @@ def execute(
             errors="replace",
             cwd=workspace,
             timeout=timeout,
+            env=env,
         )
         runtime = time.monotonic() - clock
         status = "completed" if proc.returncode == 0 else "failed"
@@ -363,7 +457,7 @@ def write_plan(
                 "",
                 "## Configurations",
                 "",
-                *[f"- `{c}`: {CONFIGURATIONS[c]['description']}" for c in config_ids],
+                *[_describe_config(c) for c in config_ids],
                 "",
                 "## Cells",
                 "",
@@ -398,20 +492,25 @@ def main() -> int:
     ap.add_argument(
         "--config",
         action="append",
-        choices=sorted(CONFIGURATIONS),
-        help="configuration to run (repeatable; default: deterministic)",
+        help=(
+            "configuration to run, repeatable; default deterministic. "
+            "A model lane is llm:<panel_id>, e.g. llm:ollama-qwen2.5-7b. "
+            f"Configurations: {', '.join(sorted(CONFIGURATIONS))}. "
+            f"Panel: {', '.join(sorted(PANEL))}"
+        ),
     )
     ap.add_argument("--repeats", type=int, default=1)
     ap.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT)
     ap.add_argument("--seed", type=int, action="append", help="seed per repetition (repeatable)")
     ap.add_argument("--plan", action="store_true", help="freeze a plan and exit without running")
     ap.add_argument("--dry-run", action="store_true", help="print the cells and exit")
-    ap.add_argument("--provider", default="none")
-    ap.add_argument("--model", default="none")
+    ap.add_argument("--panel", action="store_true", help="expand to every panel member as llm:<id>")
     args = ap.parse_args()
 
     gt = _load_ground_truth()
-    config_ids = args.config or ["deterministic"]
+    config_ids = list(args.config or ["deterministic"])
+    if args.panel:
+        config_ids = [c for c in config_ids if c != "llm"] + [f"llm:{p}" for p in sorted(PANEL)]
     seeds = args.seed or list(range(args.repeats))
     if len(seeds) < args.repeats:
         seeds = (seeds * args.repeats)[: args.repeats]
@@ -454,18 +553,13 @@ def main() -> int:
         return 1
     print(f"Using frozen plan: {plan_path.relative_to(BENCH)}\n")
 
-    uses_llm = any(CONFIGURATIONS[c]["uses_llm"] for c in config_ids)
-    if uses_llm and args.provider == "none":
-        print(
-            "An --llm configuration needs --provider and --model recorded (protocol.md section 1)."
-        )
-        return 1
-
     total = 0
     for dataset in gt["datasets"]:
         for config_id in config_ids:
             for rep in range(1, args.repeats + 1):
-                run_id = f"{experiment_id}-{dataset['openml_id']}-{config_id}-r{rep}"
+                _, member = split_config(config_id)
+                safe_cfg = config_id.replace(":", "-")
+                run_id = f"{experiment_id}-{dataset['openml_id']}-{safe_cfg}-r{rep}"
                 run_dir = RUNS / run_id
                 seed = seeds[rep - 1]
                 result = execute(dataset, config_id, run_dir, timeout=args.timeout, seed=seed)
@@ -489,10 +583,8 @@ def main() -> int:
                         "seed": seed,
                         "started_at_utc": result["started"],
                         "mlcompass_commit": _git("rev-parse", "HEAD"),
-                        "provider": args.provider
-                        if CONFIGURATIONS[config_id]["uses_llm"]
-                        else "none",
-                        "model": args.model if CONFIGURATIONS[config_id]["uses_llm"] else "none",
+                        "provider": member["provider"] if member else "none",
+                        "model": member["model"] if member else "none",
                         "status": result["status"],
                         "known_issues": scored["known_issues"] if scored else len(dataset["cases"]),
                         "correct_detections": scored["correct_detections"] if scored else "",
@@ -501,12 +593,10 @@ def main() -> int:
                         "unverified_findings": scored["unverified_findings"] if scored else "",
                         "hallucinations": "",
                         "runtime_seconds": round(result["runtime"], 3),
-                        "input_tokens": 0 if not CONFIGURATIONS[config_id]["uses_llm"] else "",
-                        "output_tokens": 0 if not CONFIGURATIONS[config_id]["uses_llm"] else "",
-                        "total_tokens": 0 if not CONFIGURATIONS[config_id]["uses_llm"] else "",
-                        "estimated_llm_cost_usd": 0
-                        if not CONFIGURATIONS[config_id]["uses_llm"]
-                        else "",
+                        "input_tokens": 0 if member is None else "",
+                        "output_tokens": 0 if member is None else "",
+                        "total_tokens": 0 if member is None else "",
+                        "estimated_llm_cost_usd": 0 if member is None else "",
                         "artifacts_path": f"runs/{run_id}",
                         "notes": "false_positives/hallucinations need a reviewer; see scoring.md",
                     }

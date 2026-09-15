@@ -1,0 +1,113 @@
+(no .mlcompass/ project found in current path — running standalone; results 
+will not be persisted)
+
+┌──────────────────────────── 📊 Dataset analysis ────────────────────────────┐
+│ Path:                                                                       │
+│ C:\Users\SABUNIS\Desktop\ml-copilot\benchmark\data\1464_blood-transfusion-s │
+│ ervice-center.csv                                                           │
+│ Shape:   748 rows × 5 columns                                               │
+│ Target:  Class (explicit confidence)                                        │
+│ Task:    binary classification (1=76%, 2=24%)                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+Columns                                                                    
+┌───────┬─────────────┬─────────┬─────────────────────────────────────────┐
+│ Name  │ Type        │ Missing │ Notes                                   │
+├───────┼─────────────┼─────────┼─────────────────────────────────────────┤
+│ V1    │ numeric     │      0% │ range [0.0, 74.0], 7 IQR outliers       │
+│ V2    │ numeric     │      0% │ range [1.0, 50.0], 45 IQR outliers      │
+│ V3    │ numeric     │      0% │ range [250.0, 12500.0], 45 IQR outliers │
+│ V4    │ numeric     │      0% │ range [2.0, 98.0]                       │
+│ Class │ categorical │      0% │ cardinality 2                           │
+└───────┴─────────────┴─────────┴─────────────────────────────────────────┘
+
+⚠ Warnings
+  • 215 exact duplicate row(s) (28.7% of the data). A random split puts copies 
+of the same row in both train and test, which inflates held-out scores without 
+any metric looking wrong. Confirm they are genuine repeated observations before
+training; if not, de-duplicate before splitting, or split on a group key.
+
+✨ Recommended models                                                          
+┌──────────────────────────────────────┬──────────────────────────────────────┐
+│ Model                                │ Why                                  │
+├──────────────────────────────────────┼──────────────────────────────────────┤
+│ Logistic Regression (L2,             │ With only 4 numeric predictors       │
+│ standardized inputs)                 │ (V1-V4) and 748 rows, a regularized  │
+│                                      │ linear model is a reliable,          │
+│                                      │ interpretable baseline; the class    │
+│                                      │ probabilities it produces give the   │
+│                                      │ user a sanity check against any      │
+│                                      │ fancier model.                       │
+│ Random Forest / ExtraTrees           │ V2 and V3 are right-skewed and       │
+│                                      │ contain 45 IQR outliers each, so a   │
+│                                      │ tree ensemble that is invariant to   │
+│                                      │ monotone transforms and captures the │
+│                                      │ nonlinear Recency/Frequency          │
+│                                      │ relationship (V1 vs V2) is a strong, │
+│                                      │ low-tuning choice for this small     │
+│                                      │ tabular problem.                     │
+│ Gradient Boosting (LightGBM/XGBoost, │ Boosted trees usually edge out       │
+│ shallow depth)                       │ bagged trees on small structured     │
+│                                      │ data like this, but with only 748    │
+│                                      │ rows the depth and learning rate     │
+│                                      │ must be kept small to avoid          │
+│                                      │ overfitting; use it to confirm       │
+│                                      │ whether the RF signal is real.       │
+└──────────────────────────────────────┴──────────────────────────────────────┘
+
+🔧 Feature engineering
+  • V3 → log1p transform (and optionally a per-donation average = V3 / V2)
+     V3 (total blood donated) has mean 1378.7 and std 1459.8 with max 12500 vs 
+q50 1000 — heavy right skew that compresses most values; log1p linearizes it 
+for the logistic baseline while leaving trees unaffected.
+  • V1 → keep raw, and add a reciprocal or exponential decay term (e.g. 
+exp(-V1)) plus optional binning
+     V1 (months since last donation) is the classic recency driver of repeat 
+donation; the effect is likely strong but non-linear/non-monotone, so a decay 
+feature helps linear models while binning exposes shape to trees.
+  • V2 → derive donation rate = V2 / V4 and average interval = V4 / V2
+     V2 (number of donations, mean 5.5) and V4 (months since first donation, 
+mean 34.3) are both raw counts of time; their ratio expresses donation 
+frequency normalized by donor tenure, which is not captured by either column 
+alone.
+  • V4 → cross with V1 and V2 rather than transforming alone
+     V4 has zero outliers (min 2, max 98, q50 28) and is fairly well behaved on
+its own; its value comes from combining with V1/V2 to separate long-tenure 
+frequent donors from recent one-off donors.
+  • V1 → flag whether V1 exceeds the donor's own typical interval (V1 > V4/V2)
+     A donor is 'overdue' when recency V1 exceeds their personal average gap 
+V4/V2; this ordinal flag is cheap to compute and often more predictive than 
+either quantity in isolation.
+  • Class → map to a 0/1 integer and treat label '1' (570 rows) as the 
+majority/negative and '2' (178 rows) as the minority/positive, then set 
+class_weight='balanced'
+     Class is stored as int64 with values {1, 2}; verifying the positive class 
+definition avoids silently inverting precision/recall and the 76.2%/23.8% split
+means unweighted training will ignore the minority class.
+
+⚠ Pitfalls
+  • 215 exact duplicate rows (28.7% of the data) flagged in warnings
+     → De-duplicate before splitting, or if copies are genuine repeated 
+measurements, split with GroupShuffleSplit / grouped k-fold on an identifier so
+identical rows cannot appear in both train and test; a naive random split here 
+inflates held-out scores with no visible symptom.
+  • Class imbalance (76.2% vs 23.8%)
+     → Use stratified train/test splits and stratified k-fold, report 
+AUC/F1/PR-AUC rather than raw accuracy, and set class_weight='balanced' (or 
+scale_pos_weight for boosting).
+  • Very small dataset (748 rows, 4 features) makes validation scores 
+high-variance
+     → Use repeated stratified k-fold (e.g. 5x5), keep models 
+regularized/shallow, and compare against a trivial majority-class baseline 
+before trusting any lift.
+  • V2 and V3 contain 45 IQR outliers each (V3 max 12500 vs q50 1000)
+     → Do not naively drop them — these are plausibly heavy donors, not errors.
+Prefer log1p/rank transforms for the linear model and leave tree models 
+unscaled; if clipping is used, fit the clip bounds on the training fold only.
+  • Feature names are anonymized (V1-V4)
+     → Confirm the semantics (this is the blood-transfusion layout: recency, 
+frequency, volume, time) before engineering ratios like V3/V2 or V2/V4, so 
+derived features keep their intended meaning.
+  • Any scaling/imputation must be fit inside the CV fold
+     → Wrap StandardScaler (and any log/clip transform) in a Pipeline so it is 
+fit on each training fold only; fitting it on the full dataset leaks 
+information into validation.

@@ -1,0 +1,82 @@
+(no .mlcompass/ project found in current path — running standalone; results 
+will not be persisted)
+
+┌──────────────────────────── 📊 Dataset analysis ────────────────────────────┐
+│ Path:                                                                       │
+│ C:\Users\SABUNIS\Desktop\ml-copilot\benchmark\data\1464_blood-transfusion-s │
+│ ervice-center.csv                                                           │
+│ Shape:   748 rows × 5 columns                                               │
+│ Target:  Class (explicit confidence)                                        │
+│ Task:    binary classification (1=76%, 2=24%)                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+Columns                                                                    
+┌───────┬─────────────┬─────────┬─────────────────────────────────────────┐
+│ Name  │ Type        │ Missing │ Notes                                   │
+├───────┼─────────────┼─────────┼─────────────────────────────────────────┤
+│ V1    │ numeric     │      0% │ range [0.0, 74.0], 7 IQR outliers       │
+│ V2    │ numeric     │      0% │ range [1.0, 50.0], 45 IQR outliers      │
+│ V3    │ numeric     │      0% │ range [250.0, 12500.0], 45 IQR outliers │
+│ V4    │ numeric     │      0% │ range [2.0, 98.0]                       │
+│ Class │ categorical │      0% │ cardinality 2                           │
+└───────┴─────────────┴─────────┴─────────────────────────────────────────┘
+
+⚠ Warnings
+  • 215 exact duplicate row(s) (28.7% of the data). A random split puts copies 
+of the same row in both train and test, which inflates held-out scores without 
+any metric looking wrong. Confirm they are genuine repeated observations before
+training; if not, de-duplicate before splitting, or split on a group key.
+
+✨ Recommended models                                                          
+┌─────────────────────┬───────────────────────────────────────────────────────┐
+│ Model               │ Why                                                   │
+├─────────────────────┼───────────────────────────────────────────────────────┤
+│ Logistic Regression │ Strong interpretable baseline for this binary task;   │
+│                     │ the four numeric predictors (V1-V4) are all clean and │
+│                     │ the target is explicit in Class, so it provides a     │
+│                     │ reliable sanity check before more complex models.     │
+│ Random Forest       │ Tree ensembles handle nonlinear interactions and      │
+│                     │ threshold effects well on small tabular datasets like │
+│                     │ this one, especially with mixed-scale numeric         │
+│                     │ features V1-V4 and no missing values.                 │
+│ XGBoost             │ Gradient-boosted trees are a strong default for       │
+│                     │ tabular binary classification and can capture         │
+│                     │ interactions among V1, V2, V3, and V4 that simpler    │
+│                     │ linear models may miss.                               │
+└─────────────────────┴───────────────────────────────────────────────────────┘
+
+🔧 Feature engineering
+  • V1, V2, V3, V4 → Standardize or robust-scale the numeric inputs for linear 
+models; keep raw values for tree models.
+     All predictors are numeric with different scales, especially V3 versus 
+V1/V2/V4, which can help optimization and coefficient comparability in Logistic
+Regression.
+  • V1, V2, V3 → Try log1p or winsorized variants for the right-skewed / 
+outlier-prone variables.
+     V1, V2, and V3 show notable outliers and wide spreads in the summary 
+stats, so monotonic transforms may reduce leverage from extreme values.
+  • V1, V2 → Create interaction features such as V1/V2, V1*V2, or 
+differences/ratios if domain sense supports them.
+     In blood-donation style tabular data, recency and frequency-type variables
+often interact; the distributions of V1 and V2 suggest potential joint effects.
+  • V3, V4 → Add interaction terms or binning for V3 and V4 to capture 
+nonlinear risk regions.
+     V3 has a wide range with outliers, while V4 is more concentrated; combined
+thresholds may be informative for Class.
+
+⚠ Pitfalls
+  • Duplicate rows are common (215 exact duplicates, 28.7% of the data).
+     → Verify whether duplicates are genuine repeated observations; if not, 
+deduplicate before modeling or use a split strategy that prevents identical 
+rows from appearing in both train and test.
+  • Potential train/test leakage from random splitting with duplicates.
+     → Use group-aware splitting or deduplicate first; at minimum, check that 
+no exact row repeats cross the split boundaries.
+  • Class imbalance in Class (about 76% vs 24%).
+     → Use imbalance-aware metrics and training settings such as class weights,
+threshold tuning, or resampling; avoid relying on accuracy alone.
+  • Small dataset size with only 748 rows.
+     → Prefer cross-validation and simpler models first; keep the model search 
+conservative to reduce overfitting.
+  • Outliers in V1, V2, and especially V3 may overly influence some models.
+     → Inspect extreme values, consider robust scaling or transformation, and 
+compare performance with and without outlier handling.

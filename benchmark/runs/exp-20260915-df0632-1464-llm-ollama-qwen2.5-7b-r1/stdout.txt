@@ -1,0 +1,50 @@
+(no .mlcompass/ project found in current path — running standalone; results 
+will not be persisted)
+
+┌──────────────────────────── 📊 Dataset analysis ────────────────────────────┐
+│ Path:                                                                       │
+│ C:\Users\SABUNIS\Desktop\ml-copilot\benchmark\data\1464_blood-transfusion-s │
+│ ervice-center.csv                                                           │
+│ Shape:   748 rows × 5 columns                                               │
+│ Target:  Class (explicit confidence)                                        │
+│ Task:    binary classification (1=76%, 2=24%)                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+Columns                                                                    
+┌───────┬─────────────┬─────────┬─────────────────────────────────────────┐
+│ Name  │ Type        │ Missing │ Notes                                   │
+├───────┼─────────────┼─────────┼─────────────────────────────────────────┤
+│ V1    │ numeric     │      0% │ range [0.0, 74.0], 7 IQR outliers       │
+│ V2    │ numeric     │      0% │ range [1.0, 50.0], 45 IQR outliers      │
+│ V3    │ numeric     │      0% │ range [250.0, 12500.0], 45 IQR outliers │
+│ V4    │ numeric     │      0% │ range [2.0, 98.0]                       │
+│ Class │ categorical │      0% │ cardinality 2                           │
+└───────┴─────────────┴─────────┴─────────────────────────────────────────┘
+
+⚠ Warnings
+  • 215 exact duplicate row(s) (28.7% of the data). A random split puts copies 
+of the same row in both train and test, which inflates held-out scores without 
+any metric looking wrong. Confirm they are genuine repeated observations before
+training; if not, de-duplicate before splitting, or split on a group key.
+
+✨ Recommended models                                                          
+┌────────────────────────┬────────────────────────────────────────────────────┐
+│ Model                  │ Why                                                │
+├────────────────────────┼────────────────────────────────────────────────────┤
+│ LogisticRegression     │ ... simple baseline for binary classification      │
+│ DecisionTreeClassifier │ ... interpretable model to understand feature      │
+│                        │ importance                                         │
+│ XGBoost                │ ... powerful ensemble method for handling complex  │
+│                        │ relationships                                      │
+└────────────────────────┴────────────────────────────────────────────────────┘
+
+🔧 Feature engineering
+  • V1 → log-transform, bin into quartiles/buckets
+     ... reduces skew and handles outliers more gracefully
+  • V2 → standardize before applying log or sqrt transformation
+     ... helps with outliers without skewing the data too much
+
+⚠ Pitfalls
+  • High class imbalance (76.2% vs 23.8%)
+     → Use AUC, F1 score, or apply class weights
+  • Exact duplicate rows present in dataset
+     → Remove duplicates before splitting into train/test
