@@ -129,3 +129,6 @@ api_keys.txt
 *api_key*
 *.key
 .env.local
+
+# Agent run workspaces, created by `mlcompass agent --project-path`.
+.mlcompass-agent/
