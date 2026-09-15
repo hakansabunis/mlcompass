@@ -477,9 +477,18 @@ PROVIDERS: dict[str, dict[str, Any]] = {
     "deepseek": {
         "kind": "openai",
         "key_env": "DEEPSEEK_API_KEY",
-        # The 'deepseek-chat' alias is deprecated 2026-07-24; pin the direct
-        # name so replication runs after that date keep working.
-        "model": "deepseek-v4-flash",
+        # Back to 'deepseek-chat'. The 2026-07-24 repin to a direct name was
+        # made on a deprecation notice and never exercised: every current
+        # direct name is a thinking-mode model, and thinking mode rejects the
+        # forced tool_choice this harness requires --
+        #     400 "Thinking mode does not support this tool_choice"
+        # -- so '--provider deepseek' produced 100% transport errors and
+        # scored every cell 0/0. Measured 2026-09-15 against deepseek-chat,
+        # deepseek-flash, deepseek-v4-flash and deepseek-v4-pro: only
+        # deepseek-chat accepts the call. It is absent from models.list() but
+        # still served, which is why a listing check would have missed this.
+        # Re-pin only after probing the replacement with a forced tool_choice.
+        "model": "deepseek-chat",
         "base_url": "https://api.deepseek.com",
     },
     "openai": {
