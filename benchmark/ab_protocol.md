@@ -1,6 +1,6 @@
 # A/B protocol — does mlcompass change how an LLM trains a model?
 
-Protocol version: A/B 1.2. No scored experiments conducted under it yet.
+Protocol version: A/B 1.3. No scored experiments conducted under it yet.
 Fourteen unscored pipeline-validation runs were made under 1.0 and 1.1, all
 of them superseded and all of them kept; they are what the four amendments
 in §9 were written from. Every amendment was made **before any scored run**.
@@ -40,7 +40,18 @@ the same generation settings, and the same execution environment. Each
 differs from the one above it in exactly one thing.
 
 **`control`** — the LLM is given the raw CSV path, the target column name,
-and the task: write a training script.
+the list of packages available in the execution environment, and the task:
+write a training script.
+
+The package list is not a courtesy. Without it the model guesses at the
+environment, and a script that fails on `import imblearn` has failed for a
+reason that says nothing about the quality of the code — it is the harness
+scoring its own `pip list`. Worse, the guess is not arm-neutral: mlcompass's
+advise output recommends addressing class imbalance, which points a model
+towards resampling libraries, so an unstated environment would make the
+treatment arms fail more often for a reason unrelated to the intervention.
+The same list goes to every arm, and it names what is actually importable
+rather than what we would like to be.
 
 **`advise`** — identical, plus the verbatim output of `mlcompass advise` on
 the same inputs.
@@ -292,3 +303,16 @@ torch-shaped task — and report that separately. Until one of those happens,
 limitation attached, and a defect count that does not fall between `advise`
 and `advise+audit` is not evidence that revision does not help. It is
 evidence that nothing was said.
+
+**A5 — state the execution environment in the prompt.** Under 1.2 the
+prompt named the CSV, the target and the columns, but not what was
+installed. A validation run's `advise` arm died on `import imblearn`, which
+is a reasonable library to reach for and simply absent from this
+environment: `runs_at_all`, one of §1's three outcomes, was partly
+measuring package availability. The confound is also directional — advise
+output recommends handling class imbalance, which points towards exactly
+the resampling libraries most likely to be missing — so leaving it unstated
+would penalise the treatment arms for taking the intervention's advice.
+Every arm now receives the same list of importable packages, generated from
+the environment the script will actually run in rather than written by
+hand.
