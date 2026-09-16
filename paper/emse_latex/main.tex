@@ -502,12 +502,14 @@ follows the same instinct without the asymmetry argument.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\textwidth]{contract_flow.pdf}
+\includegraphics[width=\textwidth]{fig1_contract.png}
 \caption{The evidence-bound contract. The deterministic evidence producer
 emits $E$; Tier~A binds the tool schema's enums to $E$ at call time; Tier~B
 re-checks the returned answer in plain code on three channels, retries with
 the offending items named, and after the budget strips unsound content and
-flags a persistent omission. The bottom box states the scope honestly: the
+flags a persistent omission. The dashed boundary encloses the narrator and
+nothing else: it is the only untrusted component, and every arrow crossing the
+boundary is contract traffic. The bottom box states the scope honestly --- the
 validated channels carry the guarantee, and the free-text field reaches the
 user too, marked as unverified.}
 \label{fig:contract}
@@ -921,9 +923,24 @@ independent scorer applies, and it returns zero.
 
 \subsection{Results}
 
-Table~\ref{tab:arms} is the head-to-head. All seven arms share the task, the
-evidence, the model, the reask budget and the scoring; they differ only in the
-enforcement mechanism.
+Figure~\ref{fig:arms} and Table~\ref{tab:arms} are the head-to-head. All seven
+arms share the task, the evidence, the model, the reask budget and the
+scoring; they differ only in the enforcement mechanism.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{fig2_arms.png}
+\caption{User-facing entity-fabrication rate by enforcement mechanism, $N=200$
+per arm, with Wilson 95\,\% intervals. The two bold rows are the comparison:
+\texttt{A-GR-STOCK} is Guardrails~AI in its default configuration at
+\textbf{35.0\,\%} [28.7, 41.8]; \texttt{A-GR-OURS} is the \emph{same} toolkit,
+reask loop, budget, prompt and model with our deterministic validators
+substituted, at \textbf{0/200} [0.0, 1.9]. The rule separates arms that leave
+fabrication reaching the user from arms that do not. Exact values in
+Table~\ref{tab:arms}; the degenerate \texttt{A-STATIC-ENUM-STALE} arm is
+omitted here and discussed in Section~\ref{sec:rq3-degenerate}.}
+\label{fig:arms}
+\end{figure}
 
 \begin{table}[t]
 \caption{User-facing entity-fabrication rate, seven arms, $N=200$ each,
@@ -1060,6 +1077,21 @@ Table~\ref{tab:sweep} reports the six-variant sweep: one instruction, six
 rule-free rewordings, $N=100$ each, zero transport errors, same evidence and
 same tool schema. Only the wording moves.
 
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{fig3_sweep.png}
+\caption{The two entity sub-channels do not move together. Variants are
+ordered by ascending blended rate, which is why the upper panel climbs
+monotonically. The lower panel is the invention count alone, and it does not
+follow: \emph{terse} has the lowest blended rate and the most inventions,
+\emph{mechanical} the highest blended rate and almost none. Bars stack the two
+sub-channels, so where a single response carries both an invented and a
+misfiled name it is counted in each and the stack exceeds the blended rate ---
+compare Table~\ref{tab:sweep}, which gives the blended figure and its
+interval.}
+\label{fig:sweep}
+\end{figure}
+
 \begin{table}[t]
 \caption{Paraphrase sweep, $N=100$ per variant, 600 live responses.
 \emph{inv.} = a name appearing nowhere in $E$; \emph{misf.} = a name in $E$
@@ -1134,7 +1166,8 @@ channel completely for this task and would not survive an evidence dictionary
 carrying more than one statistic per column.
 
 \paragraph{The two entity sub-channels move independently, and at the extremes
-they run opposite.} This was not expected and is the sharper finding:
+they run opposite.} This was not expected and is the sharper finding, and
+Figure~\ref{fig:sweep} is where it is visible:
 
 Reading the two columns of Table~\ref{tab:sweep} against each other:
 \emph{terse} has the lowest blended rate (9\,\%) and the highest invention
@@ -1228,7 +1261,20 @@ gpt-5.4-mini          &  6 &  9 &  5 & \textbf{3} \\
 \subsection{Which rules moved}\label{sec:rq5-rules}
 
 Section~\ref{sec:rq1} argues that a blended rate hides its composition. The
-same obligation applies here, so Table~\ref{tab:perrule} decomposes the fall.
+same obligation applies here, so Figure~\ref{fig:defects} and
+Table~\ref{tab:perrule} decompose the fall.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{fig4_defects.png}
+\caption{Where the downstream effect comes from. Two of the six rules carry 23
+of the 25-defect fall: \texttt{leak\_duplicate\_rows} alone accounts for 16.
+\texttt{wrong\_metric\_for\_imbalance} never fires on this panel, because its
+precondition --- a minority class below 20\,\% --- is false of all three
+datasets, so the instrument is materially two rules here. Exact values in
+Table~\ref{tab:perrule}.}
+\label{fig:defects}
+\end{figure}
 
 \begin{table}[t]
 \caption{The six-item checklist, per rule. Two rules carry 23 of the
