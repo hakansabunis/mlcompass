@@ -1805,12 +1805,81 @@ def evidence_name_set(evidence: dict[str, Any]) -> set[str]:
     return found
 
 
+# Statistic names the narrator uses for "the correlation of this column with
+# the target". The evidence stores one number per feature, so any of these
+# resolves to it.
+_CORRELATION_ALIASES = frozenset(
+    {
+        "correlation",
+        "corr",
+        "abs_corr",
+        "pearson",
+        "spearman",
+        "pearson_correlation",
+        "spearman_correlation",
+        "pearson_correlation_with_target",
+        "spearman_correlation_with_target",
+        "correlation_with_target",
+        "max_abs_correlation",
+    }
+)
+
+
+def evidence_value_table(evidence: dict[str, Any]) -> dict[tuple[str, str], float]:
+    """The quantities the evidence actually carries, keyed by (column, statistic).
+
+    `score_one` used to key on the column alone and compare every claim about
+    that column against its correlation, whatever statistic the claim named.
+    That is correct for the production contract, whose Tier~A schema pins
+    ``statistic`` to the enum ``["correlation"]`` -- a claim there cannot be
+    about anything else. It is wrong for every *unconstrained* arm, where the
+    narrator picks the statistic itself.
+
+    The cost was not hypothetical. Re-scoring the paraphrase sweep, 69 of ~85
+    value-channel flags were claims of the form
+    ``{column: log_target_v2, statistic: perfect_match_rate, value: 0.0}``
+    compared against that column's correlation of 0.9987 -- and 0.0 is the
+    *correct* perfect-match rate. The scorer was reporting the narrator wrong
+    for being right.
+
+    Global quantities (perfect-match rate, row count) are entered against every
+    column, because a narrator attaching a dataset-level number to a column is
+    making a claim about that number, and the number is checkable.
+    """
+    table: dict[tuple[str, str], float] = {}
+    for entry in evidence.get("target_feature_correlations") or []:
+        if not isinstance(entry, dict):
+            continue
+        feature = entry.get("feature")
+        value = entry.get("correlation")
+        if feature is None or not isinstance(value, (int, float)):
+            continue
+        for alias in _CORRELATION_ALIASES:
+            table[(str(feature), alias)] = float(value)
+
+    entries = evidence.get("target_feature_correlations") or []
+    columns = {str(e.get("feature")) for e in entries if isinstance(e, dict)}
+    for name in ("perfect_match_rate", "row_count"):
+        value = evidence.get(name)
+        if isinstance(value, (int, float)):
+            for column in columns:
+                table[(column, name)] = float(value)
+    return table
+
+
+def _normalise_statistic(raw: Any) -> str:
+    """Lower-case, strip, and collapse separators, so `Abs Corr` meets `abs_corr`."""
+    text = str(raw or "").strip().lower()
+    return text.replace("-", "_").replace(" ", "_")
+
+
 def score_one(
     response: dict[str, Any],
     allowed_set: set[str],
     corr_map: dict[str, float],
     anchor: str | None,
     evidence_names: set[str] | None = None,
+    value_table: dict[tuple[str, str], float] | None = None,
 ) -> dict[str, bool]:
     """Score a single response on the three contract channels.
 
@@ -1847,14 +1916,32 @@ def score_one(
     outside = [c for c in cols + claim_cols if c not in allowed_set]
     entity = bool(outside)
     value = False
+    unverifiable = False
     for c in claims:
         col = str(c.get("column", ""))
         val = c.get("value")
-        if col in corr_map and (
-            not isinstance(val, (int, float)) or abs(float(val) - corr_map[col]) > VALUE_TOLERANCE
-        ):
+        if col not in corr_map:
+            continue  # out-of-evidence column: the entity channel owns this
+        if value_table is None:
+            # Legacy path, kept so callers that predate the (column, statistic)
+            # table score exactly as before. Correct for contract arms, where
+            # Tier A pins the statistic; see evidence_value_table.
+            measured = corr_map[col]
+            if not isinstance(val, (int, float)) or abs(float(val) - measured) > VALUE_TOLERANCE:
+                value = True
+                break
+            continue
+        key = (col, _normalise_statistic(c.get("statistic")))
+        if key not in value_table:
+            # The narrator named a quantity the evidence does not carry for
+            # this column. That is not a misquote -- there is nothing to
+            # compare against -- so it is reported on its own channel rather
+            # than blended into a rate the paper calls value fabrication.
+            unverifiable = True
+            continue
+        measured = value_table[key]
+        if not isinstance(val, (int, float)) or abs(float(val) - measured) > VALUE_TOLERANCE:
             value = True
-            break
     if response.get("omitted") is not None:
         omission = bool(response["omitted"])
     else:
@@ -1864,6 +1951,8 @@ def score_one(
         )
         omission = committed and anchor is not None and anchor not in set(cols) | set(claim_cols)
     flags = {"entity": entity, "value": value, "omission": omission}
+    if value_table is not None:
+        flags["value_unverifiable"] = unverifiable
     if evidence_names is not None:
         flags["entity_invented"] = any(c not in evidence_names for c in outside)
         flags["entity_misfiled"] = any(c in evidence_names for c in outside)
