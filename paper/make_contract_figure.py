@@ -139,6 +139,36 @@ arrow(
     fs=7.8,
 )
 
+# The trust boundary. The caption has always promised a dashed line and the
+# drawing never had one, so a reader had to reconstruct from prose the single
+# thing the figure exists to show: which component is untrusted.
+#
+# It encloses the narrator and nothing else. Every arrow crossing it is
+# contract traffic -- the enum going out, the payload coming in, the
+# corrective retry going back.
+ax.add_patch(
+    FancyBboxPatch(
+        (0.052, 0.5185),
+        0.896,
+        0.124,
+        boxstyle="round,pad=0.004,rounding_size=0.012",
+        linestyle=(0, (4, 3)),
+        linewidth=1.0,
+        edgecolor="black",
+        facecolor="none",
+        zorder=0,
+    )
+)
+ax.text(
+    0.944,
+    0.6465,
+    "untrusted",
+    ha="right",
+    va="bottom",
+    fontsize=7.4,
+    style="italic",
+)
+
 fig.tight_layout(pad=0.15)
 fig.savefig(ROOT / "emse_latex" / "contract_flow.pdf")
 fig.savefig(ROOT / "contract_flow.png", dpi=300)
