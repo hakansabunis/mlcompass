@@ -1313,9 +1313,7 @@ def _named_list_excludes_target(source: str, target: str, tokens: str) -> bool:
     constant nobody selects with proves nothing about the feature matrix.
     """
     lists: dict[str, set[str]] = {}
-    for name, body in re.findall(
-        r"^\s*([A-Za-z_]\w*)\s*=\s*\[([^]]*)\]", source, re.MULTILINE
-    ):
+    for name, body in re.findall(r"^\s*([A-Za-z_]\w*)\s*=\s*\[([^]]*)\]", source, re.MULTILINE):
         # A comprehension is not a constant list. `[c for c in df.columns if
         # c != "V1"]` has a quoted name in it and filters a DIFFERENT column,
         # so reading its quotes as the feature list clears the flag on a

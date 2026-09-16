@@ -103,8 +103,7 @@ def _file_lock_for(path: Path) -> FileLock:
     with _LOCKS_GUARD:
         lock = _FILE_LOCKS.get(key)
         if lock is None:
-            lock = FileLock(str(path.with_name(path.name + ".lock")),
-                            timeout=_FILE_LOCK_TIMEOUT_S)
+            lock = FileLock(str(path.with_name(path.name + ".lock")), timeout=_FILE_LOCK_TIMEOUT_S)
             _FILE_LOCKS[key] = lock
         return lock
 

@@ -58,8 +58,7 @@ def _flag(body: str) -> bool:
 EXCLUDES = {
     "drop_literal": 'X = df.drop(columns=["Class"])\ny = df["Class"]\n',
     "drop_via_variable": (
-        'target_col = "Class"\n'
-        "X = df.drop(columns=[target_col])\ny = df[target_col]\n"
+        'target_col = "Class"\nX = df.drop(columns=[target_col])\ny = df[target_col]\n'
     ),
     "pop": 'y = df.pop("Class")\nX = df\n',
     "columns_neq": 'X = df.loc[:, df.columns != "Class"]\ny = df["Class"]\n',
@@ -233,9 +232,11 @@ def test_a_seed_hoisted_to_a_constant_counts_as_seeded() -> None:
 
 def test_a_script_with_no_seed_anywhere_is_still_flagged() -> None:
     """Widening the seed rule must not make it unable to fire."""
-    unseeded = SEED_VIA_CONSTANT.replace("RANDOM_STATE = 42\n", "").replace(
-        ", random_state=RANDOM_STATE", ""
-    ).replace("random_state=RANDOM_STATE", "")
+    unseeded = (
+        SEED_VIA_CONSTANT.replace("RANDOM_STATE = 42\n", "")
+        .replace(", random_state=RANDOM_STATE", "")
+        .replace("random_state=RANDOM_STATE", "")
+    )
     report = check_defects(
         unseeded,
         target="Class",
