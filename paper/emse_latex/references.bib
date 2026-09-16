@@ -542,3 +542,77 @@
   archivePrefix = {arXiv},
   url       = {https://arxiv.org/abs/2310.11324}
 }
+
+
+% =====================================================================
+% 9. ROUND-2 REVIEW — all verified 2026-09-16.
+%    EviBound is the most consequential: it coined "Evidence-Bound" in
+%    this domain eleven months before our sweep, with a two-gate
+%    structure close to ours. We name the distinction ourselves rather
+%    than leave a reviewer to find it.
+% =====================================================================
+
+@misc{chen2025evibound,
+  author        = {Chen},
+  title         = {Evidence-Bound Autonomous Research ({EviBound}): A Governance Framework for Eliminating False Claims},
+  year          = {2025},
+  eprint        = {2511.05524},
+  archivePrefix = {arXiv},
+  url           = {https://arxiv.org/abs/2511.05524},
+  note          = {Approval gate validating acceptance-criteria schemas before execution, verification gate querying the MLflow API for run id, required artifacts and FINISHED status afterwards, with optional metric validation; 0\% hallucination on 8 tasks against a 100\% prompt-only baseline. Verified 2026-09-16 via https://arxiv.org/abs/2511.05524}
+}
+
+@misc{khoury2015partial,
+  author        = {Rapha{\"e}l Khoury and Sylvain Hall{\'e}},
+  title         = {Runtime Enforcement with Partial Control},
+  year          = {2015},
+  eprint        = {1508.06525},
+  archivePrefix = {arXiv},
+  url           = {https://arxiv.org/abs/1508.06525},
+  note          = {Organises the action universe in a lattice of monitor-control levels, separating actions a monitor may suppress or insert from those it may only observe. Verified 2026-09-16.}
+}
+
+@article{basin2013revisited,
+  author  = {David Basin and Vincent Jug{\'e} and Felix Klaedtke and Eugen Z{\u a}linescu},
+  title   = {Enforceable Security Policies Revisited},
+  journal = {ACM Transactions on Information and System Security},
+  volume  = {16},
+  number  = {1},
+  year    = {2013},
+  doi     = {10.1145/2487222.2487225},
+  note    = {Introduces the controllable vs only-observable split for enforcement mechanisms.}
+}
+
+@article{alpern1985liveness,
+  author  = {Bowen Alpern and Fred B. Schneider},
+  title   = {Defining Liveness},
+  journal = {Information Processing Letters},
+  volume  = {21},
+  number  = {4},
+  pages   = {181--185},
+  year    = {1985},
+  doi     = {10.1016/0020-0190(85)90056-0},
+  note    = {Safety and liveness are defined over infinite executions; a liveness violation is never finitely refutable. This is why the dichotomy degenerates on the finite object a narration response is.}
+}
+
+@article{hamlen2006computability,
+  author  = {Kevin W. Hamlen and Greg Morrisett and Fred B. Schneider},
+  title   = {Computability Classes for Enforcement Mechanisms},
+  journal = {ACM Transactions on Programming Languages and Systems},
+  volume  = {28},
+  number  = {1},
+  pages   = {175--205},
+  year    = {2006},
+  doi     = {10.1145/1111596.1111601},
+  note    = {EM-enforceable is a proper subset of safety once computability is imposed.}
+}
+
+@inproceedings{gao2023rarr,
+  author    = {Luyu Gao and Zhuyun Dai and Panupong Pasupat and Anthony Chen and Arun Tejasvi Chaganty and Yicheng Fan and Vincent Y. Zhao and Ni Lao and Hongrae Lee and Da-Cheng Juan and Kelvin Guu},
+  title     = {{RARR}: Researching and Revising What Language Models Say, Using Language Models},
+  booktitle = {Proceedings of the 61st Annual Meeting of the Association for Computational Linguistics (ACL)},
+  pages     = {16477--16508},
+  year      = {2023},
+  doi       = {10.18653/v1/2023.acl-long.910},
+  note      = {Post-edits model output to fix unsupported content while preserving the original as far as possible -- post-hoc insertion, treated as the right answer.}
+}

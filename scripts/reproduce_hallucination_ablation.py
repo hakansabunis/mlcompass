@@ -1873,6 +1873,37 @@ def _normalise_statistic(raw: Any) -> str:
     return text.replace("-", "_").replace(" ", "_")
 
 
+def is_scorer_artifact(name: Any, allowed_set: set[str]) -> bool:
+    """True if this "entity" is an artifact of reading the payload, not a citation.
+
+    Two shapes, both found by inspecting the flagged records rather than
+    imagined:
+
+    * A claim whose ``column`` is JSON ``null``. Stringifying it produces the
+      entity ``"None"``, which is then out-of-evidence and, since no evidence
+      field is called ``None``, scored as an *invented* column. The narrator
+      invented nothing; it omitted a field.
+    * Several real evidence column names delivered in one field, separated by
+      a slash or comma. This is a formatting fault --- the field holds one
+      column --- and it is a contract violation, but every name in it exists.
+      Counting it as an invention says the narrator produced a name the data
+      does not contain, which is the opposite of what happened.
+
+    Both remain violations and neither is a hallucination, so they are excluded
+    from all three entity counts and reported on their own. Keeping this inside
+    ``score_one`` rather than in an analysis script is deliberate: a table in a
+    paper that cannot be reproduced by running the shipped scorer is a table
+    the replication package does not support.
+    """
+    text = str(name).strip()
+    if text in ("", "None", "null"):
+        return True
+    if "/" in text or "," in text:
+        parts = [part.strip() for part in text.replace(",", "/").split("/") if part.strip()]
+        return bool(parts) and all(part in allowed_set for part in parts)
+    return False
+
+
 def score_one(
     response: dict[str, Any],
     allowed_set: set[str],
@@ -1913,7 +1944,9 @@ def score_one(
     cols = list(response.get("columns") or [])
     claims = [c for c in (response.get("claims") or []) if isinstance(c, dict)]
     claim_cols = [str(c.get("column", "")) for c in claims]
-    outside = [c for c in cols + claim_cols if c not in allowed_set]
+    out_of_evidence = [c for c in cols + claim_cols if c not in allowed_set]
+    artifacts = [c for c in out_of_evidence if is_scorer_artifact(c, allowed_set)]
+    outside = [c for c in out_of_evidence if c not in artifacts]
     entity = bool(outside)
     value = False
     unverifiable = False
@@ -1954,8 +1987,14 @@ def score_one(
     if value_table is not None:
         flags["value_unverifiable"] = unverifiable
     if evidence_names is not None:
+        # Reported together with the sub-channels, because the artifact count
+        # is what makes `entity <= invented + misfiled` hold: a response whose
+        # only out-of-evidence name is an artifact belongs to none of the
+        # three. Callers that do not ask for the decomposition get exactly the
+        # three original keys.
         flags["entity_invented"] = any(c not in evidence_names for c in outside)
         flags["entity_misfiled"] = any(c in evidence_names for c in outside)
+        flags["entity_artifact"] = bool(artifacts)
     return flags
 
 

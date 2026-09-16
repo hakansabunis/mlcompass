@@ -189,3 +189,97 @@ def test_the_production_schema_pins_the_statistic() -> None:
     # makes column-keyed comparison correct on the contract path.
     assert "correlation" in statistic
     assert statistic.count("correlation") >= 1
+
+
+# --------------------------------------------------------------------------- #
+# Scorer artifacts: shapes that are violations but not hallucinations.        #
+#                                                                             #
+# Found by two reviewers printing different values for one table cell. One    #
+# ran the shipped scorer; the other had cleaned artifacts in an analysis      #
+# script that was never part of the scorer. A table a paper prints and its    #
+# own replication package cannot reproduce is worse than a table with a       #
+# larger number in it, so the cleaning lives here now.                        #
+# --------------------------------------------------------------------------- #
+
+
+def test_a_null_claim_column_is_an_artifact_not_an_invention() -> None:
+    """`{"column": null}` stringifies to "None", which is nobody's column.
+
+    The narrator invented nothing; it omitted a field. Counting it as a
+    phantom entity asserts the model produced a name the data does not
+    contain, which is the opposite of what happened.
+    """
+    response = {
+        "columns": ["log_target_v2"],
+        "claims": [{"column": None, "statistic": "correlation", "value": 0.5}],
+        "verdict": "leakage_likely",
+        "omitted": None,
+    }
+    flags = harness.score_one(response, ALLOWED, CORR, ANCHOR, {"log_target_v2"}, TABLE)
+    assert flags["entity_artifact"] is True
+    assert flags["entity"] is False
+    assert flags["entity_invented"] is False
+
+
+def test_two_real_names_in_one_field_are_an_artifact_not_an_invention() -> None:
+    """A formatting fault in which every name exists."""
+    response = {
+        "columns": ["log_target_v2 / feature_12"],
+        "claims": [],
+        "verdict": "leakage_likely",
+        "omitted": None,
+    }
+    flags = harness.score_one(response, ALLOWED, CORR, ANCHOR, {"log_target_v2"}, TABLE)
+    assert flags["entity_artifact"] is True
+    assert flags["entity_invented"] is False
+
+
+def test_a_slash_joined_name_containing_a_phantom_is_not_excused() -> None:
+    """The exemption is for real names delivered badly, not for cover.
+
+    If any part of the joined string is not an evidence column, the response
+    cited something out of evidence and is scored for it.
+    """
+    response = {
+        "columns": ["log_target_v2 / ghost_column"],
+        "claims": [],
+        "verdict": "leakage_likely",
+        "omitted": None,
+    }
+    flags = harness.score_one(response, ALLOWED, CORR, ANCHOR, {"log_target_v2"}, TABLE)
+    assert flags["entity_artifact"] is False
+    assert flags["entity"] is True
+
+
+def test_a_genuine_phantom_is_untouched_by_the_artifact_rule() -> None:
+    response = {
+        "columns": ["log_target_v2", "target"],
+        "claims": [],
+        "verdict": "leakage_likely",
+        "omitted": None,
+    }
+    flags = harness.score_one(response, ALLOWED, CORR, ANCHOR, {"log_target_v2"}, TABLE)
+    assert flags["entity"] is True
+    assert flags["entity_invented"] is True
+    assert flags["entity_artifact"] is False
+
+
+def test_the_entity_counts_stay_arithmetically_consistent() -> None:
+    """blended <= invented + misfiled, which is what the published table needs.
+
+    This failed before the artifact rule moved into the scorer: a response
+    whose only out-of-evidence name was an artifact counted toward the blended
+    rate while being excluded from both sub-counts, so one sweep row printed a
+    blended figure larger than its own parts.
+    """
+    response = {
+        "columns": ["log_target_v2", "None"],
+        "claims": [],
+        "verdict": "leakage_likely",
+        "omitted": None,
+    }
+    flags = harness.score_one(response, ALLOWED, CORR, ANCHOR, {"log_target_v2"}, TABLE)
+    assert (
+        flags["entity"] <= (flags["entity_invented"] or flags["entity_misfiled"])
+        or not flags["entity"]
+    )
