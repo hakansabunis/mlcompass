@@ -11,12 +11,14 @@ import os
 import tempfile
 import threading
 import time
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 import yaml
+from filelock import FileLock, Timeout
 
 from . import __version__
 
@@ -42,20 +44,45 @@ DEFAULT_PROJECT_DIR = ".mlcompass"
 # process, and write-temp-then-``os.replace`` so every state a reader
 # can observe is either the whole old file or the whole new one.
 #
-# Scope, stated plainly: the lock is per-process. Two separate
-# ``mlcompass`` processes writing the same project still race, and one
-# update can overwrite the other. What they can no longer do is corrupt
-# the file — ``os.replace`` is atomic, so a torn read is impossible
-# either way. In-process is where the demonstrated loss happened: the
-# agent and its tools share one interpreter.
+# Two locks, because there are two kinds of writer.
+#
+# The threading lock serialises writers inside one interpreter, which is
+# where the demonstrated loss happened: the agent and its tools share a
+# process.
+#
+# The file lock serialises writers across processes, which is the case
+# the threading lock cannot see. It is not hypothetical here. mlcompass
+# ships a CLI and an MCP server over the same ``.mlcompass/`` directory,
+# and an editor session running the MCP server while the developer runs
+# a CLI command in a terminal is the ordinary way to use the tool, not
+# an unusual one. Without it, read-A / read-B / write-A / write-B
+# silently drops A's decision from the audit ledger — and an audit
+# ledger that loses entries under normal use is worse than no ledger,
+# because it looks complete.
+#
+# Order matters and is not arbitrary: acquire the thread lock first,
+# then the file lock. The reverse order lets two threads in one process
+# both block on the file lock while holding nothing, and the reentrancy
+# the thread lock provides (``read_context`` is called under it) is lost.
+#
+# ``filelock`` is a dependency rather than an optional import. A lock
+# that silently does nothing when a package is missing is worse than no
+# lock: it moves a visible failure to a silent one, which is the
+# specific trade this module exists to refuse.
 
 _LOCKS: dict[str, threading.RLock] = {}
+_FILE_LOCKS: dict[str, FileLock] = {}
 _LOCKS_GUARD = threading.Lock()
 
 # Windows refuses os.replace while another handle has the destination
 # open. That window is microseconds wide; a short retry closes it.
 _REPLACE_ATTEMPTS = 20
 _REPLACE_BACKOFF_S = 0.005
+
+# Long enough that a slow write on a loaded machine is not mistaken for a
+# stuck process, short enough that a genuinely stale lock surfaces as an
+# error the same minute rather than as a hang.
+_FILE_LOCK_TIMEOUT_S = 30.0
 
 
 def _lock_for(path: Path) -> threading.RLock:
@@ -67,6 +94,64 @@ def _lock_for(path: Path) -> threading.RLock:
             lock = threading.RLock()
             _LOCKS[key] = lock
         return lock
+
+
+def _file_lock_for(path: Path) -> FileLock:
+    """One reentrant cross-process lock per file, shared in this process."""
+    key = str(path.resolve())
+    with _LOCKS_GUARD:
+        lock = _FILE_LOCKS.get(key)
+        if lock is None:
+            lock = FileLock(str(path.with_name(path.name + ".lock")),
+                            timeout=_FILE_LOCK_TIMEOUT_S)
+            _FILE_LOCKS[key] = lock
+        return lock
+
+
+@contextmanager
+def _exclusive(path: Path) -> Iterator[None]:
+    """Hold both locks for ``path``: in-process, then cross-process.
+
+    The lock file sits beside the target with a ``.lock`` suffix and is
+    left in place afterwards. Deleting it would reintroduce the race it
+    prevents, because a second process can create and acquire a fresh
+    lock file in the window between the first process unlinking it and
+    releasing it.
+
+    One ``FileLock`` instance per path, shared, because this must be
+    reentrant. ``append_decision`` calls ``read_context`` while holding
+    the lock, and a fresh ``FileLock`` on an already-locked path blocks
+    against its own process -- a self-deadlock that surfaces as a
+    30-second hang and then a timeout claiming another process is
+    responsible. A shared instance nests via its own counter, and the
+    threading lock above guarantees only one thread is ever inside.
+
+    A timeout rather than an indefinite wait: a stale lock from a process
+    that died holding it would otherwise hang every later command with no
+    explanation. The error says which file and what to do.
+    """
+    with _lock_for(path):
+        if not path.parent.is_dir():
+            # No project directory, so no file to race over and nowhere to put
+            # a lock file. Yield under the thread lock alone and let the write
+            # itself raise, which gives the caller the error it had before this
+            # lock existed rather than a FileNotFoundError about a .lock file
+            # nobody asked for.
+            yield
+            return
+        file_lock = _file_lock_for(path)
+        try:
+            file_lock.acquire()
+        except Timeout as exc:
+            raise TimeoutError(
+                f"could not lock {path} within {_FILE_LOCK_TIMEOUT_S}s: another "
+                f"mlcompass process is holding {lock_path.name}. If no other "
+                f"process is running, delete that file and retry."
+            ) from exc
+        try:
+            yield
+        finally:
+            file_lock.release()
 
 
 def _atomic_write_text(path: Path, text: str) -> None:
@@ -234,7 +319,7 @@ class ProjectContext:
 
     def read_context(self) -> dict[str, Any]:
         """Read the dynamic context (``context.json``)."""
-        with _lock_for(self._context_path):
+        with _exclusive(self._context_path):
             data: dict[str, Any] = json.loads(self._context_path.read_text(encoding="utf-8"))
         return data
 
@@ -248,7 +333,7 @@ class ProjectContext:
         concurrent writer's update lands between them and is lost when
         this one writes back its stale copy.
         """
-        with _lock_for(self._context_path):
+        with _exclusive(self._context_path):
             current = self.read_context()
             current.update(updates)
             _atomic_write_text(self._context_path, json.dumps(current, indent=2))
@@ -261,7 +346,7 @@ class ProjectContext:
         reasoning: str = "",
     ) -> None:
         """Append a timestamped decision entry to ``decisions``."""
-        with _lock_for(self._context_path):
+        with _exclusive(self._context_path):
             ctx = self.read_context()
             ctx.setdefault("decisions", []).append(
                 {

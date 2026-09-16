@@ -47,6 +47,12 @@ dependencies = [
     "click>=8.0.0",
     "pyyaml>=6.0",
     "pandas>=2.0.0",
+    # Cross-process locking for .mlcompass/context.json. Not optional: the
+    # CLI and the MCP server write the same audit ledger, and an editor
+    # session running one while a terminal runs the other is the ordinary
+    # way to use this tool. A lock that silently does nothing when a
+    # package is missing turns a visible failure into a silent one.
+    "filelock>=3.12.0",
 ]
 
 [project.optional-dependencies]

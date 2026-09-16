@@ -416,11 +416,22 @@ offending items named.
 Inside mlcompass the boundary sits within a larger system: eleven pipeline
 tools behind a CLI, a tool-integration server~\cite{mcp}, an autonomous agent,
 and editor slash commands, all over a persistent project-context folder. Every
-one of those surfaces routes through the same deterministic backend, so the
-guarded path is the only path from narrator to user. Because the evidence
-layer is deterministic and offline, every command also works with the narrator
-absent; the narrator only adds explanation, and the contract is what makes
-that explanation safe to act on.
+one of those surfaces routes through the same deterministic backend. Because
+the evidence layer is deterministic and offline, every command works with the
+narrator absent; the narrator only adds explanation, and the contract is what
+makes that explanation safe to act on.
+
+\paragraph{Where the guarantee does not reach, and why we say so here.} The
+contract governs the narrator \emph{mlcompass itself invokes}. On the
+tool-server surface there is no such narrator by design: the tools return the
+evidence dictionary and the \emph{calling} model --- the one in the user
+editor --- is the interpreter. That model is a narrator over the same evidence
+and it is entirely ungoverned. So the honest statement is not that the guarded
+path is the only path from evidence to user; it is that \textbf{mlcompass
+guarantees the faithfulness of its own narration and cannot guarantee anyone
+else}. Exporting an enforceable contract across a tool-server boundary --- so
+that a client model consuming the evidence is held to the same check --- is
+open, and Section~\ref{sec:conclusion} names it as future work.
 
 \subsection{The three layers}
 
@@ -1291,10 +1302,12 @@ providers, tasks and leak patterns; verified claims over derived and relational
 statistics; contract composition along multi-step agent chains, each step's
 enum derived from the verified output of the step before, for which
 assume-guarantee composition across agent boundaries~\cite{zheng2026continuity}
-is the nearest existing machinery; and a paired comparison against a
+is the nearest existing machinery; a paired comparison against a
 template-generated, LLM-free narration of the same evidence, which is the
 experiment most likely to tell us what the language model is contributing that
-a deterministic renderer would not.
+a deterministic renderer would not; and an enforceable contract that survives
+export across a tool-server boundary, so that a client model consuming a
+tool own evidence is held to the same check as the tool internal narrator.
 
 \backmatter
 
