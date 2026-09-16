@@ -100,14 +100,25 @@ def rescore_one(run_dir: Path) -> dict[str, Any] | None:
         print(f"  skip     {run_dir.name}: no target column recorded")
         return None
 
-    new = check_defects(
-        script.read_text(encoding="utf-8", errors="replace"),
-        target=target,
-        duplicate_rows=old["input_duplicate_rows"],
-        minority_fraction=old["input_minority_fraction"],
-        target_is_last_column=old["target_is_last_column"],
-    )
-    return {"run": run, "old": old, "new": new, "target": target}
+    facts = {
+        "target": target,
+        "duplicate_rows": old["input_duplicate_rows"],
+        "minority_fraction": old["input_minority_fraction"],
+        "target_is_last_column": old["target_is_last_column"],
+    }
+    new = check_defects(script.read_text(encoding="utf-8", errors="replace"), **facts)
+
+    # Both sides of a revision turn, or the pairing spans two scorer versions
+    # and the reader gets a different answer depending on which columns they
+    # use. Arms without a revision round simply have no such file.
+    pre_script = run_dir / "emitted_pre_revision.py"
+    new_pre = None
+    if pre_script.exists():
+        new_pre = check_defects(
+            pre_script.read_text(encoding="utf-8", errors="replace"), **facts
+        )
+
+    return {"run": run, "old": old, "new": new, "new_pre": new_pre, "target": target}
 
 
 def _target_from_split(run: dict[str, Any]) -> str | None:
@@ -200,7 +211,7 @@ def main() -> int:
             (run_dir / "scoring_rescored.md").write_text(
                 _scoring_markdown(run_dir, result, new_experiment), encoding="utf-8"
             )
-        rows.append((run_dir, run, new))
+        rows.append((run_dir, run, new, result["new_pre"]))
 
     print(f"\nscanned {scanned} preserved run(s); {len(changed_runs)} changed")
     for name, a, b in changed_runs:
@@ -217,7 +228,8 @@ def main() -> int:
 
 
 def _append_rows(
-    rows: list[tuple[Path, dict[str, Any], dict[str, Any]]], new_experiment: str
+    rows: list[tuple[Path, dict[str, Any], dict[str, Any], dict[str, Any] | None]],
+    new_experiment: str,
 ) -> None:
     with RESULTS.open(encoding="utf-8", newline="") as f:
         header = next(csv.reader(f))
@@ -227,13 +239,18 @@ def _append_rows(
             existing[row["run_id"]] = row
 
     out = []
-    for run_dir, _run, new in rows:
+    for run_dir, _run, new, new_pre in rows:
         base = dict(existing.get(run_dir.name) or {})
         if not base:
             print(f"  skip     {run_dir.name}: no original CSV row to carry forward")
             continue
         base["experiment_id"] = new_experiment
         base["defect_count"] = str(new["defect_count"])
+        if new_pre is not None:
+            # Rescored under the same version as the post-revision side, so the
+            # two are comparable.
+            base["defect_count_pre_revision"] = str(new_pre["defect_count"])
+            base["defect_count_post_revision"] = str(new["defect_count"])
         for d in DEFECT_IDS:
             base[d] = str(int(bool(new["flags"][d])))
         note = "rescored from the preserved emitted.py under amendment A7; not re-executed"

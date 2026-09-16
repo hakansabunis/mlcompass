@@ -104,6 +104,7 @@ Protocol points this implements, and where they bite:
 from __future__ import annotations
 
 import argparse
+import ast
 import contextlib
 import csv
 import functools
@@ -1265,6 +1266,49 @@ def _fit_lines(source: str, lines: list[str]) -> list[int]:
     return hits
 
 
+def _integer_bindings(source: str) -> list[tuple[str, str]]:
+    """Names bound to an integer literal by an assignment statement.
+
+    Parsed rather than matched, because the regex this replaces could not tell
+    an assignment from a keyword argument on its own line:
+
+        model = RandomForestClassifier(
+            n_estimators=200,
+            random_state=42
+        )
+
+    ``random_state=42`` sits alone on a line, so ``^\\s*NAME\\s*=\\s*\\d+\\s*$``
+    harvested it as a binding. Substituting then rewrote every ``random_state``
+    to ``42``, producing ``42=42`` -- and destroying the very
+    ``random_state\\s*=\\s*\\d+`` match the seed rule was looking for. Two of the
+    three published ``no_seed`` defects were scripts that seed sklearn twice
+    (amendment A12).
+
+    That is the same shape as the defect A11 was written to fix, introduced by
+    the fix. An absence-scored rule repaired with a pattern that cannot see
+    syntax stays absence-scored; only the parser closes the class.
+
+    A model-written script that does not parse falls back to no bindings, which
+    restores the pre-A11 behaviour for that script rather than guessing.
+    """
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return []
+    found: list[tuple[str, str]] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Assign):
+            continue
+        if not isinstance(node.value, ast.Constant) or not isinstance(node.value.value, int):
+            continue
+        if isinstance(node.value.value, bool):
+            continue
+        for target in node.targets:
+            if isinstance(target, ast.Name):
+                found.append((target.id, str(node.value.value)))
+    return found
+
+
 def _int_constant_expansion(source: str) -> str:
     """The source with every name bound to an integer literal substituted.
 
@@ -1282,7 +1326,7 @@ def _int_constant_expansion(source: str) -> str:
     One level only, and deliberately: chasing a chain of aliases buys nothing
     real and costs the ability to say what this function does in a sentence.
     """
-    bindings = re.findall(r"^\s*([A-Za-z_]\w*)\s*=\s*(\d+)\s*$", source, re.MULTILINE)
+    bindings = _integer_bindings(source)
     if not bindings:
         return source
     expanded = source

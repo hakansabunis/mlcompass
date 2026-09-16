@@ -123,11 +123,86 @@ def anchor_column(evidence: dict[str, Any]) -> str | None:
 # --------------------------------------------------------------------------- #
 
 
+_CORRELATION_ALIASES = frozenset(
+    {
+        "correlation",
+        "corr",
+        "abs_corr",
+        "pearson",
+        "spearman",
+        "pearson_correlation",
+        "spearman_correlation",
+        "pearson_correlation_with_target",
+        "spearman_correlation_with_target",
+        "correlation_with_target",
+        "max_abs_correlation",
+    }
+)
+
+
+def _normalise_statistic(raw: Any) -> str:
+    return str(raw or "").strip().lower().replace("-", "_").replace(" ", "_")
+
+
+def _is_artifact(name: Any, allowed: set[str]) -> bool:
+    """A payload-reading fault rather than a citation. See the harness."""
+    text = str(name).strip()
+    if text in ("", "None", "null"):
+        return True
+    if "/" in text or "," in text:
+        parts = [part.strip() for part in text.replace(",", "/").split("/") if part.strip()]
+        return bool(parts) and all(part in allowed for part in parts)
+    return False
+
+
+def value_table(evidence: dict[str, Any]) -> dict[tuple[str, str], float]:
+    """Quantities the evidence carries, keyed by (column, statistic)."""
+    table: dict[tuple[str, str], float] = {}
+    entries = evidence.get("target_feature_correlations") or []
+    columns: set[str] = set()
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        feature, value = entry.get("feature"), entry.get("correlation")
+        if feature is None or not isinstance(value, (int, float)):
+            continue
+        columns.add(str(feature))
+        for alias in _CORRELATION_ALIASES:
+            table[(str(feature), alias)] = float(value)
+    for name in ("perfect_match_rate", "row_count"):
+        value = evidence.get(name)
+        if isinstance(value, (int, float)):
+            for column in columns:
+                table[(column, name)] = float(value)
+    return table
+
+
+def evidence_names(evidence: dict[str, Any]) -> set[str]:
+    """Every key and string value in the evidence dict."""
+    found: set[str] = set()
+
+    def walk(node: Any) -> None:
+        if isinstance(node, dict):
+            for key, value in node.items():
+                found.add(str(key))
+                walk(value)
+        elif isinstance(node, list):
+            for value in node:
+                walk(value)
+        elif isinstance(node, str):
+            found.add(node)
+
+    walk(evidence)
+    return found
+
+
 def score_record(
     record: dict[str, Any],
     allowed: set[str],
     corr: dict[str, float],
     anchor: str | None,
+    value_table: dict[tuple[str, str], float] | None = None,
+    evidence_names: set[str] | None = None,
 ) -> dict[str, Any]:
     """Recompute the channel flags for ONE record. ``error`` records are
     marked excluded and carry no channel flags."""
@@ -139,15 +214,33 @@ def score_record(
     claim_cols = [str(c.get("column", "")) for c in claims]
     verdict_raw = record.get("verdict")
 
-    entity = any(c not in allowed for c in cited + claim_cols)
+    # Entity: artifacts of reading the payload are not citations. A claim whose
+    # column is JSON null stringifies to "None"; several real column names in
+    # one field is a formatting fault in which every name exists. Both are
+    # violations, neither is a phantom entity.
+    out_of_evidence = [c for c in cited + claim_cols if c not in allowed]
+    artifacts = [c for c in out_of_evidence if _is_artifact(c, allowed)]
+    outside = [c for c in out_of_evidence if c not in artifacts]
+    entity = bool(outside)
+    entity_invented = any(c not in evidence_names for c in outside) if evidence_names else False
+    entity_misfiled = any(c in evidence_names for c in outside) if evidence_names else False
 
+    # Value: keyed on (column, statistic). Keying on the column alone compares
+    # a perfect-match-rate claim against that column's correlation, which
+    # reports the narrator wrong for being right.
     value = False
+    value_unverifiable = False
     for claim in claims:
         col = str(claim.get("column", ""))
         val = claim.get("value")
-        if col in corr and (
-            not isinstance(val, (int, float)) or abs(float(val) - corr[col]) > TOLERANCE
-        ):
+        if col not in corr:
+            continue
+        key = (col, _normalise_statistic(claim.get("statistic")))
+        if value_table is not None and key not in value_table:
+            value_unverifiable = True
+            continue
+        measured = value_table[key] if value_table is not None else corr[col]
+        if not isinstance(val, (int, float)) or abs(float(val) - measured) > TOLERANCE:
             value = True
 
     committed = bool(cited or claims) and verdict_raw not in ("", "cannot_determine")
@@ -174,7 +267,11 @@ def score_record(
     return {
         "excluded_error": False,
         "entity": entity,
+        "entity_invented": entity_invented,
+        "entity_misfiled": entity_misfiled,
+        "entity_artifact": bool(artifacts),
         "value": value,
+        "value_unverifiable": value_unverifiable,
         "omission": omission,
         "omission_undetected": omission_undetected,
         "abstained": str(verdict_raw or "") == ABSTAIN_VERDICT,
@@ -204,8 +301,10 @@ def score_cell(
     allowed = allowed_columns(evidence)
     corr = correlation_map(evidence)
     anchor = anchor_column(evidence)
+    table = value_table(evidence)
+    names = evidence_names(evidence)
 
-    scored = [score_record(r, allowed, corr, anchor) for r in records]
+    scored = [score_record(r, allowed, corr, anchor, table, names) for r in records]
     valid = [s for s in scored if not s["excluded_error"]]
     n = len(valid)
 

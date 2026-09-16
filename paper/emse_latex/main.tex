@@ -361,8 +361,9 @@ perfect-match rate $P(\hat{y}=y)$.
 
 Reporting Spearman beside Pearson is deliberate rather than decorative.
 Monotone target transforms ($\log y$, $\sqrt{y}$, $\alpha y + \beta$) pull
-$\rho_P$ down while $\rho_S$ stays at $1.0$, so a log-target leak sitting at
-$\rho_P \approx 0.94$ slides under a Pearson-only filter. The evidence
+$\rho_P$ down while $\rho_S$ stays at $1.0$, so the log-target leak in our own
+synthetic frame sits at $\rho_P = 0.93$ against $\rho_S = 0.999$ and would
+slide under a Pearson-only filter. The evidence
 dictionary is the product of a pipeline that has to be right about this before
 the narrator is asked to say anything at all.
 
@@ -882,16 +883,26 @@ because it declined. $N=200$ per arm.}
 \toprule
  & \texttt{A-L1} & \texttt{A-CONTRACT} \\
 \midrule
-Abstained (\texttt{cannot\_determine} or equivalent) & 2/200 & 0/200 \\
-Claims per response, median                          & 10    & 10 \\
-Never mentioned the anchor                           & 0/200 & 0/200 \\
+Abstained (\texttt{verdict} is \texttt{cannot\_determine}) & 0/200 & 0/200 \\
+Claims per response, median                                & 10    & 10 \\
+Never mentioned the anchor                                 & 0/200 & 0/200 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The narrator commits, and commits to ten structured claims per response. A
-zero here is therefore a measurement and not an artefact of a narrator that
-declined to speak.
+The narrator commits, and commits to ten structured claims per response. The
+abstention count is not merely low: across all 3{,}800 records in this study,
+on both providers, in every arm and every paraphrase, \textbf{the verdict field
+is never \texttt{cannot\_determine}}. Every response asserts a conclusion. A
+zero on the other channels is therefore a measurement and not an artefact of a
+narrator that declined to speak.
+
+Abstention is defined here as the schema's own \texttt{cannot\_determine}
+value and nothing else. An earlier draft of this paper reported small non-zero
+abstention counts; they came from a regular expression that matched phrases
+such as ``not by legitimate variance'' inside verdicts that in fact assert
+leakage. The operational definition above is what the replication package's
+independent scorer applies, and it returns zero.
 
 \section{RQ2 and RQ3: Prevention, and Whether It Beats the Alternatives}\label{sec:rq3}
 
@@ -976,9 +987,10 @@ different model family --- \texttt{gpt-5.4-mini}, same evidence hash, same
 prompts, same scorer, same reask budget, temperature 1.0, zero transport
 errors. All seven arms score \textbf{0/200}, including \texttt{A-L1}.
 
-The floor arm does not fail. The model cites exactly the ten evidence columns,
-commits to ten structured claims per response, abstains in 0 of 200, and never
-writes \texttt{r2} into a column field. Nothing reaches a user that any arm
+The floor arm does not fail. In 199 of 200 responses the model cites exactly
+the ten evidence columns and makes ten structured claims (the remaining
+response cites two and claims two); it abstains in 0 of 200 and never writes
+\texttt{r2} into a column field. Nothing reaches a user that any arm
 needed to prevent, so no comparison between arms exists on this provider.
 
 ``Nothing to prevent'' would be one response too strong. Tier~B caught a single
@@ -1075,9 +1087,11 @@ predicts where a variant will fall.
 
 \paragraph{Invention exists here, at an order of magnitude below the
 headline.} Five of six variants produced names absent from $E$ entirely --- the
-frame's ten columns are \texttt{log\_target\_v2}, \texttt{near\_target\_proxy}
-and \texttt{feature\_4}\ldots\texttt{feature\_12}, and there is no column
-called \texttt{target}, so a response citing
+ten columns $E$ carries are \texttt{log\_target\_v2},
+\texttt{near\_target\_proxy}, and \texttt{feature\_4} through
+\texttt{feature\_10} together with \texttt{feature\_12} --- not
+\texttt{feature\_11}, for the reason given below. There is no column called
+\texttt{target}, so a response citing
 \texttt{[log\_target\_v2, near\_target\_proxy, target]} invented the third.
 Phantom-entity fabrication is therefore real and not an artefact of the
 scorer. It occurs at 0--7 per 100, not at the 36--72\,\% the blended rate
@@ -1130,10 +1144,9 @@ would choose \emph{terse} and would be choosing the variant that most often
 invents a column that does not exist.
 
 Abstention was checked here too, for the same reason as in
-Section~\ref{sec:rq1}. In the order of Table~\ref{tab:sweep} --- terse,
-baseline, expert, cautious, helpful, mechanical --- it is 1, 2, 1, 0, 0 and 8
-per 100. The low cells are low because the model cited cleanly, not because it
-declined to answer.
+Section~\ref{sec:rq1}, and is 0/100 in every one of the six variants. The low
+cells are low because the model cited cleanly, not because it declined to
+answer.
 
 Two further diagnostic arms ($N=200$ each, records in the replication
 package) pull the tiers apart. Placing the evidence-bound enum in the schema
@@ -1170,9 +1183,11 @@ The excluded run is disclosed rather than absorbed. Section~\ref{sec:design}'s
 exclusion rule covers \emph{transport} failures; this call succeeded and
 returned prose without a code block, which is a substantive outcome and not
 missing data --- and on the \texttt{control+revise} arm it is arguably the
-outcome that arm is about. Scored as unchanged it would give
-\texttt{control+revise} 35 over 36 runs rather than 35 over 35; neither
-reading changes any conclusion below.
+outcome that arm is about. Its pre-revision script carries one
+defect (\texttt{no\_validation}), so scored as unchanged the arm totals 36 over
+36 runs rather than 35 over 35, and \texttt{control}~$\rightarrow$~%
+\texttt{control+revise} reads 33~$\rightarrow$~36. That is the same ``noise
+around no effect'' the section argues for, in the same direction.
 
 \begin{table}[t]
 \caption{Flagged defects, summed over each (model, arm) cell. Cells hold nine
@@ -1188,11 +1203,11 @@ same preserved scripts.}
 Model & \texttt{control} & \texttt{control+revise} & \texttt{advise} & \texttt{advise+audit} \\
 \midrule
 deepseek-flash        & 13 & 11 & 13 & \textbf{4} \\
-ministral-8b          &  8 &  6 &  3 & \textbf{0} \\
+ministral-8b          &  8 &  6 &  2 & \textbf{0} \\
 qwen2.5-7b (local)    &  6 &  9 &  4 & \textbf{1} \\
-gpt-5.4-mini          &  6 &  9 &  6 & \textbf{3} \\
+gpt-5.4-mini          &  6 &  9 &  5 & \textbf{3} \\
 \midrule
-\textbf{total}        & \textbf{33} & \textbf{35} & \textbf{26} & \textbf{8} \\
+\textbf{total}        & \textbf{33} & \textbf{35} & \textbf{24} & \textbf{8} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1215,11 +1230,11 @@ Rule & \texttt{control} & \texttt{ctrl+revise} & \texttt{advise} & \texttt{advis
 \texttt{leak\_duplicate\_rows}        & 24 & 24 & 14 & \textbf{8} \\
 \texttt{no\_validation}               &  7 & 10 &  9 & \textbf{0} \\
 \texttt{target\_in\_features}         &  2 &  0 &  0 & \textbf{0} \\
-\texttt{no\_seed}                     &  0 &  1 &  2 & \textbf{0} \\
+\texttt{no\_seed}                     &  0 &  1 &  0 & \textbf{0} \\
 \texttt{leak\_fit\_before\_split}     &  0 &  0 &  1 & \textbf{0} \\
 \texttt{wrong\_metric\_for\_imbalance}&  0 &  0 &  0 & \textbf{0} \\
 \midrule
-\textbf{total}                        & \textbf{33} & \textbf{35} & \textbf{26} & \textbf{8} \\
+\textbf{total}                        & \textbf{33} & \textbf{35} & \textbf{24} & \textbf{8} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1298,13 +1313,32 @@ publishable outcome \emph{before any data existed}, and nothing here refuted
 it; but a pre-registered prediction that survives is not a measured null, and
 we do not report it as one.
 
-\section{Four Corrections to Our Own Instruments}\label{sec:instruments}
+\section{Corrections to Our Own Instruments}\label{sec:instruments}
 
-Every number in this paper is produced by an instrument we wrote. We found
-four faults in those instruments while running the study --- three defects and
-one non-reproduction --- most of them after results had already been drawn from
-them, and all four are reported here rather than in an appendix because each
-changed something a reader would otherwise take at face value. The replication package preserves the original
+Every number in this paper is produced by an instrument we wrote. We found six
+faults in those instruments while running the study --- five defects and one
+non-reproduction --- most of them after results had already been drawn from
+them, and all six are reported here rather than in an appendix because each
+changed something a reader would otherwise take at face value.
+
+\begin{table}[t]
+\caption{What each correction moved. The final column is the figure this paper
+reports.}
+\label{tab:corrections}
+\centering
+\begin{tabular}{@{}llr@{}}
+\toprule
+Correction & Quantity affected & Before $\rightarrow$ after \\
+\midrule
+1 \& 3: checklist forms  & \texttt{control}/\texttt{advise}/\texttt{advise+audit} & 40/31/15 $\rightarrow$ 33/24/8 \\
+2: value scorer          & sweep value-channel flags & 85 $\rightarrow$ 2 \\
+artifact exclusion       & \texttt{expert} blended entity & 57/100 $\rightarrow$ 56/100 \\
+abstention definition    & abstentions, all arms & non-zero $\rightarrow$ 0 \\
+4: provider model pin    & every cell of one battery & $0/0$ $\rightarrow$ measurable \\
+5: plan enforcement      & runs executed off-plan & 48 relabelled \\
+\bottomrule
+\end{tabular}
+\end{table} The replication package preserves the original
 scoring beside every correction, so a reader can recompute either.
 
 \subsection{Defect 1: the checklist penalised correct code, in a biased
@@ -1357,7 +1391,61 @@ should verify it rather than accept it. The next correction that moves these
 numbers the other way will be the one indicating the scorer is finally
 unbiased.
 
-\subsection{Defect 2: a provider change silently emptied every cell}
+\subsection{Defect 2: the value scorer never read the \texttt{statistic} field}
+
+Each structured claim is a triple \{column, statistic, value\}. The scorer
+compared every claim against the \emph{correlation} of its column, whatever
+statistic the claim named. On the contract path that is correct, because
+Tier~A pins \texttt{statistic} to a single admissible value and a claim there
+cannot be about anything else. On every unconstrained arm, where the narrator
+chooses the statistic itself, it is wrong.
+
+The cost was a channel that appeared to fire and did not. Re-scoring the
+paraphrase sweep, 69 of roughly 85 value-channel flags were claims of the form
+\texttt{\{log\_target\_v2, perfect\_match\_rate, 0.0\}} compared against that
+column's correlation of $0.9987$ --- and $0.0$ is the correct perfect-match
+rate. The scorer was reporting the narrator wrong for being right.
+
+Keyed on (column, statistic), value fabrication in the sweep is 0, 0, 1, 1, 0
+and 0 per 100. The reading it replaced --- that this channel stays quiet ---
+was substantially correct. What the correction \emph{uncovered} is
+Section~\ref{sec:rq4}'s unverifiable channel, at up to 45 per 100, which is a
+larger finding than the one it removed.
+
+This defect was found because two readers of an earlier draft disagreed about
+what the channel was measuring. One recomputed the rates and said the paper
+was wrong to call the channel quiet; the other opened the flagged records. We
+record the provenance because the disagreement, not either reader, is what
+located it.
+
+\subsection{Defect 3: the fix for Defect~1 introduced a defect of the same shape}
+
+Defect~1's correction taught the seed rule to see a value hoisted to a
+constant, by harvesting \texttt{NAME = <integer>} with a regular expression and
+substituting. The pattern matches a line like
+
+\begin{quote}\ttfamily\small
+\ \ \ \ random\_state=42
+\end{quote}
+
+which is a keyword argument inside a multi-line call, not an assignment. The
+substitution then rewrote every \texttt{random\_state} in the script to
+\texttt{42}, producing \texttt{42=42} --- and destroying the very
+\texttt{random\_state=<digit>} match the seed rule looks for. Two of the three
+published \texttt{no\_seed} defects were scripts that seed scikit-learn twice.
+
+An absence-scored rule repaired with a pattern that cannot see syntax is still
+absence-scored. The harvest is now done by parsing the script and taking
+assignment statements, which closes the class rather than the instance; a
+script that does not parse contributes no bindings.
+
+Correcting it moves \texttt{advise} from 26 flagged defects to \textbf{24}
+(Tables~\ref{tab:ab} and~\ref{tab:perrule}), with \texttt{control} and
+\texttt{advise+audit} unchanged. That is a \emph{fourth} correction in the
+direction of our hypothesis, and we note it as such in
+Section~\ref{sec:threats} rather than only here.
+
+\subsection{Defect 4: a provider change silently emptied every cell}
 
 The contract harness pins a default model per provider. A pin was updated on a
 deprecation notice and never exercised. Every current model at that provider is
@@ -1383,7 +1471,7 @@ that \emph{does} accept the call is absent from the provider's
 would have confirmed the wrong conclusion. The only reliable check is to send
 the call shape the system actually uses.
 
-\subsection{Defect 3: the pre-registration was not enforced, and the tooling
+\subsection{Defect 5: the pre-registration was not enforced, and the tooling
 caused the violation}
 
 The downstream protocol rests on freezing a plan before execution. For one run
@@ -1414,7 +1502,7 @@ returns, because a violation discoverable only by spending money is not a
 check. The 48 rows were relabelled rather than deleted, with a note stating
 what happened, and the arm was rerun against the enforced plan.
 
-\subsection{Defect 4: a point estimate is a property of a date}
+\subsection{Non-reproduction: a point estimate is a property of a date}
 
 A pilot battery run three months earlier, on the same task and the same
 provider family with the same scorer, measured the bare-arm entity rate at
@@ -1587,8 +1675,8 @@ The seven-arm battery ran on two providers; the second returns 0/200 on every
 arm including the floor, so it confirms that the rates do not transfer and
 contributes nothing to the comparison between mechanisms
 (Section~\ref{sec:rq3-second}). The paraphrase sweep and the diagnostic arms
-are single-provider. RQ5 uses four models across three providers plus a local
-model, which is where this paper's generalisation evidence lives. Rates should
+are single-provider. RQ5 uses four models --- three hosted, one local ---
+which is where this paper's generalisation evidence lives. Rates should
 not be transferred between providers; our own sweep shows they do not transfer
 across paraphrases of a single prompt on a single provider.
 
@@ -1604,10 +1692,15 @@ decline to report a null. No decision rule for ``beats'' was pre-registered,
 and with medians separated by $0.0002$ that, rather than the amount of data, is
 the binding constraint on any stronger claim.
 
-\paragraph{Corrections have run one way.} Three scorer corrections have each
-moved the downstream numbers toward our hypothesis. The mechanism is stated and
-checkable in Section~\ref{sec:instruments}; we flag the pattern explicitly so a
-reader can weigh it.
+\paragraph{Corrections have run one way.} Four scorer corrections have each
+moved the downstream numbers toward our hypothesis, the fourth being the fix to
+the fix (Section~\ref{sec:instruments}, Defect 3). The mechanism is stated and
+checkable there --- false positives concentrate in careful code, and the
+treatment arms produce more careful code --- but four in a row is a pattern a
+reader should weigh independently of the mechanism we offer for it. The
+correction that moves these numbers the other way has not arrived, and until it
+does we cannot distinguish a biased instrument being repaired from an instrument
+being repaired in a biased direction.
 
 \section{Conclusion}\label{sec:conclusion}
 

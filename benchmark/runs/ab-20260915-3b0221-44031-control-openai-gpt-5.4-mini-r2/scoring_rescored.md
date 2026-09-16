@@ -1,6 +1,6 @@
 # Rescored: ab-20260915-3b0221-44031-control-openai-gpt-5.4-mini-r2
 
-Experiment id for these rows: `ab-20260915-3b0221-rescored-v2`.
+Experiment id for these rows: `ab-20260915-3b0221-v3`.
 
 Re-scored from the preserved `emitted.py` with the corrected
 `target_in_features` rule (amendment A7). Nothing was re-executed and

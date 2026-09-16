@@ -499,3 +499,76 @@ checkable — false positives concentrate in careful code, and the treatment
 arms produce more careful code — but anyone reading this should confirm it
 rather than accept it. **The next correction that moves the numbers the
 other way will be the one that tells us the scorer is finally unbiased.**
+
+**A12 — the A11 fix introduced a defect of the same shape, and two published
+`no_seed` defects were its false positives.** Found in external review of the
+manuscript.
+
+A11 taught the seed rule to see a value hoisted to a constant, by harvesting
+`NAME = <integer>` with `^\s*([A-Za-z_]\w*)\s*=\s*(\d+)\s*$` under MULTILINE
+and substituting. That pattern matches a keyword argument on its own line:
+
+```python
+model = RandomForestClassifier(
+    n_estimators=200,
+    random_state=42
+)
+```
+
+`random_state=42` is harvested as a binding, every `random_state` in the
+script is rewritten to `42`, the expansion contains `42=42`, and the sklearn
+pattern `random_state\s*=\s*\d+` no longer matches. Two of the three published
+`no_seed` defects were scripts that seed scikit-learn twice.
+
+The lesson is the one A7 already recorded and A11 failed to apply: **an
+absence-scored rule repaired with a pattern that cannot see syntax is still
+absence-scored.** The harvest now parses the script and takes assignment
+statements, which closes the class rather than the instance. A script that
+does not parse contributes no bindings, restoring pre-A11 behaviour for that
+script rather than guessing.
+
+Rescored as `-v3`. `advise` falls **26 → 24** (ministral-8b 3 → 2,
+gpt-5.4-mini 6 → 5); `control` (33) and `advise+audit` (8) are unchanged.
+
+**This is the fourth correction in a row that moves the numbers toward our
+hypothesis.** The mechanism is stated and checkable — false positives
+concentrate in careful code, and the treatment arms produce more careful code
+— but four consecutive is a pattern worth weighing on its own. Until a
+correction moves them the other way we cannot distinguish a biased instrument
+being repaired from an instrument being repaired in a biased direction, and
+the manuscript's threats section now says so.
+
+**A13 — the rescorer scored only one side of a revision turn.** `rescore_one`
+read `emitted.py` and never `emitted_pre_revision.py`, so a rescored row
+carried a corrected `defect_count` beside a `defect_count_pre_revision` frozen
+at the previous scoring. The revision table could then be recovered three ways
+from the same CSV, and the published pairing was not the one the shipped
+scorer produces over the preserved bytes.
+
+Both sides are now scored under the same version. With A12 also applied, the
+within-arm result is **33 unchanged / 2 worse / 0 better** from either column
+pairing — the figure the manuscript reports, now reproducible.
+
+**A14 — abstention was measured with a regular expression that matched
+confirmations.** The manuscript reported small non-zero abstention counts.
+They came from a pattern matching phrases such as *"not by legitimate
+variance"* inside verdicts that assert leakage.
+
+Measured against the schema's own value: `verdict == "cannot_determine"`
+occurs **0 times in all 3,800 records**, on both providers, in every arm and
+every paraphrase. That is the stronger statement and it is the one the
+replication package's independent scorer produces.
+
+**A15 — the independent scorer had drifted from the channels it checks.**
+`scripts/independent_scorer.py` exists to re-derive every published rate from
+the raw records with a second implementation, and `make_tables.py` builds the
+manuscript tables from it. It was still keying the value channel on the column
+alone and blending artifacts into the entity channel, so the documented
+pipeline produced numbers the manuscript had already disowned, and its
+"0 disagreements" line was comparing one uncorrected implementation against
+equally uncorrected flags frozen in the records.
+
+Brought to the corrected definitions, restated rather than imported — a second
+implementation that imports the first checks nothing. It now reproduces the
+manuscript's figures exactly, including `expert` entity 56/100 [46.23, 65.33]
+and value 1/100.
