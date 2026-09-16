@@ -1,0 +1,23 @@
+Running live ablation, task=synthetic, N=200 (evidence columns: 10, anchor: log_target_v2)...
+  evidence dumped: C:\Users\SABUNIS\Desktop\ml-copilot\scripts\runs\evidence_618bd74a.json
+  plan: 2 cell(s) x N=200 -> ~410 calls, ESTIMATED cost ~$0.11 (model=deepseek-chat; rough token estimate, not a bill)
+    tier_a                 A-STRICT-ENUM (needs --strict)    200 calls  ~$0.05
+    stress_mech            A-L3-WORST-PARAPHRASE             210 calls  ~$0.06
+  provider=deepseek kind=openai model=deepseek-chat strict=False temperature=1.0
+  provenance: harness 2474a6f, adapter 668f966, product 43218bf (pinned into every record)
+  tier_a: 25/200
+  tier_a: 50/200
+  tier_a: 75/200
+  tier_a: 100/200
+  tier_a: 125/200
+  tier_a: 150/200
+  tier_a: 175/200
+  tier_a: 200/200
+  stress_mech: 25/200
+  stress_mech: 50/200
+  stress_mech: 75/200
+  stress_mech: 100/200
+  stress_mech: 125/200
+  stress_mech: 150/200
+  stress_mech: 175/200
+  stress_mech: 200/200
