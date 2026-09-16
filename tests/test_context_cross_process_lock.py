@@ -141,3 +141,46 @@ def test_a_missing_project_directory_does_not_become_a_lock_error(tmp_path: Path
     with pytest.raises((FileNotFoundError, OSError)) as caught:
         ctx.append_decision(command="advise", summary="x")
     assert ".lock" not in str(caught.value)
+
+
+def test_a_held_lock_times_out_with_a_usable_message(
+    project: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The error path the linter caught and the tests had not.
+
+    A stale lock file from a process that died holding it would otherwise hang
+    every later command with no explanation, so the wait is bounded. The
+    message has to name the file to delete -- and it referenced a variable that
+    no longer existed, so raising it at all would have produced a NameError
+    instead of the diagnosis. Exercised here rather than reasoned about.
+    """
+    import threading
+    import time
+
+    import filelock
+
+    from mlcompass import context as ctx_mod
+    from mlcompass.context import ProjectContext
+
+    monkeypatch.setattr(ctx_mod, "_FILE_LOCK_TIMEOUT_S", 0.2)
+    held = ctx_mod._file_lock_for(project / "context.json")
+    foreign = filelock.FileLock(held.lock_file, timeout=5)
+
+    released = threading.Event()
+
+    def hold() -> None:
+        with foreign:
+            released.wait(timeout=5)
+
+    holder = threading.Thread(target=hold)
+    holder.start()
+    time.sleep(0.2)
+    try:
+        with pytest.raises(TimeoutError) as caught:
+            ProjectContext(project).append_decision(command="x", summary="y")
+        message = str(caught.value)
+        assert "context.json.lock" in message, message
+        assert "delete that file" in message, message
+    finally:
+        released.set()
+        holder.join(timeout=5)

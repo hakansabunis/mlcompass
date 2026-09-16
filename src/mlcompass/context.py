@@ -11,11 +11,12 @@ import os
 import tempfile
 import threading
 import time
+from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 import yaml
 from filelock import FileLock, Timeout
@@ -145,7 +146,7 @@ def _exclusive(path: Path) -> Iterator[None]:
         except Timeout as exc:
             raise TimeoutError(
                 f"could not lock {path} within {_FILE_LOCK_TIMEOUT_S}s: another "
-                f"mlcompass process is holding {lock_path.name}. If no other "
+                f"mlcompass process is holding {Path(file_lock.lock_file).name}. If no other "
                 f"process is running, delete that file and retry."
             ) from exc
         try:
