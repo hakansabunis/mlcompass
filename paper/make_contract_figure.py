@@ -18,17 +18,20 @@ from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
 
 ROOT = Path(__file__).parent
 
-FIG_W, FIG_H = 3.45, 3.55  # inches, single IEEE column
+# Two targets, one drawing. 3.45in is a single IEEE column; 4.9in is the
+# Springer sn-jnl text width, where the IEEE size would sit small and
+# under-set with the caption running wider than the figure.
+FIG_W, FIG_H = 4.9, 4.4
 
 fig, ax = plt.subplots(figsize=(FIG_W, FIG_H))
-ax.set_xlim(0, 1)
+ax.set_xlim(-0.03, 1.03)  # a little air, or the widest box clips at the edge
 ax.set_ylim(0, 1)
 ax.axis("off")
 
 BOX = dict(boxstyle="round,pad=0.025,rounding_size=0.02", linewidth=0.9)
 
 
-def box(x, y, w, h, lines, fc="#f5f5f5", bold_first=True, fs=6.8):
+def box(x, y, w, h, lines, fc="#f5f5f5", bold_first=True, fs=9.2):
     ax.add_patch(
         FancyBboxPatch((x - w / 2, y - h / 2), w, h, fc=fc, ec="black", **BOX)
     )
@@ -46,7 +49,7 @@ def box(x, y, w, h, lines, fc="#f5f5f5", bold_first=True, fs=6.8):
         )
 
 
-def arrow(p, q, label=None, lx=0.0, ly=0.0, style="-|>", rad=0.0, fs=6.2):
+def arrow(p, q, label=None, lx=0.0, ly=0.0, style="-|>", rad=0.0, fs=8.4):
     ax.add_patch(
         FancyArrowPatch(
             p,
@@ -92,7 +95,17 @@ box(
     ],
     fc="#e8e8e8",
 )
-box(0.5, 0.075, 0.86, 0.085, ["User", "validated citations + verified claims only"])
+box(
+    0.5,
+    0.075,
+    0.86,
+    0.105,
+    [
+        "User",
+        "validated citations + verified claims,",
+        "then free text marked NOT verified",
+    ],
+)
 
 # ---- arrows ----------------------------------------------------------------
 arrow((0.5, 0.892), (0.5, 0.818))
@@ -101,11 +114,11 @@ arrow(
     (0.5, 0.618),
     label="TIER A:  enum($A_E$) bound into\ntool schema at call time",
     lx=-0.26,
-    fs=6.0,
+    fs=8.1,
 )
 arrow((0.5, 0.532), (0.5, 0.433))
 # pass path
-arrow((0.42, 0.3175), (0.42, 0.118), label="✓ faithful", lx=-0.115, fs=6.2)
+arrow((0.42, 0.3175), (0.42, 0.118), label="✓ faithful", lx=-0.115, fs=8.4)
 # retry loop (right side, curved up); label placed clear of the narrator box
 arrow((0.72, 0.41), (0.72, 0.545), rad=-0.3)
 ax.text(
@@ -114,7 +127,7 @@ ax.text(
     "✗ violation:\nretry (≤2),\nnames items",
     ha="center",
     va="center",
-    fontsize=5.7,
+    fontsize=7.7,
     style="italic",
 )
 # residual path
@@ -123,10 +136,10 @@ arrow(
     (0.58, 0.118),
     label="after budget:\nstrip unsound /\nflag omission",
     lx=0.155,
-    fs=5.8,
+    fs=7.8,
 )
 
 fig.tight_layout(pad=0.15)
-fig.savefig(ROOT / "inista_latex" / "contract_flow.pdf")
+fig.savefig(ROOT / "emse_latex" / "contract_flow.pdf")
 fig.savefig(ROOT / "contract_flow.png", dpi=300)
-print("OK: contract_flow.pdf + contract_flow.png")
+print("OK: emse_latex/contract_flow.pdf + contract_flow.png")

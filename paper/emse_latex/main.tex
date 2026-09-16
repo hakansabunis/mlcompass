@@ -403,7 +403,21 @@ asymmetry argument.
 
 \subsection{Architecture and the trust boundary}
 
-A dashed trust boundary splits the system in two. On one side is everything
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{contract_flow.pdf}
+\caption{The evidence-bound contract. The deterministic evidence producer
+emits $E$; Tier~A binds the tool schema's enums to $E$ at call time; Tier~B
+re-checks the returned answer in plain code on three channels, retries with
+the offending items named, and after the budget strips unsound content and
+flags a persistent omission. The bottom box states the scope honestly: the
+validated channels carry the guarantee, and the free-text field reaches the
+user too, marked as unverified.}
+\label{fig:contract}
+\end{figure}
+
+Figure~\ref{fig:contract} draws the system the way the contract sees it. A
+dashed trust boundary splits it in two. On one side is everything
 deterministic: the pure-Python evidence producer, the dictionary $E$, the
 Tier~B verifier, and the user-facing output, all plain code. On the other is
 the \emph{LLM narrator}, which we treat as untrusted regardless of who serves
