@@ -132,3 +132,11 @@ api_keys.txt
 
 # Agent run workspaces, created by `mlcompass agent --project-path`.
 .mlcompass-agent/
+
+# Compiled output — regenerate with tectonic (see paper/emse_latex/BUILD.md)
+paper/emse_latex/main.pdf
+paper/emse_latex/*.log
+paper/emse_latex/*.blg
+paper/emse_latex/*.aux
+paper/emse_latex/*.bbl
+paper/emse_latex/*.out

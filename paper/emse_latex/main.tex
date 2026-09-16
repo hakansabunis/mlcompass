@@ -1,7 +1,10 @@
 %% Empirical Software Engineering (Springer) submission
 %% Class + styles from the Springer Nature LaTeX template v3.1.
 %% Compile: pdflatex -> bibtex -> pdflatex -> pdflatex
-\documentclass[sn-basic,Numbered]{sn-jnl}
+% The pdflatex option is not optional here. Without it sn-jnl loads
+% breakurl, which emits PostScript specials and fails under any engine
+% that writes PDF directly (pdflatex, xelatex, lualatex, tectonic).
+\documentclass[pdflatex,sn-basic,Numbered]{sn-jnl}
 
 \usepackage{graphicx}
 \usepackage{multirow}
@@ -11,6 +14,10 @@
 \usepackage{xcolor}
 \usepackage{textcomp}
 \usepackage{url}
+% Required by sn-jnl: the class installs a footnote hook from manyfoot
+% at \begin{document} and fails with an undefined control sequence
+% without it. Present in the template's own preamble.
+\usepackage{manyfoot}
 
 \theoremstyle{definition}
 \newtheorem{definitionx}{Definition}
@@ -931,9 +938,9 @@ Arm & Mechanism & Rate & 95\,\% CI & $k/N$ \\
 \texttt{A-STATIC-ENUM-STALE} & strict mode, author-time enum      & 0.0\,\%$^{\dagger}$ & [0.0, 1.9] & 0/200 \\
 \bottomrule
 \end{tabular}
-\\[2pt]
-\footnotesize $^{\dagger}$Degenerate on this task --- see
-Section~\ref{sec:rq3-degenerate}. The row carries no comparison.
+
+{\footnotesize $^{\dagger}$Degenerate on this task --- see
+Section~\ref{sec:rq3-degenerate}. The row carries no comparison.}
 \end{table}
 
 \subsection{It is the validator, not the loop}
