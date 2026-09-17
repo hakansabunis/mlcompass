@@ -38,8 +38,8 @@
 \begin{document}
 
 \title[An Evidence-Bound Runtime Contract for LLM Narration]{Prompts Are
-Advisory, Schemas Are Enforcement: An Evidence-Bound Runtime Contract for
-Claim-Faithful LLM Narration of Pipeline Evidence}
+Advisory, Verification Is Enforcement: An Evidence-Bound Runtime Contract for
+LLM Narration of Pipeline Evidence}
 
 \author*[1]{\fnm{Hakan} \sur{Sabuni\c{s}}}\email{hakan.sabunis@std.medipol.edu.tr}
 \author[1]{\fnm{Yusuf} \sur{\"Unl\"u}}\email{yusuf.unlu@std.medipol.edu.tr}
@@ -72,13 +72,15 @@ benchmark of downstream code quality.
 
 \textbf{Results.} The failure is not the one the literature names: the
 unconstrained narrator \emph{misfiles} real evidence names at 4--71\,\% while
-\emph{inventing} names at 0--7\,\%, and the two rates move independently under
-rewording, so the prompt that looks safest invents most. Varying only the
+\emph{inventing} names at 0--7\,\%, and the two rates do not co-vary
+consistently under rewording --- at the extremes they run opposite, so the
+prompt that looks safest invents most. Varying only the
 validator inside one guardrail toolkit --- same loop, budget, prompt and model
 --- takes 35.0\,\% to 0/200. On a second production model one day later the
-same unconstrained arm scores 0/200. Downstream, flagged defects fall
-33~$\rightarrow$~8, and a fourth arm shows that a second attempt without the
-tool's findings repairs nothing.
+same unconstrained arm scores 0/200. Downstream, flags from a six-rule static checklist
+fall from 33 over 36 runs to 8 over 36, and a fourth arm shows that a second
+attempt without the tool's findings repairs nothing: rescoring both sides of
+that turn, not one of the 33 flagged rule-instances was cleared.
 
 \textbf{Conclusions.} For evidence-closed narration, faithfulness on the
 validated channels is enforceable by construction and independent of the
@@ -124,10 +126,15 @@ verifiable quantities is finite and machine-enumerable at the moment of the
 narration call.
 \end{definitionx}
 
-Once a task is evidence-closed, faithfulness checking stops being a modelling
-problem. Entity citations become set-membership tests, quantitative claims
-become numeric comparisons, and coverage of the critical finding is one more
-membership test. The check is \emph{decidable}, which changes the sensible goal
+Once a task is evidence-closed, faithfulness checking \emph{on its structured
+claim channels} stops being a modelling problem. Entity citations become
+set-membership tests against the domain admissible for the field they appear in,
+quantitative claims become numeric comparisons, and coverage of the critical
+finding is one more membership test. The narrowing matters and we hold to it
+throughout: a free-text sentence can name only real columns, quote only real
+values, and still assert a causal story the evidence does not support. That
+sentence is outside the decidable fragment, it reaches the user, and
+Section~\ref{sec:contract} says so again where the guarantee is stated. The check is \emph{decidable}, which changes the sensible goal
 from \emph{mitigation} --- pushing a probability down --- to \emph{prevention}:
 making an unfaithful answer impossible to return on the channels that carry the
 actionable content.
@@ -152,15 +159,18 @@ top-ranked candidate --- with corrective retry, residual stripping, and
 omission flagging. It is not a prototype. It runs in the production narrator of
 \textbf{mlcompass}, an open-source (MIT) ML-pipeline assistant, guarding the
 investigation that fires when an evaluation metric looks too good to be true
-($R^2>0.999$, $\mathrm{AUC}>0.995$), the classic signature of data
-leakage~\cite{leakage}.
+--- mlcompass fires at its own heuristic thresholds,
+$R^2>0.999$ or $\mathrm{AUC}>0.995$, motivated by the leakage problem
+Kaufman et al.\ describe~\cite{leakage} rather than by any threshold they
+propose.
 
 \paragraph{On reporting our own mistakes.} Three of the results below
 contradict what we believed at the point the study began. The failure mode is
 not the one we set out to measure (Section~\ref{sec:rq1}); the downstream
 effect could not initially be attributed to the tool, and a fourth arm was
-needed to attribute it (Section~\ref{sec:rq5}); and four faults in our own
-measuring instruments produced numbers we had already reasoned from
+needed to attribute it (Section~\ref{sec:rq5}); and six faults in our own
+measuring instruments --- five defects and one non-reproduction --- produced
+numbers we had already reasoned from
 (Section~\ref{sec:instruments}), one of them found only because two readers of
 an earlier draft disagreed about what a channel was measuring. We report each in the body rather than an
 appendix, with the superseded measurements preserved in the replication package
@@ -173,8 +183,8 @@ evidence about the authors.
 \item[RQ1] How does an unconstrained narrator of evidence-closed material
 actually fail, and does the failure match the name the literature gives it?
 \item[RQ2] Does the contract prevent that failure on the validated channels?
-\item[RQ3] Does it do so better than the state-of-the-art alternatives a
-practitioner would otherwise reach for?
+\item[RQ3] How does it compare with the structured-output and
+validate-and-retry alternatives a practitioner would otherwise reach for?
 \item[RQ4] Can a prompt-level defence be certified from observed compliance?
 \item[RQ5] Does the tool change what an LLM downstream actually produces, and
 if so, which part of it does the work?
@@ -198,7 +208,8 @@ model fixed and varying only the validator, Guardrails~AI's default
 configuration leaves 35.0\,\% of responses unfaithful and our deterministic
 validators, in the same loop, leave 0/200 (Section~\ref{sec:rq3}).
 \item \textbf{A decomposition of the failure, and the finding that its halves
-move independently.} Separating \emph{invented} from \emph{misfiled} entities
+do not co-vary consistently.} Separating \emph{invented} from \emph{misfiled}
+entities
 is the intrinsic/extrinsic distinction~\cite{maynez2020faithfulness} applied
 inside one measured channel; what is new is empirical, not conceptual --- the
 two sub-rates are close to unrelated across wordings and invert at the
@@ -211,8 +222,9 @@ the extra attempt they arrive with, was added as numbered amendment~A8 and run
 only after that amendment was written (Section~\ref{sec:rq5}).
 \item \textbf{A replication package} containing every emitted script, every
 model reply, and one record per live response --- 3{,}800 of them --- together
-with the frozen protocols, the amendment log, and the four faults we found and
-corrected in our own instruments while running the study.
+with the frozen protocols, the amendment log, and the six faults --- five
+defects and one non-reproduction --- that we found in our own instruments while
+running the study.
 \end{enumerate}
 
 \section{Background and Related Work}\label{sec:related}
@@ -382,23 +394,53 @@ the narrator is asked to say anything at all.
 
 \subsection{Verification is linear-time}
 
+\paragraph{Admissible domains are per field, not per response.} A single
+entity universe $A_E$ --- every string the evidence mentions --- is the obvious
+formalisation and it is the wrong one. Under it, a response whose
+\texttt{column} field reads \texttt{r2} is sound, because \texttt{r2} is in the
+evidence: it is the name of the suspicious \emph{metric}. Section~\ref{sec:rq1}
+reports that this case, not invention, is what the unconstrained narrator
+actually does, and a flat membership test cannot see it. We therefore index the
+admissible set by the field a token appears in. Writing $F$ for the schema's
+reference-bearing fields,
+\[
+A_{E,f} \subseteq A_E \quad \text{for each } f \in F,
+\qquad
+A_E \;=\; \bigcup_{f \in F} A_{E,f},
+\]
+and in the leakage contract $F = \{\texttt{columns\_referenced},
+\texttt{claims[].column}, \texttt{claims[].statistic}\}$, with
+$A_{E,\texttt{column}}$ the frame's columns, $A_{E,\texttt{statistic}}$ the
+statistic names the evidence carries, and the two disjoint. A token is
+\emph{misfiled} exactly when it is in $A_E$ but not in $A_{E,f}$ for the field
+$f$ that carries it, and \emph{invented} when it is in neither. The distinction
+is definitional here and measurable in Section~\ref{sec:rq1}; it is also what
+Tier~A binds, since the enum attached to a field is $A_{E,f}$ and not $A_E$.
+
 \begin{proposition}[Linear-time verification]\label{prop:linear}
-Let $E$ define a finite entity set $A_E$ with $|A_E| = m$ and a claim table
-$V_E$. Deciding faithfulness of a structured response $r$ --- entity
-membership, value tolerance, and anchor coverage --- takes $O(|r|)$ expected
-time after $O(m)$ preprocessing.
+Let $E$ define field-indexed admissible sets $\{A_{E,f}\}_{f \in F}$ with
+$m = \sum_{f} |A_{E,f}|$, and a claim table $V_E$ keyed on
+(column, statistic). Deciding faithfulness of a structured response $r$ ---
+field-typed entity membership, value tolerance, and anchor coverage --- takes
+$O(|r|)$ expected time after $O(m + |V_E|)$ preprocessing.
 \end{proposition}
 
 \begin{proof}
-Hash $A_E$ and $V_E$ once, in $O(m)$. Entity soundness is $|r|$ membership
-tests; value soundness is one lookup and one comparison per claim;
-completeness is one membership test. Each is $O(1)$ expected.
+Hash each $A_{E,f}$ and the table $V_E$ once, in $O(m + |V_E|)$. Entity
+soundness is $|r|$ membership tests, each against the set indexed by the
+field the token occupies; value soundness is one lookup keyed on
+(column, statistic) and one comparison per claim; completeness is one
+membership test. Each is $O(1)$ expected under hashed lookup with keys of
+bounded length.
 \end{proof}
 
 The proposition is not deep, and its shallowness is the point: it is the
 formal statement of why simple checks suffice here, and therefore of why the
 guarantee can be absolute in a setting where decode-time machinery cannot be
-attached at all.
+attached at all. What is not shallow is the indexing. An earlier version of our
+own scorer keyed $V_E$ on the column alone and compared every claim against
+that column's correlation whatever statistic it named; Section~\ref{sec:instruments}
+reports what that cost.
 
 \subsection{Repair is asymmetric, and one direction is unsafe}
 
@@ -547,6 +589,12 @@ open, and Section~\ref{sec:conclusion} names it as future work.
 
 \subsection{The three layers}
 
+Two words are doing different work and the distinction is worth one sentence
+before they are used together. The system has three functional \emph{layers} ---
+evidence production, narration, verification. The runtime contract lives across
+the last two and contains two enforcement \emph{tiers}, A and B. Layers say
+where code sits; tiers say what enforces.
+
 \paragraph{Layer 1: deterministic evidence producer.} A pure-Python module
 reads the predictions table and assembles $E$ as described in
 Section~\ref{sec:theory}.
@@ -587,7 +635,8 @@ stripping, because deleting an unsound claim can orphan the anchor.
 The invariant is easy to state, and its scope has to be stated with it:
 \emph{within the validated citation and claim channels}, any response the
 contract returns cites only entities present in the deterministic evidence and
-quotes only values equal to it, by construction, whoever the provider is.
+quotes only values within the declared tolerance of it
+($\tau = 0.005$), by construction, whoever the provider is.
 
 The free-text fields carry no such guarantee. The renderer prints them, marked
 as unverified, beneath the validated content, and the product also ships a
@@ -596,6 +645,54 @@ the same way. We state this in the artifact description rather than only in
 the limitations, because a guarantee whose scope is left to the reader is a
 guarantee that will be over-read. Membership, comparison, anchor: the checks
 are almost embarrassingly small, and that smallness is what decidability buys.
+
+\paragraph{Consistency with $E$ is not correctness.} The invariant is relative
+to the evidence dictionary. It says the narrator cannot cite a column the
+detector did not measure or quote a number the detector did not produce; it
+says nothing about whether the detector was right. If
+\texttt{detect\_leakage} mis-ranks a candidate, or the frame handed to it is
+the wrong frame, the contract will faithfully narrate a wrong finding and
+every check will pass. The deterministic producer is inside the trust
+boundary (Figure~\ref{fig:contract}) and is trusted, not verified. Any
+transposition of this design to a higher-stakes setting inherits that
+boundary, and Section~\ref{sec:discussion} restates it where we discuss one.
+
+\paragraph{What happens when the contract cannot succeed.} ``By construction''
+is only worth the failure semantics behind it, so Table~\ref{tab:failclosed}
+states them for every way the path can break. The rule throughout: no
+structured claim reaches the user unless it passed Tier~B, and an omission
+that survives the budget is surfaced rather than silently tolerated. Two
+entries are honest weaknesses rather than design choices. An omission cannot
+be repaired by deletion (Proposition~\ref{prop:asym}), so it is flagged and
+the response is still shown; and an uncaught exception in the provider call
+propagates rather than degrading, so the narration panel is absent and the
+deterministic evidence panel --- which is printed unconditionally --- is what
+the user sees.
+
+\begin{table}[t]
+\caption{Failure semantics. The user column is the one that matters: no
+unvalidated structured claim is reachable through any row.}
+\label{tab:failclosed}
+\centering
+\begin{tabular}{@{}lll@{}}
+\toprule
+Failure & Runtime action & What reaches the user \\
+\midrule
+No tool call, or malformed payload & retry, then abort panel & deterministic evidence only \\
+Required field missing            & retry, then abort panel & deterministic evidence only \\
+Entity outside $A_{E,f}$          & retry, then strip       & the sound remainder, flagged \\
+Value outside $\tau$              & retry, then strip       & the sound remainder, flagged \\
+Anchor $a^{*}$ omitted            & retry, then flag        & response, omission flagged \\
+Retry budget exhausted            & strip and flag          & the sound remainder, flagged \\
+All claims stripped               & flag, render remainder  & no claims, flag shown \\
+Provider or network exception     & propagates; panel absent & deterministic evidence only \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+A reader checking this against the implementation should know that the code
+says \emph{retry} where this paper says reask, and that the budget is not
+passed by the production caller, so it always takes its default of two.
 
 \section{Study Design}\label{sec:design}
 
@@ -612,8 +709,9 @@ protocol, a frozen analysis plan, and an amendment log.
 \subsection{Subject system and tasks}
 
 The subject is the shipped leakage-investigation path of mlcompass. The
-\emph{synthetic} task is a $1{,}000 \times 12$ regression frame carrying a
-monotone transformed leak
+\emph{synthetic} task is a 1{,}000-row frame of fourteen columns --- the
+target, the prediction, and twelve candidate features --- carrying a monotone
+transformed leak
 ($\texttt{log\_target\_v2} = \log(y) + \mathcal{N}(0, 0.01^2)$) and a
 high-correlation distractor; ten evidence columns, anchor
 \texttt{log\_target\_v2}. In every arm the \emph{shipped}
@@ -983,7 +1081,9 @@ from $E$ at call time and attach it to the field. Indeed
 \texttt{A-GR-OURS} \emph{is} that user: our validators run inside their loop.
 So the comparison is not ours-against-their-ceiling; it is
 \textbf{evidence-bound validation against what a practitioner gets out of the
-box}, which is the configuration most systems actually ship.
+box}, which is the toolkit's out-of-the-box structural
+configuration. We have no survey data on how often that configuration is the
+one deployed, and do not claim any.
 
 What the swap shows is unaffected by that narrowing, and it is the paper's
 central empirical claim: \textbf{the outer loop is general-purpose
@@ -1165,8 +1265,8 @@ rather than generated from $E$ at call time, so it constrains the
 channel completely for this task and would not survive an evidence dictionary
 carrying more than one statistic per column.
 
-\paragraph{The two entity sub-channels move independently, and at the extremes
-they run opposite.} This was not expected and is the sharper finding, and
+\paragraph{The two entity sub-channels do not co-vary consistently, and at the
+extremes they run opposite.} This was not expected and is the sharper finding, and
 Figure~\ref{fig:sweep} is where it is visible:
 
 Reading the two columns of Table~\ref{tab:sweep} against each other:
@@ -1345,6 +1445,16 @@ problems in it, and found none it could act on --- while the same models, shown
 from 33 to 8 is attributable to the findings and not to the turn they arrive
 with.
 
+A net count cannot carry that sentence, because a run that repairs one rule and
+introduces another shows no movement. Both sides of the turn are preserved, so
+we rescored them rule by rule under the current scorer. Across all 35 pairs,
+\textbf{no rule flagged before the revision was clean after it}: 24
+\texttt{leak\_duplicate\_rows}, 8 \texttt{no\_validation} and 1
+\texttt{no\_seed} persisted unchanged, and the two runs that got worse did so by
+introducing \texttt{no\_validation} where the first attempt had none. Zero
+repairs, two regressions, thirty-three unchanged. The claim is about individual
+defects and not about their sum.
+
 This is a replication, not a discovery, and reads better as one. Huang
 \emph{et al.}~\cite{huang2024selfcorrect} show models cannot reliably correct
 their own reasoning without external feedback, sometimes degrading; Olausson
@@ -1353,6 +1463,51 @@ is bottlenecked by the model's ability to critique its own code, and that
 improving the critic is what produces the gains. Our contrast substitutes a
 \emph{deterministic} critic for a stronger model, on a task where the critic
 can be exactly right, and the effect is what that literature predicts.
+
+\subsection{Denominators, execution, and what the arms cost}\label{sec:rq5-denom}
+
+Table~\ref{tab:ab} gives totals, and the arms do not share a denominator: one
+\texttt{control+revise} run is excluded (Section~\ref{sec:rq5}), so that arm
+has 35 scored scripts against 36 for the others. Table~\ref{tab:denom} gives
+the per-run rate alongside the total, so the comparison does not rest on a
+reader noticing the footnote.
+
+The same table carries a number the paper previously reported only in
+aggregate, and it deserves its own column. \textbf{A script with fewer flagged
+defects is not worth much if it does not run.} Across the panel, 27 of 143
+scripts failed to execute and a further 24 ran but saved an artefact the scorer
+could not load. Those failures are not evenly spread, but neither do they run
+against the effect: \texttt{advise+audit} has the \emph{fewest} execution
+failures and the most scored runs, so the defect fall is not an artefact of
+that arm emitting less runnable code.
+
+Cost is the other thing a practitioner needs and the paper did not state.
+The contract's price here is a longer prompt and a second turn, not a
+verification overhead --- Tier~B is the linear-time check of
+Proposition~\ref{prop:linear} and does not appear in the timings.
+
+\begin{table}[t]
+\caption{Per-run denominators, execution outcomes and cost. Token counts are
+per-run means over the arm; seconds are wall-clock medians. ``Artefact
+unloadable'' counts runs that completed but produced nothing the held-out
+scorer could use.}
+\label{tab:denom}
+\centering
+\begin{tabular}{@{}lrrrrrrr@{}}
+\toprule
+& & \multicolumn{2}{c}{Defects} & \multicolumn{3}{c}{Execution} & Cost \\
+\cmidrule(lr){3-4}\cmidrule(lr){5-7}\cmidrule(lr){8-8}
+Arm & $N$ & total & per run & failed & unloadable & scored & tokens \\
+\midrule
+\texttt{control}        & 36 & 33 & 0.92 & 8 & 6 & 22 & 1{,}627 \\
+\texttt{control+revise} & 35 & 35 & 1.00 & 6 & 7 & 22 & 4{,}747 \\
+\texttt{advise}         & 36 & 24 & 0.67 & 7 & 7 & 22 & 2{,}327 \\
+\texttt{advise+audit}   & 36 & \textbf{8} & \textbf{0.22} & \textbf{6} & \textbf{4} & \textbf{26} & 5{,}372 \\
+\midrule
+total                   & 143 & 100 & --- & 27 & 24 & 92 & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \subsection{The held-out score shows no consistent improvement}\label{sec:rq5-score}
 
@@ -1660,8 +1815,12 @@ that set with independent verification. Any narration task with all three
 supports the same guarantee. A clinical-decision narrator could be bound to the
 patient's actually-measured abnormal results, with cited values verified against
 the measurements; an expert-system narrator could be bound to the identifiers
-of the rules that fired. We have not evaluated either domain, and they mark
-where our claims stop.
+of the rules that fired. In the clinical case the transposed guarantee would be
+that the narration is consistent with the recorded measurements --- not that the
+recommendation is clinically valid, and not that the measurements are right. The
+distinction is the one drawn in Section~ef{sec:contract}, and it matters more
+as the stakes rise. We have not evaluated either domain, and they mark where our
+claims stop.
 
 One engineering note from shipping: when a capability is exposed through
 several interfaces --- a CLI and a tool server here --- parity must be enforced
@@ -1742,6 +1901,30 @@ across paraphrases of a single prompt on a single provider.
 \paragraph{Datasets are small and tabular.} Three OpenML datasets, 583 to
 20{,}640 rows. Nothing here speaks to deep-learning pipelines, to which the
 audit rules largely do not apply.
+
+\paragraph{The verifier assumes the evidence is correctly typed.} The
+field-indexed domains $A_{E,f}$ are derived from the evidence dictionary's own
+structure: columns come from the correlation table, statistic names from the
+keys beside them. If a future evidence producer put a metric name where a
+column belongs, the admissible set would inherit the error and the verifier
+would certify it. The contract checks the narrator against $E$; nothing in it
+checks $E$ against itself.
+
+\paragraph{The evidence domain here is small, and we did not test a large one.}
+$E$ carries ten columns. Proposition~\ref{prop:linear} bounds the verifier's
+cost and says nothing about the schema's: Tier~A serialises $A_{E,f}$ into the
+tool definition on every call, so a frame with a thousand candidate columns
+sends a thousand-element enum, against provider enum limits, request size
+limits and whatever a model's attention does with a list that long. We have no
+measurement of where that degrades. A practitioner with a wide frame should
+treat the enum as untested above the scale reported here.
+
+\paragraph{The guarantee is relative to the evidence, not to the world.} Stated
+in Section~\ref{sec:contract} and repeated here because it is the threat most
+easily lost: a narration that passes every check is consistent with what
+\texttt{detect\_leakage} measured. If the detector is wrong, the contract
+transmits the error faithfully. Nothing in this paper measures the detector's
+accuracy against ground-truth leakage.
 
 \subsection{Conclusion validity}
 
