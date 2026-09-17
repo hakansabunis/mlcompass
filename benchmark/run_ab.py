@@ -201,7 +201,7 @@ MAX_COMPLETION_TOKENS = 4096
 # ab_protocol.md §2 under 1.1. `treatment` was the 1.0 name for what is now
 # `advise`; rows carrying it belong to the 1.0 validation pair and are kept in
 # `ab_results_v1.0.csv`, not renamed.
-ARMS = ("control", "control+revise", "advise", "advise+audit")
+ARMS = ("control", "control+revise", "control+revise+rubric", "advise", "advise+audit")
 
 # The arms that receive `mlcompass advise` output in their first turn. Kept as
 # a set rather than tested with `arm != "control"` so that adding a fourth arm
@@ -220,8 +220,25 @@ AUDIT_ARM = "advise+audit"
 # `advise+audit` measures what mlcompass adds on top of one.
 SELF_REVISE_ARM = "control+revise"
 
+# The §9 A17 arm. `advise+audit` is told what is wrong with THIS script; the
+# six rules it is told about are also the six the outcome is scored on, so a
+# reviewer can fairly ask whether the fall measures the findings or merely the
+# fact that the rubric was named in the prompt. This arm names the rubric and
+# supplies no findings: same six concerns in the same order, no claim about
+# which of them this script has, no line numbers, nothing read from the code.
+#
+#   control+revise        -> control+revise+rubric   what naming the rubric buys
+#   control+revise+rubric -> advise+audit            what the specific findings buy
+#
+# It is scored on the same six rules, so treatment-outcome vocabulary overlap
+# is not removed by this arm -- it is measured by it.
+RUBRIC_REVISE_ARM = "control+revise+rubric"
+
 # Every arm that takes a second turn, whatever is in it.
-REVISION_ARMS = frozenset({AUDIT_ARM, SELF_REVISE_ARM})
+REVISION_ARMS = frozenset({AUDIT_ARM, SELF_REVISE_ARM, RUBRIC_REVISE_ARM})
+
+# The two arms whose second turn carries no mlcompass output at all.
+NO_TOOL_REVISION_ARMS = frozenset({SELF_REVISE_ARM, RUBRIC_REVISE_ARM})
 
 
 class ProtocolDrift(RuntimeError):
@@ -695,6 +712,52 @@ def build_self_revision_messages(
         {"role": "user", "content": control_prompt},
         {"role": "assistant", "content": first_reply},
         {"role": "user", "content": SELF_REVISION_PROMPT},
+    ]
+
+
+# The §9 A17 second turn. The six concerns are the six scored rules, stated as
+# a rubric and in the order `check_defects` returns them, so nothing about
+# which ones matter is hidden from this arm. What is withheld is the only thing
+# `advise+audit` has and this arm does not: a claim about THIS script.
+#
+# Wording discipline. Each line describes the concern, never its presence. "Is
+# every source of randomness seeded" and not "your script is unseeded". A
+# reviewer checking whether the rubric leaked a finding should be able to read
+# this block against any script at all and find it equally true.
+RUBRIC_REVISION_PROMPT = """Review the script you just wrote and fix any problems you find in it.
+
+Check it against these six concerns in particular. This list is generic: it is
+the same list for every script, and it says nothing about which of them, if
+any, your script actually has.
+
+1. Is every source of randomness seeded, so a re-run reproduces the result?
+2. Is anything fitted on data that includes the rows held out for testing?
+3. If the input file contains duplicate rows, are they removed before the split?
+4. If the target's classes are heavily imbalanced, is the reported metric one
+   that survives that imbalance?
+5. Is the model evaluated on data it was not trained on?
+6. Is the target column excluded from the feature matrix?
+
+Reply with the complete final script inside a single ```python code block, and nothing else.
+"""
+
+
+def build_rubric_revision_messages(
+    *,
+    control_prompt: str,
+    first_reply: str,
+) -> list[dict[str, str]]:
+    """Build the `control+revise+rubric` arm's second turn (§9 A17).
+
+    Identical to the self-revision arm except for the rubric block. The pair
+    exists to answer one question the battery could not previously answer:
+    whether `advise+audit`'s fall comes from being told what is wrong with this
+    script, or from the scored rubric being named in the prompt at all.
+    """
+    return [
+        {"role": "user", "content": control_prompt},
+        {"role": "assistant", "content": first_reply},
+        {"role": "user", "content": RUBRIC_REVISION_PROMPT},
     ]
 
 
@@ -2046,8 +2109,8 @@ def run_cell(
     if source is None:
         return finish("no_code", f"no script to run: {how}")
 
-    # ---- The self-revision round, `control+revise` only (§9 A8) ------------ #
-    if arm == SELF_REVISE_ARM:
+    # ---- The tool-free revision rounds, §9 A8 and A17 ---------------------- #
+    if arm in NO_TOOL_REVISION_ARMS:
         # Preserved under the same name the audit arm uses, so the two arms'
         # first-turn scripts are compared by reading the same file.
         (run_dir / "emitted_pre_revision.py").write_text(source, encoding="utf-8")
@@ -2059,15 +2122,17 @@ def run_cell(
             target_is_last_column=split["target_is_last_column"],
         )
 
-        messages = build_self_revision_messages(
-            control_prompt=control,
-            first_reply=reply["text"],
+        build = (
+            build_rubric_revision_messages
+            if arm == RUBRIC_REVISE_ARM
+            else build_self_revision_messages
         )
+        messages = build(control_prompt=control, first_reply=reply["text"])
         if messages[0]["content"] != control:
             raise RuntimeError(
-                "the self-revision round's first turn is not the control prompt; "
-                "ab_protocol.md section 9 A8 makes this arm interpretable only if "
-                "it begins from the identical first turn as control."
+                "the tool-free revision round's first turn is not the control prompt; "
+                "ab_protocol.md section 9 A8/A17 makes these arms interpretable only "
+                "if they begin from the identical first turn as control."
             )
         # mlcompass must not have been anywhere near this arm. Asserted rather
         # than assumed, because the whole value of the comparison is that the
@@ -2075,8 +2140,19 @@ def run_cell(
         # branch would be invisible in the numbers.
         if "mlcompass" in messages[2]["content"].lower():
             raise RuntimeError(
-                "the self-revision prompt mentions mlcompass; §9 A8 requires this "
-                "arm's second turn to carry no mlcompass content at all."
+                f"the {arm} revision prompt mentions mlcompass; §9 A8/A17 require "
+                "these arms' second turns to carry no mlcompass content at all."
+            )
+        # The rubric arm's value rests entirely on the rubric describing the six
+        # concerns without asserting any of them of this script. A prompt built
+        # from the script -- a line number, a column name, a defect name lifted
+        # from the code -- would make it a findings arm wearing a rubric's name,
+        # and the comparison it exists for would be meaningless.
+        if arm == RUBRIC_REVISE_ARM and messages[2]["content"] != RUBRIC_REVISION_PROMPT:
+            raise RuntimeError(
+                "the rubric revision prompt is not the frozen constant; §9 A17 "
+                "requires this arm's second turn to be identical for every run, "
+                "so that it cannot carry anything read from the script."
             )
         (run_dir / "prompt_revision.txt").write_text(messages[2]["content"], encoding="utf-8")
         prompt_hashes["revision_prompt_sha256"] = hashlib.sha256(
@@ -2085,7 +2161,7 @@ def run_cell(
 
         revision = call_model(member, messages, llm_timeout)
         outcome["turns"].append(
-            _turn_record(2, "control+revise self-revision", messages[2]["content"], revision)
+            _turn_record(2, f"{arm} tool-free revision", messages[2]["content"], revision)
         )
         (run_dir / "reply_turn2.txt").write_text(revision["text"], encoding="utf-8")
         (run_dir / "reply.txt").write_text(revision["text"], encoding="utf-8")
@@ -2373,10 +2449,13 @@ def _write_scoring(
     if arm in REVISION_ARMS:
         pre = outcome["defects_pre_revision"]
         audited = arm == AUDIT_ARM
+        rubric = arm == RUBRIC_REVISE_ARM
         lines += [
             (
                 "## Revision round (ab_protocol.md section 2, §9 A1)"
                 if audited
+                else "## Rubric revision round (ab_protocol.md §9 A17)"
+                if rubric
                 else "## Self-revision round (ab_protocol.md §9 A8)"
             ),
             "",
@@ -2386,6 +2465,10 @@ def _write_scoring(
                 f"- `mlcompass audit` on this arm's own first-turn script:"
                 f" {(outcome['audit'] or {}).get('audit_status', 'not reached')}"
                 if audited
+                else "- Second turn carries no mlcompass content: the six scored "
+                "concerns are named as a generic rubric, with no claim about which "
+                "of them this script has"
+                if rubric
                 else "- Second turn carries no mlcompass content: it asks the model to "
                 "review and fix its own script, naming no concern"
             ),

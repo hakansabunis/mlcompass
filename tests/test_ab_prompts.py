@@ -410,9 +410,9 @@ AUDIT = """\
 """
 
 
-def test_the_four_arms_and_what_separates_them() -> None:
-    """§2 since 1.1 names three arms; §9 A8 adds the fourth. `treatment` is a
-    retired 1.0 name.
+def test_the_five_arms_and_what_separates_them() -> None:
+    """§2 since 1.1 names three arms; §9 A8 adds the fourth and A17 the fifth.
+    `treatment` is a retired 1.0 name.
 
     The arm list is deliberately not tied to the protocol version here. 1.2
     changed the split and left §2 alone, and a test that re-asserted the
@@ -420,19 +420,99 @@ def test_the_four_arms_and_what_separates_them() -> None:
     which is how a test stops being read. The version has its own assertion in
     the A4 section below.
 
-    Order matters and is asserted: the tuple reads as the design. `control`
-    and `control+revise` differ only by a second turn; `control` and `advise`
-    differ only by the findings block; `advise` and `advise+audit` differ only
-    by a second turn. Every neighbouring pair isolates exactly one thing,
-    which is what lets the battery say which one did the work.
+    Order matters and is asserted: the tuple reads as the design. Every
+    neighbouring pair isolates exactly one thing, which is what lets the
+    battery say which one did the work.
+
+        control                -> control+revise           a second turn
+        control+revise         -> control+revise+rubric    naming the rubric
+        control+revise+rubric  -> advise+audit             findings about THIS script
+        control                -> advise                   the findings block
+        advise                 -> advise+audit             a second turn
     """
-    assert run_ab.ARMS == ("control", "control+revise", "advise", "advise+audit")
-    # The two arms that take a second turn, and the two that receive mlcompass
-    # advice in their first, are different pairs. `control+revise` is in the
-    # first and not the second: that is the whole point of it.
-    assert frozenset({"control+revise", "advise+audit"}) == run_ab.REVISION_ARMS
+    assert run_ab.ARMS == (
+        "control",
+        "control+revise",
+        "control+revise+rubric",
+        "advise",
+        "advise+audit",
+    )
+    # The arms that take a second turn, and the arms that receive mlcompass
+    # advice in their first, are different sets. Both tool-free revision arms
+    # are in the first and neither is in the second: that is the whole point.
+    assert (
+        frozenset({"control+revise", "control+revise+rubric", "advise+audit"})
+        == run_ab.REVISION_ARMS
+    )
+    assert frozenset({"control+revise", "control+revise+rubric"}) == run_ab.NO_TOOL_REVISION_ARMS
     assert frozenset({"advise", "advise+audit"}) == run_ab.ADVISE_ARMS
     assert run_ab.SELF_REVISE_ARM not in run_ab.ADVISE_ARMS
+    assert run_ab.RUBRIC_REVISE_ARM not in run_ab.ADVISE_ARMS
+
+
+def test_the_rubric_prompt_names_every_scored_rule_and_asserts_none_of_them() -> None:
+    """§9 A17. This arm exists to separate "told what is wrong with this
+    script" from "told what the rubric is", so the prompt has to do exactly
+    two things: name all six scored concerns, and claim nothing about the
+    script in front of it.
+
+    The second half is what the test is really for. A single sentence of the
+    form "your script does not seed" would turn this into a findings arm
+    wearing a rubric's name, and the comparison against `advise+audit` would
+    measure nothing.
+    """
+    prompt = run_ab.RUBRIC_REVISION_PROMPT
+    lowered = prompt.lower()
+
+    assert "mlcompass" not in lowered
+
+    # All six concerns are present, in the order check_defects returns them.
+    positions = [
+        lowered.index(marker)
+        for marker in (
+            "seeded",
+            "held out for testing",
+            "duplicate rows",
+            "imbalanced",
+            "not trained on",
+            "target column excluded",
+        )
+    ]
+    assert positions == sorted(positions), "the rubric does not follow the scored order"
+
+    # And none of them is asserted of this script. The rubric says so itself,
+    # and the phrasing is checked rather than trusted.
+    assert "says nothing about which of them" in lowered
+    for asserted in (
+        "your script does",
+        "your script is",
+        "you did not",
+        "you forgot",
+        "line ",
+        "is missing",
+    ):
+        assert asserted not in lowered, f"the rubric asserts {asserted!r} of the script"
+
+    # It closes with the same instruction as the other two second turns, so the
+    # three differ only in what sits above that line.
+    assert prompt.endswith(
+        "Reply with the complete final script inside a single ```python code block, "
+        "and nothing else.\n"
+    )
+    assert prompt.startswith(run_ab.SELF_REVISION_PROMPT.split("\n")[0])
+
+
+def test_the_rubric_arm_second_turn_is_identical_for_every_script() -> None:
+    """A rubric built from the script would be a findings arm. Two different
+    first turns must produce byte-identical second turns."""
+    a = run_ab.build_rubric_revision_messages(
+        control_prompt="P", first_reply="```python\nimport pandas\n```"
+    )
+    b = run_ab.build_rubric_revision_messages(
+        control_prompt="P", first_reply="```python\nX = df\nmodel.fit(X, y)\n```"
+    )
+    assert a[2]["content"] == b[2]["content"] == run_ab.RUBRIC_REVISION_PROMPT
+    assert a[0]["content"] == "P", "the first turn must be the control prompt verbatim"
 
 
 def test_the_self_revision_prompt_carries_no_mlcompass_content() -> None:

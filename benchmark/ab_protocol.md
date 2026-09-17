@@ -643,3 +643,46 @@ named their own treatment in a comment (`# Remove duplicate rows as advised`,
 arms, so the leak had a direction. Treatment vocabulary is now redacted, every
 redaction is logged per script, and the generator re-reads its own output and
 refuses to write a sample with a surviving tell.
+
+**A17 — a fifth arm, because "told what is wrong" and "told what the rubric is"
+were never separated.**
+
+`advise+audit` is handed `mlcompass audit` findings about its own first-turn
+script. The six rules those findings name are also the six the outcome is
+scored on. §12 of the manuscript concedes the overlap as a threat; a reviewer
+put it more sharply, and correctly, as a confound: the 31 → 8 fall may measure
+the findings, or it may measure nothing more than the scored rubric having been
+named in the prompt at all.
+
+The existing arms cannot tell those apart. `control+revise` names nothing, so
+the pair `control+revise` → `advise+audit` moves two things at once.
+
+`control+revise+rubric` holds the rubric and withholds the findings. Its second
+turn is `RUBRIC_REVISION_PROMPT`: the six scored concerns, in the order
+`check_defects` returns them, each phrased as a question about the concern and
+never as a claim about this script, plus an explicit sentence saying the list
+is generic. First turn is the control prompt, byte-identical to
+`control+revise`'s. Closing instruction byte-identical to all three second
+turns.
+
+    control                -> control+revise           what a second attempt buys
+    control+revise         -> control+revise+rubric    what naming the rubric buys
+    control+revise+rubric  -> advise+audit             what the findings buy
+
+Two guards, because the arm is worthless if either fails. The prompt must not
+mention mlcompass, as in A8; and it must be byte-identical to the frozen
+constant on every run, which is what makes it impossible for anything read from
+the script to reach it. Both raise rather than warn. Three tests pin the prompt
+(`tests/test_ab_prompts.py`): that all six concerns appear in scored order,
+that no assertion about the script appears, and that two different first turns
+produce identical second turns.
+
+This arm does not remove the treatment-outcome vocabulary overlap. It measures
+it. If `control+revise+rubric` lands near 31, the fall is the findings. If it
+lands near 8, the fall is largely the rubric and the manuscript's causal claim
+has to be rewritten. We are recording that second outcome as publishable before
+running it, exactly as §6 of the frozen protocol recorded "the process
+improves, the metric does not".
+
+Pre-registered as its own plan before execution, 3 datasets × 4 models ×
+3 repeats = 36 runs.
