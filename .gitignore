@@ -140,3 +140,4 @@ paper/emse_latex/*.blg
 paper/emse_latex/*.aux
 paper/emse_latex/*.bbl
 paper/emse_latex/*.out
+paper/tse_latex/main.pdf
