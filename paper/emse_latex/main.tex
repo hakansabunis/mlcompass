@@ -78,7 +78,7 @@ prompt that looks safest invents most. Varying only the
 validator inside one guardrail toolkit --- same loop, budget, prompt and model
 --- takes 35.0\,\% to 0/200. On a second production model one day later the
 same unconstrained arm scores 0/200. Downstream, flags from a six-rule static checklist
-fall from 33 over 36 runs to 8 over 36, and a fourth arm shows that a second
+fall from 31 over 36 runs to 8 over 36, and a fourth arm shows that a second
 attempt without the tool's findings repairs nothing: rescoring both sides of
 that turn, not one of the 33 flagged rule-instances was cleared.
 
@@ -168,8 +168,8 @@ propose.
 contradict what we believed at the point the study began. The failure mode is
 not the one we set out to measure (Section~\ref{sec:rq1}); the downstream
 effect could not initially be attributed to the tool, and a fourth arm was
-needed to attribute it (Section~\ref{sec:rq5}); and six faults in our own
-measuring instruments --- five defects and one non-reproduction --- produced
+needed to attribute it (Section~\ref{sec:rq5}); and seven faults in our own
+measuring instruments --- six defects and one non-reproduction --- produced
 numbers we had already reasoned from
 (Section~\ref{sec:instruments}), one of them found only because two readers of
 an earlier draft disagreed about what a channel was measuring. We report each in the body rather than an
@@ -222,9 +222,10 @@ the extra attempt they arrive with, was added as numbered amendment~A8 and run
 only after that amendment was written (Section~\ref{sec:rq5}).
 \item \textbf{A replication package} containing every emitted script, every
 model reply, and one record per live response --- 3{,}800 of them --- together
-with the frozen protocols, the amendment log, and the six faults --- five
-defects and one non-reproduction --- that we found in our own instruments while
-running the study.
+with the frozen protocols, the amendment log, the two independent
+implementations of the downstream scorer, and the seven faults --- six defects
+and one non-reproduction --- that we found in our own instruments while running
+the study.
 \end{enumerate}
 
 \section{Background and Related Work}\label{sec:related}
@@ -1332,7 +1333,7 @@ missing data --- and on the \texttt{control+revise} arm it is arguably the
 outcome that arm is about. Its pre-revision script carries one
 defect (\texttt{no\_validation}), so scored as unchanged the arm totals 36 over
 36 runs rather than 35 over 35, and \texttt{control}~$\rightarrow$~%
-\texttt{control+revise} reads 33~$\rightarrow$~36. That is the same ``noise
+\texttt{control+revise} reads 31~$\rightarrow$~36. That is the same ``noise
 around no effect'' the section argues for, in the same direction.
 
 \begin{table}[t]
@@ -1349,11 +1350,11 @@ same preserved scripts.}
 Model & \texttt{control} & \texttt{control+revise} & \texttt{advise} & \texttt{advise+audit} \\
 \midrule
 deepseek-flash        & 13 & 11 & 13 & \textbf{4} \\
-ministral-8b          &  8 &  6 &  2 & \textbf{0} \\
+ministral-8b          &  6 &  6 &  2 & \textbf{0} \\
 qwen2.5-7b (local)    &  6 &  9 &  4 & \textbf{1} \\
 gpt-5.4-mini          &  6 &  9 &  5 & \textbf{3} \\
 \midrule
-\textbf{total}        & \textbf{33} & \textbf{35} & \textbf{24} & \textbf{8} \\
+\textbf{total}        & \textbf{31} & \textbf{35} & \textbf{24} & \textbf{8} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1366,20 +1367,21 @@ Table~\ref{tab:perrule} decompose the fall.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\textwidth]{fig4_defects.png}
-\caption{Where the downstream effect comes from. Two of the six rules carry 23
-of the 25-defect fall: \texttt{leak\_duplicate\_rows} alone accounts for 16.
-\texttt{wrong\_metric\_for\_imbalance} never fires on this panel, because its
-precondition --- a minority class below 20\,\% --- is false of all three
-datasets, so the instrument is materially two rules here. Exact values in
+\includegraphics[width=\textwidth]{fig4_defects.pdf}
+\caption{Where the downstream effect comes from. Two of the six rules carry
+the entire 23-defect fall: \texttt{leak\_duplicate\_rows} accounts for 16 and
+\texttt{no\_validation} for 7. The other four contribute nothing, and
+\texttt{wrong\_metric\_for\_imbalance} \emph{cannot} --- its precondition, a
+minority class below 20\,\%, is false of all three datasets --- so the
+instrument is materially two rules here. Exact values in
 Table~\ref{tab:perrule}.}
 \label{fig:defects}
 \end{figure}
 
 \begin{table}[t]
-\caption{The six-item checklist, per rule. Two rules carry 23 of the
-25-defect fall, a third contributes 2, and
-\texttt{wrong\_metric\_for\_imbalance} never fires on this panel at all.}
+\caption{The six-item checklist, per rule. Two rules carry the whole
+23-defect fall, three never fire on this panel at all, and
+\texttt{wrong\_metric\_for\_imbalance} cannot.}
 \label{tab:perrule}
 \centering
 \begin{tabular}{@{}lrrrr@{}}
@@ -1388,12 +1390,12 @@ Rule & \texttt{control} & \texttt{ctrl+revise} & \texttt{advise} & \texttt{advis
 \midrule
 \texttt{leak\_duplicate\_rows}        & 24 & 24 & 14 & \textbf{8} \\
 \texttt{no\_validation}               &  7 & 10 &  9 & \textbf{0} \\
-\texttt{target\_in\_features}         &  2 &  0 &  0 & \textbf{0} \\
+\texttt{target\_in\_features}         &  0 &  0 &  0 & \textbf{0} \\
 \texttt{no\_seed}                     &  0 &  1 &  0 & \textbf{0} \\
 \texttt{leak\_fit\_before\_split}     &  0 &  0 &  1 & \textbf{0} \\
 \texttt{wrong\_metric\_for\_imbalance}&  0 &  0 &  0 & \textbf{0} \\
 \midrule
-\textbf{total}                        & \textbf{33} & \textbf{35} & \textbf{24} & \textbf{8} \\
+\textbf{total}                        & \textbf{31} & \textbf{35} & \textbf{24} & \textbf{8} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1416,7 +1418,7 @@ contributor. \textbf{That is the part of the downstream effect the instrument
 did not hand to the treatment.}
 
 \subsection{The extra attempt is worth nothing; the findings are worth
-$33 \rightarrow 8$}
+$31 \rightarrow 8$}
 
 The obvious objection to a treatment arm that revises is that it differs from
 the control in \emph{two} ways at once: it is told what is wrong, and it gets a
@@ -1424,8 +1426,8 @@ second attempt. Our first version of this benchmark could not separate them,
 and the objection was raised in internal review before it could be raised
 externally. The \texttt{control+revise} arm exists to answer it.
 
-A second attempt on its own does nothing: $33 \rightarrow 35$, two models down
-and two up, noise around no effect. The within-arm view is sharper. Across the
+A second attempt on its own does nothing: $31 \rightarrow 35$, one model down,
+one level and two up, noise around no effect. The within-arm view is sharper. Across the
 35 runs that produced a defect count on both sides of the revision turn:
 
 \begin{center}
@@ -1442,7 +1444,7 @@ better    & \textbf{0} \\
 defect in 35 runs.} The model was handed its own script and asked to find
 problems in it, and found none it could act on --- while the same models, shown
 \texttt{mlcompass audit} output on the same kind of script, fix them. The fall
-from 33 to 8 is attributable to the findings and not to the turn they arrive
+from 31 to 8 is attributable to the findings and not to the turn they arrive
 with.
 
 A net count cannot carry that sentence, because a run that repairs one rule and
@@ -1499,12 +1501,12 @@ scorer could use.}
 \cmidrule(lr){3-4}\cmidrule(lr){5-7}\cmidrule(lr){8-8}
 Arm & $N$ & total & per run & failed & unloadable & scored & tokens \\
 \midrule
-\texttt{control}        & 36 & 33 & 0.92 & 8 & 6 & 22 & 1{,}627 \\
+\texttt{control}        & 36 & 31 & 0.86 & 8 & 6 & 22 & 1{,}627 \\
 \texttt{control+revise} & 35 & 35 & 1.00 & 6 & 7 & 22 & 4{,}747 \\
 \texttt{advise}         & 36 & 24 & 0.67 & 7 & 7 & 22 & 2{,}327 \\
 \texttt{advise+audit}   & 36 & \textbf{8} & \textbf{0.22} & \textbf{6} & \textbf{4} & \textbf{26} & 5{,}372 \\
 \midrule
-total                   & 143 & 100 & --- & 27 & 24 & 92 & --- \\
+total                   & 143 & 98 & --- & 27 & 24 & 92 & --- \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1529,10 +1531,10 @@ we do not report it as one.
 
 \section{Corrections to Our Own Instruments}\label{sec:instruments}
 
-Every number in this paper is produced by an instrument we wrote. We found six
-faults in those instruments while running the study --- five defects and one
-non-reproduction --- most of them after results had already been drawn from
-them, and all six are reported here rather than in an appendix because each
+Every number in this paper is produced by an instrument we wrote. We found
+seven faults in those instruments while running the study --- six defects and
+one non-reproduction --- most of them after results had already been drawn from
+them, and all seven are reported here rather than in an appendix because each
 changed something a reader would otherwise take at face value.
 
 \begin{table}[t]
@@ -1544,12 +1546,13 @@ reports.}
 \toprule
 Correction & Quantity affected & Before $\rightarrow$ after \\
 \midrule
-1 \& 3: checklist forms  & \texttt{control}/\texttt{advise}/\texttt{advise+audit} & 40/31/15 $\rightarrow$ 33/24/8 \\
+1, 3 \& 6: checklist forms & \texttt{control}/\texttt{advise}/\texttt{advise+audit} & 40/31/15 $\rightarrow$ 31/24/8 \\
 2: value scorer          & sweep value-channel flags & 85 $\rightarrow$ 2 \\
 artifact exclusion       & \texttt{expert} blended entity & 57/100 $\rightarrow$ 56/100 \\
 abstention definition    & abstentions, all arms & non-zero $\rightarrow$ 0 \\
 4: provider model pin    & every cell of one battery & $0/0$ $\rightarrow$ measurable \\
-5: plan enforcement      & runs executed off-plan & 48 relabelled \\
+7: plan enforcement      & runs executed off-plan & 48 relabelled \\
+6: target-name harvest   & \texttt{target\_in\_features}, whole panel & 2 $\rightarrow$ 0 \\
 \bottomrule
 \end{tabular}
 \end{table} The replication package preserves the original
@@ -1583,27 +1586,35 @@ is a tidier script; so the checker systematically penalised the coding style
 that the treatment arms produce.
 
 Corrected against the same bytes --- no model call, no re-execution, dataset
-facts read back from each run's record --- across two rescoring passes:
+facts read back from each run's record --- across four rescoring passes:
 
 \begin{center}
-\begin{tabular}{@{}lrrr@{}}
+\begin{tabular}{@{}llrrr@{}}
 \toprule
-scoring & \texttt{control} & \texttt{advise} & \texttt{advise+audit} \\
+scoring & found by & \texttt{control} & \texttt{advise} & \texttt{advise+audit} \\
 \midrule
-original            & 40 & 31 & 15 \\
-after correction 1  & 35 & 27 &  9 \\
-after correction 2  & \textbf{33} & \textbf{26} & \textbf{8} \\
+original                    & ---   & 40 & 31 & 15 \\
+after correction 1 (A7)     & review & 35 & 27 &  9 \\
+after correction 2 (A11)    & review & 33 & 26 &  8 \\
+after correction 3 (A12)    & ours  & 33 & 24 &  8 \\
+after correction 4 (A16)    & audit & \textbf{31} & \textbf{24} & \textbf{8} \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-The direction survives all three scorings. It has also moved toward our
-hypothesis three times running, and we say so plainly rather than burying it:
+The direction survives all five scorings. Four of the first corrections also
+moved toward our hypothesis, and we said so plainly rather than burying it:
 false positives concentrate in careful code and the treatment arms produce more
-careful code, which is a checkable mechanism rather than an excuse. A reader
-should verify it rather than accept it. The next correction that moves these
-numbers the other way will be the one indicating the scorer is finally
-unbiased.
+careful code, which is a checkable mechanism rather than an excuse. An earlier
+version of this paper closed the paragraph by writing that ``the next
+correction that moves these numbers the other way will be the one indicating
+the scorer is finally unbiased''.
+
+Correction~4 is that correction. It moves \texttt{control} from 33 to 31 and
+leaves both treatment arms untouched, so it \emph{shrinks} the effect we are
+arguing for, from a 25-defect fall to a 23-defect one. We report it in the
+position the earlier sentence committed us to. Section~\ref{sec:defect6}
+describes what it was.
 
 \subsection{Defect 2: the value scorer never read the \texttt{statistic} field}
 
@@ -1685,7 +1696,110 @@ that \emph{does} accept the call is absent from the provider's
 would have confirmed the wrong conclusion. The only reliable check is to send
 the call shape the system actually uses.
 
-\subsection{Defect 5: the pre-registration was not enforced, and the tooling
+\subsection{Defect 6: the target-name harvest could not see a parameter
+default}\label{sec:defect6}
+
+Defect~1 is scored against a list of \emph{forms} for excluding the target, and
+each form is matched against the target's name or against a variable holding
+it. The variables were harvested with
+
+\begin{quote}\ttfamily\small
+\^{}\textbackslash s*(\textbackslash w+)\textbackslash s*=\textbackslash s*['"]<target>['"]
+\end{quote}
+
+which finds \texttt{TARGET = "price"} and does not find
+
+\begin{quote}\ttfamily\small
+def train\_and\_save\_model(csv\_path, target\_column="price"):\\
+\ \ \ \ X = df.drop(columns=[target\_column])
+\end{quote}
+
+because the binding is a function-parameter default, not an assignment. Two
+runs on OpenML~44031 are exactly this script, drop the target correctly on
+their ninth line, exit~0, and were published carrying
+\texttt{target\_in\_features}.
+
+This is Defect~3 again. An absence-scored rule was repaired with a pattern
+that cannot see syntax; the repair itself was then found to have the same
+fault (amendment~A12); and here a \emph{third} binding form escapes the same
+way. The harvest now parses the script and collects names bound to the target
+literal by assignment, by parameter default, and by keyword argument at a call
+site (amendment~A16). A script that does not parse contributes no names.
+
+Correcting it moves \texttt{control} from 33 flagged defects to \textbf{31},
+with every treatment arm unchanged, and removes \texttt{target\_in\_features}
+from the panel entirely. It is the first correction in this study to move a
+result \emph{against} the hypothesis we are arguing for.
+
+\subsection{How we found it: a differential audit of the final scorer}
+
+Section~\ref{sec:threats} concedes that after five instrument defects a reader
+has no reason to trust the sixth version of the scorer more than the fifth. The
+concession is not an answer, so we built one.
+
+\texttt{benchmark/independent\_defect\_scorer.py} decides the same six rules by
+a different method: \texttt{ast} over the parsed script rather than regular
+expressions over its text. On two rules it is deliberately inverted.
+\texttt{check\_defects} scores \texttt{target\_in\_features} and
+\texttt{no\_validation} by the absence of every enumerated correct form --- the
+shape this section has now twice identified as the reason a defect existed ---
+so the second scorer fires on positive evidence of the defect instead. That
+makes it strictly more conservative on those two rules by construction, which
+is the point: where the two disagree is where the first scorer's enumeration
+has run out.
+
+Both scorers were run over all 143 preserved scripts, 858 rule-instances.
+Table~\ref{tab:audit} is the result \emph{as the audit found it}, against the
+scorer before Defect~6 was corrected. Five rules agree on every script. The
+sixth disagrees twice, both times with the regex scorer flagging and the
+\texttt{ast} scorer clean, and both times the regex scorer is wrong --- those
+two runs are Defect~6. With the correction applied the same command returns
+858/858 and \texttt{target\_in\_features} fires nowhere, which is a statement
+about the repair and not a second piece of evidence: the audit is what located
+the defect, so agreement afterwards is expected rather than informative.
+
+\begin{table}[t]
+\caption{Differential audit of the final scorer, 143 scripts. $\kappa$ is
+Cohen's~$\kappa$ between the two implementations; it is undefined where both
+scorers are constant and agree.}
+\label{tab:audit}
+\centering
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Rule & regex & \texttt{ast} & agree & $\kappa$ \\
+\midrule
+\texttt{no\_seed}                     &  1 &  1 & 143/143 & 1.000 \\
+\texttt{leak\_fit\_before\_split}     &  1 &  1 & 143/143 & 1.000 \\
+\texttt{leak\_duplicate\_rows}        & 70 & 70 & 143/143 & 1.000 \\
+\texttt{wrong\_metric\_for\_imbalance}&  0 &  0 & 143/143 & n/a \\
+\texttt{no\_validation}               & 26 & 26 & 143/143 & 1.000 \\
+\texttt{target\_in\_features}         &  2 &  0 & 141/143 & 0.000 \\
+\midrule
+\textbf{total}                        & \textbf{100} & \textbf{98} & \textbf{856/858} & \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{What this is, and what it is not.} It is not an independent
+replication. Both scorers are ours, written days apart, by people who have read
+each other's. Two implementations that share an author share their author's
+blind spots, and an agreement of 856/858 between them is weaker evidence than
+the same number between strangers. What it does establish is narrower and still
+worth having: the five rules that carry every number in Section~\ref{sec:rq5}
+are not sensitive to the implementation technique, and the one rule whose
+\emph{shape} we had already identified as fragile is the one, and the only one,
+that disagreed.
+
+The independence the paper actually needs is human. The replication package
+contains \texttt{benchmark/blind\_review/}: a stratified sample of the emitted
+scripts with arm, model and dataset stripped and the order randomised, a rating
+form for the six rules, and the script that computes checklist precision and
+recall against the ratings together with Cohen's~$\kappa$ between raters. We
+have not run it. We report the apparatus rather than a result, because
+two authors rating their own artefact is not blind, and reporting it as though
+it were would be the same kind of mistake this section exists to document.
+
+\subsection{Defect 7: the pre-registration was not enforced, and the tooling
 caused the violation}
 
 The downstream protocol rests on freezing a plan before execution. For one run
@@ -1818,7 +1932,8 @@ the measurements; an expert-system narrator could be bound to the identifiers
 of the rules that fired. In the clinical case the transposed guarantee would be
 that the narration is consistent with the recorded measurements --- not that the
 recommendation is clinically valid, and not that the measurements are right. The
-distinction is the one drawn in Section~ef{sec:contract}, and it matters more
+distinction is the one drawn in Section~
+ef{sec:contract}, and it matters more
 as the stakes rise. We have not evaluated either domain, and they mark where our
 claims stop.
 
@@ -1934,15 +2049,27 @@ decline to report a null. No decision rule for ``beats'' was pre-registered,
 and with medians separated by $0.0002$ that, rather than the amount of data, is
 the binding constraint on any stronger claim.
 
-\paragraph{Corrections have run one way.} Four scorer corrections have each
-moved the downstream numbers toward our hypothesis, the fourth being the fix to
-the fix (Section~\ref{sec:instruments}, Defect 3). The mechanism is stated and
-checkable there --- false positives concentrate in careful code, and the
-treatment arms produce more careful code --- but four in a row is a pattern a
-reader should weigh independently of the mechanism we offer for it. The
-correction that moves these numbers the other way has not arrived, and until it
-does we cannot distinguish a biased instrument being repaired from an instrument
-being repaired in a biased direction.
+\paragraph{Corrections ran one way four times, then stopped.} The first four
+scorer corrections each moved the downstream numbers toward our hypothesis, the
+fourth being the fix to the fix (Section~\ref{sec:instruments}, Defect~3). The
+mechanism is stated and checkable there --- false positives concentrate in
+careful code, and the treatment arms produce more careful code --- but four in a
+row is a pattern a reader should weigh independently of any mechanism we offer
+for it. An earlier version of this section said that the correction moving these
+numbers the other way had not arrived, and that until it did we could not
+distinguish a biased instrument being repaired from an instrument being repaired
+in a biased direction.
+
+It has now arrived. Defect~6 removes two \texttt{control} flags and touches no
+treatment arm, shrinking the effect from a 25-defect fall to a 23-defect one.
+One correction is not a calibration, and we do not present it as one: five
+corrections that favour a hypothesis and one that does not is still a lopsided
+record. What changed is that the record is no longer unanimous, and that the
+correction which broke it came from a procedure built to look for exactly this
+--- a second implementation on a different technique
+(Section~\ref{sec:defect6}) --- rather than from us noticing something. The
+apparatus for the human-rated check that would settle it is in the replication
+package and has not been run.
 
 \section{Conclusion}\label{sec:conclusion}
 
@@ -1960,10 +2087,10 @@ an open-source tool. Against the nearest real alternative, the finding is that
 the outer loop was never the contribution: Guardrails~AI's own validators leave
 35.0\,\% of responses unfaithful and the same loop running our deterministic
 validators leaves 0/200. Against six rule-free rewordings of one instruction,
-the failure rate moves from 9\,\% to 72\,\% --- and the invention rate moves
-independently of it, so the wording that looks safest on the headline metric is
-the one inventing most. Downstream, across four models and three datasets,
-flagged defects fall from 33 to 8, and a fourth arm shows the fall is the
+the failure rate moves from 9\,\% to 72\,\% --- and the invention rate does
+not follow it, so the wording that looks safest on the headline metric is the
+one inventing most. Downstream, across four models and three datasets,
+flagged defects fall from 31 to 8, and a fourth arm shows the fall is the
 tool's findings and not the extra attempt they arrive with: self-revision
 without findings repaired nothing in 35 runs.
 

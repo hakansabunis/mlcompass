@@ -114,9 +114,7 @@ def rescore_one(run_dir: Path) -> dict[str, Any] | None:
     pre_script = run_dir / "emitted_pre_revision.py"
     new_pre = None
     if pre_script.exists():
-        new_pre = check_defects(
-            pre_script.read_text(encoding="utf-8", errors="replace"), **facts
-        )
+        new_pre = check_defects(pre_script.read_text(encoding="utf-8", errors="replace"), **facts)
 
     return {"run": run, "old": old, "new": new, "new_pre": new_pre, "target": target}
 

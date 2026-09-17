@@ -1410,10 +1410,55 @@ def _comprehension_excludes_target(source: str, tokens: str) -> bool:
 
 
 def _target_tokens(source: str, target: str) -> list[str]:
-    """The target column's name plus any variable holding that literal."""
+    """The target column's name plus any variable holding that literal.
+
+    Harvested by parsing, not by matching line starts. The regex this replaced
+    saw `TARGET = "price"` and missed `def train(csv, target_column="price")`,
+    so a script that correctly dropped the target through its parameter name
+    was scored as leaving the target in the features. That is the same fault as
+    amendment A12 -- a syntactic binding read with a pattern that cannot see
+    syntax -- and it is closed the same way (amendment A16).
+
+    Three binding forms count: assignment, function-parameter default, and a
+    keyword argument at a call site. A script that does not parse contributes
+    no names, exactly as in `_integer_bindings`.
+    """
     tokens = [re.escape(target)]
-    for name in re.findall(rf"^\s*(\w+)\s*=\s*['\"]{re.escape(target)}['\"]", source, re.MULTILINE):
-        tokens.append(re.escape(name))
+    names: set[str] = set()
+
+    def literal_is_target(node: ast.expr | None) -> bool:
+        return isinstance(node, ast.Constant) and node.value == target
+
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return tokens
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign) and literal_is_target(node.value):
+            for t in node.targets:
+                if isinstance(t, ast.Name):
+                    names.add(t.id)
+        elif isinstance(node, ast.AnnAssign) and literal_is_target(node.value):
+            if isinstance(node.target, ast.Name):
+                names.add(node.target.id)
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            a = node.args
+            positional = a.posonlyargs + a.args
+            for arg, default in zip(
+                positional[len(positional) - len(a.defaults) :], a.defaults, strict=True
+            ):
+                if literal_is_target(default):
+                    names.add(arg.arg)
+            for arg, default in zip(a.kwonlyargs, a.kw_defaults, strict=True):
+                if literal_is_target(default):
+                    names.add(arg.arg)
+        elif isinstance(node, ast.Call):
+            for kw in node.keywords:
+                if kw.arg and literal_is_target(kw.value):
+                    names.add(kw.arg)
+
+    tokens.extend(re.escape(n) for n in sorted(names))
     return tokens
 
 

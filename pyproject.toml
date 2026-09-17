@@ -149,7 +149,10 @@ line-length = 100
 # `emitted.py` files before this entry existed; they were restored from git,
 # and the exclusion is here so the next person running the formatter cannot
 # repeat it.
-extend-exclude = ["benchmark/runs"]
+# The blind-review sample is the same evidence copied and redacted; a
+# formatter rewriting it would change the artefact a human rater is asked
+# to judge, and the ratings would no longer be about what the model wrote.
+extend-exclude = ["benchmark/runs", "benchmark/blind_review/sample"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W", "UP", "B", "SIM"]

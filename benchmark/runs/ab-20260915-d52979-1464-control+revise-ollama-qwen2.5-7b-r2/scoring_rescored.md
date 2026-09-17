@@ -1,6 +1,6 @@
 # Rescored: ab-20260915-d52979-1464-control+revise-ollama-qwen2.5-7b-r2
 
-Experiment id for these rows: `ab-20260915-d52979-v3`.
+Experiment id for these rows: `v4cr`.
 
 Re-scored from the preserved `emitted.py` with the corrected
 `target_in_features` rule (amendment A7). Nothing was re-executed and

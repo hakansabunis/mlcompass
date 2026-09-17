@@ -1,0 +1,49 @@
+{
+  "scripts_scored": 143,
+  "parse_errors": [],
+  "per_rule": {
+    "no_seed": {
+      "regex_flagged": 1,
+      "ast_flagged": 1,
+      "agreements": 143,
+      "n": 143,
+      "kappa": 1.0
+    },
+    "leak_fit_before_split": {
+      "regex_flagged": 1,
+      "ast_flagged": 1,
+      "agreements": 143,
+      "n": 143,
+      "kappa": 1.0
+    },
+    "leak_duplicate_rows": {
+      "regex_flagged": 70,
+      "ast_flagged": 70,
+      "agreements": 143,
+      "n": 143,
+      "kappa": 1.0
+    },
+    "wrong_metric_for_imbalance": {
+      "regex_flagged": 0,
+      "ast_flagged": 0,
+      "agreements": 143,
+      "n": 143,
+      "kappa": null
+    },
+    "no_validation": {
+      "regex_flagged": 26,
+      "ast_flagged": 26,
+      "agreements": 143,
+      "n": 143,
+      "kappa": 1.0
+    },
+    "target_in_features": {
+      "regex_flagged": 0,
+      "ast_flagged": 0,
+      "agreements": 143,
+      "n": 143,
+      "kappa": null
+    }
+  },
+  "disagreements": []
+}

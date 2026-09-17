@@ -1,6 +1,6 @@
 # Rescored: ab-20260915-3b0221-1464-control-deepseek-flash-r1
 
-Experiment id for these rows: `ab-20260915-3b0221-v3`.
+Experiment id for these rows: `v4`.
 
 Re-scored from the preserved `emitted.py` with the corrected
 `target_in_features` rule (amendment A7). Nothing was re-executed and

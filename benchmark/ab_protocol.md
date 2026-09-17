@@ -572,3 +572,74 @@ Brought to the corrected definitions, restated rather than imported — a second
 implementation that imports the first checks nothing. It now reproduces the
 manuscript's figures exactly, including `expert` entity 56/100 [46.23, 65.33]
 and value 1/100.
+
+**A16 — the target-name harvest could not see a parameter default, and the
+final scorer had never been audited against a second implementation.**
+
+Two changes, one found by the other.
+
+*The audit.* After five instrument defects, "we checked it again" is not a
+reason for a reader to trust the sixth version of `check_defects`. So
+`benchmark/independent_defect_scorer.py` decides the same six rules by a
+different technique — `ast` over the parsed script rather than regular
+expressions over its text — and on `target_in_features` and `no_validation` it
+is deliberately inverted, firing on positive evidence of the defect rather than
+on the absence of every enumerated correct form. That inversion is the point:
+absence-scoring is the shape this log has twice recorded as the reason a defect
+existed (A7, A12), so the two scorers were built to fail differently there.
+
+`benchmark/audit_defect_scorers.py` runs both over all 143 preserved scripts,
+858 rule-instances, and reports per-rule Cohen's κ plus every disagreement with
+its file. Five rules: κ = 1.000, 143/143. `target_in_features`: 141/143.
+
+*The defect.* Both disagreements are the same script, run twice:
+
+    def train_and_save_model(csv_path, target_column="price"):
+        X = df.drop(columns=[target_column])
+
+The target is dropped correctly on line 9. `_target_tokens` harvested variables
+holding the target literal with
+
+    ^\s*(\w+)\s*=\s*['"]<target>['"]
+
+which finds `TARGET = "price"` and does not find a function-parameter default.
+Both runs exited 0 and were published carrying `target_in_features`.
+
+This is A12 a third time: an absence-scored rule matched with a pattern that
+cannot see syntax. The harvest now parses and collects names bound to the
+target literal by assignment, by parameter default, and by keyword argument at
+a call site. A script that does not parse contributes no names, as in
+`_integer_bindings`. Pinned by three tests in
+`tests/test_ab_target_exclusion.py`, including one that a script genuinely
+leaving the target in is still flagged.
+
+Rescored as `v4` (three-arm battery) and `v4cr` (`control+revise`), against the
+same preserved bytes, no model call and no re-execution:
+
+| arm | v3 | v4 |
+|---|---|---|
+| `control` | 33 | **31** |
+| `control+revise` | 35 | 35 |
+| `advise` | 24 | 24 |
+| `advise+audit` | 8 | 8 |
+
+`target_in_features` now fires nowhere on the panel. **This is the first
+correction in this study to move a result against the hypothesis we are
+arguing for**: it shrinks the effect from a 25-defect fall to a 23-defect one
+and leaves every treatment arm untouched. §12 of the manuscript had committed
+in writing to reporting such a correction if it arrived.
+
+*What the audit does not establish.* Both scorers are ours. Two
+implementations that share an author share their author's blind spots, and
+856/858 between them is weaker evidence than the same number between
+strangers. `benchmark/blind_review/` holds the apparatus for the check that
+would settle it — 24 scripts, six per arm, arm/model/dataset stripped, order
+shuffled, plus the scorer for rater κ and checklist precision/recall. It has
+not been run, and the manuscript reports the apparatus rather than a result.
+
+Building that sample surfaced a blinding problem worth recording: two scripts
+named their own treatment in a comment (`# Remove duplicate rows as advised`,
+`# Hold-out validation split (for audit compliance ...)`). Both were treatment
+arms, so the leak had a direction. Treatment vocabulary is now redacted, every
+redaction is logged per script, and the generator re-reads its own output and
+refuses to write a sample with a surviving tell.

@@ -1,12 +1,12 @@
 # Rescored: ab-20260915-3b0221-44031-control-mistral-ministral-8b-r2
 
-Experiment id for these rows: `ab-20260915-3b0221-v3`.
+Experiment id for these rows: `v4`.
 
 Re-scored from the preserved `emitted.py` with the corrected
 `target_in_features` rule (amendment A7). Nothing was re-executed and
 no model was called; the original `scoring.md` is kept beside this file.
 
-Defect count: **1 -> 1**
+Defect count: **1 -> 0**
 
 | flag | before | after |
 | --- | :---: | :---: |
@@ -15,6 +15,6 @@ Defect count: **1 -> 1**
 | `leak_duplicate_rows` | no | no |
 | `wrong_metric_for_imbalance` | no | no |
 | `no_validation` | no | no |
-| `target_in_features` | yes | yes |
+| `target_in_features` | yes | no **<-- changed** |
 
-No flag changed.
+Changed: `target_in_features`.

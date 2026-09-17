@@ -245,3 +245,71 @@ def test_a_script_with_no_seed_anywhere_is_still_flagged() -> None:
         target_is_last_column=True,
     )
     assert report["flags"]["no_seed"]
+
+
+TARGET_VIA_PARAMETER_DEFAULT = """\
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestRegressor
+
+
+def train_and_save_model(csv_path, target_column="price"):
+    df = pd.read_csv(csv_path)
+    X = df.drop(columns=[target_column])
+    y = df[target_column]
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42
+    )
+    model = RandomForestRegressor(random_state=42)
+    model.fit(X_train, y_train)
+"""
+
+
+def test_target_dropped_through_a_parameter_default_is_not_a_defect() -> None:
+    """runs/ab-20260915-3b0221-44031-control-mistral-ministral-8b-r1 and -r2.
+
+    The target name is bound by a function-parameter default, not by an
+    assignment, so the line-anchored harvest never saw it and the script was
+    scored as leaving the target in the features. It drops it on line 9.
+    Found by the differential audit against the ast scorer (amendment A16).
+    """
+    report = check_defects(
+        TARGET_VIA_PARAMETER_DEFAULT,
+        target="price",
+        duplicate_rows=0,
+        minority_fraction=None,
+        target_is_last_column=False,
+    )
+    assert not report["flags"]["target_in_features"]
+
+
+def test_target_via_keyword_argument_is_not_a_defect() -> None:
+    """The same binding at a call site rather than in a signature."""
+    source = (
+        TARGET_VIA_PARAMETER_DEFAULT.replace(
+            'def train_and_save_model(csv_path, target_column="price"):',
+            "def train_and_save_model(csv_path, target_column):",
+        )
+        + '\n\ntrain_and_save_model("t.csv", target_column="price")\n'
+    )
+    report = check_defects(
+        source,
+        target="price",
+        duplicate_rows=0,
+        minority_fraction=None,
+        target_is_last_column=False,
+    )
+    assert not report["flags"]["target_in_features"]
+
+
+def test_a_script_that_really_leaves_the_target_in_is_still_flagged() -> None:
+    """Widening the harvest must not make the rule unable to fire."""
+    leaky = TARGET_VIA_PARAMETER_DEFAULT.replace("X = df.drop(columns=[target_column])", "X = df")
+    report = check_defects(
+        leaky,
+        target="price",
+        duplicate_rows=0,
+        minority_fraction=None,
+        target_is_last_column=False,
+    )
+    assert report["flags"]["target_in_features"]

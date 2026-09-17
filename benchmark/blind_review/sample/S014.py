@@ -1,0 +1,87 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+from sklearn.metrics import accuracy_score
+from joblib import dump
+import os
+
+def load_and_preprocess_data(file_path):
+    """Load and preprocess the dataset."""
+    # Load the data
+    data = pd.read_csv(file_path)
+
+    # Separate features and target
+    X = data.drop(columns=['Class'])
+    y = data['Class']
+
+    # Identify categorical and numerical columns
+    categorical_cols = X.select_dtypes(include=['object', 'string']).columns
+    numerical_cols = X.select_dtypes(include=['int64', 'float64']).columns
+
+    # Preprocessing for numerical data: impute missing values and scale
+    numerical_transformer = Pipeline(steps=[
+        ('imputer', SimpleImputer(strategy='median')),
+        ('scaler', StandardScaler())
+    ])
+
+    # Preprocessing for categorical data: impute missing values and one-hot encode
+    categorical_transformer = Pipeline(steps=[
+        ('imputer', SimpleImputer(strategy='most_frequent')),
+        ('onehot', OneHotEncoder(handle_unknown='ignore'))
+    ])
+
+    # Combine preprocessing steps
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ('num', numerical_transformer, numerical_cols),
+            ('cat', categorical_transformer, categorical_cols)
+        ])
+
+    return X, y, preprocessor
+
+def train_model(X, y, preprocessor):
+    """Train a Random Forest classifier with the preprocessor."""
+    # Split data into training and validation sets
+    X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=20260915)
+
+    # Create a pipeline with preprocessing and model
+    model = Pipeline(steps=[
+        ('preprocessor', preprocessor),
+        ('classifier', RandomForestClassifier(random_state=20260915))
+    ])
+
+    # Train the model
+    model.fit(X_train, y_train)
+
+    # Evaluate on validation set
+    y_pred = model.predict(X_val)
+    accuracy = accuracy_score(y_val, y_pred)
+    print(f"Validation Accuracy: {accuracy:.4f}")
+
+    return model
+
+def save_model(model, model_path='trained_model.joblib'):
+    """Save the trained model to a file."""
+    dump(model, model_path)
+    print(f"Model saved to {model_path}")
+
+def main():
+    # Define the file path
+    file_path = r"C:\Users\SABUNIS\AppData\Local\Temp\<TMPDIR>\train.csv"
+
+    # Load and preprocess data
+    X, y, preprocessor = load_and_preprocess_data(file_path)
+
+    # Train the model
+    model = train_model(X, y, preprocessor)
+
+    # Save the model
+    save_model(model)
+
+if __name__ == "__main__":
+    main()
