@@ -79,7 +79,7 @@ rather than by shrinking the page.
 | Text ran 132pt past the paper's edge and was cut mid-word | p3, the set $F$ of reference-bearing fields as one unbreakable math group | broken into a displayed `array` |
 | Table too wide by 77pt | Table I, seven arms | `table*`, full width |
 | Table too wide | Table II, paraphrase sweep | `table*`, full width |
-| Table too wide by 35pt | Table V, corrections | `ootnotesize`, two words shorter |
+| Table too wide by 35pt | Table V, corrections | `footnotesize`, two words shorter |
 
 Two figures were drawn for a 4.9in measure and had been squeezed into a 3.5in
 column, which left their axis labels and Figure 4's legend unreadable. Both are
@@ -88,7 +88,7 @@ defects). Figures 1 and 2 survive at column width and were checked at print
 scale.
 
 Float parameters are loosened in the preamble. Eleven floats over fourteen
-pages is dense, and the stock `	opfraction` / `	extfraction` values queued
+pages is dense, and the stock `\topfraction` / `\textfraction` values queued
 them until a page top could take several at once, which produced one page
 carrying four floats with the body text in fragments between them.
 
