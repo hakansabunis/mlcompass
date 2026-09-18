@@ -539,6 +539,22 @@ PROVIDERS: dict[str, dict[str, Any]] = {
         "base_url": "http://localhost:8000/v1",
         "key_optional": True,
     },
+    "ollama": {
+        "kind": "openai",
+        "key_env": "OLLAMA_API_KEY",
+        # Local Ollama, OpenAI-compatible endpoint. The same runtime and the
+        # same model the A/B panel calls `ollama-qwen2.5-7b`, so a contract
+        # measurement here is comparable with that panel's lane rather than
+        # being a fourth unrelated model.
+        #
+        # It is here because it costs nothing. A hosted provider charges for
+        # every arm of every battery, and the arms that most need re-running
+        # are the ones whose result would change a claim -- so a free lane is
+        # the difference between "we should check that" and checking it.
+        "model": "qwen2.5:7b",
+        "base_url": "http://localhost:11434/v1",
+        "key_optional": True,
+    },
 }
 
 
@@ -2034,6 +2050,7 @@ LAYER_LABELS = {
     "stress_mech": "L3 + worst paraphrase",
     # Baseline comparison arms (analysis_plan §6, plan 2026-09 §2.1).
     "guardrails_stock": "BASE Guardrails (stock)",
+    "guardrails_choices": "BASE Guardrails (+choices)",
     "guardrails_tierb": "BASE Guardrails (+TierB)",
     "static_schema_noenum": "BASE strict, no enum",
     "static_schema": "BASE strict, stale enum",
@@ -2057,6 +2074,7 @@ ARM_IDS: dict[str, str] = {
     "tier_a": "A-STRICT-ENUM (needs --strict)",
     "stress_mech": "A-L3-WORST-PARAPHRASE",
     "guardrails_stock": "A-GR-STOCK",
+    "guardrails_choices": "A-GR-CHOICES",
     "guardrails_tierb": "A-GR-OURS",
     "static_schema_noenum": "A-STRICT-STATIC",
     "static_schema": "A-STATIC-ENUM-STALE",
@@ -2084,6 +2102,12 @@ BASELINE_ARMS: tuple[str, ...] = (
     "layer3_bare",
     "layer3_stress",
     "guardrails_stock",
+    # A-GR-CHOICES sits between stock and ours on purpose, and the ordering is
+    # the design: stock is what the toolkit gives you, choices is what a
+    # competent user builds from the evidence, ours is the contract. The
+    # objection this arm answers -- that 35.0 % measures a strawman -- is only
+    # answerable if all three are the same task, model and budget.
+    "guardrails_choices",
     "guardrails_tierb",
     "static_schema_noenum",
     "static_schema",
@@ -2093,7 +2117,13 @@ BASELINE_ARMS: tuple[str, ...] = (
 # contract arms that share the battery). Used to gate mock mode, which cannot
 # run any of them.
 MECHANISM_BASELINE_ARMS: frozenset[str] = frozenset(
-    {"guardrails_stock", "guardrails_tierb", "static_schema", "static_schema_noenum"}
+    {
+        "guardrails_stock",
+        "guardrails_choices",
+        "guardrails_tierb",
+        "static_schema",
+        "static_schema_noenum",
+    }
 )
 
 # Registered arms §2.1 lists that this harness cannot run today. Printed in the
