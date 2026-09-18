@@ -178,8 +178,9 @@ propose.
 contradict what we believed at the point the study began. The failure mode is
 not the one we set out to measure (Section~\ref{sec:rq1}); the downstream
 effect could not initially be attributed to the tool, and a fourth arm was
-needed to attribute it (Section~\ref{sec:rq5}); and seven faults in our own
-measuring instruments --- six defects and one non-reproduction --- produced
+needed to attribute it (Section~\ref{sec:rq5}); and eight faults in our own
+measuring instruments --- six defects, one non-reproduction, and one channel
+the replication package never recorded --- produced
 numbers we had already reasoned from
 (Section~\ref{sec:instruments}), one of them found only because two readers of
 an earlier draft disagreed about what a channel was measuring. We report each in the body rather than an
@@ -242,7 +243,7 @@ only after its amendment, including the adverse outcome, was written down
 \item \textbf{A replication package} containing every emitted script, every
 model reply, and one record per live response --- 3{,}800 of them --- together
 with the frozen protocols, the amendment log, the two independent
-implementations of the downstream scorer, and the seven faults --- six defects
+implementations of the downstream scorer, and the eight faults --- six defects
 and one non-reproduction --- that we found in our own instruments while running
 the study.
 \end{enumerate}
@@ -1888,7 +1889,7 @@ we do not report it as one.
 \section{Corrections to Our Own Instruments}\label{sec:instruments}
 
 Every number in this paper is produced by an instrument we wrote. We found
-seven faults in those instruments while running the study --- six defects and
+eight faults in those instruments while running the study --- six defects and
 one non-reproduction --- most of them after results had already been drawn from
 them, and all seven are reported here rather than in an appendix because each
 changed something a reader would otherwise take at face value.
@@ -2371,9 +2372,39 @@ $N=36$ this design separates the two arms weakly. A reader who concludes that
 RQ5 does not establish a checklist-level benefit for the tool's findings is
 reading our own result correctly.
 
-\paragraph{Free text is unmeasured.} The guarantee covers the validated
-citation and claim channels. Enforcement pressure could push fabrication into
-the unverified prose field, and we did not measure such displacement.
+\paragraph{Free text is unmeasured, and we could not have measured it.} The
+guarantee covers the validated citation and claim channels. Enforcement
+pressure could push fabrication into the unverified prose field --- if Tier~B
+strips a claim, nothing stops the model asserting it in the narration instead
+--- and three independent readers have now named this as the most important
+open question about the design.
+
+Attempting it produced an eighth instrument finding, and the first that is
+about the replication package rather than a scorer. \textbf{The narration text
+was never recorded.} The harness requests it, the tool schema marks it
+required, and the record normaliser dropped it before writing, so all 4{,}960
+preserved responses carry the structured payload and no trace of the channel in
+question. A package advertised as one record per live response is missing the
+one field this threat is about.
+
+The normaliser now preserves it and the analysis is written and committed
+(\texttt{scripts/measure\_freetext\_displacement.py}); run against records that
+predate the fix it refuses rather than substituting another field, which
+matters here because the obvious substitute manufactures the effect. The
+\texttt{verdict} field holds free prose in the unconstrained arms and a
+schema-pinned enum in the contract arms, and scoring those two against each
+other produces a 42\,\% against 76\,\% ``displacement effect'' that is entirely
+an artefact of field naming. Our own first attempt did exactly that, which is
+why the script now declines the substitution rather than documenting it.
+
+So the honest statement is not that displacement did not occur. It is that the
+study cannot say, that the reason is our instrumentation and not the question's
+difficulty, and that a fresh battery answers it. Note also that the half a
+deterministic check can reach --- fabricated numbers and names in prose --- is
+not the whole threat: a narration can name only real columns, quote only
+measured values, and still assert a causal story the evidence does not support.
+That half needs the human raters of the blind protocol.
+
 Miscalibrated confidence on correctly-cited, correctly-valued evidence is also
 unscored.
 

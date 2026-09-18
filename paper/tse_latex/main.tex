@@ -178,8 +178,9 @@ Three of the results below contradict what we believed when the study began.
 The failure mode is not the one we set out to measure
 (Section~\ref{sec:rq1}); the downstream effect could not initially be
 attributed to the tool, and a fourth arm was needed to attribute it
-(Section~\ref{sec:rq5}); and seven faults in our own measuring instruments ---
-six defects and one non-reproduction --- produced numbers we had already
+(Section~\ref{sec:rq5}); and eight faults in our own measuring instruments ---
+six defects, one non-reproduction, and one channel the replication package
+never recorded --- produced numbers we had already
 reasoned from (Section~\ref{sec:instruments}), one of them found only because
 two readers of an earlier draft disagreed about what a channel was measuring.
 We report each in the body rather than an appendix, with the superseded
@@ -221,7 +222,7 @@ Goodhart effect in the checklist itself; and (v) \textbf{a replication package}
 containing every
 emitted script, every model reply, one record per live response (3,800),
 the frozen protocols, the amendment log, two independent implementations of the
-downstream scorer, and the seven instrument faults.
+downstream scorer, and the eight instrument faults.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Background and Related Work}\label{sec:related}
@@ -1324,7 +1325,7 @@ report it as one.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Every number in this paper is produced by an instrument we wrote. We found
-seven faults in those instruments while running the study --- six defects and
+eight faults in those instruments while running the study --- six defects and
 one non-reproduction --- most of them after results had already been drawn from
 them. Table~\ref{tab:corrections} lists what each one moved. Three are
 described below because each carries a lesson the others repeat; the full
@@ -1521,8 +1522,19 @@ blends invention with misfiling, which is why Section~\ref{sec:rq1} decomposes
 it. The free text that reaches the user is unmeasured, and enforcement pressure
 could in principle displace unfaithful content from the structured fields into
 it --- a narration can name only real columns and still assert a causal story
-the evidence does not support. We have no measurement of that channel and name
-it as the most important gap in the guarantee.
+the evidence does not support. We name it as the most important gap in the
+guarantee, and attempting to close it produced an eighth instrument finding,
+the first about the replication package rather than a scorer: \textbf{the
+narration text was never recorded}. The harness requests it and the schema
+marks it required; the record normaliser dropped it before writing, so all
+4{,}960 preserved responses carry the structured payload and no trace of this
+channel. The normaliser now keeps it and the analysis is committed, refusing to
+run on records that predate the fix rather than substituting \texttt{verdict}
+--- which holds prose in the unconstrained arms and a schema-pinned enum in the
+contract arms, and scoring one against the other manufactures a 42\,\% against
+76\,\% effect out of a field name. Our first attempt did exactly that. The
+study therefore cannot say whether displacement occurs, and the reason is our
+instrumentation rather than the question.
 
 \paragraph{Internal} The \texttt{advise+audit} arm is handed findings naming
 the same rules the outcome is scored on, and \textbf{the overlap accounts for
@@ -1629,7 +1641,7 @@ alternatives a practitioner would otherwise use. We are equally explicit about
 what this study revised in our own understanding of the system it measures: the
 failure mode is not the one we set out to find, a fabrication rate we had
 treated as a property of narrators turned out to be a property of one model on
-one date, and seven faults in our own instruments produced numbers we had
+one date, and eight faults in our own instruments produced numbers we had
 already reasoned from.
 
 Exporting an enforceable contract across a tool-server boundary --- so that a

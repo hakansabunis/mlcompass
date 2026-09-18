@@ -249,8 +249,24 @@ as rubric arm (done), blind human audit, and a second evidence-closed task.
 | 1b | Blind human rating of the checklist | apparatus frozen, needs two raters who are not us |
 | 5 | Evidence-domain scalability, 10 / 100 / 500 / 1000 | queued. §12 concedes Tier A is untested above ten columns; the measurement is cheap (schema bytes, latency, API acceptance, tokens, first-pass compliance) |
 | 8 | **Temperature sensitivity, T ∈ {0, 0.2, 1.0}** | queued. Methods now justifies T=1.0 and admits the baselines are conditioned on it. A supplementary sweep would close it |
+| 9 | **Free-text displacement** — does enforcement push unfaithful content into the unverified prose? | **blocked on a re-run, and the reason is us.** The narration was never recorded: the harness asks for it, the schema requires it, `_normalize` dropped it. All 4,960 published responses carry the structured payload and no trace of this channel. Fixed in the harness; `scripts/measure_freetext_displacement.py` is the analysis, and it refuses to run on pre-fix records rather than substituting `verdict` (which manufactures a 42 % vs 76 % effect out of a field name — our own first attempt did that) |
 | 4 | Template-only, LLM-free baseline | queued |
 | 6 | Tier B mutation / adversarial tests | queued |
+| 10 | Numeric tolerance sensitivity, τ ∈ {0.0005, 0.005, 0.05} + type-aware relative error | queued. Stanford Q3; τ=0.005 is currently unjustified |
+| 11 | Alias / synonym handling for entity names without opening a misattribution channel | queued. Stanford Q5; design question before it is an experiment |
+
+### Answered since
+
+**Stanford Q4 — multiple statistics per column without overconstraining the
+vocabulary.** Done, in code. `src/mlcompass/agents/evidence_contract.py`
+extracts the contract from the leakage path and keys the value table on
+`(entity, statistic)` rather than the entity, which is what a second evidence
+shape forced: a dataset profile carries thirteen statistics per column, and an
+entity-keyed table compares a claimed `mean` against a stored `missing_pct` and
+passes it. The statistic domain is computed per call from what the evidence
+actually carries, so a categorical column admits `cardinality` and not `mean` —
+the vocabulary is bound rather than frozen. `PROFILE` is the second instance;
+wiring it to a narrator and running a battery is item 7.
 
 Two of 7, 1b and 5 would, by the reviewer's own account, move the paper from
 borderline to the accept side.

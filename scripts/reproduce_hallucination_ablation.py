@@ -841,6 +841,20 @@ def _normalize(tool_input: dict[str, Any]) -> dict[str, Any]:
         "columns": [str(c) for c in cols] if isinstance(cols, list) else [],
         "claims": claims,
         "verdict": str(tool_input.get("verdict", "")),
+        # The unverified prose channel, preserved verbatim.
+        #
+        # ADDITIVE record field, and it closes a hole in the replication
+        # package rather than adding a feature. The schema asks for a narration
+        # and marks it required; this function dropped it, so every record
+        # written before 2026-09-18 carries the structured payload and no trace
+        # of the one channel the guarantee does not cover. Three reviewers have
+        # asked whether enforcement displaces unfaithful content into that
+        # channel, and the honest answer for the published runs is that the
+        # data to check it was never kept. It is kept from here.
+        #
+        # Records written earlier simply lack the key. No channel definition
+        # changes and no published cell moves.
+        "narration": str(tool_input.get("narration", "")),
         "omitted": None,  # computed by the scorer for layers 1-2
         "rejections": 0,  # Tier B catches; nonzero only on contract arms
         "rejection_kinds": [],  # violation composition per catch (contract arms)
