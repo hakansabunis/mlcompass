@@ -11,10 +11,13 @@
 
 📄 **Paper (manuscript, not yet published):** the contract that guards
 mlcompass's leakage narrator is written up in
-[`paper/INISTA_Paper.md`](paper/INISTA_Paper.md) — *"An Evidence-Bound
-Runtime Schema for Claim-Faithful LLM Narration of Machine-Learning
-Pipeline Evidence"*. Every measurement in it is reproducible end-to-end
-via the scripts in [`scripts/`](scripts/). See
+[`paper/emse_latex/`](paper/emse_latex/) — *"Prompts Are Advisory,
+Verification Is Enforcement: An Evidence-Bound Runtime Contract for LLM
+Narration of Pipeline Evidence"*. A two-column condensation for an IEEE
+venue is in [`paper/tse_latex/`](paper/tse_latex/); the two carry identical
+numbers and [`paper/tse_latex/CUTS.md`](paper/tse_latex/CUTS.md) records what
+differs. Every measurement is reproducible end-to-end via the scripts in
+[`scripts/`](scripts/). See
 [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md) for what the contract
 does and does not protect against, and
 [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md) for what we

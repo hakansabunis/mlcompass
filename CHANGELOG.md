@@ -27,8 +27,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [0.9.0] — 2026-06-11
 
 **The claim-faithful contract release.** The leakage narrator now ships the
-evidence-bound runtime-schema contract that is the subject of the INISTA 2026
-paper: every entity and every number the narrator returns is verified against
+evidence-bound runtime-schema contract that is the subject of the manuscript
+in `paper/`: every entity and every number the narrator returns is verified against
 the deterministic evidence — by construction, independent of the provider.
 
 ### Added — evidence-bound contract (`agents/leakage_investigator.py`)

@@ -106,8 +106,6 @@ scripts/data/sambanis_civil_war.csv
 # Local-only document artifacts
 # Generated exports whose Markdown/LaTeX source is tracked, third-party
 # conference material, and scratch files. Kept on disk, out of the repo.
-/INISTA2026_CFP.pdf
-/cfp_inista2026.txt
 /conference-template-a4.docx
 /conference-template-letter.docx
 /conference-template-*.docx
@@ -117,7 +115,6 @@ scripts/data/sambanis_civil_war.csv
 /Capstone_Presentation.pptx
 /image-*.webp
 paper/Capstone_Report.docx
-paper/INISTA_Paper.docx
 paper/Konusma_Metni_EN.docx
 paper/Konusma_Metni_TR.docx
 paper/Proje_Raporu_TR.docx

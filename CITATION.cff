@@ -34,10 +34,10 @@ authors:
     given-names: "Yusuf"
     affiliation: "Istanbul Medipol University"
     email: "yusuf.unlu@std.medipol.edu.tr"
-  - family-names: "Akyokuş"
-    given-names: "Selim"
+  - family-names: "Özdemir"
+    given-names: "Mehmet Kemal"
     affiliation: "Istanbul Medipol University"
-    email: "sakyokus@medipol.edu.tr"
+    email: "mkozdemir@medipol.edu.tr"
 
 # The manuscript is unpublished. It has no DOI, no venue and no year of
 # publication, so none is recorded here; `type: unpublished` is the
@@ -46,8 +46,8 @@ authors:
 preferred-citation:
   type: unpublished
   title: >-
-    An Evidence-Bound Runtime Schema for Claim-Faithful LLM Narration of
-    Machine-Learning Pipeline Evidence
+    Prompts Are Advisory, Verification Is Enforcement: An Evidence-Bound
+    Runtime Contract for LLM Narration of Pipeline Evidence
   authors:
     - family-names: "Sabuniş"
       given-names: "Hakan"
@@ -55,8 +55,8 @@ preferred-citation:
     - family-names: "Ünlü"
       given-names: "Yusuf"
       affiliation: "Istanbul Medipol University"
-    - family-names: "Akyokuş"
-      given-names: "Selim"
+    - family-names: "Özdemir"
+      given-names: "Mehmet Kemal"
       affiliation: "Istanbul Medipol University"
   institution:
     name: "School of Engineering and Natural Sciences, Istanbul Medipol University"
@@ -64,4 +64,5 @@ preferred-citation:
     country: "TR"
   notes: >-
     Unpublished manuscript. The source is in this repository at
-    paper/INISTA_Paper.md.
+    paper/emse_latex/, with a two-column condensation for an IEEE venue at
+    paper/tse_latex/ carrying identical numbers.
