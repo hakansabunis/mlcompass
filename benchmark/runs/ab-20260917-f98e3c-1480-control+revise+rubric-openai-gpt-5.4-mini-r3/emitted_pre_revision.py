@@ -1,0 +1,103 @@
+import os
+import json
+import joblib
+import numpy as np
+import pandas as pd
+
+from sklearn.model_selection import StratifiedKFold, cross_val_score
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.metrics import accuracy_score
+from sklearn.ensemble import HistGradientBoostingClassifier
+
+DATA_PATH = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed2-r3\train.csv"
+MODEL_PATH = "trained_model.joblib"
+
+
+def make_one_hot_encoder():
+    # sklearn version compatibility across releases
+    try:
+        return OneHotEncoder(handle_unknown="ignore", sparse_output=False)
+    except TypeError:
+        return OneHotEncoder(handle_unknown="ignore", sparse=False)
+
+
+def main():
+    df = pd.read_csv(DATA_PATH)
+
+    target_col = "Class"
+    y = df[target_col].astype(int)
+    X = df.drop(columns=[target_col])
+
+    # Identify column types
+    cat_cols = X.select_dtypes(include=["object", "category"]).columns.tolist()
+    num_cols = [c for c in X.columns if c not in cat_cols]
+
+    numeric_transformer = Pipeline(
+        steps=[
+            ("imputer", SimpleImputer(strategy="median")),
+        ]
+    )
+
+    categorical_transformer = Pipeline(
+        steps=[
+            ("imputer", SimpleImputer(strategy="most_frequent")),
+            ("onehot", make_one_hot_encoder()),
+        ]
+    )
+
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ("num", numeric_transformer, num_cols),
+            ("cat", categorical_transformer, cat_cols),
+        ],
+        remainder="drop",
+        verbose_feature_names_out=False,
+    )
+
+    model = HistGradientBoostingClassifier(
+        learning_rate=0.05,
+        max_depth=None,
+        max_iter=300,
+        min_samples_leaf=20,
+        l2_regularization=0.0,
+        random_state=42,
+    )
+
+    clf = Pipeline(
+        steps=[
+            ("preprocess", preprocessor),
+            ("model", model),
+        ]
+    )
+
+    # Optional quick validation for a sanity check
+    try:
+        cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+        scores = cross_val_score(clf, X, y, cv=cv, scoring="accuracy", n_jobs=-1)
+        print(f"CV accuracy: {scores.mean():.5f} +/- {scores.std():.5f}")
+    except Exception as e:
+        print(f"Cross-validation skipped due to: {e}")
+
+    # Fit final model on full data
+    clf.fit(X, y)
+
+    # Save fitted pipeline
+    joblib.dump(
+        {
+            "model": clf,
+            "feature_columns": list(X.columns),
+            "target_column": target_col,
+            "categorical_columns": cat_cols,
+            "numeric_columns": num_cols,
+        },
+        MODEL_PATH,
+    )
+
+    print(f"Saved model to: {os.path.abspath(MODEL_PATH)}")
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,2 @@
+Model Test MSE: 0.02
+Model and scaler saved to model.joblib

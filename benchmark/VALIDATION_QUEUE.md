@@ -150,3 +150,66 @@ publishable and we say so now.
 **To run it:** the arm needs `pip install '.[baselines]'` and a provider key,
 and slots into the existing battery as a seventh layer alongside
 `guardrails_stock` and `guardrails_tierb`.
+
+---
+
+## Results, 2026-09-18
+
+Both batteries ran. Item 3 narrows a claim; item 2 breaks one.
+
+### Item 3 — `A-GR-CHOICES` reaches 0/200
+
+DeepSeek `deepseek-chat`, N=200 per arm, three days after the manuscript's run:
+
+| arm | entity | 95 % CI | k/N | Tier B catches |
+|---|---|---|---|---|
+| `A-L1` | 43.0 % | [36.3, 49.9] | 86/200 | 0 |
+| `A-GR-STOCK` | 43.5 % | [36.8, 50.4] | 87/200 | 0 |
+| **`A-GR-CHOICES`** | **0.0 %** | [0.0, 1.9] | **0/200** | **88** |
+| `A-GR-OURS` | 0.0 % | [0.0, 1.9] | 0/200 | 83 |
+| `A-CONTRACT` | 0.0 % | [0.0, 1.9] | 0/200 | 0 |
+| `A-STRESS` | 0.0 % | [0.0, 1.9] | 0/200 | 23 |
+| `A-STRICT-STATIC` | 7.0 % | [4.2, 11.4] | 14/200 | 0 |
+| `A-STATIC-ENUM-STALE` | 0.0 % | [0.0, 1.9] | 0/200 | 0 |
+
+The toolkit's own generic acceptable-values check, populated from `E` at call
+time and carrying none of our three channels, reaches the same 0/200 the
+contract does. The outcome recorded before the run said this would make the
+claim "both narrower and stronger", and it does. The contribution is not that
+our validator beats theirs. It is that **binding the admissible set to the
+evidence at call time is what does the work, and nothing in the toolkit's
+default configuration does that.** §7 has to be rewritten to say so.
+
+Two things worth keeping from the same battery. `A-GR-STOCK` moved from
+35.0 % to 43.5 % in three days on the same model name, which is a third data
+point for the paper's own thesis that a rate is a property of a model version
+at a date. And on local `qwen2.5:7b` (N=20) every arm is 0/20 except
+`A-STRICT-STATIC` at 2/20 — a third provider, a third null.
+
+### Item 2 — the rubric arm breaks §9's causal claim
+
+See `A17_RESULT.md` for the full analysis. In short: an arm told the six scored
+concerns and nothing about its own script ends at **1 flagged defect over 32
+scored runs**, better than `advise+audit`'s 8. A17 recorded before the run that
+a result near 8 would force a rewrite; it landed at 1.
+
+The arm pays for it somewhere the checklist cannot see. It executes 17/36
+(47 %) against 78–83 % for every other arm, so on the joint outcome a
+practitioner gets — runs *and* carries no flagged defect — `advise+audit` is
+still first at 64 % [48, 78] against the rubric arm's 44 % [30, 60], with
+overlapping intervals.
+
+And it explains a claim rather than removing it: `control+revise` repaired 0
+of 33 defects, the rubric arm repaired 21 of 25 and regressed none. A model
+asked to review its own script with nothing named fixes nothing; a model told
+what to look for fixes most of it, whether or not anyone tells it what is
+actually wrong.
+
+### Remaining
+
+| # | Work | Status |
+|---|---|---|
+| 1b | Blind human rating of the checklist | apparatus frozen, needs two raters who are not us |
+| 4 | Template-only, LLM-free baseline | queued |
+| 5 | Evidence-domain scalability, 10 / 100 / 500 / 1000 | queued |
+| 6 | Tier B mutation / adversarial tests | queued |

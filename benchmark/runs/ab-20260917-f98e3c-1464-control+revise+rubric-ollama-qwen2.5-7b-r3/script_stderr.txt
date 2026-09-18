@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed2-r3\emitted.py", line 21, in <module>
+    model = XGBClassifier(use_label_encoder=False, random_state=42)
+            ^^^^^^^^^^^^^
+NameError: name 'XGBClassifier' is not defined

@@ -1,0 +1,4 @@
+Test RMSE: 0.1393
+Test MAE:  0.0966
+Test R2:   0.8513
+Model saved to C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed0-r1\model.joblib

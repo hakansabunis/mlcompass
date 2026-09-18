@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed2-r3\emitted.py", line 132, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed2-r3\emitted.py", line 123, in main
+    balanced_acc = evaluate_model(model, X_test, y_test)
+  File "C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed2-r3\emitted.py", line 95, in evaluate_model
+    if len(np.unique(y)) > 2:  # Multi-class
+                     ^
+NameError: name 'y' is not defined

@@ -1,0 +1,90 @@
+```python
+import pandas as pd
+import joblib
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
+from sklearn.impute import SimpleImputer
+from xgboost import XGBRegressor
+
+DATA_PATH = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed1-r2\train.csv"
+TARGET = "price"
+MODEL_PATH = "model.joblib"
+
+df = pd.read_csv(DATA_PATH)
+X = df.drop(columns=[TARGET])
+y = df[TARGET]
+
+numeric_features = X.columns.tolist()
+
+def make_preprocessor():
+    return ColumnTransformer(
+        transformers=[
+            ("num", SimpleImputer(strategy="median"), numeric_features)
+        ],
+        remainder="drop"
+    )
+
+X_train, X_val, y_train, y_val = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+base_model = XGBRegressor(
+    n_estimators=2000,
+    learning_rate=0.03,
+    max_depth=7,
+    min_child_weight=1,
+    subsample=0.8,
+    colsample_bytree=0.8,
+    gamma=0.0,
+    reg_alpha=0.0,
+    reg_lambda=1.0,
+    random_state=42,
+    n_jobs=-1,
+    objective="reg:squarederror",
+    tree_method="hist",
+    early_stopping_rounds=50,
+    eval_metric="rmse",
+)
+
+pipeline = Pipeline([
+    ("prep", make_preprocessor()),
+    ("model", base_model)
+])
+
+pipeline.fit(
+    X_train, y_train,
+    model__eval_set=[(X_val, y_val)],
+    model__verbose=False
+)
+
+best_iteration = pipeline.named_steps["model"].best_iteration
+if best_iteration is None:
+    best_iteration = pipeline.named_steps["model"].n_estimators - 1
+
+final_model = XGBRegressor(
+    n_estimators=best_iteration + 1,
+    learning_rate=0.03,
+    max_depth=7,
+    min_child_weight=1,
+    subsample=0.8,
+    colsample_bytree=0.8,
+    gamma=0.0,
+    reg_alpha=0.0,
+    reg_lambda=1.0,
+    random_state=42,
+    n_jobs=-1,
+    objective="reg:squarederror",
+    tree_method="hist",
+)
+
+final_pipeline = Pipeline([
+    ("prep", make_preprocessor()),
+    ("model", final_model)
+])
+
+final_pipeline.fit(X, y)
+
+joblib.dump(final_pipeline, MODEL_PATH)
+print(f"Fitted model saved to {MODEL_PATH}")
+```

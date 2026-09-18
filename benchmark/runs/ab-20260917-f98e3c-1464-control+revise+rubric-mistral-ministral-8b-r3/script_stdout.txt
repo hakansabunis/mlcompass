@@ -1,0 +1,16 @@
+
+Model Evaluation:
+Balanced Accuracy: 0.6496865203761756
+
+Classification Report:
+              precision    recall  f1-score   support
+
+           1       0.80      0.84      0.82        58
+           2       0.53      0.45      0.49        22
+
+    accuracy                           0.74        80
+   macro avg       0.66      0.65      0.66        80
+weighted avg       0.73      0.74      0.73        80
+
+
+Model saved to trained_model.joblib

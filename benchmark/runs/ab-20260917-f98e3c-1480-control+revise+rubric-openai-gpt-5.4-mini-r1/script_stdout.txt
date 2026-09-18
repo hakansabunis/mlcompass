@@ -1,0 +1,4 @@
+Saved model to: C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed0-r1\trained_model.joblib
+Saved metadata to: C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed0-r1\trained_model_metadata.json
+Validation balanced accuracy: 0.514426
+Best params: {'model__min_samples_leaf': 20, 'model__max_leaf_nodes': 127, 'model__max_iter': 150, 'model__learning_rate': np.float64(0.038571428571428576), 'model__l2_regularization': np.float64(0.1)}

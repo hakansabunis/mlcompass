@@ -1,0 +1,81 @@
+```python
+import os
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report, balanced_accuracy_score, f1_score
+from joblib import dump
+from tqdm import tqdm
+
+def train_and_save_model():
+    # Define the file path
+    file_path = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed0-r1\train.csv"
+
+    # Load the data
+    print("Loading data...")
+    data = pd.read_csv(file_path)
+
+    # Remove duplicate rows before any processing
+    data = data.drop_duplicates()
+    print(f"Removed {len(data) - len(data.drop_duplicates())} duplicate rows")
+
+    # Separate features and target
+    X = data.drop(columns=['Class'])
+    y = data['Class']
+
+    # Check for class imbalance
+    class_counts = y.value_counts(normalize=True)
+    print("\nClass distribution:")
+    for cls, count in class_counts.items():
+        print(f"Class {cls}: {count:.2%}")
+
+    # Split data into training and validation sets (80-20 split)
+    X_train, X_val, y_train, y_val = train_test_split(
+        X, y,
+        test_size=0.2,
+        random_state=42,  # Seeded randomness
+        stratify=y  # Maintain class distribution
+    )
+
+    # Standardize the features (only on training data)
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_val_scaled = scaler.transform(X_val)  # Using same scaling for validation
+
+    # Initialize and train the model
+    print("\nTraining model...")
+    model = RandomForestClassifier(
+        n_estimators=100,
+        random_state=42,  # Seeded randomness
+        class_weight='balanced',  # Handles class imbalance
+        n_jobs=-1,
+        max_depth=10,  # Prevent overfitting
+        min_samples_split=5
+    )
+    model.fit(X_train_scaled, y_train)
+
+    # Evaluate on validation set (data the model hasn't seen)
+    y_pred = model.predict(X_val_scaled)
+
+    # Report metrics that are robust to class imbalance
+    print("\nValidation Set Performance:")
+    print(f"Balanced Accuracy: {balanced_accuracy_score(y_val, y_pred):.4f}")
+    print(f"Macro F1 Score: {f1_score(y_val, y_pred, average='macro'):.4f}")
+    print("\nClassification Report:")
+    print(classification_report(y_val, y_pred))
+
+    # Save the model and scaler to files in current working directory
+    model_file = "random_forest_model.joblib"
+    scaler_file = "scaler.joblib"
+
+    print(f"\nSaving model to {model_file} and scaler to {scaler_file} in current directory")
+    dump(model, model_file)
+    dump(scaler, scaler_file)
+
+    print("Training complete!")
+
+if __name__ == "__main__":
+    train_and_save_model()
+```

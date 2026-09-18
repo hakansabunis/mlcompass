@@ -1,0 +1,13 @@
+Original rows: 427, after removing duplicates: 427
+
+Classification Report:
+              precision    recall  f1-score   support
+
+           1       0.80      0.87      0.83        61
+           2       0.60      0.48      0.53        25
+
+    accuracy                           0.76        86
+   macro avg       0.70      0.67      0.68        86
+weighted avg       0.74      0.76      0.75        86
+
+Error during processing: name 'y' is not defined

@@ -1,0 +1,9 @@
+Loading and preprocessing data...
+Training model...
+
+Model Evaluation:
+Mean Squared Error: 0.02
+R-squared: 0.8391
+
+Saving model...
+Model saved to C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed1-r2\house_price_model.joblib

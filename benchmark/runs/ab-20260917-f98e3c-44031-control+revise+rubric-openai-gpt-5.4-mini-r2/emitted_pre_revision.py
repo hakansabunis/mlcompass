@@ -1,0 +1,92 @@
+import os
+import json
+import joblib
+import numpy as np
+import pandas as pd
+
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error
+from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
+from sklearn.impute import SimpleImputer
+from sklearn.ensemble import HistGradientBoostingRegressor
+
+# -----------------------------
+# Configuration
+# -----------------------------
+TRAIN_PATH = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed1-r2\train.csv"
+MODEL_PATH = "trained_model.joblib"
+
+RANDOM_STATE = 42
+
+# -----------------------------
+# Load data
+# -----------------------------
+df = pd.read_csv(TRAIN_PATH)
+
+target_col = "price"
+feature_cols = [c for c in df.columns if c != target_col]
+
+X = df[feature_cols].copy()
+y = df[target_col].copy()
+
+# -----------------------------
+# Preprocessing + model
+# -----------------------------
+numeric_features = feature_cols
+
+preprocessor = ColumnTransformer(
+    transformers=[
+        ("num", SimpleImputer(strategy="median"), numeric_features),
+    ],
+    remainder="drop",
+    verbose_feature_names_out=False,
+)
+
+model = HistGradientBoostingRegressor(
+    loss="squared_error",
+    learning_rate=0.05,
+    max_iter=500,
+    max_depth=8,
+    min_samples_leaf=20,
+    l2_regularization=0.0,
+    random_state=RANDOM_STATE,
+)
+
+pipeline = Pipeline(
+    steps=[
+        ("preprocessor", preprocessor),
+        ("model", model),
+    ]
+)
+
+# -----------------------------
+# Simple validation for a sanity check
+# -----------------------------
+X_train, X_val, y_train, y_val = train_test_split(
+    X, y, test_size=0.15, random_state=RANDOM_STATE
+)
+
+pipeline.fit(X_train, y_train)
+val_pred = pipeline.predict(X_val)
+rmse = mean_squared_error(y_val, val_pred, squared=False)
+
+print(f"Validation RMSE: {rmse:.6f}")
+
+# -----------------------------
+# Fit on full data
+# -----------------------------
+pipeline.fit(X, y)
+
+# -----------------------------
+# Save model artifact
+# -----------------------------
+artifact = {
+    "model": pipeline,
+    "feature_cols": feature_cols,
+    "target_col": target_col,
+    "validation_rmse": float(rmse),
+}
+
+joblib.dump(artifact, MODEL_PATH)
+print(f"Saved model to: {os.path.abspath(MODEL_PATH)}")

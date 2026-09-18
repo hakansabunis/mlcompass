@@ -1,0 +1,69 @@
+import os
+import random
+import numpy as np
+import pandas as pd
+import joblib
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import f1_score
+from xgboost import XGBClassifier
+
+# Set random seeds for reproducibility
+random.seed(42)
+np.random.seed(42)
+
+csv_path = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed1-r2\train.csv"
+df = pd.read_csv(csv_path)
+
+# Remove duplicate rows before splitting
+df = df.drop_duplicates()
+
+target_col = "Class"
+X = df.drop(columns=[target_col])
+y = df[target_col]
+
+# Determine evaluation metric based on number of classes
+n_classes = y.nunique()
+eval_metric = "logloss" if n_classes == 2 else "mlogloss"
+
+# Split into train and hold-out test sets
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)
+
+# Train a model on the training set only for evaluation
+model_eval = XGBClassifier(
+    n_estimators=500,
+    learning_rate=0.05,
+    max_depth=6,
+    subsample=0.8,
+    colsample_bytree=0.8,
+    random_state=42,
+    n_jobs=-1,
+    tree_method="hist",
+    eval_metric=eval_metric,
+)
+model_eval.fit(X_train, y_train)
+
+# Evaluate on the untouched hold-out test set using macro F1 (robust to imbalance)
+y_pred = model_eval.predict(X_test)
+score = f1_score(y_test, y_pred, average="macro")
+print(f"Macro F1 on hold-out test set: {score:.4f}")
+
+# Retrain on the full dataset for the final saved model
+final_model = XGBClassifier(
+    n_estimators=500,
+    learning_rate=0.05,
+    max_depth=6,
+    subsample=0.8,
+    colsample_bytree=0.8,
+    random_state=42,
+    n_jobs=-1,
+    tree_method="hist",
+    eval_metric=eval_metric,
+)
+final_model.fit(X, y)
+
+# Save the fitted model to the current working directory
+model_path = os.path.join(os.getcwd(), "trained_model.joblib")
+joblib.dump(final_model, model_path)
+print(f"Model saved to {model_path}")

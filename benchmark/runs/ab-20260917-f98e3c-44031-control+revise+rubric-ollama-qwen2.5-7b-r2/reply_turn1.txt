@@ -1,0 +1,44 @@
+```python
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from xgboost import XGBRegressor
+
+# Load the dataset
+df = pd.read_csv(r'C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed1-r2\train.csv')
+
+# Define the target and features
+X = df.drop(columns=['price'])
+y = df['price']
+
+# Split into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Define preprocessing for numeric columns (scale them)
+numeric_features = [col for col in X.columns if X[col].dtype == "float64"]
+numeric_transformer = Pipeline(steps=[
+    ('scaler', StandardScaler())])
+
+# Create preprocessor
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('num', numeric_transformer, numeric_features)])
+
+# Define the model
+model = XGBRegressor(random_state=42)
+
+# Combine preprocessing and modeling into a pipeline
+pipeline = Pipeline(steps=[('preprocessor', preprocessor),
+                           ('regressor', model)])
+
+# Fit the pipeline to the training data
+pipeline.fit(X_train, y_train)
+
+# Save the fitted model to a file in the current working directory
+import joblib
+joblib_file = "trained_model.joblib"
+joblib.dump(pipeline, joblib_file)
+print(f"Model saved as {joblib_file}")
+```

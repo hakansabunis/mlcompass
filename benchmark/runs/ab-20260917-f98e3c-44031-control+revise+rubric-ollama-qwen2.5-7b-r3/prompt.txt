@@ -1,0 +1,53 @@
+You are given a tabular dataset saved as a CSV file at this path:
+
+C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed2-r3\train.csv
+
+The target column is: price
+
+The columns in the file are:
+  - MedInc (float64)
+  - HouseAge (float64)
+  - AveRooms (float64)
+  - AveBedrms (float64)
+  - Population (float64)
+  - AveOccup (float64)
+  - Latitude (float64)
+  - Longitude (float64)
+  - price (float64)
+
+The script will be run by Python 3.13.3. These third-party packages can be imported in that environment:
+
+  - numpy 2.4.1
+  - pandas 2.3.3
+  - scipy 1.17.0
+  - pyarrow 22.0.0
+  - polars 1.39.3
+  - sklearn (scikit-learn 1.8.0)
+  - joblib 1.5.3
+  - xgboost 3.1.3
+  - torch 2.6.0+cu124
+  - tensorflow 2.21.0
+  - keras 3.13.1
+  - shap 0.51.0
+  - matplotlib 3.10.8
+  - seaborn 0.13.2
+  - plotly 6.8.0
+  - cloudpickle 3.1.2
+  - h5py 3.14.0
+  - openpyxl 3.1.5
+  - xlsxwriter 3.2.9
+  - numba 0.65.0
+  - tqdm 4.67.1
+  - yaml (PyYAML 6.0.3)
+
+The Python standard library is there as well. Nothing is installed before the script runs, so an import of anything not listed above may fail.
+
+Write a complete Python training script that trains a model to predict the target column from the other columns in that file, and saves the fitted model to a file in the current working directory so it can be loaded and used to predict on new rows later.
+
+Reply with the script inside a single ```python code block, and nothing else.
+
+Below is the verbatim output of mlcompass run on the same inputs.
+
+--- mlcompass advise ---
+
+--- end mlcompass advise ---

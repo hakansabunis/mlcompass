@@ -1,0 +1,3 @@
+Validation RMSE: 0.15
+Validation R²: 0.83
+Model saved to C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed2-r3\house_price_model.joblib

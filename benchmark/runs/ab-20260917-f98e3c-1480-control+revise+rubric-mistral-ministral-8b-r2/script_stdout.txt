@@ -1,0 +1,19 @@
+Class distribution: Class
+1    304
+2    123
+Name: count, dtype: int64
+
+Validation Balanced Accuracy: 0.5698
+
+Classification Report:
+              precision    recall  f1-score   support
+
+           1       0.75      0.82      0.78        61
+           2       0.42      0.32      0.36        25
+
+    accuracy                           0.67        86
+   macro avg       0.58      0.57      0.57        86
+weighted avg       0.65      0.67      0.66        86
+
+
+Model saved to trained_classifier.joblib

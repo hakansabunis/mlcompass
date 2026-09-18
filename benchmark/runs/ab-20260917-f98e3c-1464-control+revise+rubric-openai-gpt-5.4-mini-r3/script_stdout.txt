@@ -1,0 +1,8 @@
+rf: balanced_accuracy=0.595749 +/- 0.052691
+et: balanced_accuracy=0.610435 +/- 0.055793
+hgb: balanced_accuracy=0.604444 +/- 0.063684
+lr: balanced_accuracy=0.711546 +/- 0.050486
+Best model: lr
+Held-out test balanced accuracy: 0.623041
+Held-out test accuracy: 0.637500
+Saved trained model to: C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed2-r3\trained_model.joblib

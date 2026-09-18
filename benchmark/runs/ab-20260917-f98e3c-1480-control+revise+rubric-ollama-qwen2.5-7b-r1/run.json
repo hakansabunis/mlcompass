@@ -1,0 +1,150 @@
+{
+  "dataset_id": "openml-1480",
+  "arm": "control+revise+rubric",
+  "panel_id": "ollama-qwen2.5-7b",
+  "provider": "openai",
+  "model": "qwen2.5:7b",
+  "endpoint": "http://localhost:11434/v1",
+  "control_prompt_sha256": "037dbb55c7368327e421864f1f1e74b0db5c6d517b7560d0ad3fd2a2031555dd",
+  "prompt_sha256": "20e7c85a0023af1ed05ad76bddee243e146b2e139ee834d0d688e553a13695f5",
+  "revision_prompt_sha256": "94100ad52758fb99ae5d8ca1f4b38827b6c7bdb357b59866c5629754f586095e",
+  "started_at_utc": "2026-09-18T08:57:15Z",
+  "status": "script_failed",
+  "script_exit_code": 1,
+  "runtime_seconds": 59.184,
+  "temperature": {
+    "requested": 1.0,
+    "status": "sent",
+    "used": 1.0,
+    "frozen_by": "ab_protocol.md \u00a75 (\u00a79 A3)"
+  },
+  "turns": [
+    {
+      "turn": 1,
+      "label": "control+revise+rubric first turn",
+      "prompt_sha256": "20e7c85a0023af1ed05ad76bddee243e146b2e139ee834d0d688e553a13695f5",
+      "ok": true,
+      "error": "",
+      "finish_reason": "stop",
+      "input_tokens": 592,
+      "output_tokens": 206,
+      "seconds": 26.662,
+      "temperature_requested": 1.0,
+      "temperature_status": "sent",
+      "temperature_used": 1.0,
+      "temperature_rejection": ""
+    },
+    {
+      "turn": 2,
+      "label": "control+revise+rubric tool-free revision",
+      "prompt_sha256": "94100ad52758fb99ae5d8ca1f4b38827b6c7bdb357b59866c5629754f586095e",
+      "ok": true,
+      "error": "",
+      "finish_reason": "stop",
+      "input_tokens": 956,
+      "output_tokens": 238,
+      "seconds": 30.222,
+      "temperature_requested": 1.0,
+      "temperature_status": "sent",
+      "temperature_used": 1.0,
+      "temperature_rejection": ""
+    }
+  ],
+  "usage": {
+    "input_tokens": 1548,
+    "output_tokens": 444
+  },
+  "split": {
+    "train_csv": "C:\\Users\\SABUNIS\\Desktop\\ml-copilot\\benchmark\\runs\\ab-20260917-f98e3c\\_splits\\openml-1480-seed0\\train.csv",
+    "holdout_csv": "C:\\Users\\SABUNIS\\Desktop\\ml-copilot\\benchmark\\runs\\ab-20260917-f98e3c\\_splits\\openml-1480-seed0\\holdout.csv",
+    "columns": "  - V1 (int64)\n  - V2 (object)\n  - V3 (float64)\n  - V4 (float64)\n  - V5 (int64)\n  - V6 (int64)\n  - V7 (int64)\n  - V8 (float64)\n  - V9 (float64)\n  - V10 (float64)\n  - Class (int64)",
+    "seed": 0,
+    "holdout_fraction": 0.25,
+    "stratified": true,
+    "train_rows": 439,
+    "holdout_rows": 144,
+    "source_sha256": "8a3a32776f0341286f16ba78816dc4cf196bb26ed547ec831d10ab43cda92277",
+    "train_sha256": "d4219f27109888e947a242883952b85363d2442d1d8b6ede1952b537bf0f1f93",
+    "holdout_sha256": "4f657f8c2285fa2b877b4f5ad44e8c38728cb4a5056de8c080d7c938aa3c4711",
+    "grouped_on_duplicates": true,
+    "holdout_rows_present_in_train": 0,
+    "duplicate_rows": 12,
+    "duplicate_groups": 570,
+    "train_groups": 427,
+    "holdout_groups": 143,
+    "source_rows": 583,
+    "source_duplicate_rows": 13,
+    "minority_fraction": 0.2870159453302961,
+    "target_is_last_column": true
+  },
+  "holdout": {
+    "status": "unscorable",
+    "metric": "",
+    "score": "",
+    "artifact": "",
+    "attempts": [],
+    "reason": "script did not complete (script_failed); nothing to load"
+  },
+  "defects": {
+    "flags": {
+      "no_seed": false,
+      "leak_fit_before_split": false,
+      "leak_duplicate_rows": false,
+      "wrong_metric_for_imbalance": false,
+      "no_validation": false,
+      "target_in_features": false
+    },
+    "defect_count": 0,
+    "frameworks_imported": [
+      "sklearn"
+    ],
+    "frameworks_seeded": [
+      "sklearn"
+    ],
+    "split_line": 18,
+    "dedupe_deadline": 14,
+    "transformer_fit_lines": [],
+    "input_duplicate_rows": 12,
+    "input_minority_fraction": 0.2870159453302961,
+    "target_is_last_column": true
+  },
+  "defects_pre_revision": {
+    "flags": {
+      "no_seed": false,
+      "leak_fit_before_split": false,
+      "leak_duplicate_rows": true,
+      "wrong_metric_for_imbalance": false,
+      "no_validation": false,
+      "target_in_features": false
+    },
+    "defect_count": 1,
+    "frameworks_imported": [
+      "sklearn"
+    ],
+    "frameworks_seeded": [
+      "sklearn"
+    ],
+    "split_line": 15,
+    "dedupe_deadline": 11,
+    "transformer_fit_lines": [],
+    "input_duplicate_rows": 12,
+    "input_minority_fraction": 0.2870159453302961,
+    "target_is_last_column": true
+  },
+  "audit": null,
+  "execution": {
+    "workspace": "fresh temp dir, seeded with train.csv only, deleted after the run",
+    "containment": "separate subprocess, wall-clock timeout, holdout outside the workspace",
+    "python": "3.13.3",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "environment_stated_to_every_arm": {
+      "interpreter": "C:\\Users\\SABUNIS\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
+      "python": "3.13.3",
+      "packages_stated": "  - numpy 2.4.1\n  - pandas 2.3.3\n  - scipy 1.17.0\n  - pyarrow 22.0.0\n  - polars 1.39.3\n  - sklearn (scikit-learn 1.8.0)\n  - joblib 1.5.3\n  - xgboost 3.1.3\n  - torch 2.6.0+cu124\n  - tensorflow 2.21.0\n  - keras 3.13.1\n  - shap 0.51.0\n  - matplotlib 3.10.8\n  - seaborn 0.13.2\n  - plotly 6.8.0\n  - cloudpickle 3.1.2\n  - h5py 3.14.0\n  - openpyxl 3.1.5\n  - xlsxwriter 3.2.9\n  - numba 0.65.0\n  - tqdm 4.67.1\n  - yaml (PyYAML 6.0.3)",
+      "packages_sha256": "586a0177de4527cffb81a6078cd2c4ee67f8dcb9eb2f41d3a28ef4fc2ab90d31",
+      "scope": "packages importable by that interpreter, from a frozen roster of 36 ML-relevant names; measured at prompt time, not a complete pip list"
+    }
+  },
+  "mlcompass_commit": "cf31d5a931dc8e0ee44d8e9278fe3419d4a7f9ed",
+  "tree_dirty": true
+}

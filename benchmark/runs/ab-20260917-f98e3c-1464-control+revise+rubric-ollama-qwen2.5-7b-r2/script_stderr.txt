@@ -1,0 +1,11 @@
+Traceback (most recent call last):
+  File "C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed1-r2\emitted.py", line 27, in <module>
+    model.fit(X_train, y_train)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Users\SABUNIS\AppData\Local\Programs\Python\Python313\Lib\site-packages\xgboost\core.py", line 774, in inner_f
+    return func(**kwargs)
+  File "C:\Users\SABUNIS\AppData\Local\Programs\Python\Python313\Lib\site-packages\xgboost\sklearn.py", line 1763, in fit
+    raise ValueError(
+    ...<2 lines>...
+    )
+ValueError: Invalid classes inferred from unique values of `y`.  Expected: [0 1], got [1 2]

@@ -1,0 +1,28 @@
+Loading dataset...
+Original shape: (554, 5)
+Shape after removing duplicates: (399, 5)
+
+Class distribution:
+Class
+1    287
+2    112
+Name: count, dtype: int64
+Class imbalance detected, applying oversampling for minority class
+Splitting data...
+Training model...
+
+Validation results:
+
+Classification Report:
+              precision    recall  f1-score   support
+
+           1       0.89      0.69      0.78        58
+           2       0.74      0.91      0.82        57
+
+    accuracy                           0.80       115
+   macro avg       0.82      0.80      0.80       115
+weighted avg       0.82      0.80      0.80       115
+
+ROC AUC Score: 0.8873
+
+Model saved to C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed1-r2\mlcab_model.joblib

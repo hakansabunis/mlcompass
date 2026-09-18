@@ -1,0 +1,73 @@
+```python
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report
+from sklearn.preprocessing import StandardScaler
+from joblib import dump
+import os
+
+def load_and_preprocess_data(filepath):
+    """Load and preprocess the dataset."""
+    # Load the data
+    df = pd.read_csv(filepath)
+
+    # Separate features and target
+    X = df.drop('Class', axis=1)
+    y = df['Class']
+
+    # Convert categorical variables to numerical (one-hot encoding for V2)
+    X = pd.get_dummies(X, columns=['V2'], drop_first=True)
+
+    # Split into train and test sets
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42, stratify=y
+    )
+
+    # Scale numerical features (excluding those that might be counts or already scaled)
+    # Here we scale all float columns except V2 (already handled)
+    float_cols = ['V3', 'V4', 'V8', 'V9', 'V10']
+    scaler = StandardScaler()
+    X_train[float_cols] = scaler.fit_transform(X_train[float_cols])
+    X_test[float_cols] = scaler.transform(X_test[float_cols])
+
+    return X_train, X_test, y_train, y_test, scaler
+
+def train_and_save_model(X_train, y_train, model_path='random_forest_model.joblib'):
+    """Train a Random Forest classifier and save it."""
+    # Initialize and train the model
+    model = RandomForestClassifier(
+        n_estimators=100,
+        random_state=42,
+        class_weight='balanced',
+        max_depth=10,
+        n_jobs=-1
+    )
+    model.fit(X_train, y_train)
+
+    # Save the model and scaler
+    dump(model, model_path)
+
+    return model_path
+
+def main():
+    # Define the file path
+    file_path = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed2-r3\train.csv"
+
+    # Load and preprocess data
+    X_train, X_test, y_train, y_test, scaler = load_and_preprocess_data(file_path)
+
+    # Train and save model
+    model_path = train_and_save_model(X_train, y_train)
+
+    # Evaluate on test set (optional)
+    y_pred = model.predict(X_test)
+    print("Classification Report:")
+    print(classification_report(y_test, y_pred))
+
+    print(f"Model saved to: {os.path.abspath(model_path)}")
+
+if __name__ == "__main__":
+    main()
+```

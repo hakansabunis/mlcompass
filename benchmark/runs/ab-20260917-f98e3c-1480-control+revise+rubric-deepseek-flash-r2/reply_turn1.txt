@@ -1,0 +1,131 @@
+```python
+import os
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.impute import SimpleImputer
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.metrics import accuracy_score, f1_score
+from sklearn.ensemble import HistGradientBoostingClassifier, RandomForestClassifier, ExtraTreesClassifier
+from xgboost import XGBClassifier
+import joblib
+
+# Path to the dataset
+DATA_PATH = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed1-r2\train.csv"
+
+# Load data
+df = pd.read_csv(DATA_PATH)
+
+# Separate features and target
+target_col = 'Class'
+X = df.drop(columns=[target_col])
+y = df[target_col]
+
+# Identify categorical and numerical columns
+categorical_cols = X.select_dtypes(include=['object']).columns.tolist()
+numerical_cols = X.select_dtypes(exclude=['object']).columns.tolist()
+
+# Preprocessing pipelines
+numeric_transformer = Pipeline(steps=[
+    ('imputer', SimpleImputer(strategy='median'))
+])
+
+categorical_transformer = Pipeline(steps=[
+    ('imputer', SimpleImputer(strategy='most_frequent')),
+    ('onehot', OneHotEncoder(handle_unknown='ignore', sparse_output=False))
+])
+
+transformers = []
+if numerical_cols:
+    transformers.append(('num', numeric_transformer, numerical_cols))
+if categorical_cols:
+    transformers.append(('cat', categorical_transformer, categorical_cols))
+
+preprocessor = ColumnTransformer(transformers=transformers)
+
+# Determine number of classes
+n_classes = len(np.unique(y))
+
+# Define models to try
+models = {}
+
+# XGBoost
+xgb_params = dict(
+    n_estimators=500,
+    max_depth=6,
+    learning_rate=0.05,
+    subsample=0.8,
+    colsample_bytree=0.8,
+    random_state=42,
+    n_jobs=-1,
+    tree_method='hist'
+)
+if n_classes == 2:
+    xgb_params.update(objective='binary:logistic', eval_metric='logloss')
+else:
+    xgb_params.update(objective='multi:softprob', eval_metric='mlogloss')
+models['XGBoost'] = XGBClassifier(**xgb_params)
+
+# HistGradientBoosting
+models['HistGradientBoosting'] = HistGradientBoostingClassifier(
+    max_iter=500,
+    learning_rate=0.05,
+    early_stopping=True,
+    validation_fraction=0.1,
+    n_iter_no_change=20,
+    random_state=42
+)
+
+# RandomForest
+models['RandomForest'] = RandomForestClassifier(
+    n_estimators=500,
+    random_state=42,
+    n_jobs=-1
+)
+
+# ExtraTrees
+models['ExtraTrees'] = ExtraTreesClassifier(
+    n_estimators=500,
+    random_state=42,
+    n_jobs=-1
+)
+
+# Split data for validation, ensuring stratification if possible
+class_counts = y.value_counts()
+stratify_param = y if class_counts.min() >= 2 else None
+
+X_train, X_val, y_train, y_val = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=stratify_param
+)
+
+best_score = -1
+best_model_name = None
+best_pipeline = None
+
+for name, model in models.items():
+    pipeline = Pipeline(steps=[
+        ('preprocessor', preprocessor),
+        ('classifier', model)
+    ])
+    pipeline.fit(X_train, y_train)
+    y_pred = pipeline.predict(X_val)
+    acc = accuracy_score(y_val, y_pred)
+    f1 = f1_score(y_val, y_pred, average='macro')
+    print(f"{name} - Accuracy: {acc:.4f}, F1-macro: {f1:.4f}")
+    if acc > best_score:
+        best_score = acc
+        best_model_name = name
+        best_pipeline = pipeline
+
+print(f"\nBest model: {best_model_name} with validation accuracy: {best_score:.4f}")
+
+# Refit best model on the full dataset
+best_pipeline.fit(X, y)
+
+# Save the fitted model to the current working directory
+output_path = os.path.join(os.getcwd(), 'trained_model.joblib')
+joblib.dump(best_pipeline, output_path)
+print(f"Model saved to {output_path}")
+```

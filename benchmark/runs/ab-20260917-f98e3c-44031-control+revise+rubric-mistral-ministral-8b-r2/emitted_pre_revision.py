@@ -1,0 +1,71 @@
+import os
+import numpy as np
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.metrics import mean_squared_error, r2_score
+from joblib import dump
+from tqdm import tqdm
+import shap
+
+def train_and_save_model():
+    # Define paths
+    csv_path = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed1-r2\train.csv"
+    model_save_path = os.path.join(os.getcwd(), "house_price_model.joblib")
+
+    # Load data
+    print("Loading data...")
+    df = pd.read_csv(csv_path)
+
+    # Separate features and target
+    X = df.drop(columns=['price'])
+    y = df['price']
+
+    # Split data into train and test sets
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42
+    )
+
+    # Feature scaling
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
+
+    # Initialize and train model (Gradient Boosting Regressor)
+    print("Training model...")
+    model = GradientBoostingRegressor(
+        n_estimators=200,
+        learning_rate=0.05,
+        max_depth=5,
+        random_state=42
+    )
+    model.fit(X_train_scaled, y_train)
+
+    # Evaluate on test set
+    y_pred = model.predict(X_test_scaled)
+    mse = mean_squared_error(y_test, y_pred)
+    r2 = r2_score(y_test, y_pred)
+    print(f"\nModel Evaluation:")
+    print(f"Mean Squared Error: {mse:.2f}")
+    print(f"R-squared: {r2:.4f}")
+
+    # Save the model and scaler
+    print("\nSaving model...")
+    dump({
+        'model': model,
+        'scaler': scaler,
+        'feature_names': X.columns.tolist()
+    }, model_save_path)
+    print(f"Model saved to {model_save_path}")
+
+    # Optional: Generate SHAP values for feature importance
+    print("\nCalculating feature importance...")
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(X_test_scaled)
+
+    # Plot feature importance (optional visualization)
+    shap.summary_plot(shap_values, X_test_scaled, feature_names=X.columns)
+
+if __name__ == "__main__":
+    train_and_save_model()

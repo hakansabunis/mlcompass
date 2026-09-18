@@ -1,0 +1,13 @@
+Traceback (most recent call last):
+  File "C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed0-r1\emitted.py", line 155, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed0-r1\emitted.py", line 102, in main
+    model = build_model(random_state=RANDOM_STATE)
+  File "C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed0-r1\emitted.py", line 60, in build_model
+    lr = LogisticRegression(
+        max_iter=5000,
+    ...<2 lines>...
+        random_state=random_state,
+    )
+TypeError: LogisticRegression.__init__() got an unexpected keyword argument 'multi_class'

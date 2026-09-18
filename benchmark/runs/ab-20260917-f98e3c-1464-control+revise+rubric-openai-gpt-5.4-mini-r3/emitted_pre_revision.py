@@ -1,0 +1,114 @@
+import os
+import json
+import joblib
+import numpy as np
+import pandas as pd
+
+from sklearn.model_selection import StratifiedKFold, cross_val_score
+from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier, HistGradientBoostingClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+from sklearn.metrics import accuracy_score
+from sklearn.base import clone
+
+DATA_PATH = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed2-r3\train.csv"
+MODEL_PATH = "trained_model.joblib"
+
+
+def load_data(path: str):
+    df = pd.read_csv(path)
+    if "Class" not in df.columns:
+        raise ValueError("Target column 'Class' not found.")
+    X = df.drop(columns=["Class"])
+    y = df["Class"]
+    return X, y
+
+
+def build_models(random_state: int = 42):
+    models = {
+        "rf": RandomForestClassifier(
+            n_estimators=500,
+            random_state=random_state,
+            n_jobs=-1,
+            class_weight=None,
+        ),
+        "et": ExtraTreesClassifier(
+            n_estimators=800,
+            random_state=random_state,
+            n_jobs=-1,
+            class_weight=None,
+        ),
+        "hgb": HistGradientBoostingClassifier(
+            learning_rate=0.05,
+            max_depth=None,
+            max_iter=300,
+            random_state=random_state,
+        ),
+        "lr": LogisticRegression(
+            max_iter=5000,
+            n_jobs=-1,
+            multi_class="auto",
+        ),
+    }
+    return models
+
+
+def make_pipeline(model):
+    return Pipeline(
+        steps=[
+            ("imputer", SimpleImputer(strategy="median")),
+            ("model", model),
+        ]
+    )
+
+
+def main():
+    X, y = load_data(DATA_PATH)
+
+    # Basic sanity handling for integer-only data; keep as numeric.
+    X = X.copy()
+    y = y.astype(int)
+
+    models = build_models(random_state=42)
+    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+
+    scored_models = []
+    for name, model in models.items():
+        pipe = make_pipeline(model)
+        scores = cross_val_score(pipe, X, y, cv=cv, scoring="accuracy", n_jobs=-1)
+        scored_models.append((name, float(np.mean(scores)), float(np.std(scores))))
+        print(f"{name}: accuracy={np.mean(scores):.6f} +/- {np.std(scores):.6f}")
+
+    # Pick the best CV model
+    scored_models.sort(key=lambda x: x[1], reverse=True)
+    best_name = scored_models[0][0]
+    best_model = models[best_name]
+    final_pipeline = make_pipeline(best_model)
+
+    # Fit on all data
+    final_pipeline.fit(X, y)
+
+    # Save model and metadata
+    artifact = {
+        "model": final_pipeline,
+        "feature_names": list(X.columns),
+        "target_name": "Class",
+        "best_model_name": best_name,
+        "cv_results": [
+            {"model": n, "mean_accuracy": m, "std_accuracy": s}
+            for n, m, s in scored_models
+        ],
+    }
+    joblib.dump(artifact, MODEL_PATH)
+    print(f"Saved trained model to: {os.path.abspath(MODEL_PATH)}")
+    print(f"Best model: {best_name}")
+
+    # Optional: report training accuracy for the final fitted model
+    train_pred = final_pipeline.predict(X)
+    train_acc = accuracy_score(y, train_pred)
+    print(f"Training accuracy: {train_acc:.6f}")
+
+
+if __name__ == "__main__":
+    main()

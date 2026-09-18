@@ -1,0 +1,58 @@
+import os
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report
+from joblib import dump, load
+import numpy as np
+
+def train_and_save_model():
+    # Define the file path
+    file_path = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed0-r1\train.csv"
+
+    # Load the data
+    print("Loading data...")
+    data = pd.read_csv(file_path)
+
+    # Separate features and target
+    X = data.drop(columns=['Class'])
+    y = data['Class']
+
+    # Split data into training and validation sets
+    X_train, X_val, y_train, y_val = train_test_split(
+        X, y, test_size=0.2, random_state=42, stratify=y
+    )
+
+    # Standardize the features
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_val_scaled = scaler.transform(X_val)
+
+    # Initialize and train the model
+    print("Training model...")
+    model = RandomForestClassifier(
+        n_estimators=100,
+        random_state=42,
+        class_weight='balanced',
+        n_jobs=-1
+    )
+    model.fit(X_train_scaled, y_train)
+
+    # Evaluate on validation set
+    y_pred = model.predict(X_val_scaled)
+    print("\nValidation Set Performance:")
+    print(classification_report(y_val, y_pred))
+
+    # Save the model and scaler to files
+    model_file = "random_forest_model.joblib"
+    scaler_file = "scaler.joblib"
+
+    print(f"\nSaving model to {model_file} and scaler to {scaler_file}")
+    dump(model, model_file)
+    dump(scaler, scaler_file)
+
+    print("Training complete!")
+
+if __name__ == "__main__":
+    train_and_save_model()

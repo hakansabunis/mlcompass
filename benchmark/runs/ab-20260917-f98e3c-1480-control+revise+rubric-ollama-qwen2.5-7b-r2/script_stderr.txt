@@ -1,0 +1,28 @@
+Traceback (most recent call last):
+  File "C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1480-seed1-r2\emitted.py", line 23, in <module>
+    X_train_scaled = scaler.fit_transform(X_train)
+  File "C:\Users\SABUNIS\AppData\Local\Programs\Python\Python313\Lib\site-packages\sklearn\utils\_set_output.py", line 316, in wrapped
+    data_to_wrap = f(self, X, *args, **kwargs)
+  File "C:\Users\SABUNIS\AppData\Local\Programs\Python\Python313\Lib\site-packages\sklearn\base.py", line 907, in fit_transform
+    return self.fit(X, **fit_params).transform(X)
+           ~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\SABUNIS\AppData\Local\Programs\Python\Python313\Lib\site-packages\sklearn\preprocessing\_data.py", line 924, in fit
+    return self.partial_fit(X, y, sample_weight)
+           ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\SABUNIS\AppData\Local\Programs\Python\Python313\Lib\site-packages\sklearn\base.py", line 1336, in wrapper
+    return fit_method(estimator, *args, **kwargs)
+  File "C:\Users\SABUNIS\AppData\Local\Programs\Python\Python313\Lib\site-packages\sklearn\preprocessing\_data.py", line 961, in partial_fit
+    X = validate_data(
+        self,
+    ...<4 lines>...
+        reset=first_call,
+    )
+  File "C:\Users\SABUNIS\AppData\Local\Programs\Python\Python313\Lib\site-packages\sklearn\utils\validation.py", line 2902, in validate_data
+    out = check_array(X, input_name="X", **check_params)
+  File "C:\Users\SABUNIS\AppData\Local\Programs\Python\Python313\Lib\site-packages\sklearn\utils\validation.py", line 1022, in check_array
+    array = _asarray_with_order(array, order=order, dtype=dtype, xp=xp)
+  File "C:\Users\SABUNIS\AppData\Local\Programs\Python\Python313\Lib\site-packages\sklearn\utils\_array_api.py", line 878, in _asarray_with_order
+    array = numpy.asarray(array, order=order, dtype=dtype)
+  File "C:\Users\SABUNIS\AppData\Local\Programs\Python\Python313\Lib\site-packages\pandas\core\generic.py", line 2171, in __array__
+    arr = np.asarray(values, dtype=dtype)
+ValueError: could not convert string to float: 'Male'

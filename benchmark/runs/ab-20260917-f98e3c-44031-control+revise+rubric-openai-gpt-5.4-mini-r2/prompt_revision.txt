@@ -1,0 +1,15 @@
+Review the script you just wrote and fix any problems you find in it.
+
+Check it against these six concerns in particular. This list is generic: it is
+the same list for every script, and it says nothing about which of them, if
+any, your script actually has.
+
+1. Is every source of randomness seeded, so a re-run reproduces the result?
+2. Is anything fitted on data that includes the rows held out for testing?
+3. If the input file contains duplicate rows, are they removed before the split?
+4. If the target's classes are heavily imbalanced, is the reported metric one
+   that survives that imbalance?
+5. Is the model evaluated on data it was not trained on?
+6. Is the target column excluded from the feature matrix?
+
+Reply with the complete final script inside a single ```python code block, and nothing else.

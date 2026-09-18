@@ -1,0 +1,133 @@
+```python
+import os
+import json
+import joblib
+import numpy as np
+import pandas as pd
+
+from sklearn.model_selection import StratifiedKFold, cross_val_score
+from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
+from sklearn.impute import SimpleImputer
+from sklearn.metrics import accuracy_score
+from xgboost import XGBClassifier
+
+TRAIN_PATH = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-1464-seed1-r2\train.csv"
+MODEL_PATH = "trained_model.joblib"
+
+
+def load_data(path: str):
+    df = pd.read_csv(path)
+    if "Class" not in df.columns:
+        raise ValueError("Target column 'Class' not found in training data.")
+    X = df.drop(columns=["Class"])
+    y = df["Class"]
+    return X, y
+
+
+def build_model(random_state: int = 42):
+    feature_cols = ["V1", "V2", "V3", "V4"]
+
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ("num", SimpleImputer(strategy="median"), feature_cols),
+        ],
+        remainder="drop",
+        verbose_feature_names_out=False,
+    )
+
+    model = XGBClassifier(
+        n_estimators=300,
+        max_depth=4,
+        learning_rate=0.05,
+        subsample=0.9,
+        colsample_bytree=0.9,
+        min_child_weight=1,
+        reg_alpha=0.0,
+        reg_lambda=1.0,
+        objective="binary:logistic" if len(np.unique(y_global)) == 2 else "multi:softprob",
+        eval_metric="logloss" if len(np.unique(y_global)) == 2 else "mlogloss",
+        tree_method="hist",
+        random_state=random_state,
+        n_jobs=-1,
+    )
+
+    pipe = Pipeline(
+        steps=[
+            ("preprocess", preprocessor),
+            ("model", model),
+        ]
+    )
+    return pipe
+
+
+if __name__ == "__main__":
+    X, y = load_data(TRAIN_PATH)
+    y_global = y.values
+
+    # Determine whether binary or multiclass from target
+    n_classes = len(np.unique(y))
+    if n_classes == 2:
+        objective = "binary:logistic"
+        eval_metric = "logloss"
+    else:
+        objective = "multi:softprob"
+        eval_metric = "mlogloss"
+
+    feature_cols = ["V1", "V2", "V3", "V4"]
+
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ("num", SimpleImputer(strategy="median"), feature_cols),
+        ],
+        remainder="drop",
+        verbose_feature_names_out=False,
+    )
+
+    model = XGBClassifier(
+        n_estimators=300,
+        max_depth=4,
+        learning_rate=0.05,
+        subsample=0.9,
+        colsample_bytree=0.9,
+        min_child_weight=1,
+        reg_alpha=0.0,
+        reg_lambda=1.0,
+        objective=objective,
+        eval_metric=eval_metric,
+        tree_method="hist",
+        random_state=42,
+        n_jobs=-1,
+    )
+
+    pipe = Pipeline(
+        steps=[
+            ("preprocess", preprocessor),
+            ("model", model),
+        ]
+    )
+
+    # Optional quick CV estimate
+    try:
+        cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+        scores = cross_val_score(pipe, X, y, cv=cv, scoring="accuracy", n_jobs=-1)
+        print(f"CV accuracy: {scores.mean():.5f} ± {scores.std():.5f}")
+    except Exception as e:
+        print(f"Cross-validation skipped due to: {e}")
+
+    # Fit final model on all data
+    pipe.fit(X, y)
+
+    # Save model
+    joblib.dump(
+        {
+            "model": pipe,
+            "feature_columns": feature_cols,
+            "target_column": "Class",
+            "classes_": np.unique(y).tolist(),
+        },
+        MODEL_PATH,
+    )
+
+    print(f"Saved trained model to: {os.path.abspath(MODEL_PATH)}")
+```

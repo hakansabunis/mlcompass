@@ -1,0 +1,68 @@
+```python
+import os
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from xgboost import XGBRegressor
+import joblib
+
+# Path to the training data
+csv_path = r"C:\Users\SABUNIS\AppData\Local\Temp\mlcab-44031-seed0-r1\train.csv"
+if not os.path.exists(csv_path):
+    csv_path = "train.csv"
+
+# Load data
+df = pd.read_csv(csv_path)
+
+# Separate features and target
+target_col = "price"
+X = df.drop(columns=[target_col])
+y = df[target_col]
+
+# Split for early stopping
+X_train, X_val, y_train, y_val = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+# Initial XGBoost model with early stopping
+model = XGBRegressor(
+    n_estimators=2000,
+    learning_rate=0.05,
+    max_depth=6,
+    subsample=0.8,
+    colsample_bytree=0.8,
+    random_state=42,
+    n_jobs=-1,
+    tree_method="hist",
+    early_stopping_rounds=50,
+    eval_metric="rmse",
+)
+model.fit(
+    X_train,
+    y_train,
+    eval_set=[(X_val, y_val)],
+    verbose=False,
+)
+
+# Best iteration
+best_iter = model.best_iteration
+if best_iter is None:
+    best_iter = 1000  # fallback
+
+# Retrain on full data with best iteration
+final_model = XGBRegressor(
+    n_estimators=best_iter + 1,
+    learning_rate=0.05,
+    max_depth=6,
+    subsample=0.8,
+    colsample_bytree=0.8,
+    random_state=42,
+    n_jobs=-1,
+    tree_method="hist",
+)
+final_model.fit(X, y)
+
+# Save the model to the current working directory
+model_path = "model.joblib"
+joblib.dump(final_model, model_path)
+print(f"Model saved to {model_path}")
+```

@@ -1,0 +1,26 @@
+Loading data...
+Removed 0 duplicate rows
+
+Class distribution:
+Class 1: 71.93%
+Class 2: 28.07%
+
+Training model...
+
+Validation Set Performance:
+Balanced Accuracy: 0.6293
+Macro F1 Score: 0.6234
+
+Classification Report:
+              precision    recall  f1-score   support
+
+           1       0.80      0.76      0.78        58
+           2       0.44      0.50      0.47        22
+
+    accuracy                           0.69        80
+   macro avg       0.62      0.63      0.62        80
+weighted avg       0.70      0.69      0.69        80
+
+
+Saving model to random_forest_model.joblib and scaler to scaler.joblib in current directory
+Training complete!
