@@ -64,11 +64,11 @@ general-purpose guardrail toolkit does not.
 \emph{evidence-closed}: the citable entities and checkable quantities are
 finite and machine-enumerable at the moment of the call, which makes
 faithfulness decidable. A two-tier \emph{evidence-bound runtime contract} built
-on that property ships in the production narrator of \textbf{mlcompass}, an
+on that property ships in the narration path of \textbf{mlcompass}, an
 open-source ML-pipeline assistant. We evaluate it over 3,800 live responses and
-143 scored runs: a seven-arm controlled experiment on two providers, a
-six-variant paraphrase sweep, two diagnostic arms, and a pre-registered
-benchmark of downstream code quality.
+175 scored runs: an eight-arm controlled experiment on three providers, a
+six-variant paraphrase sweep, two diagnostic arms, and a five-arm
+pre-registered benchmark of downstream code quality.
 
 \textbf{Results.} The failure is not the one the literature names: the
 unconstrained narrator \emph{misfiles} real evidence names at 4--71\,\% while
@@ -76,11 +76,16 @@ unconstrained narrator \emph{misfiles} real evidence names at 4--71\,\% while
 consistently under rewording --- at the extremes they run opposite, so the
 prompt that looks safest invents most. Varying only the
 validator inside one guardrail toolkit --- same loop, budget, prompt and model
---- takes 35.0\,\% to 0/200. On a second production model one day later the
-same unconstrained arm scores 0/200. Downstream, flags from a six-rule static checklist
-fall from 31 over 36 runs to 8 over 36, and a fourth arm shows that a second
-attempt without the tool's findings repairs nothing: rescoring both sides of
-that turn, not one of the 33 flagged rule-instances was cleared.
+--- takes 35.0\,\% to 0/200, and so does that toolkit's own generic
+choice-list check once the list is bound to the evidence: what does the work is
+the binding, not our validator. The rate itself is not a property of anything
+stable --- a second provider scores 0/200 on the unconstrained arm, and the
+same model name re-run three days later moves the toolkit's default from
+35.0\,\% to 43.5\,\%. Downstream, over 175 scored runs, a fifth arm given only
+the names of the six scored rules and nothing about its own code beats the arm
+given the tool's real findings on the checklist (1 flagged defect against 8),
+so we withdraw the causal attribution an earlier version of this abstract made
+--- while writing code that executes 47\,\% of the time against 83\,\%.
 
 \textbf{Conclusions.} For evidence-closed narration, faithfulness on the
 validated channels is enforceable by construction and independent of the
@@ -156,7 +161,12 @@ takes over where trust ends: plain code re-checks the returned answer on three
 channels --- entity soundness, value soundness of structured
 \{column, statistic, value\} claims, and completeness with respect to the
 top-ranked candidate --- with corrective retry, residual stripping, and
-omission flagging. It is not a prototype. It runs in the production narrator of
+omission flagging. It is not a research prototype built for this paper: it is
+the narration path of the released tool, on by default, and the measurements
+below run against that path rather than a reimplementation of it. We say
+\emph{shipped} and not \emph{production}, because we have no deployment
+telemetry to offer --- no user counts, no incident record, no operational
+duration --- and a claim of production use should be backed by those. It is
 \textbf{mlcompass}, an open-source (MIT) ML-pipeline assistant, guarding the
 investigation that fires when an evaluation metric looks too good to be true
 --- mlcompass fires at its own heuristic thresholds,
@@ -202,11 +212,16 @@ What this setting adds runs \emph{opposite} to the security case, where
 insertion is simply a more powerful primitive: over a narrator it is
 inadmissible, because an inserted reference fabricates attribution rather than
 correcting an action.
-\item \textbf{A controlled swap of the validator inside a production
-guardrail toolkit.} Holding the reask loop, the budget, the prompt and the
-model fixed and varying only the validator, Guardrails~AI's default
-configuration leaves 35.0\,\% of responses unfaithful and our deterministic
-validators, in the same loop, leave 0/200 (Section~\ref{sec:rq3}).
+\item \textbf{A controlled swap of the validator inside a released
+guardrail toolkit, and the narrower claim it forced.} Holding the reask loop,
+the budget, the prompt and the model fixed and varying only the validator,
+Guardrails~AI's default configuration leaves 35.0\,\% of responses unfaithful
+and our deterministic validators, in the same loop, leave 0/200. A third arm
+puts the toolkit's \emph{own} generic acceptable-values check on our side of
+the line, with the list built from $E$ at call time, and it also reaches
+0/200 --- so what does the work is not our validator but binding the
+admissible set to the evidence at call time, and the claim is stated that way
+(Section~\ref{sec:rq3}).
 \item \textbf{A decomposition of the failure, and the finding that its halves
 do not co-vary consistently.} Separating \emph{invented} from \emph{misfiled}
 entities
@@ -215,11 +230,15 @@ inside one measured channel; what is new is empirical, not conceptual --- the
 two sub-rates are close to unrelated across wordings and invert at the
 extremes, so the wording that looks safest on the blended metric is the one
 inventing most (Sections~\ref{sec:rq1} and~\ref{sec:rq4}).
-\item \textbf{A pre-registered downstream benchmark with the confound
-removed}: 143 scored runs over four models and three datasets. Three arms were
-frozen before execution; the fourth, which separates the tool's findings from
-the extra attempt they arrive with, was added as numbered amendment~A8 and run
-only after that amendment was written (Section~\ref{sec:rq5}).
+\item \textbf{A pre-registered downstream benchmark whose two added arms each
+attack our own attribution}: 175 scored runs over four models and three
+datasets. Three arms were frozen before execution. The fourth separates the
+tool's findings from the extra attempt they arrive with (amendment~A8); the
+fifth separates them from the vocabulary of the outcome measure
+(amendment~A17), and it is the arm that removed our causal claim on the
+checklist and exposed a Goodhart effect in the checklist itself. Each was run
+only after its amendment, including the adverse outcome, was written down
+(Section~\ref{sec:rq5}).
 \item \textbf{A replication package} containing every emitted script, every
 model reply, and one record per live response --- 3{,}800 of them --- together
 with the frozen protocols, the amendment log, the two independent
@@ -409,10 +428,14 @@ A_{E,f} \subseteq A_E \quad \text{for each } f \in F,
 \qquad
 A_E \;=\; \bigcup_{f \in F} A_{E,f},
 \]
-and in the leakage contract $F = \{\texttt{columns\_referenced},
-\texttt{claims[].column}, \texttt{claims[].statistic}\}$, with
-$A_{E,\texttt{column}}$ the frame's columns, $A_{E,\texttt{statistic}}$ the
-statistic names the evidence carries, and the two disjoint. A token is
+and in the leakage contract
+\[
+F = \{\texttt{columns\_referenced},\;
+      \texttt{claims[].column},\;
+      \texttt{claims[].statistic}\},
+\]
+with $A_{E,\texttt{column}}$ the frame's columns, $A_{E,\texttt{statistic}}$
+the statistic names the evidence carries, and the two disjoint. A token is
 \emph{misfiled} exactly when it is in $A_E$ but not in $A_{E,f}$ for the field
 $f$ that carries it, and \emph{invented} when it is in neither. The distinction
 is definitional here and measurable in Section~\ref{sec:rq1}; it is also what
@@ -552,9 +575,13 @@ re-checks the returned answer in plain code on three channels, retries with
 the offending items named, and after the budget strips unsound content and
 flags a persistent omission. The dashed boundary encloses the narrator and
 nothing else: it is the only untrusted component, and every arrow crossing the
-boundary is contract traffic. The bottom box states the scope honestly --- the
-validated channels carry the guarantee, and the free-text field reaches the
-user too, marked as unverified.}
+boundary is contract traffic. Three annotations mark where the guarantee
+stops. The producer is \emph{trusted and never verified}: the contract starts
+below it. The free-text field reaches the user too, marked unverified, so the
+guarantee covers channels and not the screen. And the band at the foot states
+the scope that is easiest to over-read --- the response is guaranteed
+consistent with $E$, and $E$ is not guaranteed to be consistent with the
+world.}
 \label{fig:contract}
 \end{figure}
 
@@ -728,12 +755,17 @@ error rather than a surprise.
 
 \subsection{Arms}
 
-\paragraph{Contract and baseline arms (RQ1--RQ3), $N=200$ each, run on two
-providers.} The seven arms below were executed in full on
-\texttt{deepseek-chat} and again on \texttt{gpt-5.4-mini}, over the same
-evidence dictionary, the same prompts and the same scorer --- 2{,}800 responses
-in total. Section~\ref{sec:rq3-second} reports the second provider, where the
-result is a null and the null is the point.
+\paragraph{Contract and baseline arms (RQ1--RQ3), $N=200$ each.} The first
+seven arms below were executed in full on \texttt{deepseek-chat} and again on
+\texttt{gpt-5.4-mini}, over the same evidence dictionary, the same prompts and
+the same scorer --- 2{,}800 responses in total.
+Section~\ref{sec:rq3-second} reports the second provider, where the
+result is a null and the null is the point. The eighth,
+\texttt{A-GR-CHOICES}, was added after those results forced a concession we
+had written but not tested; it ran on 2026-09-18 alongside a re-run of the
+other seven, and a third provider --- a local \texttt{qwen2.5:7b} under Ollama,
+$N=20$ --- ran the same eight
+(Section~\ref{sec:rq3-replication}).
 \begin{description}
 \item[\texttt{A-L1}] The floor: bare prompt requesting the structured fields,
 stating no faithfulness rule, open enum-free schema, no verification.
@@ -745,6 +777,12 @@ the Tier~A enums removed, so the narrator fabricates at its natural rate and
 every Tier~B catch becomes observable.
 \item[\texttt{A-GR-STOCK}] \textbf{Guardrails~AI} with structural validation
 and reask only: what a validate-and-reask toolkit gives out of the box.
+\item[\texttt{A-GR-CHOICES}] \textbf{Guardrails~AI running the toolkit's own
+generic acceptable-values validator}, with the list of admissible columns built
+from $E$ at call time. Their validator, their loop, our binding; the comparison
+is what the validator is given rather than who wrote it. It carries no value
+tolerance and no anchor requirement, so it is strictly weaker than Tier~B by
+construction.
 \item[\texttt{A-GR-OURS}] \textbf{Guardrails~AI running custom validators that
 encode the Tier~B checks.} Our validator, their loop; the comparison is loops.
 \item[\texttt{A-STRICT-STATIC}] The provider's strict structured-output mode
@@ -770,14 +808,24 @@ faithfulness rule, over the same evidence and tool schema. All six were
 written before any measurement and none was discarded afterwards. Only the
 wording moves.
 
-\paragraph{Downstream benchmark (RQ5), $3\times4\times3$ per arm.} Four arms,
-each asked to write a training script for a pinned dataset:
+\paragraph{Downstream benchmark (RQ5), $3\times4\times3$ per arm.} Five arms,
+each asked to write a training script for a pinned dataset. Three were frozen
+before execution; \texttt{control+revise} was added as amendment~A8 and
+\texttt{control+revise+rubric} as amendment~A17, each run only after its
+amendment --- including the outcome that would go against us --- was written
+down:
 \begin{description}
 \item[\texttt{control}] The task, the CSV path, the target, the column
 listing, and the list of installed packages.
 \item[\texttt{control+revise}] The control prompt, then a second turn saying
 only \emph{review the script you just wrote and fix any problems you find in
 it}. No findings, no checklist, no concern named.
+\item[\texttt{control+revise+rubric}] The control prompt, then a second turn
+carrying a frozen constant that names the six scored concerns as questions ---
+\emph{does it leak duplicate rows?}, \emph{does it validate?} --- with an
+explicit sentence saying the list is generic and nothing at all about the
+script just written. It separates ``was told what is wrong'' from ``was told
+what we score''.
 \item[\texttt{advise}] The control prompt plus an appended block carrying the
 verbatim stdout of \texttt{mlcompass advise} on the same training file.
 \item[\texttt{advise+audit}] The \texttt{advise} turn, then one revision round
@@ -865,9 +913,19 @@ The downstream protocol was frozen before execution, including the arms, the
 datasets, the models, the repetition count, the seeds, and --- in
 Section~6 of the protocol --- the outcome we would regard as publishable if
 the metric did not move. Every deviation is recorded as a numbered amendment
-with its reason; eleven amendments (A1--A11) are in the replication package,
+with its reason; seventeen amendments (A1--A17) are in the replication package,
 and the ones that changed a conclusion are discussed in
 Section~\ref{sec:instruments} rather than buried in an appendix.
+
+Seventeen is enough amendments that the reader is owed the composition rather
+than the count, so each carries a classification and the log is summarised in
+Section~\ref{sec:threats}: twelve are infrastructure or reporting and cannot
+move a result, three are instrument repairs reported as corrections, and two
+add an arm. Both added arms exist to attack our own attribution, both were
+written with their adverse outcome stated before they ran, and the second one's
+adverse outcome is what happened (Section~\ref{sec:rq5-rubric}). What was never
+amended is the set of scored rules, the datasets, the models, the repetition
+count or the seeds.
 
 \subsection{Models and generation settings}
 
@@ -881,6 +939,27 @@ tool use. The paraphrase sweep and the two diagnostic arms are
 provider, sent explicitly in the request body rather than left to a provider
 default, and recorded in every run record. Results are reported per model and
 never pooled.
+
+\paragraph{Why temperature 1.0.} A practitioner tuning for reliability would
+lower it, and a reviewer is right to ask why we did not. Three reasons, and
+one admission. It is the default of every endpoint we call, so it is what a
+narrator gets unless someone decides otherwise; lowering it would make the
+baseline a configuration we chose rather than the one a caller inherits. It is
+also the setting the shipped narrator uses, and the contract arms measure that
+narrator rather than a tuned variant of it. And it is the conservative choice
+\emph{against} our own thesis in the only direction that matters for the
+enforcement arms: whatever sampling does to first-attempt propensity, a
+contract arm reading 0/200 at the noisiest temperature cannot be an artefact
+of a quiet one.
+
+The admission is that this cuts the other way for the \emph{baseline} rates.
+\texttt{A-L1}'s 42.0\,\% is a property of this temperature as much as of this
+model and this date, and a low-temperature baseline would very likely read
+lower. We did not measure the sensitivity, and a reader should treat every
+non-zero rate in Sections~\ref{sec:rq1} and~\ref{sec:rq4} as conditioned on
+$T=1.0$. That the comparisons survive this is the point of
+Section~\ref{sec:rq3-second}: the rate is not stable across models or dates
+either, and the contract does not depend on which value it takes.
 
 \section{RQ1: How Does an Unconstrained Narrator Actually Fail?}\label{sec:rq1}
 
@@ -1022,9 +1101,12 @@ independent scorer applies, and it returns zero.
 
 \subsection{Results}
 
-Figure~\ref{fig:arms} and Table~\ref{tab:arms} are the head-to-head. All seven
+Figure~\ref{fig:arms} and Table~\ref{tab:arms} are the head-to-head. All eight
 arms share the task, the evidence, the model, the reask budget and the
-scoring; they differ only in the enforcement mechanism.
+scoring; they differ only in the enforcement mechanism. Seven were executed
+together; the eighth, \texttt{A-GR-CHOICES}, was added in response to a
+concession the first seven forced us to make, and is marked with its own date
+in the table for the reason the rest of this paper gives.
 
 \begin{figure}[t]
 \centering
@@ -1042,8 +1124,12 @@ omitted here and discussed in Section~\ref{sec:rq3-degenerate}.}
 \end{figure}
 
 \begin{table}[t]
-\caption{User-facing entity-fabrication rate, seven arms, $N=200$ each,
-DeepSeek \texttt{deepseek-chat}, 2026-09-15. Wilson 95\,\% intervals.}
+\caption{User-facing entity-fabrication rate, eight arms, $N=200$ each,
+DeepSeek \texttt{deepseek-chat}. Wilson 95\,\% intervals. Seven arms ran
+2026-09-15; \texttt{A-GR-CHOICES} was added afterwards and ran 2026-09-18
+($^{\ddagger}$), on which date the whole battery was re-run --- the enforcement
+conclusions replicate and the rates do not, which
+Section~\ref{sec:rq3-replication} reports rather than averaging away.}
 \label{tab:arms}
 \centering
 \begin{tabular}{@{}llrcr@{}}
@@ -1054,6 +1140,7 @@ Arm & Mechanism & Rate & 95\,\% CI & $k/N$ \\
 \texttt{A-GR-STOCK}      & Guardrails AI, stock validators        & 35.0\,\% & [28.7, 41.8] & 70/200 \\
 \texttt{A-STRICT-STATIC} & provider strict mode, no enum          &  4.0\,\% & [2.0, 7.7]   &  8/200 \\
 \midrule
+\texttt{A-GR-CHOICES}$^{\ddagger}$ & \textbf{Guardrails' own choice check} & \textbf{0.0\,\%} & [0.0, 1.9] & 0/200 \\
 \texttt{A-GR-OURS}       & \textbf{Guardrails' loop, our Tier B}   & \textbf{0.0\,\%} & [0.0, 1.9] & 0/200 \\
 \texttt{A-CONTRACT}      & Tier A + Tier B                        & \textbf{0.0\,\%} & [0.0, 1.9] & 0/200 \\
 \texttt{A-STRESS}        & Tier B alone, no enum                  & \textbf{0.0\,\%} & [0.0, 1.9] & 0/200 \\
@@ -1062,10 +1149,13 @@ Arm & Mechanism & Rate & 95\,\% CI & $k/N$ \\
 \end{tabular}
 
 {\footnotesize $^{\dagger}$Degenerate on this task --- see
-Section~\ref{sec:rq3-degenerate}. The row carries no comparison.}
+Section~\ref{sec:rq3-degenerate}. The row carries no comparison.\\
+$^{\ddagger}$Run 2026-09-18, not 2026-09-15. On that date \texttt{A-L1} read
+43.0\,\% and \texttt{A-GR-STOCK} 43.5\,\%; the 0/200 cells were 0/200 on both
+dates (Section~\ref{sec:rq3-replication}).}
 \end{table}
 
-\subsection{It is the validator, not the loop}
+\subsection{It is the binding, not the validator and not the loop}
 
 The two rows to read together are \texttt{A-GR-STOCK} and \texttt{A-GR-OURS}.
 \textbf{The same toolkit, the same reask loop, the same budget of two, the same
@@ -1086,14 +1176,70 @@ box}, which is the toolkit's out-of-the-box structural
 configuration. We have no survey data on how often that configuration is the
 one deployed, and do not claim any.
 
-What the swap shows is unaffected by that narrowing, and it is the paper's
-central empirical claim: \textbf{the outer loop is general-purpose
-infrastructure and was never the contribution; the validator inside it is.}
+\paragraph{We tested that concession, and it narrows the claim further.}
+Writing that a competent user \emph{could} construct the list is cheap. The
+\texttt{A-GR-CHOICES} arm is that user: the same Guard, the same open schema,
+the same reask budget of two, the same transport and the same scorer, with one
+generic acceptable-values check on \texttt{columns\_referenced} whose list is
+built from $E$ at call time. It carries none of Tier~B --- no value tolerance,
+no anchor requirement, no per-claim checking --- and is therefore strictly
+weaker than our validator by construction.
+
+\textbf{It reaches 0/200, with 88 catches.} A generic membership test, given
+the right list at the right moment, is enough.
+
+That result is the reason the claim below is narrower than the one an earlier
+draft made. \emph{The validator is not what does the work either.} What does
+the work is \textbf{binding the admissible set to the deterministic evidence at
+call time}, and the paper's central empirical claim is that nothing in a
+validate-and-reask toolkit's default configuration does that, while anything
+that does --- a generic choice list, our three channels, or a schema enum ---
+lands in the same place.
+
+The three Tier~B channels still earn their place, and this arm shows where:
+\texttt{A-GR-CHOICES} checks columns and nothing else, so a misquoted value or
+an unaddressed anchor passes it. On this task neither occurs, which is why the
+two arms tie. Section~\ref{sec:rq4} measures a channel where they would not:
+unverifiable statistics run at up to 45 per 100 under paraphrase, and a choice
+list on the column field cannot see them.
+
+A further reason to state the claim this way rather than as ours-against-theirs
+is what the toolkit does and does not install. A fresh
+\texttt{pip install guardrails-ai==0.11.0} registers \emph{no} validators at
+all: the registry is empty and the hub namespace exports nothing, so every
+validator, the acceptable-values check included, is a separate fetch from a
+remote service. ``Out of the box'' is therefore a stronger statement than we
+first made --- out of the box there is no faithfulness validator to configure.
 
 \texttt{A-STRESS} reaching 0/200 with the enum removed says the same thing
 from the other side. Post-generation verification alone suffices, which is what
 makes the guarantee independent of the provider. Tier~B fired on 12 of 200
 responses in that arm and passed none of them through.
+
+\subsubsection{The comparison replicates; the rate does not}\label{sec:rq3-replication}
+All eight arms of Table~\ref{tab:arms}
+were re-run on 2026-09-18, three days after the numbers above, same model name,
+same evidence hash, same prompts, same scorer, $N=200$ per arm --- 1{,}600
+further live responses. Every
+enforcement conclusion holds: \texttt{A-GR-CHOICES}, \texttt{A-GR-OURS},
+\texttt{A-CONTRACT}, \texttt{A-STRESS} and \texttt{A-STATIC-ENUM-STALE} are all
+0/200 again. The \emph{rates} do not hold. \texttt{A-L1} reads 43.0\,\%
+[36.3, 49.9] against 42.0\,\%, which is a replication; \texttt{A-GR-STOCK}
+reads \textbf{43.5\,\%} [36.8, 50.4] against 35.0\,\%, which is not.
+\texttt{A-STRICT-STATIC} reads 7.0\,\% against 4.0\,\%.
+
+Nothing was changed between the two runs but the date. We report it here rather
+than in a footnote because it is the third independent demonstration of this
+paper's own thesis --- alongside the second provider in
+Section~\ref{sec:rq3-second} and the local model below --- and because a reader
+who took 35.0\,\% as a property of Guardrails~AI would be wrong by eight and a
+half points within a week.
+
+A third model makes the same point from the other direction. The battery was
+also run on a local \texttt{qwen2.5:7b} under Ollama ($N=20$ per arm), where
+every arm scores 0/20 except \texttt{A-STRICT-STATIC} at 2/20. That is a third
+provider and a third floor at which there is nothing for any mechanism to
+prevent.
 
 \texttt{A-GR-OURS} is the instructive middle: Tier~B's checks caught 86
 violations across 84 responses inside Guardrails' loop, and the user-facing
@@ -1110,13 +1256,49 @@ does not constrain it --- the same effect we report for Tier~A in
 Section~\ref{sec:rq4}. Steering is not enforcement, and cannot be certified:
 it can regress as silently as a prompt.
 
+\paragraph{Three things are called ``valid'', and the arms measure all three.}
+The word does most of the equivocating in this area, so Table~\ref{tab:valid}
+separates the senses. A payload can parse, and still put a metric name in a
+column field. It can carry the right \emph{type} in every field, and still name
+a column the dataset does not have. Only the third level --- the field's
+admissible set derived from $E$ at call time --- is the one this paper's
+guarantee is about, and it is the only one of the three that no schema can
+express, because a schema is written before the evidence exists.
+
+\begin{table}[t]
+\caption{Three senses of ``valid'', the mechanism that establishes each, and
+the arm in this battery that measures it. Each level is strictly stronger than
+the one above and none of them implies correctness against the world.}
+\label{tab:valid}
+\centering
+\begin{tabular}{@{}llll@{}}
+\toprule
+Level & Question & Established by & Arm \\
+\midrule
+Syntactic  & Does it parse? & JSON schema & all \\
+Type       & Right type per field? & strict mode & \texttt{A-STRICT-STATIC} \\
+\textbf{Evidence} & \textbf{$x \in A_{E,f}$?} & \textbf{call-time binding}
+  & \textbf{\texttt{A-GR-CHOICES}} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The two failure modes of Section~\ref{sec:rq1} sit one level apart, which is
+why a single blended rate hid them. A \emph{misfiled} entity is
+type-valid and evidence-invalid: \texttt{r2} is a string in a string field, and
+is not a column. An \emph{invented} entity is invalid at the evidence level
+too, and at no other. Nothing below the third level can tell them apart,
+because nothing below the third level knows what the evidence contained.
+
 \subsection{The second provider fails at nothing, and that is the
 result}\label{sec:rq3-second}
 
-Every arm in Table~\ref{tab:arms} was re-run on a second provider and a
+The battery was re-run on a second provider and a
 different model family --- \texttt{gpt-5.4-mini}, same evidence hash, same
 prompts, same scorer, same reask budget, temperature 1.0, zero transport
-errors. All seven arms score \textbf{0/200}, including \texttt{A-L1}.
+errors. This ran before \texttt{A-GR-CHOICES} existed, so it covers the seven
+arms of Table~\ref{tab:arms} other than that one. All seven score
+\textbf{0/200}, including \texttt{A-L1}.
 
 The floor arm does not fail. In 199 of 200 responses the model cites exactly
 the ten evidence columns and makes ten structured claims (the remaining
@@ -1145,7 +1327,7 @@ mechanism can be compared at all.
 \item \textbf{It is the case for structural enforcement rather than measured
 compliance.} An engineer who benchmarked prompt-level reliability on
 \texttt{gpt-5.4-mini} would measure 0/200 and conclude the problem does not
-exist. The same benchmark on another production model, the same week, the same
+exist. The same benchmark on another hosted model, the same week, the same
 task, measures 42\,\%. A guarantee that holds by construction is worth having
 precisely because the rate it replaces is not a stable property of anything.
 \end{itemize}
@@ -1311,20 +1493,29 @@ whose protection is certifiable.
 
 \subsection{Results}
 
-Table~\ref{tab:ab} reports the downstream benchmark: four arms $\times$ four
-models $\times$ three datasets $\times$ three repetitions, all on one frozen
-split per dataset. 143 of the 144 planned runs produced a script to score.
+Table~\ref{tab:ab} reports the downstream benchmark's first four arms: four
+arms $\times$ four models $\times$ three datasets $\times$ three repetitions,
+all on one frozen split per dataset. 143 of the 144 planned runs produced a
+script to score. A fifth arm, \texttt{control+revise+rubric}, was added later
+and is reported in Section~\ref{sec:rq5-rubric}; with it the benchmark is 175
+scored runs of 180 planned.
 
-One accounting point governs the three sections that follow. Three arms ---
+One accounting point governs the sections that follow, and it is the reason no
+single table here carries all five arms. Three arms ---
 \texttt{control}, \texttt{advise}, \texttt{advise+audit} --- were frozen and
 executed as one 108-run experiment. The fourth, \texttt{control+revise}, did
 not exist at that point: it was specified as numbered amendment~A8 in response
 to the objection it answers, and run afterwards as a separate 35-run
-experiment against its own frozen plan. Where a figure below refers to 108
+experiment against its own frozen plan. The fifth was specified as
+amendment~A17, after the first four had been analysed and written up, and run
+as a third 36-run experiment. Where a figure below refers to 108
 runs or 36 cells, it is the original three arms; the instrument analysis of
 Section~\ref{sec:instruments} and the held-out analysis of
 Section~\ref{sec:rq5-score} are both of that kind, because both predate the
-fourth arm.
+fourth arm. The differential scorer audit
+(Section~\ref{sec:defect6}) covers the 143 scripts of the first four arms; the
+fifth arm's scripts were scored by that same audited code and were not
+themselves re-scored by the second implementation.
 
 The excluded run is disclosed rather than absorbed. Section~\ref{sec:design}'s
 exclusion rule covers \emph{transport} failures; this call succeeded and
@@ -1374,7 +1565,7 @@ the entire 23-defect fall: \texttt{leak\_duplicate\_rows} accounts for 16 and
 \texttt{wrong\_metric\_for\_imbalance} \emph{cannot} --- its precondition, a
 minority class below 20\,\%, is false of all three datasets --- so the
 instrument is materially two rules here. Exact values in
-Table~\ref{tab:perrule}.}
+Table~\ref{tab:perrule}. The fall itself is no longer attributed to the tool's findings: Section~\ref{sec:rq5-rubric} reports a fifth arm, absent here, that reaches 1 flagged defect with no findings at all.}
 \label{fig:defects}
 \end{figure}
 
@@ -1417,8 +1608,8 @@ is not: no audit rule mentions duplicate rows, and it is the largest single
 contributor. \textbf{That is the part of the downstream effect the instrument
 did not hand to the treatment.}
 
-\subsection{The extra attempt is worth nothing; the findings are worth
-$31 \rightarrow 8$}
+\subsection{The extra attempt is worth nothing, and the findings are worth
+less than we claimed}\label{sec:rq5-rubric}
 
 The obvious objection to a treatment arm that revises is that it differs from
 the control in \emph{two} ways at once: it is told what is wrong, and it gets a
@@ -1427,7 +1618,69 @@ and the objection was raised in internal review before it could be raised
 externally. The \texttt{control+revise} arm exists to answer it.
 
 A second attempt on its own does nothing: $31 \rightarrow 35$, one model down,
-one level and two up, noise around no effect. The within-arm view is sharper. Across the
+one level and two up, noise around no effect.
+
+\paragraph{A fifth arm, and it does not go our way.} That pair separates the
+attempt from the findings and leaves a second confound standing, which
+Section~\ref{sec:threats} had conceded and not measured: the findings name the
+same six rules the outcome is scored on. \texttt{control+revise+rubric} holds
+the rubric and withholds the findings. Its second turn is a frozen constant
+listing the six scored concerns, each phrased as a question about the concern
+and never as a claim about this script, with an explicit sentence saying the
+list is generic. It was pre-registered as amendment~A17, and the amendment
+recorded before the run that a result near 8 would mean the fall was largely
+the rubric and this section's causal claim would have to be rewritten.
+
+It landed at \textbf{1 flagged defect over 32 scored runs}
+(Table~\ref{tab:rubric}), against \texttt{advise+audit}'s 8 over 36. Telling
+the model what it will be scored on, with nothing said about its own code,
+outperforms handing it the tool's actual findings.
+
+\textbf{So the 31~$\rightarrow$~8 fall is not attributable to the tool's
+findings on this metric, and we withdraw that attribution.} The
+treatment--outcome vocabulary overlap is not a limitation to note in passing;
+it is a confound large enough to account for the whole effect on the checklist.
+
+\begin{table}[t]
+\caption{The fifth arm, and where it pays. A script with no flagged defect is
+worth nothing if it does not run, so the last column is the outcome a
+practitioner actually receives: executes \emph{and} carries no flagged defect.}
+\label{tab:rubric}
+\centering
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Arm & defects & per run & runnable & useful \\
+\midrule
+\texttt{control}               & 31 & 0.86 & 78\,\% & 22\,\% \\
+\texttt{control+revise}        & 35 & 1.00 & 83\,\% & 20\,\% \\
+\texttt{advise}                & 24 & 0.67 & 81\,\% & 39\,\% \\
+\texttt{advise+audit}          & \textbf{8} & 0.22 & \textbf{83\,\%} & \textbf{64\,\%} \\
+\texttt{control+revise+rubric} & \textbf{1} & \textbf{0.03} & \textbf{47\,\%} & 44\,\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{The rubric arm pays where the checklist cannot see.} Every other arm
+executes between 78\,\% and 83\,\% of the time. The rubric arm executes 17 of
+36, \textbf{47\,\%} [32, 63], and the intervals barely touch. Handed six
+conditions to satisfy and nothing about its own code, the model writes
+something that satisfies the checklist and does not run.
+
+This is Goodhart's law inside our own instrument, and we can measure it only
+because the benchmark records execution separately from the checklist.
+Section~\ref{sec:threats} argues that six deterministic rules are not code
+quality; this is the first evidence in the study of what optimising against
+them costs.
+
+On the joint outcome --- runs \emph{and} carries no flagged defect ---
+\texttt{advise+audit} is first at \textbf{64\,\%} [48, 78] against the rubric
+arm's 44\,\% [30, 60]. Those intervals overlap substantially. At $N=36$ this
+design separates the two arms \emph{weakly}, and we claim no more than that:
+the tool's findings buy a better joint outcome than the rubric alone, on
+evidence that a larger panel could overturn.
+
+\paragraph{What this arm explains rather than removes.} The claim below is that
+self-revision repaired nothing. It is true and this arm tells us why. The within-arm view is sharper. Across the
 35 runs that produced a defect count on both sides of the revision turn:
 
 \begin{center}
@@ -1442,10 +1695,15 @@ better    & \textbf{0} \\
 
 \textbf{Self-revision without the tool's findings did not repair a single
 defect in 35 runs.} The model was handed its own script and asked to find
-problems in it, and found none it could act on --- while the same models, shown
-\texttt{mlcompass audit} output on the same kind of script, fix them. The fall
-from 31 to 8 is attributable to the findings and not to the turn they arrive
-with.
+problems in it, and found none it could act on.
+
+The rubric arm, on the same datasets with the same models, repaired
+\textbf{21 of 25} and regressed none. So the reading this result invites ---
+that models cannot repair their own code without external feedback --- is the
+wrong one, and our own earlier draft made it. The correct reading is narrower:
+\textbf{a model asked to review its own script with nothing named fixes
+nothing; a model told what to look for fixes most of it, whether or not anyone
+tells it what is actually wrong with the code in front of it.}
 
 A net count cannot carry that sentence, because a run that repairs one rule and
 introduces another shows no movement. Both sides of the turn are preserved, so
@@ -1893,11 +2151,23 @@ amounts to telling the model to be careful --- at 68\,\%. Vague guidance is
 weak; precise deterministic feedback is strong. The division of labour follows:
 let the verifier, not the prompt author, do the correcting.
 
-RQ5 is the same lesson at a larger scale and with the confound removed. Asking
-a model to review its own script repaired zero defects in 35 runs. Handing it a
-deterministic tool's findings about that script moved four model lanes from 33
-flagged defects to 8. What the tool contributes is not encouragement to be
-careful; it is a specific, checkable statement of what is wrong.
+RQ5 is the same lesson at a larger scale, and one of its two confounds turned
+out to carry the effect. Asking a model to review its own script with nothing
+named repaired zero defects in 35 runs. Handing it a deterministic tool's
+findings took the checklist from 31 flagged defects to 8 --- but handing it a
+generic list of the six scored concerns, and nothing at all about the script,
+took it to 1 (Section~\ref{sec:rq5-rubric}). On the checklist the tool's
+findings are therefore not what did the work, and we say so where the number
+appears.
+
+The lesson that survives is the one about specificity, and it is unchanged in
+direction and narrower in scope: what a model cannot do is find problems in its
+own code when nothing is named. What it can do is act on \emph{any} specific,
+checkable statement --- ours, or a rubric. Where the two differ is what the
+checklist cannot see: the rubric arm satisfies the six rules with code that
+runs 47\,\% of the time, against 83\,\% for the arm handed real findings. On
+the outcome that composes both --- runs and carries no flagged defect ---
+the tool's findings lead, 64\,\% against 44\,\%, on intervals that overlap.
 
 \subsection{Negative results are boundaries, not failures}
 
@@ -1932,8 +2202,8 @@ the measurements; an expert-system narrator could be bound to the identifiers
 of the rules that fired. In the clinical case the transposed guarantee would be
 that the narration is consistent with the recorded measurements --- not that the
 recommendation is clinically valid, and not that the measurements are right. The
-distinction is the one drawn in Section~
-ef{sec:contract}, and it matters more
+distinction is the one drawn in Section~\ref{sec:contract}, and it matters
+more
 as the stakes rise. We have not evaluated either domain, and they mark where our
 claims stop.
 
@@ -1953,27 +2223,55 @@ and keep the blended flag only for continuity with the arm comparisons. Any
 reader comparing our rates to another paper's should check which of the two
 that paper counts; we suspect the distinction is not made elsewhere.
 
-\paragraph{The downstream checklist is an absence-scored proxy.} Six
-deterministic rules are not ``code quality''. They are six things that are
-cheap to check and expensive to get wrong, and Section~\ref{sec:instruments}
-shows how the absence-scoring shape produces false positives with a direction.
-Two independent raters blind to arm would be a stronger instrument; we did not
-have them.
+\paragraph{The downstream checklist is an absence-scored proxy, and we can
+now put a number on that.} Six deterministic rules are not ``code quality''.
+They are six things that are cheap to check and expensive to get wrong, and
+Section~\ref{sec:instruments} shows how the absence-scoring shape produces
+false positives with a direction. Two independent raters blind to arm would be
+a stronger instrument; the apparatus is in the replication package and we did
+not have the raters.
 
-\paragraph{The treatment text and the outcome measure share vocabulary.} This
-is the threat we consider most serious in RQ5 and it is structural, not
-incidental. The \texttt{advise+audit} arm pastes \texttt{mlcompass audit}
-output into the prompt, and across the 54 preserved audit files the rules that
-actually fire are \texttt{seed}, \texttt{val\_split}, \texttt{unused\_holdout}
-and \texttt{metric\_choice} --- which map onto three of the six scored items.
-\texttt{no\_validation} falling 7 to 0 is therefore partly the measure scoring
-the thing the treatment named. The comparison that would separate ``was told
-what is wrong'' from ``was told what we score'' is a fifth arm carrying a
-generic defect checklist that names no tool output, and we have not run it.
-What the overlap does \emph{not} explain is
-\texttt{leak\_duplicate\_rows} (24~$\rightarrow$~8, the largest single
-contributor), which no audit rule mentions; that contrast is
-Section~\ref{sec:rq5-rules}.
+Until this revision that paragraph was an argument. The
+\texttt{control+revise+rubric} arm makes it a measurement. Handed the six
+scored concerns and nothing about its own code, the model reaches 1 flagged
+defect over 32 scored runs --- the best checklist score in the study --- while
+its scripts execute \textbf{47\,\%} [32, 63] of the time against 78--83\,\% in
+every other arm (Section~\ref{sec:rq5-rubric}). That is Goodhart's law measured
+inside our own instrument: the checklist can be satisfied by code that does not
+run, and it was, without anyone asking for it. Any reading of a checklist total
+in this paper --- including our own --- has to carry the execution rate beside
+it, which is why Table~\ref{tab:rubric} reports the joint outcome and why the
+surviving \texttt{advise+audit} claim is stated on that outcome and not on the
+count.
+
+\paragraph{The treatment text and the outcome measure share vocabulary, and
+the overlap accounts for the effect.} This was the threat we considered most
+serious in RQ5, it is structural rather than incidental, and it is now measured
+rather than conceded. The \texttt{advise+audit} arm pastes \texttt{mlcompass
+audit} output into the prompt, and across the 54 preserved audit files the
+rules that actually fire are \texttt{seed}, \texttt{val\_split},
+\texttt{unused\_holdout} and \texttt{metric\_choice} --- which map onto three
+of the six scored items.
+
+An earlier version of this paragraph offered a defence: the largest single
+contributor, \texttt{leak\_duplicate\_rows} (24~$\rightarrow$~8), is named by
+no audit rule, so the overlap was ``weakened but not removed''. That defence
+was too generous to us. The arm that tests it directly ---
+\texttt{control+revise+rubric}, carrying a generic list of the six scored
+concerns and nothing about the script, pre-registered as amendment~A17 with the
+adverse outcome written down before the run --- reaches 1 flagged defect over
+32 scored runs against \texttt{advise+audit}'s 8 over 36. On the checklist,
+being told what will be scored beats being told what is actually wrong.
+Section~\ref{sec:rq5-rubric} withdraws the causal attribution that this
+paragraph used to protect.
+
+What survives is narrower and is stated where it is claimed: on the joint
+outcome a practitioner receives --- the script runs \emph{and} carries no
+flagged defect --- \texttt{advise+audit} leads at 64\,\% [48, 78] against the
+rubric arm's 44\,\% [30, 60], with intervals that overlap substantially. At
+$N=36$ this design separates the two arms weakly. A reader who concludes that
+RQ5 does not establish a checklist-level benefit for the tool's findings is
+reading our own result correctly.
 
 \paragraph{Free text is unmeasured.} The guarantee covers the validated
 citation and claim channels. Enforcement pressure could push fabrication into
@@ -1983,14 +2281,32 @@ unscored.
 
 \subsection{Internal validity}
 
-\paragraph{Provider non-determinism.} Temperature is fixed at $1.0$ and sent
-explicitly, but the endpoints are closed and may change beneath a stable model
-name. Section~\ref{sec:instruments} documents two of our own figures that a
-later run did not reproduce for what we believe is exactly this reason.
+\paragraph{Provider non-determinism, measured rather than supposed.}
+Temperature is fixed at $1.0$ and sent explicitly, but the endpoints are closed
+and may change beneath a stable model name.
+Section~\ref{sec:instruments} documents two of our own figures that a later run
+did not reproduce for what we believe is exactly this reason, and
+Section~\ref{sec:rq3-replication} re-runs the whole battery three days later on
+the same model name and watches \texttt{A-GR-STOCK} move 8.5 points. That
+re-run is the one comparison in this paper that isolates the date: same
+provider, same model name, same prompts, same scorer, same evidence hash. The
+second-provider result of Section~\ref{sec:rq3-second} does \emph{not} isolate
+it --- provider, model family and date all differ there --- and we draw the
+weaker conclusion it supports, that reliability is not portable across
+configurations, rather than the stronger one about drift that it cannot carry.
 
 \paragraph{Repetitions share a split.} The three repetitions of each downstream
 cell use one split per dataset, so they measure generation variability and not
 split variability. A design varying both would be stronger and is future work.
+
+\paragraph{The checklist arms are not matched on what reaches a runnable
+script.} The rubric arm's 47\,\% execution rate means its checklist total rests
+on a different, smaller population than the other four arms' --- 17 scripts
+against 28--30. We report the count, the execution rate and the joint outcome
+separately (Table~\ref{tab:rubric}) rather than a single figure, because no
+single figure over unequal denominators is honest here. The comparison we
+believe is sound is the joint one; the comparison we believe is misleading, and
+which the earlier draft's framing invited, is defect counts alone.
 
 \paragraph{The stress arm's propensity is not the bare arm's.} It reuses the
 shipped contract's user message, which mentions a contract, so its first-attempt
@@ -2003,11 +2319,14 @@ demonstrations that the verifier fires, not as estimates of a bare rate.
 leakage task with one leak pattern. Other evidence shapes and other leak
 patterns are unmeasured.
 
-\paragraph{Provider coverage is uneven, and the second provider is a null.}
-The seven-arm battery ran on two providers; the second returns 0/200 on every
-arm including the floor, so it confirms that the rates do not transfer and
-contributes nothing to the comparison between mechanisms
-(Section~\ref{sec:rq3-second}). The paraphrase sweep and the diagnostic arms
+\paragraph{Provider coverage is uneven, and two of the three providers are
+nulls.} The battery ran on three providers --- \texttt{deepseek-chat},
+\texttt{gpt-5.4-mini} and a local \texttt{qwen2.5:7b} --- and only the first
+fails at all. The other two return 0/200 (and 0/20) on every arm including the
+floor, so they confirm that the rates do not transfer and contribute nothing to
+the comparison between mechanisms (Section~\ref{sec:rq3-second}). The
+comparative claim is therefore single-provider even though the study is not,
+and we state it that way wherever it appears. The paraphrase sweep and the diagnostic arms
 are single-provider. RQ5 uses four models --- three hosted, one local ---
 which is where this paper's generalisation evidence lives. Rates should
 not be transferred between providers; our own sweep shows they do not transfer
@@ -2060,16 +2379,35 @@ numbers the other way had not arrived, and that until it did we could not
 distinguish a biased instrument being repaired from an instrument being repaired
 in a biased direction.
 
-It has now arrived. Defect~6 removes two \texttt{control} flags and touches no
-treatment arm, shrinking the effect from a 25-defect fall to a 23-defect one.
-One correction is not a calibration, and we do not present it as one: five
-corrections that favour a hypothesis and one that does not is still a lopsided
-record. What changed is that the record is no longer unanimous, and that the
-correction which broke it came from a procedure built to look for exactly this
---- a second implementation on a different technique
-(Section~\ref{sec:defect6}) --- rather than from us noticing something. The
-apparatus for the human-rated check that would settle it is in the replication
-package and has not been run.
+Two have now arrived. Defect~6 removes two \texttt{control} flags and touches
+no treatment arm, shrinking the effect from a 25-defect fall to a 23-defect
+one. Amendment~A17's rubric arm then removed the causal attribution for what
+remained. Neither is a calibration and we do not present them as one: five
+corrections that favour a hypothesis and two that do not is still a lopsided
+record. What changed is that the record is no longer unanimous, and that both
+corrections which broke it came from procedures built to look for exactly this
+--- a second scorer implementation on a different technique
+(Section~\ref{sec:defect6}) and an arm whose adverse outcome was written down
+before it ran (Section~\ref{sec:rq5-rubric}) --- rather than from us noticing
+something. The apparatus for the human-rated check that would settle the
+scorer question is in the replication package and has not been run.
+
+\paragraph{Seventeen amendments is a lot of amendments.} A protocol frozen
+before execution and then amended seventeen times invites the question of how
+much of it stayed frozen, and the answer belongs here rather than in the
+package. Twelve amendments are infrastructure or reporting and cannot move a
+result in either direction: added provenance fields, log-directory handling,
+key loading, the differential-audit harness, the blind-review apparatus. Three
+are instrument repairs whose direction is reported as a correction in
+Section~\ref{sec:instruments} rather than absorbed. Two add an arm ---
+\texttt{control+revise} (A8) and \texttt{control+revise+rubric} (A17) --- and
+both were added to attack our own attribution rather than to support it; each
+was written with its adverse outcome stated before the arm ran, and A17's
+adverse outcome is what happened. What was never amended is the set of scored
+rules, the datasets, the models, the repetition count or the seeds. The
+amendment log in the package carries this classification per entry, with a
+column for whether the amendment could move a result in the direction of our
+hypothesis.
 
 \section{Conclusion}\label{sec:conclusion}
 
@@ -2082,17 +2420,23 @@ monotonicity argument whose remedy is restricted by what enforcement over
 speech is permitted to invent); and fabrication on the verified channels is
 therefore preventable rather than merely mitigable.
 
-We measured a two-tier contract built on those facts, in the production path of
-an open-source tool. Against the nearest real alternative, the finding is that
+We measured a two-tier contract built on those facts, in the shipped narration
+path of an open-source tool. Against the nearest real alternative, the finding is that
 the outer loop was never the contribution: Guardrails~AI's own validators leave
 35.0\,\% of responses unfaithful and the same loop running our deterministic
 validators leaves 0/200. Against six rule-free rewordings of one instruction,
 the failure rate moves from 9\,\% to 72\,\% --- and the invention rate does
 not follow it, so the wording that looks safest on the headline metric is the
-one inventing most. Downstream, across four models and three datasets,
-flagged defects fall from 31 to 8, and a fourth arm shows the fall is the
-tool's findings and not the extra attempt they arrive with: self-revision
-without findings repaired nothing in 35 runs.
+one inventing most. Downstream, across four models and three datasets, the
+result went against us: flagged defects fall from 31 to 8 when the tool's
+findings are supplied, but to 1 when a generic list of the six scored rules is
+supplied instead, so on the checklist the findings are not what did the work
+and we withdraw that attribution. What survives is that a second attempt with
+nothing named repairs nothing in 35 runs, that \emph{any} specific statement of
+what to look for repairs most of it, and that the arm optimising against the
+rubric alone produces code that runs 47\,\% of the time against 83\,\% ---
+which is the clearest evidence in the study that a six-rule checklist is a
+proxy and not the thing itself.
 
 We are explicit about what is claimed: not a new decoding algorithm, but a
 decidable-class framing, a contract carrying one complexity observation and one

@@ -205,11 +205,52 @@ asked to review its own script with nothing named fixes nothing; a model told
 what to look for fixes most of it, whether or not anyone tells it what is
 actually wrong.
 
+### Both manuscripts revised, 2026-09-18
+
+`paper/emse_latex/main.tex` (49 pp.) and `paper/tse_latex/main.tex` (16 pp.,
+body ends on 15) now carry both results. What changed, in the order a reader
+meets it:
+
+- **Abstract, contributions, conclusion.** The Guardrails claim narrows from
+  "our validator" to "the binding". The downstream claim withdraws the
+  31 → 8 attribution and states what survives: the joint outcome, weakly.
+- **§7.** New heading, the `A-GR-CHOICES` passage, the empty-registry fact,
+  and the three-days-later replication as its own labelled subsection.
+- **§8.** A new table separating syntactic / type / **evidence** validity,
+  with the arm that measures each. The two failure modes of §6 sit one level
+  apart, which is why a blended rate hid them.
+- **§9.** The fifth arm, `tab:rubric` with the joint-outcome column, and the
+  Goodhart paragraph.
+- **§12.** The overlap paragraph stops calling itself "weakened but not
+  removed"; the checklist-is-a-proxy paragraph gains the 47 % execution rate;
+  the corrections paragraph now reads five-for and two-against; a new
+  paragraph classifies the seventeen amendments.
+- **Figure 1** is regenerated from a committed generator
+  (`paper/make_fig1_contract.py`, which did not previously exist) with three
+  scope annotations: the producer is trusted and never verified, unverified
+  prose still reaches the user, and a band reading GUARANTEED response ↔ E /
+  NOT GUARANTEED E ↔ ground truth.
+- Deployment language moves from "production" to "shipped", with the reason
+  stated: we have no telemetry to back a production claim.
+- Temperature 1.0 is justified in Methods, including the admission that it
+  cuts against the baselines.
+
+Both build with zero undefined references. EMSE has zero overfull boxes; TSE
+has one 1.8 pt overfull vbox.
+
 ### Remaining
+
+Re-ordered after the external review of 2026-09-18, which ranks the top three
+as rubric arm (done), blind human audit, and a second evidence-closed task.
 
 | # | Work | Status |
 |---|---|---|
+| 7 | **A second evidence-closed task** — a different deterministic producer (schema profiler, missing-value diagnostics, fairness report, static analyser) narrated under the same contract | **queued, and the largest gap.** RQ1–RQ4 measure one evidence shape while the paper defines a class. One second task retires "you define a general class and evaluate one instance" |
 | 1b | Blind human rating of the checklist | apparatus frozen, needs two raters who are not us |
+| 5 | Evidence-domain scalability, 10 / 100 / 500 / 1000 | queued. §12 concedes Tier A is untested above ten columns; the measurement is cheap (schema bytes, latency, API acceptance, tokens, first-pass compliance) |
+| 8 | **Temperature sensitivity, T ∈ {0, 0.2, 1.0}** | queued. Methods now justifies T=1.0 and admits the baselines are conditioned on it. A supplementary sweep would close it |
 | 4 | Template-only, LLM-free baseline | queued |
-| 5 | Evidence-domain scalability, 10 / 100 / 500 / 1000 | queued |
 | 6 | Tier B mutation / adversarial tests | queued |
+
+Two of 7, 1b and 5 would, by the reviewer's own account, move the paper from
+borderline to the accept side.
