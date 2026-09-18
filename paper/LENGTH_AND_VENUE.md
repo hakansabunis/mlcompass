@@ -137,13 +137,52 @@ access; it should be read directly from
 browser. SCIE + Scopus indexing is what makes a quartile exist at all, and
 both are confirmed above.
 
-### Where "Stanford" probably comes from
+### Where "Stanford" comes from — corrected
 
-Almost certainly the **Stanford / Elsevier "Top 2% Scientists" list**
-(Ioannidis et al., published through Elsevier Data Repository). That list ranks
-**researchers** by a composite citation score. It has nothing to do with
-papers, nothing to do with journals, and nothing to say about a manuscript
-before publication.
+**An earlier version of this memo guessed wrong here.** It said the reference
+was probably the Stanford / Elsevier "Top 2% Scientists" list. That list ranks
+researchers and you cannot send anything to it, so it does not fit "send it for
+a check" at all.
+
+The thing that does exist, and fits exactly, is the **Stanford Agentic
+Reviewer** at <https://paperreview.ai> — an open-access service from the
+Stanford ML Group (Yixing Jiang and Andrew Ng). You upload a manuscript PDF,
+optionally name a target venue, and it emails back reviewer-style feedback.
+
+| | |
+|---|---|
+| Cost | free |
+| Input | PDF, **max 10 MB**, **first 15 pages analysed** |
+| Optional | target venue |
+| Turnaround | feedback by e-mail, typically under 30 minutes |
+| Contact | aireviewer@cs.stanford.edu |
+
+How it works, from the service's own technical page: it converts the PDF to
+Markdown, generates web-search queries at several levels of specificity to pull
+relevant prior work from arXiv, judges which of it is relevant, and reviews the
+paper against that synthesised related work rather than in isolation.
+
+Reported calibration: Spearman correlation of 0.42 between the AI score and one
+human score, against 0.41 between two human scores, on ICLR 2025 reviews. For
+predicting acceptance it reaches 0.75 AUC against 0.84 for human reviewers.
+
+Its stated limits matter for us and are mostly favourable. It works best "in
+fields like AI where recent research is freely published" on arXiv, which is
+ours. It is English-only, which is fine. And the developers note that AI
+reviewers comment on **novelty** far less than humans do — which is the single
+dimension this paper most needs attacked, given that EviBound shares its term
+and much of its structure. So it will not substitute for the novelty argument;
+it will check everything around it.
+
+**Send the two-column build.** `paper/tse_latex/main.pdf` is 14 pages, so the
+whole paper falls inside the 15-page analysis window. The `sn-jnl` build is 43
+pages and the tool would read only the first 15, stopping partway through the
+study design and seeing none of the results.
+
+One judgement call that is not ours to make: this uploads an unpublished
+manuscript to a third-party service. That is an ordinary thing to do and
+21,500 papers went through it in its first week, but the decision belongs to
+the authors.
 
 ### What does exist: journal matchers that take an abstract
 
