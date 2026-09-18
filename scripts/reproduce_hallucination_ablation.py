@@ -1035,7 +1035,7 @@ def _live_one_response(
                 corr_map=evidence_correlation_map(evidence),
                 anchor=top_candidate(evidence),
                 tolerance=VALUE_TOLERANCE,
-                with_validators=(layer == "guardrails_tierb"),
+                arm=layer,
                 num_reasks=guardrails_reasks,
             )
         except Exception as e:  # noqa: BLE001

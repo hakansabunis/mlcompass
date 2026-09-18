@@ -8,7 +8,7 @@ model, same provider call, same forced ``submit_investigation`` tool with the
 same OPEN (enum-free) schema the L1/L2 arms use, same sampling pin, and the
 same three-channel scoring by the independent scorer.
 
-Two arms are provided, matching the preregistered fairness design:
+Three arms are provided, matching the preregistered fairness design:
 
 ``guardrails_stock``
     ``Guard.for_pydantic(Investigation)`` with NO faithfulness validator.
@@ -16,6 +16,23 @@ Two arms are provided, matching the preregistered fairness design:
     presence, field types) and reasks on a structural failure. This is what
     the toolkit gives you out of the box, and it is the honest answer to
     "does a validate-and-reask toolkit stop phantom columns by itself?".
+
+``guardrails_choices``
+    The same Guard plus ONE generic acceptable-values check on
+    ``columns_referenced``, populated from the evidence at call time. This is
+    the arm a reviewer means when they ask whether 35.0 % is a strawman: it is
+    the competent Guardrails user who took the toolkit's own choice validator
+    and fed it the list. No value tolerance, no anchor requirement, no bespoke
+    logic -- strictly weaker than Tier B, by construction.
+
+    Note for anyone checking the claim that the toolkit "ships" such a
+    validator: it does not. A fresh ``pip install guardrails-ai==0.11.0``
+    registers ZERO validators -- ``validators_registry`` is empty and
+    ``guardrails.hub`` exports nothing. Each one is a separate
+    ``guardrails hub install`` that fetches a manifest from
+    hub.api.guardrailsai.com. The arm therefore reimplements the documented
+    semantics locally, which keeps it runnable from the replication package
+    alone and keeps the check short enough to audit by reading it.
 
 ``guardrails_tierb``
     The same Guard plus two custom validators that encode the Tier B checks
@@ -73,6 +90,7 @@ Configuration decisions, all load-bearing, all deliberate
 
 from __future__ import annotations
 
+import contextlib
 import json
 from collections.abc import Callable
 from typing import Any
@@ -86,7 +104,18 @@ GUARDRAILS_PACKAGE = "guardrails-ai"
 
 # The two arms this module serves. Registered here so the harness and the
 # tests agree on the names without importing guardrails.
-GUARDRAILS_ARMS = ("guardrails_stock", "guardrails_tierb")
+GUARDRAILS_ARMS = ("guardrails_stock", "guardrails_choices", "guardrails_tierb")
+
+# What each arm actually attaches, recorded in every response's telemetry so a
+# reader never has to infer the configuration from the arm's name.
+_VALIDATOR_NAMES: dict[str, list[str]] = {
+    "guardrails_stock": [],
+    "guardrails_choices": ["mlcompass/acceptable-values"],
+    "guardrails_tierb": [
+        "mlcompass/evidence-bound-columns",
+        "mlcompass/evidence-bound-claims",
+    ],
+}
 
 _VALIDATORS_REGISTERED = False
 
@@ -231,7 +260,91 @@ def _register_validators() -> None:
                 )
             return PassResult()
 
+    @register_validator(name="mlcompass/acceptable-values", data_type="list")
+    class AcceptableValues(Validator):  # type: ignore[misc]
+        """The toolkit's generic acceptable-values check, given the evidence.
+
+        This is the `guardrails_choices` arm and it exists to answer one
+        objection: that 35.0 % measures a strawman, because a competent user
+        would have taken Guardrails' own choice validator and populated it from
+        the evidence. This arm IS that user.
+
+        It is deliberately the whole of that configuration and nothing more.
+        No value tolerance, no anchor requirement, no per-claim checking -- one
+        membership test against a list supplied at call time, which is the
+        documented semantics of the Hub's `ValidChoices`. It is therefore
+        strictly weaker than `EvidenceBoundColumns` above, by construction, and
+        any difference between the two arms is the difference between a generic
+        check and a contract.
+
+        Why it is written here rather than installed. A fresh
+        `pip install guardrails-ai==0.11.0` registers ZERO validators:
+        `validators_registry` is empty and `guardrails.hub` exports nothing.
+        Every validator, this one included, is a separate `guardrails hub
+        install` that fetches a manifest from hub.api.guardrailsai.com. The
+        toolkit does not ship it. Reimplementing the documented semantics keeps
+        the arm runnable from the replication package alone, and the semantics
+        are simple enough that the reimplementation is checkable by reading it.
+        """
+
+        def _validate(self, value: Any, metadata: dict[str, Any]) -> ValidationResult:
+            allowed = {str(c) for c in (metadata.get("allowed_columns") or [])}
+            cited = [str(c) for c in (value or [])]
+            off = [c for c in cited if c not in allowed]
+            if off:
+                return FailResult(
+                    error_message=(
+                        f"columns_referenced contains values that are not in the "
+                        f"list of acceptable values: {off}. "
+                        f"Acceptable values: {sorted(allowed)}"
+                    )
+                )
+            return PassResult()
+
     _VALIDATORS_REGISTERED = True
+
+
+def _silence_hub_telemetry() -> None:
+    """Stop Guardrails exporting spans to its hub during a measurement run.
+
+    ``settings.disable_tracing`` covers the Guard's own tracer and does not
+    cover the hub tracer, which is a separate singleton that decides once, at
+    ``initialize_tracer`` time, from ``settings.rc.enable_metrics``. Left
+    alone it posts a span batch per call to an AWS endpoint and, when that
+    endpoint cannot be resolved, retries with backoff before giving up. On a
+    200-response arm that is real wall-clock on every response and a stream of
+    stack traces over the run log.
+
+    Two reasons this is not merely tidiness. A measurement run must not phone
+    home: what it would be reporting is our own experiment's call pattern. And
+    the retry delay lands inside the interval being timed, so an un-silenced
+    run does not measure what it claims to.
+
+    Best effort by construction. The internals it reaches into are private and
+    may move between versions, so every step is guarded and a failure to
+    silence is never a failure to run.
+    """
+    try:
+        from guardrails import settings
+
+        rc = getattr(settings, "rc", None)
+        if rc is not None and hasattr(rc, "enable_metrics"):
+            rc.enable_metrics = False
+    except Exception:  # noqa: BLE001 - telemetry is never worth a crash
+        pass
+
+    try:
+        from guardrails.hub_telemetry.hub_tracing import HubTelemetry
+
+        # The singleton may already have been constructed at import, in which
+        # case the constructor's reading of enable_metrics is already stale.
+        instance = getattr(HubTelemetry, "_instance", None)
+        for target in (instance, HubTelemetry):
+            if target is not None:
+                with contextlib.suppress(Exception):
+                    target._enabled = False  # type: ignore[attr-defined]
+    except Exception:  # noqa: BLE001
+        pass
 
 
 def _as_dict(obj: Any) -> dict[str, Any]:
@@ -249,12 +362,17 @@ def _as_dict(obj: Any) -> dict[str, Any]:
 # --------------------------------------------------------------------------- #
 
 
-def build_guard(*, with_validators: bool) -> Any:
+def build_guard(*, arm: str) -> Any:
     """Build the Guard for one arm.
 
-    ``with_validators=False`` is ``guardrails_stock``: structural validation
-    and reask only, no faithfulness checking. ``True`` is
-    ``guardrails_tierb``: the Tier-B-equivalent validators on top.
+    ``guardrails_stock``
+        Structural validation and reask only. What the toolkit gives you out
+        of the box, which is to say: no faithfulness checking at all.
+    ``guardrails_choices``
+        One generic acceptable-values check on ``columns_referenced``,
+        populated from the evidence at call time.
+    ``guardrails_tierb``
+        The Tier-B-equivalent validators: entity, value and completeness.
     """
     _require()
     from guardrails import settings
@@ -262,16 +380,24 @@ def build_guard(*, with_validators: bool) -> Any:
     # No telemetry export: measurement runs must not phone home, and the
     # exporter otherwise retries against an unreachable host on every call.
     settings.disable_tracing = True
+    _silence_hub_telemetry()
 
     from guardrails import Guard, OnFailAction
 
+    if arm not in GUARDRAILS_ARMS:
+        raise ValueError(f"unknown Guardrails arm {arm!r}; expected one of {GUARDRAILS_ARMS}")
+
     _, investigation = _build_models()
     guard = Guard.for_pydantic(investigation)
-    if not with_validators:
+    if arm == "guardrails_stock":
         return guard
 
     _register_validators()
     from guardrails.validator_base import validators_registry
+
+    if arm == "guardrails_choices":
+        choices_validator = validators_registry["mlcompass/acceptable-values"]
+        return guard.use(choices_validator(on_fail=OnFailAction.REASK), on="$.columns_referenced")
 
     columns_validator = validators_registry["mlcompass/evidence-bound-columns"]
     claims_validator = validators_registry["mlcompass/evidence-bound-claims"]
@@ -294,7 +420,7 @@ def run_guardrails_once(
     corr_map: dict[str, float],
     anchor: str | None,
     tolerance: float,
-    with_validators: bool,
+    arm: str,
     num_reasks: int = 2,
 ) -> dict[str, Any]:
     """Sample ONE response through Guardrails' validate-and-reask loop.
@@ -306,7 +432,7 @@ def run_guardrails_once(
     unvalidated final payload is preserved under ``baseline.passthrough`` so
     the alternative "ship it anyway" reading is recoverable from the same log.
     """
-    guard = build_guard(with_validators=with_validators)
+    guard = build_guard(arm=arm)
 
     calls: dict[str, Any] = {"n": 0, "usage_in": 0, "usage_out": 0, "usage_seen": False}
     last_payload: dict[str, Any] = {}
@@ -360,11 +486,8 @@ def run_guardrails_once(
         "baseline": {
             "toolkit": GUARDRAILS_PACKAGE,
             "version": guardrails_version(),
-            "validators": (
-                ["mlcompass/evidence-bound-columns", "mlcompass/evidence-bound-claims"]
-                if with_validators
-                else []
-            ),
+            "arm": arm,
+            "validators": _VALIDATOR_NAMES[arm],
             "num_reasks": num_reasks,
             "llm_calls": calls["n"],
             "validation_passed": bool(outcome.validation_passed),
@@ -400,6 +523,8 @@ def _catch_telemetry(guard: Any) -> tuple[int, list[str]]:
         "mlcompass/evidence-bound-columns": "entity+omission",
         "EvidenceBoundClaims": "value",
         "mlcompass/evidence-bound-claims": "value",
+        "AcceptableValues": "entity",
+        "mlcompass/acceptable-values": "entity",
     }
     for iteration in call.iterations:
         failures = list(getattr(iteration, "failed_validations", []) or [])
