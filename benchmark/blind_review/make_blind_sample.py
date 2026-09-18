@@ -13,6 +13,13 @@ to run id is written to a separate file that raters must not open -- keeping it
 out of the sample directory is the only thing standing between this and an
 unblinded rating, so it is written one level up and named accordingly.
 
+The reference flags in that key are computed here, by the current checker, over
+the redacted script the rater actually reads. An earlier version copied them
+out of each run.json, which records the scoring as it stood when the run
+executed; a key frozen before amendment A16 therefore carried four
+`target_in_features` false positives that A16 had already removed, and the
+scoring script reported a precision of 0.00 against raters who were right.
+
 Stripping is not cosmetic. An emitted script can carry its own provenance: a
 temp path containing the dataset id, a comment quoting the audit findings the
 advise+audit arm was given. Both are removed and the removal is logged, so a
@@ -38,6 +45,7 @@ BENCH = HERE.parent
 sys.path.insert(0, str(BENCH))
 
 from rescore_ab import _target_from_split  # noqa: E402
+from run_ab import check_defects  # noqa: E402
 
 PANEL = {"v4", "v4cr"}
 RULES = (
@@ -118,6 +126,49 @@ def main() -> int:
         target = (
             run.get("target") or (run.get("split") or {}).get("target") or _target_from_split(run)
         )
+
+        # The key is SCORED HERE, by the current checker, over the REDACTED
+        # source -- not read back from run.json.
+        #
+        # Reading it back was wrong twice over. run.json holds the scoring as
+        # it stood when the run executed, so a key frozen after amendment A16
+        # still carried the four `target_in_features` false positives A16
+        # removed, and `score_blind_review.py` as shipped reported "precision
+        # 0.00" against raters who were right. And the raters see the redacted
+        # file, so the key has to score the redacted file: redaction touches
+        # only comments and string literals, but a key computed from the
+        # original could not detect it if that ever stopped being true.
+        fresh = check_defects(
+            clean,
+            target=target,
+            duplicate_rows=int(blk.get("input_duplicate_rows") or 0),
+            minority_fraction=blk.get("input_minority_fraction"),
+            target_is_last_column=bool(blk.get("target_is_last_column")),
+        )
+        flags = {k: bool(v) for k, v in (fresh.get("flags") or {}).items()}
+
+        # Redaction must not move a rule. If it does, the sample is unusable
+        # and refusing here is the only safe outcome -- a silently altered
+        # reference is worse than no reference.
+        on_original = check_defects(
+            src,
+            target=target,
+            duplicate_rows=int(blk.get("input_duplicate_rows") or 0),
+            minority_fraction=blk.get("input_minority_fraction"),
+            target_is_last_column=bool(blk.get("target_is_last_column")),
+        )
+        moved = {
+            k
+            for k in flags
+            if flags[k] != bool((on_original.get("flags") or {}).get(k))
+        }
+        if moved:
+            print(
+                f"REFUSING: redaction changed {sorted(moved)} on {blind_id} "
+                f"({r['run_id']}). The sample would carry a wrong reference.",
+                file=sys.stderr,
+            )
+            return 1
         key_rows.append(
             {
                 "blind_id": blind_id,
@@ -125,7 +176,7 @@ def main() -> int:
                 "arm": r["arm"],
                 "dataset_id": r["dataset_id"],
                 "model": r["panel_id"],
-                "checklist_flags": json.dumps(blk.get("flags", {})),
+                "checklist_flags": json.dumps(flags),
                 "sha256": hashlib.sha256(clean.encode("utf-8")).hexdigest(),
                 "tells_removed": "; ".join(removed),
             }
