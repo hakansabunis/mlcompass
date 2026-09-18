@@ -239,6 +239,7 @@ def main() -> int:
                     max_retries=2 if do_verify else 0,
                     system_prompt=PROFILE_BOUND_PROMPT if do_verify and arm == "contract" else prompt,
                     enforce_schema_enum=enforce,
+                    verify_response=do_verify,
                     temperature=args.temperature,
                     max_columns=args.max_columns,
                 )
@@ -276,6 +277,8 @@ def main() -> int:
                     "max_columns": args.max_columns,
                     "columns": res["columns_referenced"],
                     "claims": res["claims"],
+                    "raw_columns": res["raw_columns_referenced"],
+                    "raw_claims": res["raw_claims"],
                     "narration": res["narration"],
                     "verdict": res["verdict"],
                     "confidence": res["confidence"],

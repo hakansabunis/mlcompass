@@ -185,6 +185,7 @@ def narrate_profile_bound(
     max_retries: int = 2,
     system_prompt: str | None = None,
     enforce_schema_enum: bool = True,
+    verify_response: bool = True,
     strict_tools: bool = False,
     correction_style: str = "named",
     temperature: float | None = None,
@@ -253,7 +254,10 @@ def narrate_profile_bound(
 
         payload = _extract_tool_input(response, SUBMIT_TOOL_NAME)
         violations = verify(payload, bound, PROFILE_CONTRACT)
-        if not violations:
+        # The violations are always computed, because the diagnostic arms need
+        # to know what Tier B WOULD have caught. Whether anything is done about
+        # them is `verify_response`, and on the floor arm the answer is nothing.
+        if not verify_response or not violations:
             break
 
         schema_rejections += 1
@@ -269,9 +273,20 @@ def narrate_profile_bound(
                     violations, bound, PROFILE_CONTRACT, tool_name=SUBMIT_TOOL_NAME
                 )
 
-    cited_clean, claims_clean = strip_unsound(payload, bound, PROFILE_CONTRACT)
     cited_raw = [str(c) for c in (payload.get("columns_referenced") or [])]
     claims_raw = [c for c in (payload.get("claims") or []) if isinstance(c, dict)]
+
+    # Deletion is enforcement, so an arm without Tier B must not get it. The
+    # first version of this function stripped unconditionally, which repaired
+    # the floor arm before it was scored: 60 of 200 bare responses carried a
+    # violation, every one was deleted, and the arm read 0/200 on a task that
+    # actually fails at 30 %. A harness that silently repairs its own control
+    # produces exactly the number the hypothesis wants, which is why this flag
+    # exists and why the bug is reported rather than quietly fixed.
+    if verify_response:
+        cited_clean, claims_clean = strip_unsound(payload, bound, PROFILE_CONTRACT)
+    else:
+        cited_clean, claims_clean = list(cited_raw), list(claims_raw)
     had_unrecoverable = (
         len(cited_clean) != len(cited_raw) or len(claims_clean) != len(claims_raw)
     )
@@ -298,6 +313,13 @@ def narrate_profile_bound(
         "confidence": confidence,
         "columns_referenced": cited_clean,
         "claims": claims_clean,
+        # What the model actually returned, before any deletion. Preserved
+        # because the stripped payload cannot be un-stripped: when the floor
+        # arm was accidentally repaired, the evidence that it had been was
+        # only recoverable from the rejection counters, and the decomposition
+        # the paper's RQ1 needs was gone with the deleted names.
+        "raw_columns_referenced": cited_raw,
+        "raw_claims": claims_raw,
         "narration": str(payload.get("narration", "")).strip(),
         "recommended_checks": [
             str(c).strip() for c in (payload.get("recommended_checks") or []) if c
