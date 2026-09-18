@@ -1112,14 +1112,18 @@ in the table for the reason the rest of this paper gives.
 \centering
 \includegraphics[width=\textwidth]{fig2_arms.pdf}
 \caption{User-facing entity-fabrication rate by enforcement mechanism, $N=200$
-per arm, with Wilson 95\,\% intervals. The two bold rows are the comparison:
-\texttt{A-GR-STOCK} is Guardrails~AI in its default configuration at
-\textbf{35.0\,\%} [28.7, 41.8]; \texttt{A-GR-OURS} is the \emph{same} toolkit,
-reask loop, budget, prompt and model with our deterministic validators
-substituted, at \textbf{0/200} [0.0, 1.9]. The rule separates arms that leave
-fabrication reaching the user from arms that do not. Exact values in
-Table~\ref{tab:arms}; the degenerate \texttt{A-STATIC-ENUM-STALE} arm is
-omitted here and discussed in Section~\ref{sec:rq3-degenerate}.}
+per arm, with Wilson 95\,\% intervals. The three bold rows are the comparison,
+and they are all the same toolkit, reask loop, budget, prompt and model ---
+only the validator changes. \texttt{A-GR-STOCK} is Guardrails~AI in its default
+configuration at \textbf{35.0\,\%} [28.7, 41.8]. \texttt{A-GR-OURS} substitutes
+our deterministic validators, at \textbf{0/200} [0.0, 1.9]. \texttt{A-GR-CHOICES}
+substitutes the toolkit's \emph{own} generic acceptable-values check with its
+list built from $E$ at call time, and lands in the same place --- which is why
+the paper's claim is about the binding and not about our validator. The rule
+separates arms that leave fabrication reaching the user from arms that do not.
+Exact values and dates in Table~\ref{tab:arms}; the degenerate
+\texttt{A-STATIC-ENUM-STALE} arm is omitted here and discussed in
+Section~\ref{sec:rq3-degenerate}.}
 \label{fig:arms}
 \end{figure}
 
@@ -1513,9 +1517,11 @@ runs or 36 cells, it is the original three arms; the instrument analysis of
 Section~\ref{sec:instruments} and the held-out analysis of
 Section~\ref{sec:rq5-score} are both of that kind, because both predate the
 fourth arm. The differential scorer audit
-(Section~\ref{sec:defect6}) covers the 143 scripts of the first four arms; the
-fifth arm's scripts were scored by that same audited code and were not
-themselves re-scored by the second implementation.
+(Section~\ref{sec:defect6}) is reported over the 143 scripts of the first four
+arms, because that is the population on which it found a defect; re-run over
+every preserved script in the replication package --- 259 scripts and 1{,}554
+rule-instances, the fifth arm's 36 included --- the two implementations
+disagree nowhere.
 
 The excluded run is disclosed rather than absorbed. Section~\ref{sec:design}'s
 exclusion rule covers \emph{transport} failures; this call succeeded and
@@ -1565,7 +1571,7 @@ the entire 23-defect fall: \texttt{leak\_duplicate\_rows} accounts for 16 and
 \texttt{wrong\_metric\_for\_imbalance} \emph{cannot} --- its precondition, a
 minority class below 20\,\%, is false of all three datasets --- so the
 instrument is materially two rules here. Exact values in
-Table~\ref{tab:perrule}. The fall itself is no longer attributed to the tool's findings: Section~\ref{sec:rq5-rubric} reports a fifth arm, absent here, that reaches 1 flagged defect with no findings at all.}
+Table~\ref{tab:perrule}. The diamonds and the right axis are the other half of the result: the share of each arm's 36 planned runs whose script executed. Four arms sit between 78\,\% and 83\,\%; \texttt{control+revise+rubric}, which was told the six scored rules and nothing about its own code, reaches the best checklist total in the study at 47\,\%. The two series belong in one figure because either one alone supports a conclusion the other refutes.}
 \label{fig:defects}
 \end{figure}
 
@@ -1591,7 +1597,7 @@ Rule & \texttt{control} & \texttt{ctrl+revise} & \texttt{advise} & \texttt{advis
 \end{tabular}
 \end{table}
 
-Sixteen of the 25-defect fall is \texttt{leak\_duplicate\_rows} alone and
+Sixteen of the 23-defect fall is \texttt{leak\_duplicate\_rows} alone and
 twenty-three of it is that rule plus \texttt{no\_validation}.
 \texttt{wrong\_metric\_for\_imbalance} fires zero times in all 143 runs: its
 precondition is a minority class below 20\,\%, which is a property of the data
@@ -1644,7 +1650,7 @@ it is a confound large enough to account for the whole effect on the checklist.
 \begin{table}[t]
 \caption{The fifth arm, and where it pays. A script with no flagged defect is
 worth nothing if it does not run, so the last column is the outcome a
-practitioner actually receives: executes \emph{and} carries no flagged defect.}
+practitioner actually receives: executes \emph{and} carries no flagged defect. Every rate is over the 36 planned runs of its arm, including calls that returned no script --- a run that produced no code did not execute, and shrinking the denominator to hide that would be the error this paper objects to elsewhere.}
 \label{tab:rubric}
 \centering
 \begin{tabular}{@{}lrrrr@{}}
@@ -1652,7 +1658,7 @@ practitioner actually receives: executes \emph{and} carries no flagged defect.}
 Arm & defects & per run & runnable & useful \\
 \midrule
 \texttt{control}               & 31 & 0.86 & 78\,\% & 22\,\% \\
-\texttt{control+revise}        & 35 & 1.00 & 83\,\% & 20\,\% \\
+\texttt{control+revise}        & 35 & 1.00 & 81\,\% & 19\,\% \\
 \texttt{advise}                & 24 & 0.67 & 81\,\% & 39\,\% \\
 \texttt{advise+audit}          & \textbf{8} & 0.22 & \textbf{83\,\%} & \textbf{64\,\%} \\
 \texttt{control+revise+rubric} & \textbf{1} & \textbf{0.03} & \textbf{47\,\%} & 44\,\% \\

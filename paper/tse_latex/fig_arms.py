@@ -1,4 +1,4 @@
-"""Figure 2: the seven-arm comparison as a forest plot.
+"""Figure 2: the eight-arm comparison as a forest plot.
 
 Numbers restated from Table 2 of the manuscript, which is itself produced by
 scripts/reproduce_hallucination_ablation.py.  The degenerate
@@ -24,13 +24,14 @@ ARMS = [
     ("A-L1",            "no enforcement",                42.0, 35.4, 48.9, "84/200", False),
     ("A-GR-STOCK",      "Guardrails AI, stock",          35.0, 28.7, 41.8, "70/200", True),
     ("A-STRICT-STATIC", "provider strict, no enum",       4.0,  2.0,  7.7,  "8/200", False),
+    ("A-GR-CHOICES",    "Guardrails' own choice check",   0.0,  0.0,  1.9,  "0/200", True),
     ("A-GR-OURS",       "Guardrails' loop, our Tier B",   0.0,  0.0,  1.9,  "0/200", True),
     ("A-CONTRACT",      "Tier A + Tier B",                0.0,  0.0,  1.9,  "0/200", False),
     ("A-STRESS",        "Tier B alone, no enum",          0.0,  0.0,  1.9,  "0/200", False),
 ]
-SPLIT_AFTER = 3  # the rule separating "fabrication reaches the user" from "it does not"
+SPLIT_AFTER = 3  # noqa: E262  # the rule separating "fabrication reaches the user" from "it does not"
 
-fig, ax = plt.subplots(figsize=(4.9, 2.9))
+fig, ax = plt.subplots(figsize=(4.9, 3.3))
 ys = list(range(len(ARMS)))[::-1]
 
 for y, (arm, mech, est, lo, hi, kn, bold) in zip(ys, ARMS):
