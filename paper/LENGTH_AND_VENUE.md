@@ -105,8 +105,10 @@ DOI and count pages with any PDF library.
 
 ## 2. "Did you send it to Stanford? What Q did they give you?"
 
-There is no such service, and the question contains a common misunderstanding
-worth clearing up because it changes what we should actually do.
+Two separate things are folded together here, and pulling them apart changes
+what we should actually do. There **is** a Stanford service that checks a
+paper — it is named below — but it does not, and cannot, give the paper a
+quartile.
 
 **A quartile is a property of a journal, not of a paper.** Q1/Q2/Q3/Q4 come
 from two ranking systems, both of which rank *journals* by citation metrics
