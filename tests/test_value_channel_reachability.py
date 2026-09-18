@@ -103,12 +103,34 @@ def test_verifiable_quantities_are_a_strict_subset_of_the_evidence() -> None:
 # --------------------------------------------------------------------------- #
 
 
-def test_statistic_field_is_never_read_by_the_verifier() -> None:
-    """The advertised triple is verified as a pair.
+def test_statistic_field_is_now_read_by_the_verifier() -> None:
+    """The advertised triple is verified as a triple. This test was inverted.
 
-    The same claim, submitted with a ``statistic`` the schema does not admit,
-    produces an identical verdict — because Tier B looks the column up in the
-    correlation map and compares the value, and never inspects ``statistic``.
+    It used to assert the opposite --- that ``statistic`` is never read, so the
+    same claim labelled ``perfect_match_rate`` produced an identical clean
+    verdict and reached the user intact. That was true of the inline Tier B and
+    is the narrower half of the reachability limit this file documents.
+
+    Extracting the contract into
+    :mod:`mlcompass.agents.evidence_contract` closed it, because a second
+    evidence shape forced it to: a dataset profile carries a dozen statistics
+    per column, and a table keyed on the entity alone would compare a claimed
+    ``mean`` against a stored ``missing_pct`` and pass it. The value table is
+    now keyed on ``(entity, statistic)`` for every contract, leakage included.
+
+    **This is a behaviour change on a shipped path, and it is unobservable on
+    every published cell.** Across the 50,499 structured claims in the
+    replication package, 3,276 carry a statistic other than ``correlation`` ---
+    and every one of them is in the paraphrase sweep (no schema at all), in
+    ``A-L1`` (3 claims, open schema), or in one local ``A-STRICT-STATIC``
+    response. On every arm where Tier B runs --- ``A-CONTRACT``, ``A-STRESS``,
+    ``A-GR-OURS``, ``A-GR-CHOICES``, ``A-TIER-A-ONLY``, ``A-CONTRACT-WORST``
+    --- the count is zero, because Tier A pins the statistic enum in all of
+    them. No published measurement changes.
+
+    The other half of the limit --- a fabricated quantity written into the
+    free-text ``narration`` --- is untouched, and the two strict xfails below
+    still record it.
     """
     as_correlation = investigate_leakage_bound(
         EVIDENCE,
@@ -120,25 +142,31 @@ def test_statistic_field_is_never_read_by_the_verifier() -> None:
             narration="ok",
         ),
     )
-    as_nonsense = investigate_leakage_bound(
-        EVIDENCE,
-        client=_submit(
-            verdict="leakage_likely",
-            confidence="high",
-            columns_referenced=["log_target_v2"],
-            claims=[
-                # Not in the enum, and semantically a different statistic.
-                {"column": "log_target_v2", "statistic": "perfect_match_rate", "value": 1.0}
-            ],
-            narration="ok",
-        ),
-    )
-    assert as_nonsense["schema_rejections"] == as_correlation["schema_rejections"] == 0
-    assert as_nonsense["had_unrecoverable_violation"] is False
-    # The mislabelled claim is returned to the user intact, statistic and all.
-    assert as_nonsense["claims"] == [
-        {"column": "log_target_v2", "statistic": "perfect_match_rate", "value": 1.0}
+    assert as_correlation["schema_rejections"] == 0
+    assert as_correlation["claims"] == [
+        {"column": "log_target_v2", "statistic": "correlation", "value": 1.0}
     ]
+
+    # The same column and the same value, under a statistic the evidence does
+    # not carry for it. Previously clean; now caught, retried and stripped.
+    mislabelled = {
+        "verdict": "leakage_likely",
+        "confidence": "high",
+        "columns_referenced": ["log_target_v2"],
+        "claims": [
+            {"column": "log_target_v2", "statistic": "perfect_match_rate", "value": 1.0}
+        ],
+        "narration": "ok",
+    }
+    client = MockClient(
+        responses=[tool_use_response(SUBMIT_TOOL_NAME, dict(mislabelled)) for _ in range(3)]
+    )
+    as_nonsense = investigate_leakage_bound(EVIDENCE, client=client, max_retries=2)
+    assert as_nonsense["schema_rejections"] == 3
+    assert as_nonsense["rejection_kinds"] == ["value", "value", "value"]
+    assert as_nonsense["had_unrecoverable_violation"] is True
+    # The mislabelled claim no longer reaches the user.
+    assert as_nonsense["claims"] == []
 
 
 def test_correlation_misquote_is_caught_the_channel_is_narrow_not_empty() -> None:

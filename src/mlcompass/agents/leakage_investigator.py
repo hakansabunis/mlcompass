@@ -24,6 +24,16 @@ from typing import Any
 from agentlite import Agent
 
 from ._common import AgentResponseError, parse_json_response
+from .evidence_contract import (
+    LEAKAGE as LEAKAGE_CONTRACT,
+)
+from .evidence_contract import (
+    BoundEvidence,
+    build_payload_schema,
+    correction_text,
+    strip_unsound,
+    verify,
+)
 
 LEAKAGE_MODEL_DEFAULT = "claude-opus-4-7"
 
@@ -153,10 +163,10 @@ def investigate_leakage(
     }
 
 
-_VERDICT_VALUES = frozenset(
-    {"leakage_likely", "leakage_uncertain", "score_legitimate", "cannot_determine"}
-)
-_CONFIDENCE_VALUES = frozenset({"high", "medium", "low", "cannot_determine"})
+# Single source of truth: the contract spec carries these, and the schema it
+# emits is built from them. Restating them here let the two drift once already.
+_VERDICT_VALUES = LEAKAGE_CONTRACT.verdict_values
+_CONFIDENCE_VALUES = LEAKAGE_CONTRACT.confidence_values
 
 
 def _compact(evidence: dict[str, Any]) -> dict[str, Any]:
@@ -323,6 +333,27 @@ _SUBMIT_DESCRIPTION = (
 )
 
 
+def _bound_from_columns(allowed_columns: list[str]) -> BoundEvidence:
+    """Just enough bound evidence to emit the schema, from a column list alone.
+
+    The tool builders take a column list rather than $E$ --- they are public and
+    callers pass one --- so the domains are reconstructed here. Only the domains
+    are needed to generate the schema; the value table and the anchor belong to
+    verification and the real bind supplies them.
+    """
+    domain = tuple(allowed_columns)
+    return BoundEvidence(
+        domains={
+            "columns_referenced": domain,
+            "claims[].column": domain,
+            "claims[].statistic": ("correlation",),
+        },
+        values={},
+        anchor=None,
+        tolerance=VALUE_TOLERANCE,
+    )
+
+
 def _submit_input_schema(
     allowed_columns: list[str], *, enforce_enum: bool = True, strict: bool = False
 ) -> dict[str, Any]:
@@ -346,35 +377,15 @@ def _submit_input_schema(
     (H4 enforcement-dichotomy measurements). Semantics are unchanged; Tier B
     still never relies on provider enforcement.
     """
-    col_schema: dict[str, Any] = {"type": "string"}
-    if enforce_enum:
-        col_schema = {"type": "string", "enum": list(allowed_columns)}
-    claim_schema: dict[str, Any] = {
-        "type": "object",
-        "properties": {
-            "column": dict(col_schema),
-            "statistic": {"type": "string", "enum": ["correlation"]},
-            "value": {"type": "number"},
-        },
-        "required": ["column", "statistic", "value"],
-    }
-    schema: dict[str, Any] = {
-        "type": "object",
-        "properties": {
-            "verdict": {"type": "string", "enum": sorted(_VERDICT_VALUES)},
-            "confidence": {"type": "string", "enum": sorted(_CONFIDENCE_VALUES)},
-            "columns_referenced": {"type": "array", "items": dict(col_schema)},
-            "claims": {"type": "array", "items": claim_schema},
-            "narration": {"type": "string"},
-            "recommended_checks": {"type": "array", "items": {"type": "string"}},
-        },
-        "required": ["verdict", "confidence", "columns_referenced", "claims", "narration"],
-    }
-    if strict:
-        schema["required"] = sorted(schema["properties"])
-        schema["additionalProperties"] = False
-        claim_schema["additionalProperties"] = False
-    return schema
+    # Built through the generic layer so the leakage contract is an instance of
+    # the class the paper defines rather than the only thing that implements it.
+    # The domains are handed in directly: this function is called with a column
+    # list rather than with E, and every caller that has E goes through
+    # evidence_contract.LEAKAGE.bind.
+    bound = _bound_from_columns(allowed_columns)
+    return build_payload_schema(
+        bound, LEAKAGE_CONTRACT, enforce_enum=enforce_enum, strict=strict
+    )
 
 
 def build_submit_investigation_tool(
@@ -572,7 +583,8 @@ def investigate_leakage_bound(
         names no candidate — the renderer needs it to say *which* column the
         narration failed to address), and ``evidence_bound``.
     """
-    allowed = evidence_allowed_columns(evidence)
+    bound = LEAKAGE_CONTRACT.bind(evidence)
+    allowed = list(bound.domains["columns_referenced"])
     allowed_set = set(allowed)
     system = system_prompt if system_prompt is not None else LEAKAGE_BOUND_PROMPT
     if provider == "openai":
@@ -634,45 +646,21 @@ def investigate_leakage_bound(
         cited = [str(c) for c in (tool_input.get("columns_referenced") or [])]
         claims = [c for c in (tool_input.get("claims") or []) if isinstance(c, dict)]
 
-        # Tier B (1) — entity soundness.
-        entity_violations = [c for c in cited if c not in allowed_set]
-        # Tier B (2) — value soundness of structured claims.
-        value_violations: list[str] = []
-        for claim in claims:
-            col = str(claim.get("column", ""))
-            val = claim.get("value")
-            if col not in corr_map:
-                value_violations.append(f"{col}: not in evidence")
-            elif (
-                not isinstance(val, (int, float))
-                or abs(float(val) - corr_map[col]) > VALUE_TOLERANCE
-            ):
-                value_violations.append(f"{col}: cited {val}, evidence says {corr_map[col]:.4f}")
-        # Tier B (3) — completeness. Only when the narrator commits to a
-        # verdict; an explicit abstention (or a declined call) is not an
-        # omission. Claims columns count as addressing the anchor.
-        raw_verdict = str(tool_input.get("verdict", "cannot_determine"))
-        committed = (
-            bool(tool_input)
-            and raw_verdict in _VERDICT_VALUES
-            and raw_verdict != "cannot_determine"
-        )
-        referenced = set(cited) | {str(c.get("column", "")) for c in claims}
-        omitted = committed and anchor is not None and anchor not in referenced
+        # Tier B, all three channels, through the task-agnostic verifier:
+        # (1) entity soundness, (2) value soundness of structured claims
+        # against the (entity, statistic) table, (3) completeness of a
+        # committed verdict with respect to the anchor.
+        violations = verify(tool_input, bound, LEAKAGE_CONTRACT)
+        entity_violations = list(violations.entity)
+        value_violations = list(violations.value)
+        omitted = violations.omitted
 
-        if not entity_violations and not value_violations and not omitted:
+        if not violations:
             break
         # Deterministic rejection, independent of the provider.
         schema_rejections += 1
         # Violation-composition telemetry (which channels fired this round).
-        kinds: list[str] = []
-        if entity_violations:
-            kinds.append("entity")
-        if value_violations:
-            kinds.append("value")
-        if omitted:
-            kinds.append("omission")
-        rejection_kinds.append("+".join(kinds))
+        rejection_kinds.append(violations.kinds)
         if attempt < max_retries:
             if correction_style == "generic":
                 # H5 control (analysis_plan A3.2): a rejection carrying NO
@@ -682,40 +670,14 @@ def investigate_leakage_bound(
                     "through submit_investigation."
                 )
                 continue
-            parts: list[str] = []
-            if entity_violations:
-                parts.append(
-                    f"you cited columns NOT in the evidence dictionary: {entity_violations}; "
-                    f"you may cite only these columns: {allowed}"
-                )
-            if value_violations:
-                parts.append(
-                    "these claims do not match the measured values: "
-                    + "; ".join(value_violations)
-                    + " — copy values exactly from the evidence"
-                )
-            if omitted:
-                parts.append(
-                    f"you committed to a verdict but did not address the top-ranked "
-                    f"candidate-leak column '{anchor}' — address it or answer cannot_determine"
-                )
-            correction = (
-                "\n\nYour previous answer violated the contract: "
-                + ". Also, ".join(parts)
-                + ". Re-answer through submit_investigation."
+            correction = correction_text(
+                violations, bound, LEAKAGE_CONTRACT, tool_name=SUBMIT_TOOL_NAME
             )
 
     # Final deterministic strip — the worst-case guarantee. Any entity or claim
     # still unsound after the retry budget is removed before it reaches the
     # user. Omissions cannot be stripped; they are flagged instead.
-    cited_clean = [c for c in cited if c in allowed_set]
-    claims_clean = [
-        c
-        for c in claims
-        if str(c.get("column", "")) in corr_map
-        and isinstance(c.get("value"), (int, float))
-        and abs(float(c["value"]) - corr_map[str(c["column"])]) <= VALUE_TOLERANCE
-    ]
+    cited_clean, claims_clean = strip_unsound(tool_input, bound, LEAKAGE_CONTRACT)
     had_unrecoverable = len(cited_clean) != len(cited) or len(claims_clean) != len(claims)
 
     verdict = str(tool_input.get("verdict", "cannot_determine"))

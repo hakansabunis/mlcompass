@@ -204,6 +204,16 @@ def verify(
     claim_entity_domain = bound.admissible(spec.claim_entity_path)
     stat_domain = bound.admissible(spec.claim_statistic_path)
 
+    # Name the statistic in a violation message only when there is more than one
+    # to name. The leakage contract carries exactly one, and its published runs
+    # were measured with the corrective retry that says `column: ...`; changing
+    # that wording would change the treatment those arms measured and quietly
+    # break comparability with every number already in print.
+    qualify = len(stat_domain) > 1
+
+    def label(ent: str, stat: str) -> str:
+        return f"{ent}.{stat}" if qualify else ent
+
     value: list[str] = []
     for claim in _claims_of(payload):
         ent = str(claim.get(spec.claim_entity_field, ""))
@@ -213,17 +223,19 @@ def verify(
             value.append(f"{ent}: not in evidence")
             continue
         if stat_domain and stat not in stat_domain:
-            value.append(f"{ent}.{stat}: not a quantity the evidence carries")
+            value.append(f"{label(ent, stat)}: not a quantity the evidence carries")
             continue
         measured = bound.values.get((ent, stat))
         if measured is None:
-            value.append(f"{ent}.{stat}: not in evidence")
+            value.append(f"{label(ent, stat)}: not in evidence")
         elif (
             not isinstance(val, (int, float))
             or isinstance(val, bool)
             or abs(float(val) - measured) > bound.tolerance
         ):
-            value.append(f"{ent}.{stat}: cited {val}, evidence says {measured:.4f}")
+            value.append(
+                f"{label(ent, stat)}: cited {val}, evidence says {measured:.4f}"
+            )
 
     omitted = (
         is_committed(payload, spec)
@@ -533,8 +545,18 @@ def bind_profile(evidence: Mapping[str, Any]) -> BoundEvidence:
     )
 
 
-LEAKAGE_VERDICTS = frozenset({"leakage_likely", "leakage_unlikely", "cannot_determine"})
-PROFILE_VERDICTS = frozenset({"ready_to_train", "needs_cleaning", "cannot_determine"})
+#: The leakage narration's verdict vocabulary. This is the authoritative
+#: definition and ``leakage_investigator`` imports it rather than restating it.
+#: An earlier draft of this module restated it and got it wrong --- two of the
+#: four values --- which silently changed the shipped tool schema and which the
+#: 38 tests over that path did not catch, because none of them asserts on the
+#: schema. ``tests/test_evidence_contract.py`` now does.
+LEAKAGE_VERDICTS = frozenset(
+    {"leakage_likely", "leakage_uncertain", "score_legitimate", "cannot_determine"}
+)
+PROFILE_VERDICTS = frozenset(
+    {"ready_to_train", "needs_cleaning", "cannot_determine"}
+)
 CONFIDENCE_VALUES = frozenset({"high", "medium", "low", "cannot_determine"})
 
 #: The shipped leakage contract, re-expressed. Behaviour is unchanged; the
