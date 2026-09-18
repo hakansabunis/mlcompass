@@ -113,8 +113,21 @@ def compact(evidence: dict[str, Any], *, max_columns: int | None = None) -> dict
             k: v
             for k, v in col.items()
             if k in ("name", "type", "missing_count", "missing_pct",
-                     "cardinality", "zero_ratio", "stats", "outliers")
+                     "cardinality", "zero_ratio", "stats")
         }
+        # Flatten the outlier block. Nested under `outliers`, the two counts
+        # have no single obvious name, and narrators guessed five different
+        # ones -- `z_score_count`, `outliers.z_score_count`, `outliers`,
+        # `iqr_count`, `outliers_iqr_count` -- none of which a domain can
+        # anticipate. Lifting them to the top level means the name the
+        # narrator reads is the name the domain admits, which is what binding
+        # the domain to the evidence is supposed to mean.
+        outliers = col.get("outliers")
+        if isinstance(outliers, dict):
+            for src, dst in (("iqr_count", "iqr_count"),
+                             ("z_score_count", "z_score_count")):
+                if outliers.get(src) is not None:
+                    keep[dst] = outliers[src]
         columns.append(keep)
         if max_columns is not None and len(columns) >= max_columns:
             break

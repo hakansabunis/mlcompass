@@ -87,7 +87,9 @@ def wilson(k: int, n: int) -> tuple[float, float]:
     return (100 * max(0.0, c - h), 100 * min(1.0, c + h))
 
 
-def build_profile_evidence(seed: int = 0, n_rows: int = 1200) -> dict[str, Any]:
+def build_profile_evidence(
+    seed: int = 0, n_rows: int = 1200, frame_columns: int | None = None
+) -> dict[str, Any]:
     """A wide frame with real data-quality problems, profiled by the shipped tool.
 
     The evidence the experiment narrates is produced by `analyze_dataset`, not
@@ -109,7 +111,14 @@ def build_profile_evidence(seed: int = 0, n_rows: int = 1200) -> dict[str, Any]:
 
     rng = np.random.default_rng(seed)
     cols: dict[str, Any] = {}
-    for i in range(1, 15):
+
+    # The scalability knob. The 24-column frame is the task; a wider one is the
+    # same task with a wider admissible set, which is the only variable Section
+    # 12 concedes we never moved. Extra columns are numeric and structurally
+    # identical to the first fourteen, so what changes between widths is the
+    # size of the enum and nothing else about the narration problem.
+    extra = 0 if frame_columns is None else max(0, frame_columns - 24)
+    for i in range(1, 15 + extra):
         v = rng.normal(50 + i, 12, n_rows)
         v[rng.random(n_rows) < (0.02 * (i % 5))] = np.nan
         if i % 4 == 0:
@@ -178,7 +187,10 @@ def main() -> int:
     ap.add_argument("--n", type=int, default=20)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--max-columns", type=int, default=None,
-                    help="Truncate the enum. The Tier A scalability knob.")
+                    help="Truncate the enum after profiling. Cannot exceed the frame.")
+    ap.add_argument("--frame-columns", type=int, default=None,
+                    help="Build a frame this wide. The Tier A scalability knob: "
+                         "10/50/100/500/1000 gives the enum cost curve.")
     ap.add_argument("--temperature", type=float, default=1.0)
     ap.add_argument("--log-dir", type=pathlib.Path, default=RUNS)
     ap.add_argument("--dry-run", action="store_true",
@@ -186,7 +198,7 @@ def main() -> int:
     args = ap.parse_args()
 
     arms = args.arm or ["bare"]
-    evidence = build_profile_evidence(seed=args.seed)
+    evidence = build_profile_evidence(seed=args.seed, frame_columns=args.frame_columns)
     trimmed = compact(evidence, max_columns=args.max_columns)
     bound = PROFILE.bind(trimmed)
     ehash = evidence_hash(trimmed)
@@ -275,6 +287,7 @@ def main() -> int:
                     "seed": args.seed,
                     "n_planned": args.n,
                     "max_columns": args.max_columns,
+                    "frame_columns": args.frame_columns,
                     "columns": res["columns_referenced"],
                     "claims": res["claims"],
                     "raw_columns": res["raw_columns_referenced"],

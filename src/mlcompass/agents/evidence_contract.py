@@ -461,9 +461,17 @@ def bind_leakage(evidence: Mapping[str, Any]) -> BoundEvidence:
 #: contract's statistic domain is the subset actually present, computed per
 #: call --- a categorical column carries ``cardinality`` and no ``mean``, so a
 #: single frozen list would admit statistics the evidence never measured.
+#: Every name here is a key the profiler itself writes. That is not a style
+#: choice. An earlier version called the outlier counts ``iqr_outliers`` and
+#: ``z_score_outliers`` because they read better, while the evidence calls them
+#: ``outliers.iqr_count`` and ``outliers.z_score_count``. Narrators wrote what
+#: the evidence said, the domain rejected it, and 49 of 71 "unmeasured
+#: statistic" violations in the first battery were that mismatch rather than
+#: anything the model got wrong. A domain bound to the evidence has to use the
+#: evidence's words; renaming on the way in unbinds it.
 PROFILE_STATISTICS: tuple[str, ...] = (
     "cardinality",
-    "iqr_outliers",
+    "iqr_count",
     "max",
     "mean",
     "min",
@@ -473,7 +481,7 @@ PROFILE_STATISTICS: tuple[str, ...] = (
     "q50",
     "q75",
     "std",
-    "z_score_outliers",
+    "z_score_count",
     "zero_ratio",
 )
 
@@ -522,10 +530,15 @@ def bind_profile(evidence: Mapping[str, Any]) -> BoundEvidence:
             for stat in ("mean", "std", "min", "max", "q25", "q50", "q75"):
                 put(stat, stats.get(stat))
 
+        # Accept both shapes: the raw profiler nests these under `outliers`,
+        # and `profile_narrator.compact` lifts them to the top level so the
+        # narrator reads the same word the domain admits.
+        put("iqr_count", entry.get("iqr_count"))
+        put("z_score_count", entry.get("z_score_count"))
         outliers = entry.get("outliers")
         if isinstance(outliers, dict):
-            put("iqr_outliers", outliers.get("iqr_count"))
-            put("z_score_outliers", outliers.get("z_score_count"))
+            put("iqr_count", outliers.get("iqr_count"))
+            put("z_score_count", outliers.get("z_score_count"))
 
         pct = entry.get("missing_pct")
         if isinstance(pct, (int, float)) and not isinstance(pct, bool):

@@ -271,7 +271,11 @@ def test_profile_binds_a_wide_domain_and_many_statistics(
 ) -> None:
     assert profile_bound.domains["columns_referenced"] == ("age", "city", "income")
     stats = set(profile_bound.domains["claims[].statistic"])
-    assert {"mean", "std", "missing_pct", "cardinality", "iqr_outliers"} <= stats
+    # The names are the profiler's own keys, not prettier synonyms: a domain
+    # that renames on the way in is no longer bound to the evidence.
+    assert {"mean", "std", "missing_pct", "cardinality", "iqr_count"} <= stats
+    assert "iqr_outliers" not in stats
+    assert "z_score_outliers" not in stats
     # A categorical column carries cardinality and no mean; the domain is the
     # union of what the columns actually carry, not a frozen list.
     assert ("city", "cardinality") in profile_bound.values

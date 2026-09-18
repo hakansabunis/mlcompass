@@ -36,3 +36,41 @@ about them.
 
 This is the ninth fault found in our own instruments, and the second whose
 direction favoured the hypothesis we are arguing for.
+
+---
+
+# Superseded: the statistic domain renamed what the evidence called things
+
+`deepseek_deepseek-chat_profile_bare_n200_seed0_e8d80f33c.jsonl` (the corrected
+re-run of the above) and `prefix_tier_a_n200.jsonl` are preserved here for the
+same reason: they measure a domain that was not bound to the evidence.
+
+The profiler writes `outliers: {iqr_count: ..., z_score_count: ...}`. The
+binder called those `iqr_outliers` and `z_score_outliers` because they read
+better. So a narrator writing `z_score_count` -- the evidence's own word --
+scored as naming a quantity the evidence does not carry.
+
+The run reported:
+
+    entity      1/200    0.5 %
+    value      45/200   22.5 %  [17.3, 28.8]
+    omission    0/200    0.0 %
+
+Replaying the preserved responses under the corrected names moves the value
+channel from 71 offending claims across 38 responses to 46 across 29. Roughly a
+third of the measured failure was the instrument's vocabulary, not the
+narrator's.
+
+The deeper fault is a design one, and it is why the fix is not just a rename.
+The claim schema is flat -- `(column, statistic, value)` -- and the evidence was
+nested. A narrator handed a nested quantity and a flat claim slot has to invent
+a flattening, and narrators invented five: `z_score_count`,
+`outliers.z_score_count`, `outliers`, `iqr_count`, `outliers_iqr_count`. No
+domain can anticipate that set. `compact()` now lifts the outlier counts to the
+top level so the name the narrator reads is the name the domain admits, which
+is what binding a domain to evidence is supposed to mean.
+
+That changes the evidence hash, so the corrected battery runs under a new
+`e` prefix and cannot collide with these.
+
+Tenth fault found in our own instruments.
