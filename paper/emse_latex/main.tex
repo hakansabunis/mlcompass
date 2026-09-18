@@ -363,6 +363,98 @@ every flipped conclusion --- not coverage of an anchor within a response, and
 its enforcer works by removing the LLM from the answer path, which is
 unavailable here because the narration \emph{is} the product.
 
+\subsection{Where the enforcement lives}\label{sec:taxonomy}
+
+The works above and below differ less in what they want than in \emph{where
+they put the thing that cannot be talked out of its job}, and organising them
+that way locates this paper precisely.
+
+\begin{table}[t]
+\caption{Where enforcement lives, and what each position costs. The rows are
+ordered by how much of the provider's internals the mechanism needs. Only the
+last two rows are available behind a commercial endpoint, and only the last
+binds its admissible set to the evidence at the moment of the call.}
+\label{tab:taxonomy}
+\centering
+\begin{tabular}{@{}llll@{}}
+\toprule
+Position & Needs & Guarantees & Example \\
+\midrule
+Decode-time, token & logits & grammaticality & \cite{outlines, gcd, guidance} \\
+Decode-time, closed loop & logits & --- (empirical) & \cite{cruz2026atlasrtc} \\
+Decode-time, span & logits & verbatim spans & \cite{signe2026chyd} \\
+Provider schema & nothing & structure, \emph{uncertifiable} & \cite{structured} \\
+Host code, author-time & nothing & policy contracts & \cite{ahn2026harness} \\
+Host code, accumulated & nothing & per-claim provenance & \cite{du2026ledgermind} \\
+\textbf{Host code, call-time} & \textbf{nothing} & \textbf{faithfulness to $E$}
+  & \textbf{this paper} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{The rows that need logits.} ATLAS-RTC~\cite{cruz2026atlasrtc}
+monitors decoding step by step and intervenes with biasing, masking and
+rollback before an error materialises, reporting first-attempt success gains of
+20 to 37.8 points. It is strictly more powerful than anything we do --- it
+prevents the token rather than deleting the claim --- and strictly less
+available, for the same reason CHyD is: a commercial endpoint returns text, not
+logits. That is the trade this paper makes and we state it plainly rather than
+claiming an advantage. Its finding that many failures are decoding artefacts
+rather than task misunderstanding is also the most plausible mechanism we know
+of for our own paraphrase sweep.
+
+\paragraph{The row that is closest in method.} Ahn and
+Kim~\cite{ahn2026harness} run our experimental design on a different contract.
+They move deterministic behaviour out of prompts into code, manifests, schemas
+and validation artifacts, hold the model fixed, vary only the enforcement
+layer, and find what we find: prompt instructions alone let violations reach
+the reader, a bolt-on guardrail blocks them but over-refuses (88/120 utility
+against the harness's 120/120), and only code-owned enforcement keeps both.
+They also replicate under model substitution across three hosted models, 270
+runs. We read this as strong independent support for the paper's central
+claim rather than as a competitor, and we found it through a reviewer rather
+than through our own search, which is worth saying.
+
+What is different is what the contract is \emph{about}. Their contracts are
+policy --- source boundaries, entity routing, recommendation language, trace
+hygiene --- and are fixed when the harness is written. Ours is faithfulness to
+a specific finite set of measurements, and its admissible domain does not exist
+until the evidence does. An author-time contract cannot express ``cite only
+these ten column names'' because it does not know them.
+
+\paragraph{The row that is closest in mechanism.}
+LedgerMind~\cite{du2026ledgermind} normalises tool outputs into a structured
+evidence ledger, permits downstream claims to cite only active ledger entries,
+checks grounding at the entity and numeric level, and constrains repair to
+typed transitions that cannot introduce content without tool-produced
+provenance, under a \emph{provenance non-amplification} guarantee.
+
+Three of those four are our three Tier~B channels, and the fourth is
+Proposition~\ref{prop:asym} under another name. We did not know of this work
+when we derived the asymmetry and we make no priority claim over it; convergent
+arrival at the same constraint from a different domain is evidence the
+constraint is real, and we would rather say so than discover the overlap in
+review. The differences are of setting and of closure. LedgerMind governs a
+multi-step multimodal trajectory whose ledger \emph{accumulates} as reasoning
+proceeds, so what is admissible is a moving target. Evidence-closed narration
+is the degenerate and much easier case where the set is complete before the
+call and cannot grow during it --- which is exactly what buys
+Proposition~\ref{prop:linear} and lets the domain be pushed into the schema as
+an enum rather than only checked afterwards.
+
+\paragraph{Two rows on the interface itself.} Life-Harness~\cite{xu2026lifeharness}
+evolves a runtime harness from training trajectories and improves 116 of 126
+model--environment settings without touching weights, transferring across 17
+backbones --- evidence that environment-side structure is reusable, and
+explicitly empirical rather than guaranteed. Le~\cite{le2026schemakey} shows
+that schema-key \emph{wording} is an instruction channel: changing only the key
+names moves accuracy in both directions across seven models. We report the same
+effect from the other side in Section~\ref{sec:rq3-degenerate}, where a static
+schema with no column enum cuts the failure rate from 42\,\% to 4\,\% while
+constraining nothing --- and draw the conclusion that paper's result demands,
+that steering of that size is a reason to distrust an uncertified schema, not
+to rely on it.
+
 \subsection{Code assistants, ML tooling, and the data-to-text ancestry}
 
 Foundation models trained on code~\cite{codex} power widely used assistants
