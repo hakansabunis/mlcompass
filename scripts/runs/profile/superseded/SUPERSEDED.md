@@ -74,3 +74,27 @@ That changes the evidence hash, so the corrected battery runs under a new
 `e` prefix and cannot collide with these.
 
 Tenth fault found in our own instruments.
+
+---
+
+# Discarded before it was finished: the contract arm had a prompt confound
+
+`partial_contract_strictprompt_n101.jsonl` is 101 responses of a `contract` arm
+that was given the strict faithfulness prompt while `bare`, `tier_a` and
+`stress` were given the bare one.
+
+That is the confound the leakage battery's `A-CONTRACT` exists to avoid. Its
+definition in the design section is "the shipped enforcement stack with the
+faithfulness *prompt removed*, so the contract is compared to bare-prompt
+baselines without confounding prompt with mechanism". The profile battery
+reintroduced it in one line.
+
+Caught at 101 of 200, before any number from it was reported, so this is a
+design error in a new experiment rather than a fault in a published
+instrument — it is not counted among the ten. The run is kept because it is a
+valid measurement of something else: strict prompt plus Tier A plus Tier B,
+which is the configuration the tool actually ships. It is simply not the arm
+the comparison needs, and mixing the two would make the contract arm look
+better for a reason that is not the contract.
+
+Every arm now gets `PROFILE_BARE_PROMPT`.

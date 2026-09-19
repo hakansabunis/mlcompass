@@ -270,7 +270,15 @@ def main() -> int:
                     model=model,
                     provider="openai",
                     max_retries=2 if do_verify else 0,
-                    system_prompt=PROFILE_BOUND_PROMPT if do_verify and arm == "contract" else prompt,
+                    # Every arm gets the bare prompt. Giving the contract arm
+                    # the strict one would confound the mechanism with the
+                    # instruction, which is the confound the leakage battery's
+                    # A-CONTRACT was defined to remove: the shipped enforcement
+                    # stack measured with the faithfulness prompt taken out, so
+                    # it is comparable to bare-prompt baselines. An earlier
+                    # version of this line handed `contract` PROFILE_BOUND_PROMPT
+                    # and reintroduced it.
+                    system_prompt=prompt,
                     enforce_schema_enum=enforce,
                     verify_response=do_verify,
                     temperature=args.temperature,
