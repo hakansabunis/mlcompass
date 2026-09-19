@@ -79,8 +79,13 @@ moves the toolkit's default from 35.0\,\% to 43.5\,\%. Downstream, a fifth arm
 given only the names of the six scored rules and nothing about its own code
 beats the arm given the tool's real findings on the checklist (1 flagged defect
 against 8), so we withdraw the causal attribution an earlier draft made ---
-while writing code that executes 47\,\% of the time against 83\,\%. For
-evidence-closed
+while writing code that executes 47\,\% of the time against 83\,\%. Bound to a
+second evidence shape --- a dataset profiler, 24 admissible columns and 13
+statistics against the first task's 10 and 1 --- the same verifier takes an
+8.5\,\% failure rate to 0/200, and the characteristic failure transposes with
+it: on both tasks the dominant error is \emph{misfiling a real item rather than
+inventing one}, relocating from the entity channel to the value channel with
+the shape of the evidence. For evidence-closed
 narration, faithfulness on the validated channels is enforceable by
 construction and independent of the provider; the contract's value is not that
 it lowers a rate, but that the rate it replaces is not a stable property of
@@ -221,6 +226,8 @@ validate-and-retry alternatives a practitioner would otherwise reach for?
 \item[RQ4] Can a prompt-level defence be certified from observed compliance?
 \item[RQ5] Does the tool change what an LLM downstream actually produces, and
 if so, which part of it does the work?
+\item[RQ6] Does the contract transpose to a second evidence shape, and does
+the failure it prevents transpose with it?
 \end{description}
 
 We contribute: (i) \textbf{the evidence-closed class}
@@ -1428,7 +1435,7 @@ Arm & Mechanism & Value & 95\,\% CI & Tier~B \\
 \texttt{P-L1}          & no enforcement        & 8.5\,\% & [5.4, 13.2] & --- \\
 \texttt{P-TIER-A-ONLY} & enum, no verification & 6.0\,\% & [3.5, 10.2] & --- \\
 \texttt{P-CONTRACT}    & \textbf{Tier A + Tier B} & \textbf{0/200} & [0.0, 1.9] & 6 \\
-\texttt{P-STRESS}      & \textbf{Tier B, no enum} & \textbf{0/200} & [0.0, 1.9] & 1 \\
+\texttt{P-STRESS}      & \textbf{Tier B, no enum} & \textbf{0/200} & [0.0, 1.9] & 13 \\
 \bottomrule
 \end{tabular}
 
@@ -1482,11 +1489,17 @@ number} --- the admissible set is a predicate over a continuum, parameterised
 by a sibling field. Section~\ref{sec:rq3} argues that two of the three channels
 are inexpressible in a schema; this measures it.
 
-Adding Tier~B closes the channel: \texttt{P-CONTRACT} is 0/200 with six catches
-(five value, one entity), and \texttt{P-STRESS} --- verification with the enum
-removed --- is also 0/200. The guarantee survives the transposition, and it
-survives it without the enum, which is what makes it independent of the
-provider.
+Adding Tier~B closes the channel. \texttt{P-CONTRACT} is 0/200 with six
+catches, five on the value channel and one on the entity channel.
+\texttt{P-STRESS} --- verification with the enum removed entirely --- is also
+0/200, and fires \textbf{thirteen} times to get there: eleven value violations
+and two responses carrying both an entity and a value violation. More reaches
+the verifier when nothing steers the model, and none of it reaches the user.
+
+That row is the stronger one. The guarantee survives the transposition, and it
+survives it with no help from the schema, which is what makes it independent of
+the provider --- the same thing \texttt{A-STRESS} shows on the leakage task,
+now on a channel where the schema was never going to help anyway.
 
 One catch is worth flagging against ourselves. The single \emph{entity} catch
 occurred in the arm whose schema carries the column enum, where Tier~A should
