@@ -356,52 +356,46 @@ Code, accumulated & --- & per-claim provenance & \cite{du2026ledgermind} \\
 \end{tabular}
 \end{table}
 
-\paragraph{The rows that need logits} ATLAS-RTC~\cite{cruz2026atlasrtc}
-monitors decoding and intervenes with biasing, masking and rollback before an
-error materialises, gaining 20 to 37.8 points of first-attempt success. It is
-strictly more powerful than anything we do and strictly less available, for the
-reason CHyD is: an endpoint returns text, not logits. That is the trade this
-paper makes, and its finding that many failures are decoding artefacts rather
-than task misunderstanding is the most plausible mechanism we know of for our
-own paraphrase sweep.
+The rows needing logits are stronger than anything we do and unavailable
+behind the endpoints we target: ATLAS-RTC~\cite{cruz2026atlasrtc} intervenes
+during decoding with biasing, masking and rollback, gaining 20--37.8 points of
+first-attempt success, and its finding that many failures are decoding
+artefacts rather than task misunderstanding is the most plausible mechanism we
+know of for our own paraphrase sweep. Life-Harness~\cite{xu2026lifeharness}
+improves 116 of 126 model--environment settings by evolving the harness alone,
+explicitly empirical rather than guaranteed. Le~\cite{le2026schemakey} shows
+schema-key \emph{wording} moves accuracy in both directions across seven
+models; we measure the same steering from the other side in
+Section~\ref{sec:rq3-degenerate}, and read it as a reason to distrust an
+uncertified schema rather than to rely on one.
+
+Two rows are close enough to concede explicitly.
 
 \paragraph{Closest in method} Ahn and Kim~\cite{ahn2026harness} run our
-experimental design on a different contract: deterministic behaviour moved into
-code and schemas, model fixed, enforcement layer varied. They find what we
-find --- prompts alone let violations reach the reader, a bolt-on guardrail
-blocks them but over-refuses (88/120 utility against 120/120), only code-owned
-enforcement keeps both --- and replicate across three hosted models over 270
-runs. We read it as independent support rather than competition, and we found
-it through a reviewer rather than our own search. What differs is what the
-contract is \emph{about}: their contracts are policy and are fixed when the
-harness is written, ours is faithfulness to a finite set of measurements whose
-admissible domain does not exist until the evidence does. An author-time
-contract cannot express ``cite only these ten column names''.
+experimental design on a different contract --- determinism moved into code,
+model fixed, enforcement layer varied --- and find what we find: prompts alone
+let violations through, a bolt-on guardrail blocks them but over-refuses
+(88/120 utility against 120/120), only code-owned enforcement keeps both,
+replicated over 270 runs on three hosted models. That is independent support
+rather than competition, and we found it through a reviewer rather than our own
+search. What differs is what the contract is \emph{about}: theirs is policy,
+fixed when the harness is written; ours is faithfulness to a finite measurement
+set whose admissible domain does not exist until the evidence does. An
+author-time contract cannot say ``cite only these ten column names''.
 
-\paragraph{Closest in mechanism} LedgerMind~\cite{du2026ledgermind} normalises
-tool outputs into a structured evidence ledger, permits claims to cite only
-active entries, checks grounding at the entity and numeric level, and
-constrains repair to transitions that cannot introduce content without
-tool-produced provenance, under a \emph{provenance non-amplification}
-guarantee. Three of those are our Tier~B channels and the fourth is
-Appendix~\ref{app:asym} under another name. We did not know the work when we
-derived the asymmetry and claim no priority over it; convergent arrival from a
+\paragraph{Closest in mechanism} LedgerMind~\cite{du2026ledgermind} permits
+claims to cite only active ledger entries, checks grounding at the entity and
+numeric level, and constrains repair to transitions that cannot introduce
+content without tool-produced provenance, under a \emph{provenance
+non-amplification} guarantee. Three of those are our Tier~B channels and the
+fourth is Appendix~\ref{app:asym} under another name. We did not know the work
+when we derived the asymmetry and claim no priority; convergent arrival from a
 different domain is evidence the constraint is real. What differs is closure:
-their ledger \emph{accumulates} as a multi-step trajectory proceeds, so the
-admissible set moves. Evidence-closed narration is the easier case where the
-set is complete before the call, which is what buys
-Proposition~\ref{prop:linear} and lets the domain be pushed into the schema as
-an enum rather than only checked afterwards.
-
-\paragraph{Two rows on the interface} Life-Harness~\cite{xu2026lifeharness}
-evolves a runtime harness from trajectories and improves 116 of 126
-model--environment settings without touching weights, transferring across 17
-backbones --- explicitly empirical, not guaranteed. Le~\cite{le2026schemakey}
-shows schema-key \emph{wording} is an instruction channel, moving accuracy in
-both directions across seven models by renaming keys alone. We measure the same
-effect from the other side: a static schema with no column enum cuts the
-failure rate from 42\,\% to 4\,\% while constraining nothing. Steering of that
-size is a reason to distrust an uncertified schema, not to rely on it.
+their ledger \emph{accumulates} as a trajectory proceeds, so the admissible set
+moves, while evidence-closed narration is the easier case where the set is
+complete before the call --- which is what buys
+Proposition~\ref{prop:linear} and lets the domain go into the schema as an enum
+rather than only being checked afterwards.
 
 \subsection{Code assistants and the data-to-text ancestry}
 
