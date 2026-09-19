@@ -172,6 +172,27 @@ mlcompass fires at its own heuristic thresholds, $R^2>0.999$ or
 $\mathrm{AUC}>0.995$, motivated by the leakage problem Kaufman \emph{et al.}
 describe~\cite{leakage} rather than by any threshold they propose.
 
+\subsection{What this paper establishes, stated before what it withdraws}
+
+Several claims here are narrower than the ones we set out to make, and two were
+withdrawn after arms we ran to attack them succeeded. That record is reported
+in full because it is the record, and it is easy to mistake for a paper that
+found nothing. So the surviving claim is stated once, plainly.
+
+\textbf{For a narration task whose citable entities and checkable quantities
+are finite and enumerable at the moment of the call, faithfulness on the
+structured claim channels is enforceable by construction, in plain host code,
+behind a commercial API that exposes no logits.} The admissible set must be
+computed from the evidence at call time --- not declared when the harness was
+written, because then the evidence does not exist --- and checked where we
+control the check, because a schema sent to a provider is a request.
+
+The withdrawals cost a claim about \emph{whose} validator does the work
+(Section~\ref{sec:rq3}: the toolkit's own generic check, given the same list,
+also reaches 0/200) and a causal claim about downstream code quality
+(Section~\ref{sec:rq5-rubric}: a generic rubric beats the tool's findings on
+the checklist). Neither touches the sentence above.
+
 \subsection{On reporting our own mistakes}
 
 Three of the results below contradict what we believed when the study began.
@@ -919,7 +940,28 @@ Out of the box there is no faithfulness validator to configure.
 \texttt{A-STRESS} reaching 0/200 with the enum removed says the same from the
 other side. Post-generation verification alone suffices, which is what makes
 the guarantee independent of the provider; Tier~B fired on 12 of 200 responses
-in that arm and passed none through. \texttt{A-GR-OURS} is the instructive
+in that arm and passed none through.
+
+\paragraph{Then what is Tier~B for, if the enum arm also reaches zero}
+The arms cannot answer this, because on this task both tiers are measured at
+the same floor. The answer is not empirical: two of the three channels cannot
+be expressed in a schema at all. \emph{Entity} can --- a finite list of strings
+is what an \texttt{enum} is, and that overlap is why the enum arm matches the
+contract arm here. \emph{Value} cannot: the admissible set is ``within
+$\varepsilon$ of a measured float, which float depending on a sibling field'',
+a predicate over a continuum, and the schema emits a bare
+\texttt{\{"type": "number"\}} in every configuration. \emph{Completeness}
+cannot: ``a committed verdict addresses the anchor'' is a property of the whole
+response, conditional on another field's value, and the array that would carry
+it has no \texttt{minItems} and no \texttt{contains}. On the one channel a
+schema does reach, Tier~A is a request whose observance is unobservable from
+outside; Tier~B is the same check where we control it. The package pins this
+with 36 offline mutations --- tolerance boundaries, booleans as numbers, entity
+names one character from a real column, a real statistic on a column that does
+not carry it, an anchor removed by its own repair --- which is the only
+evidence here that is not a property of a model on a date.
+
+\texttt{A-GR-OURS} is the instructive
 middle: Tier~B caught 86 violations across 84 responses inside Guardrails'
 loop, and the user-facing rate was still 0/200. The loop is a perfectly
 adequate delivery vehicle for a decidable check. It just does not contain one.
@@ -1563,13 +1605,15 @@ and only one fails at all, so the comparative claim is single-provider even
 though the study is not. \textbf{The verifier assumes the evidence is correctly
 typed}: the field-indexed domains $A_{E,f}$ are derived from the evidence
 dictionary's own structure, so a producer that put a metric name where a column
-belongs would have the error inherited and certified. \textbf{The evidence
-domain here is small.} $E$ carries ten columns;
-Proposition~\ref{prop:linear} bounds the verifier's cost and says nothing about
-the schema's, and Tier~A serialises $A_{E,f}$ into the tool definition on every
-call, so a frame with a thousand candidate columns sends a thousand-element
-enum against provider limits and whatever a model's attention does with a list
-that long. We have no measurement of where that degrades. \textbf{And the
+belongs would have the error inherited and certified. \textbf{The domain cost is measured, and we were worried about the wrong
+half.} Proposition~\ref{prop:linear} bounds the verifier and says nothing about
+the schema, and Tier~A serialises $A_{E,f}$ into the tool definition on every
+call. Serialising both at 10 to 1{,}000 columns, the enum costs about 38 bytes
+per column and the evidence that produced it about 358: at a thousand columns
+the schema is 39\,kB against the profile's 358\,kB, so the binding is about a
+tenth of what the caller must send regardless. What this does not settle is
+whether a given provider accepts an enum that long, or what attention does with
+it. \textbf{And the
 guarantee is relative to the evidence, not to the world}: nothing in this paper
 measures the detector's accuracy against ground-truth leakage.
 

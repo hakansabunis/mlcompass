@@ -308,12 +308,12 @@ def main() -> int:
                     "provenance": prov,
                 }
             )
+            with out.open("a", encoding="utf-8") as fh:
+                fh.write(json.dumps(rows[-1], default=str) + "\n")
+
             if (i + 1) % 10 == 0:
                 print(f"  {arm}: {i + 1}/{args.n}")
 
-        out.write_text(
-            "\n".join(json.dumps(r, default=str) for r in rows) + "\n", encoding="utf-8"
-        )
         n = len(rows)
         print(f"\n{arm_id} ({arm}), N={n}, {time.time() - t0:.0f}s -> {out.name}")
         for channel in ("entity", "value", "omission"):

@@ -174,6 +174,31 @@ $R^2>0.999$ or $\mathrm{AUC}>0.995$, motivated by the leakage problem
 Kaufman et al.\ describe~\cite{leakage} rather than by any threshold they
 propose.
 
+\paragraph{What this paper establishes, stated before what it withdraws.}
+Several claims in this paper are narrower than the ones we set out to make, and
+two were withdrawn outright after arms we ran to attack them succeeded. That
+record is reported in full because it is the record. It is also easy to mistake
+for a paper that found nothing, so the surviving claim is stated here, once,
+plainly.
+
+\textbf{For a narration task whose citable entities and checkable quantities
+are finite and enumerable at the moment of the call, faithfulness on the
+structured claim channels is enforceable by construction, in plain host code,
+behind a commercial API that exposes no logits.} The admissible set has to be
+computed from the evidence at call time --- not declared when the harness was
+written, because at that point the evidence does not exist --- and it has to be
+checked where we control the check, because a schema sent to a provider is a
+request. Everything else in the paper is measurement around that sentence:
+which failures actually occur, what the alternatives leave standing, and how
+far the guarantee does \emph{not} reach.
+
+What the withdrawals cost is real and is not this. They cost us a claim about
+\emph{whose} validator does the work (Section~\ref{sec:rq3}: the toolkit's own
+generic check, given the same list, also reaches 0/200) and a causal claim
+about downstream code quality (Section~\ref{sec:rq5-rubric}: a generic rubric
+beats the tool's findings on the checklist). Neither touches the sentence
+above, which is the one the contract is built on.
+
 \paragraph{On reporting our own mistakes.} Three of the results below
 contradict what we believed at the point the study began. The failure mode is
 not the one we set out to measure (Section~\ref{sec:rq1}); the downstream
@@ -188,6 +213,13 @@ appendix, with the superseded measurements preserved in the replication package
 beside their corrections, because an instrument defect found and reported by
 the authors is evidence about the instrument, and one found by a reader is
 evidence about the authors.
+
+Ten faults in ten weeks is a number a reader should weigh, and the direction is
+what makes it weighable rather than alarming: two moved a result \emph{against}
+the hypothesis this paper argues for, and both came from procedures built to
+look for exactly that --- a second scorer on a different technique, and an arm
+whose adverse outcome was written down before it ran. An instrument nobody
+audits produces no corrections at all.
 
 \paragraph{Research questions.}
 \begin{description}
@@ -1312,6 +1344,43 @@ first made --- out of the box there is no faithfulness validator to configure.
 from the other side. Post-generation verification alone suffices, which is what
 makes the guarantee independent of the provider. Tier~B fired on 12 of 200
 responses in that arm and passed none of them through.
+
+\paragraph{Then what is Tier~B for, if the enum arm also reaches zero?} It is
+the obvious question and the arms cannot answer it, because on this task the
+two tiers are measured at the same floor. The answer is not empirical: it is
+that \textbf{two of the three channels cannot be expressed in a schema at all},
+so no configuration of Tier~A closes them.
+
+\emph{Entity} can be. The admissible set is a finite list of strings, which is
+exactly what an \texttt{enum} is, and this is the one channel where the two
+tiers genuinely overlap --- which is why the enum arm matches the contract arm
+here.
+
+\emph{Value} cannot. The admissible set is ``within $\varepsilon$ of a measured
+float, which float depending on the entity named in a sibling field''. That is
+a predicate over a continuum, parameterised by another field's value. JSON
+Schema can say \texttt{\{"type": "number"\}} and nothing more, and it says
+exactly that in every configuration the contract emits.
+
+\emph{Completeness} cannot. ``A committed verdict addresses the anchor'' is a
+property of the whole response. A schema constrains fields, and the array that
+would have to carry the rule has no \texttt{minItems} and no \texttt{contains}
+because neither would express it: the requirement is conditional on a value in
+a different field.
+
+And on the one channel a schema does reach, Tier~A is a \emph{request}. The
+enum leaves as part of a tool definition and whether it was honoured is not
+observable from outside; Section~\ref{sec:rq3-degenerate} is what an
+uncertifiable mechanism looks like when it works. Tier~B is the same check run
+where we control it.
+
+The replication package makes this executable rather than rhetorical: 36
+mutations that each change one thing a schema cannot forbid --- values either
+side of the tolerance boundary, booleans where numbers belong, entity names one
+character or one capital from a real column, a real statistic attached to a
+column that does not carry it, an anchor removed by the repair that was
+supposed to protect it. They run offline, which is worth stating in a paper
+whose every other number is a property of a model on a date.
 
 \subsubsection{The comparison replicates; the rate does not}\label{sec:rq3-replication}
 All eight arms of Table~\ref{tab:arms}
@@ -2473,14 +2542,51 @@ column belongs, the admissible set would inherit the error and the verifier
 would certify it. The contract checks the narrator against $E$; nothing in it
 checks $E$ against itself.
 
-\paragraph{The evidence domain here is small, and we did not test a large one.}
-$E$ carries ten columns. Proposition~\ref{prop:linear} bounds the verifier's
-cost and says nothing about the schema's: Tier~A serialises $A_{E,f}$ into the
-tool definition on every call, so a frame with a thousand candidate columns
-sends a thousand-element enum, against provider enum limits, request size
-limits and whatever a model's attention does with a list that long. We have no
-measurement of where that degrades. A practitioner with a wide frame should
-treat the enum as untested above the scale reported here.
+\paragraph{The evidence domain, and the cost we were worried about.}
+Proposition~\ref{prop:linear} bounds the verifier's cost and says nothing about
+the schema's: Tier~A serialises $A_{E,f}$ into the tool definition on every
+call, so a wide frame sends a long enum, against provider enum limits, request
+size limits and whatever a model's attention does with a list that long. An
+earlier version of this paragraph conceded that we had not measured it.
+
+We have now, and the concession was aimed at the wrong cost
+(Table~\ref{tab:scale}). Both quantities grow linearly, and the enum is the
+cheap one: roughly 38 bytes per admissible column against roughly 358 bytes for
+the evidence that produced it. At a thousand columns the tool schema is 39\,kB
+while the profile it was derived from is 358\,kB --- about 90{,}000 tokens,
+which is where a context window fails long before a schema does. \textbf{Tier~A
+costs about a tenth of what the caller has to send anyway}, so a practitioner
+choosing whether to bind the domain is not trading it against the request size;
+the request is already dominated by the evidence.
+
+\begin{table}[t]
+\caption{What the binding costs as the admissible set grows. Measured by
+serialising the tool definition and the evidence at each width; no model is
+called, so these are properties of the contract rather than of a provider on a
+date. Reproduce with \texttt{--dry-run --frame-columns N}.}
+\label{tab:scale}
+\centering
+\begin{tabular}{@{}rrrr@{}}
+\toprule
+Columns & Tool schema & Evidence & Schema share \\
+\midrule
+10    &  1.5\,kB &   3.9\,kB & 28\,\% \\
+24    &  2.0\,kB &   6.5\,kB & 24\,\% \\
+50    &  2.9\,kB &  15.7\,kB & 16\,\% \\
+100   &  4.7\,kB &  33.8\,kB & 12\,\% \\
+250   & 10.4\,kB &  88.2\,kB & 11\,\% \\
+500   & 19.9\,kB & 178.4\,kB & 10\,\% \\
+1000  & 38.9\,kB & 358.1\,kB & 10\,\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Two things this does not measure, and a practitioner should know which is
+which. It does not measure whether a provider \emph{accepts} a
+thousand-element enum --- that is a per-provider limit we have not surveyed ---
+and it does not measure what a model's attention does with a list that long,
+which is a behavioural question this design cannot reach. What it settles is
+the arithmetic, and the arithmetic says the enum is not the bottleneck.
 
 \paragraph{The guarantee is relative to the evidence, not to the world.} Stated
 in Section~\ref{sec:contract} and repeated here because it is the threat most
