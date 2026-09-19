@@ -1,7 +1,7 @@
 # Durum notu — 19 Eylül 2026
 
-**Gönderilen dosya:** `paper/tse_latex/main.pdf` — IEEE iki sütun, 18 sayfa
-(gövde 16'da bitiyor, kaynakça 17–18).
+**Gönderilen dosya:** `paper/tse_latex/main.pdf` — IEEE iki sütun, 19 sayfa
+(gövde 17'de bitiyor, kaynakça 18–19). İkinci görev bölümü (RQ6) eklendi.
 
 Springer uzun formu (`paper/emse_latex/`, 54 sayfa) bırakıldı. Hedef dergi
 IEEE TSE, ve bundan sonra tek bakımı yapılan sürüm bu.
@@ -58,13 +58,26 @@ yok) 17'den 12'ye iniyor — yani **neredeyse hiçbir şey almıyor**. Bir enum
 kolon adını kısıtlayabilir, bir *sayıyı* kısıtlayamaz. Leakage'da bu kol sıfıra
 iniyordu ve iki katmanı birbirinden ayırmak mümkün değildi; bu görev ayırıyor.
 
-İki zorlama kolu (`contract`, `stress`) şu anda koşuyor; sonuçları yarın.
+**Dört kol da tamamlandı:**
+
+| kol | mekanizma | hata | 95% GA | Tier B yakalama |
+|---|---|---|---|---|
+| `P-L1` | zorlama yok | %8.5 | [5.4, 13.2] | — |
+| `P-TIER-A-ONLY` | enum, doğrulama yok | %6.0 | [3.5, 10.2] | — |
+| `P-CONTRACT` | Tier A + Tier B | **0/200** | [0.0, 1.9] | 6 |
+| `P-STRESS` | **enum yok**, sadece Tier B | **0/200** | [0.0, 1.9] | **13** |
+
+Son satır en güçlüsü. `stress` hiçbir şema yardımı olmadan 13 kez ateşliyor ve
+hiçbirini kullanıcıya geçirmiyor. Şema kalkınca daha çoğu doğrulayıcıya
+ulaşıyor, doğrulayıcı yine tutuyor — "sağlayıcıdan bağımsız" iddiasının
+tamamı bu, ikinci bir kanıt biçiminde ve şemanın zaten yardım edemeyeceği bir
+kanalda ölçülmüş.
 
 ---
 
 ## Kendi enstrümanlarımızda bulunan hatalar
 
-Toplam on. Son üçü bu hafta, hepsi biz raporlamadan önce yakalandı:
+Toplam on bir. Son üçü bu hafta, hepsi biz raporlamadan önce yakalandı:
 
 1. **Kontrol kolu puanlanmadan önce onarılıyordu.** 200 yanıtın 60'ının
    ihlalleri siliniyor, kol 0/200 okuyordu. İşaret, Tier B'si olmayan bir kolda
@@ -97,7 +110,9 @@ olduğunu yazıyoruz.
 
 ## Kalan iş
 
-- İki zorlama kolu bitince ikinci görev bölümünün yazılması (yarın)
+- **arXiv preprint.** Depo herkese açık, makale henüz yayımlanmamış. Tarihli
+  bir öncelik kaydı bırakmak için en kısa sürede yapılmalı; IEEE TSE'ye
+  gönderirken arXiv'de preprint bulunmasına izin veriyor.
 - Kör insan değerlendirmesi: aparat hazır, yazar olmayan iki kişi gerekiyor
 - Zenodo DOI alınması. Depo public ve MIT (`github.com/hakansabunis/mlcompass`,
   PyPI'da 0.9.0), ama makale kalıcı bir arşiv bağlantısı vaat ediyor ve henüz

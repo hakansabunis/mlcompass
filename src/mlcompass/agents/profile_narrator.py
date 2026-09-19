@@ -228,6 +228,7 @@ def narrate_profile_bound(
 
     schema_rejections = 0
     rejection_kinds: list[str] = []
+    attempts: list[dict[str, Any]] = []
     attempts_made = 0
     correction = ""
     payload: dict[str, Any] = {}
@@ -267,6 +268,29 @@ def narrate_profile_bound(
 
         payload = _extract_tool_input(response, SUBMIT_TOOL_NAME)
         violations = verify(payload, bound, PROFILE_CONTRACT)
+
+        # Every attempt, not just the last one. A violation repaired on retry
+        # used to leave no trace of what it was: the contract arm caught one
+        # entity violation that Tier A's enum should have made impossible, and
+        # the record could not say whether the provider had ignored its own
+        # schema, because only the final payload survived. That question is
+        # worth answering and the data to answer it was being thrown away.
+        attempts.append(
+            {
+                "attempt": attempt + 1,
+                "columns_referenced": [
+                    str(c) for c in (payload.get("columns_referenced") or [])
+                ],
+                "claims": [
+                    c for c in (payload.get("claims") or []) if isinstance(c, dict)
+                ],
+                "verdict": str(payload.get("verdict", "")),
+                "violations": violations.kinds,
+                "entity": list(violations.entity),
+                "value": list(violations.value),
+                "omitted": violations.omitted,
+            }
+        )
         # The violations are always computed, because the diagnostic arms need
         # to know what Tier B WOULD have caught. Whether anything is done about
         # them is `verify_response`, and on the floor arm the answer is nothing.
@@ -333,6 +357,7 @@ def narrate_profile_bound(
         # the paper's RQ1 needs was gone with the deleted names.
         "raw_columns_referenced": cited_raw,
         "raw_claims": claims_raw,
+        "attempts": attempts,
         "narration": str(payload.get("narration", "")).strip(),
         "recommended_checks": [
             str(c).strip() for c in (payload.get("recommended_checks") or []) if c

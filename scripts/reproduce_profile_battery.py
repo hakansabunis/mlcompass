@@ -321,6 +321,7 @@ def main() -> int:
                     "claims": res["claims"],
                     "raw_columns": res["raw_columns_referenced"],
                     "raw_claims": res["raw_claims"],
+                    "attempts": res["attempts"],
                     "narration": res["narration"],
                     "verdict": res["verdict"],
                     "confidence": res["confidence"],
