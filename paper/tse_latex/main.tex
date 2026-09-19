@@ -582,6 +582,32 @@ stripping, because deleting an unsound claim can orphan the anchor.
 Appendix~\ref{app:failclosed} gives the failure semantics for every way the
 path can break.
 
+\subsection{One contract, two instances}\label{sec:generic}
+
+The description above is of a class and the code, for most of this study, was
+an instance: one column set, \texttt{claims[].statistic} frozen to a
+one-element enum because leakage has one kind, and a claim checked by looking
+its column up in the correlation map without reading the statistic field.
+Correct for the task, not the class, and a paper asserting portability while
+shipping one instance is asserting it.
+
+The contract is now a layer: a spec says how to read one evidence shape,
+binding yields the field-indexed domains, a value table and the anchor, and the
+verifier, stripper, retry text and schema builder name no task. Leakage is one
+spec of about forty lines; Section~\ref{sec:rq6} reports a second.
+
+What extraction cost is the argument for it. \textbf{The value table must be
+keyed on $(\text{entity}, \text{statistic})$}, which leakage could never
+expose because one statistic per column makes the two tables identical. A
+profile carries a dozen: \texttt{age.mean} is $38.5$ and
+\texttt{age.missing\_pct} is $0.012$, and an entity-keyed table checks a claim
+about one against the other. That is Defect~2 --- the scorer that never read
+the statistic field --- reappearing in the production path, found by the second
+task. Two consequences follow: the statistic set is computed per call, because
+a categorical column has a cardinality and no mean; and the evidence's surface
+shape must match the flat claim slot, because narrators handed a nested
+quantity invent a flattening, and they invented five.
+
 \subsection{The invariant, and three things it does not cover}
 
 The invariant is easy to state, and its scope has to be stated with it:
@@ -1608,10 +1634,10 @@ dictionary's own structure, so a producer that put a metric name where a column
 belongs would have the error inherited and certified. \textbf{The domain cost is measured, and we were worried about the wrong
 half.} Proposition~\ref{prop:linear} bounds the verifier and says nothing about
 the schema, and Tier~A serialises $A_{E,f}$ into the tool definition on every
-call. Serialising both at 10 to 1{,}000 columns, the enum costs about 38 bytes
-per column and the evidence that produced it about 358: at a thousand columns
-the schema is 39\,kB against the profile's 358\,kB, so the binding is about a
-tenth of what the caller must send regardless. What this does not settle is
+call. Serialising both at 10 to 1{,}000 columns, the enum costs 38 bytes per
+column and the evidence that produced it 344: at a thousand columns the schema
+is 39\,kB against the profile's 344\,kB, so the binding is about a tenth of
+what the caller must send regardless. What this does not settle is
 whether a given provider accepts an enum that long, or what attention does with
 it. \textbf{And the
 guarantee is relative to the evidence, not to the world}: nothing in this paper

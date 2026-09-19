@@ -195,7 +195,28 @@ def main() -> int:
     ap.add_argument("--log-dir", type=pathlib.Path, default=RUNS)
     ap.add_argument("--dry-run", action="store_true",
                     help="Bind and print the domains, spend nothing.")
+    ap.add_argument("--scale-table", action="store_true",
+                    help="Emit the LaTeX rows of the Tier A cost table and exit. "
+                         "No API call: a serialised schema is a property of the "
+                         "contract, not of a provider on a date.")
     args = ap.parse_args()
+
+    if args.scale_table:
+        from mlcompass.agents.profile_narrator import build_submit_tool_openai
+        print("% Generated: python scripts/reproduce_profile_battery.py --scale-table")
+        for width in (10, 24, 50, 100, 250, 500, 1000):
+            ev = compact(
+                build_profile_evidence(seed=args.seed, frame_columns=width),
+                max_columns=width,
+            )
+            bd = PROFILE.bind(ev)
+            sch = len(json.dumps(build_submit_tool_openai(bd)))
+            evb = len(json.dumps(ev, default=str))
+            print(
+                rf"{width:<5} & {sch / 1000:5.1f}\,kB & {evb / 1000:6.1f}\,kB "
+                rf"& {100 * sch / (sch + evb):.0f}\,\% \\"
+            )
+        return 0
 
     arms = args.arm or ["bare"]
     evidence = build_profile_evidence(seed=args.seed, frame_columns=args.frame_columns)

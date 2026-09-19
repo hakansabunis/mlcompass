@@ -783,6 +783,46 @@ items (budget~2). Whatever is still unsound afterwards is \emph{stripped}, a
 persistent omission is \emph{flagged}, and completeness is re-checked after
 stripping, because deleting an unsound claim can orphan the anchor.
 
+\subsection{One contract, two instances}\label{sec:generic}
+
+The description above is of a class and the code, for most of this study, was
+an instance. Section~\ref{sec:theory} defines field-indexed admissible sets
+$A_{E,f}$ and argues that three invariants make the contract portable; the
+shipped narrator carried a single column set, froze
+\texttt{claims[].statistic} to a one-element enum because leakage evidence has
+exactly one kind of statistic, and checked a claim by looking its column up in
+the correlation map --- \emph{never reading the statistic field at all}. That
+is correct for this task. It is not the class, and a paper that asserts
+portability while shipping one instance is asserting it.
+
+So the contract is now a layer. A \emph{spec} says how to read one evidence
+shape; binding an evidence dictionary through it yields the field-indexed
+domains, a value table and the completeness anchor; and the verifier, the
+stripper, the corrective-retry text and the schema builder take those three and
+name no task. The leakage contract is one spec of about forty lines, and
+Section~\ref{sec:rq6} reports a second.
+
+Extracting it was not free, and what it cost is the argument for having done
+it. \textbf{The value table has to be keyed on the pair
+$(\text{entity}, \text{statistic})$, not on the entity.} Leakage never exposed
+this, because with one statistic per column the two are the same table. A
+dataset profile carries a dozen per column: \texttt{age.mean} is $38.5$ and
+\texttt{age.missing\_pct} is $0.012$, and an entity-keyed table holds one of
+them and silently checks a claim about the other against it. That is
+Defect~2 of Section~\ref{sec:instruments} --- the scorer that never read the
+statistic field --- reappearing in the production path, and the second task is
+what made it visible.
+
+Two consequences a practitioner inherits. The admissible statistic set must be
+computed per call and not frozen, because which quantities exist depends on the
+column: a categorical column has a cardinality and no mean. And \textbf{the
+evidence's surface shape has to match the claim shape}. The claim slot is flat,
+\{entity, statistic, value\}; the profiler nested its outlier counts under an
+\texttt{outliers} object; and narrators handed a nested quantity and a flat slot
+invented five different flattenings of it. No admissible set can anticipate
+that, and the fix is to flatten the evidence rather than to guess at synonyms.
+Section~\ref{sec:instruments} reports what believing otherwise cost us.
+
 \subsection{The invariant, and its scope}
 
 The invariant is easy to state, and its scope has to be stated with it:
@@ -2551,10 +2591,10 @@ earlier version of this paragraph conceded that we had not measured it.
 
 We have now, and the concession was aimed at the wrong cost
 (Table~\ref{tab:scale}). Both quantities grow linearly, and the enum is the
-cheap one: roughly 38 bytes per admissible column against roughly 358 bytes for
-the evidence that produced it. At a thousand columns the tool schema is 39\,kB
-while the profile it was derived from is 358\,kB --- about 90{,}000 tokens,
-which is where a context window fails long before a schema does. \textbf{Tier~A
+cheap one: 38 bytes per admissible column against 344 bytes for the evidence
+that produced it. At a thousand columns the tool schema is 39\,kB while the
+profile it was derived from is 344\,kB --- roughly 86{,}000 tokens, which is
+where a context window fails long before a schema does. \textbf{Tier~A
 costs about a tenth of what the caller has to send anyway}, so a practitioner
 choosing whether to bind the domain is not trading it against the request size;
 the request is already dominated by the evidence.
@@ -2563,20 +2603,23 @@ the request is already dominated by the evidence.
 \caption{What the binding costs as the admissible set grows. Measured by
 serialising the tool definition and the evidence at each width; no model is
 called, so these are properties of the contract rather than of a provider on a
-date. Reproduce with \texttt{--dry-run --frame-columns N}.}
+date. The rows are emitted by
+\texttt{reproduce\_profile\_battery.py --scale-table} and pasted verbatim
+rather than transcribed.}
 \label{tab:scale}
 \centering
 \begin{tabular}{@{}rrrr@{}}
 \toprule
 Columns & Tool schema & Evidence & Schema share \\
 \midrule
-10    &  1.5\,kB &   3.9\,kB & 28\,\% \\
-24    &  2.0\,kB &   6.5\,kB & 24\,\% \\
-50    &  2.9\,kB &  15.7\,kB & 16\,\% \\
-100   &  4.7\,kB &  33.8\,kB & 12\,\% \\
-250   & 10.4\,kB &  88.2\,kB & 11\,\% \\
-500   & 19.9\,kB & 178.4\,kB & 10\,\% \\
-1000  & 38.9\,kB & 358.1\,kB & 10\,\% \\
+% Generated: python scripts/reproduce_profile_battery.py --scale-table
+10    &   1.5\,kB &    3.8\,kB & 28\,\% \\
+24    &   2.0\,kB &    6.3\,kB & 24\,\% \\
+50    &   2.9\,kB &   15.1\,kB & 16\,\% \\
+100   &   4.7\,kB &   32.5\,kB & 13\,\% \\
+250   &  10.4\,kB &   84.8\,kB & 11\,\% \\
+500   &  19.9\,kB &  171.6\,kB & 10\,\% \\
+1000  &  38.9\,kB &  344.2\,kB & 10\,\% \\
 \bottomrule
 \end{tabular}
 \end{table}
