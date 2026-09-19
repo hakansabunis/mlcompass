@@ -99,5 +99,6 @@ olduğunu yazıyoruz.
 
 - İki zorlama kolu bitince ikinci görev bölümünün yazılması (yarın)
 - Kör insan değerlendirmesi: aparat hazır, yazar olmayan iki kişi gerekiyor
-- Depo hâlâ private, Zenodo DOI yok — makale "open-source" deyip bağlantı
-  veriyor, hakem tıklarsa 404 görür. Gönderim öncesi kapatılmalı.
+- Zenodo DOI alınması. Depo public ve MIT (`github.com/hakansabunis/mlcompass`,
+  PyPI'da 0.9.0), ama makale kalıcı bir arşiv bağlantısı vaat ediyor ve henüz
+  yok. Gönderim öncesi kapatılmalı.
