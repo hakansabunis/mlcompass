@@ -1,129 +1,127 @@
-# Where this stopped, 2026-09-19
+# Where this stopped — 2026-09-24
 
-Paused mid-battery to shut the machine down. Nothing is in a broken state; the
-only loss is the API calls the killed run had already paid for and not yet
-written, which is a harness flaw worth fixing before the next run (see below).
+Submission target is **IEEE TSE**, `paper/tse_latex/`. The Springer long form in
+`paper/emse_latex/` is frozen and unmaintained (see its `UNMAINTAINED.md`).
 
-## Run this first
+Current build: 20 pages, body through 18, no dangling references, one 1.5 pt
+overfull vbox. Last commit before this note: `f8a7ba4`.
+
+---
+
+## 1. Finish the free-text battery — run this first
+
+It was running when the machine was shut down. Every response is written as it
+arrives, so nothing paid for is lost; resume picks up exactly where it stopped.
 
 ```bash
 source scripts/load_keys.sh
-python -X utf8 -u scripts/reproduce_profile_battery.py \
-  --arm bare --arm tier_a --arm contract --arm stress \
-  --n 200 --provider deepseek
+python -X utf8 -u scripts/reproduce_hallucination_ablation.py \
+  --mode live --provider deepseek --n 200 --only-baselines \
+  --resume --log-dir scripts/runs/2026-09-19_freetext
 ```
 
-About 70 minutes, 800 calls on `deepseek-chat`. It refuses to overwrite any arm
-whose file already exists, so it is safe to re-run after an interruption — but
-only whole arms are saved, so an interrupted arm restarts from zero.
+State at shutdown: `layer1` 200/200, `layer3_bare` ~70/200, six arms not
+started. Roughly 1,700 calls and under a dollar on `deepseek-chat`.
 
-**Fix before running if there is time:** the battery writes each arm's `.jsonl`
-once, after all 200 calls. An interrupted arm therefore loses every response it
-paid for. Writing incrementally (append per response, or every 20) would have
-saved two partial arms today.
+**Before trusting it, check the prose is really there** — this battery has
+already been lost once to an empty field:
 
-Do **not** switch models. The leakage battery ran on `deepseek-chat`, and the
-whole point of the second task is that a difference between the two tasks is a
-difference in the tasks. `deepseek-v4-pro` was offered and declined for this
-reason.
+```bash
+python -X utf8 -c "
+import json,pathlib
+for f in sorted(pathlib.Path('scripts/runs/2026-09-19_freetext').glob('*.jsonl')):
+    L=[json.loads(l) for l in f.read_text(encoding='utf-8').splitlines() if l.strip()]
+    e=sum(1 for r in L if not (r.get('narration') or '').strip())
+    print(f.name.split('_synthetic_')[1].rsplit('_n',1)[0], len(L), 'empty:', e)"
+```
 
-## What the battery is for
+Every arm must show `empty: 0`. The two bugs that emptied it are fixed —
+`_normalize` read only `narration`, and `_from_contract_result` started from
+`_normalize({})` and never copied `primary_hypothesis` across — and a smoke test
+confirmed every arm records prose. But check.
 
-Queue item 7, the second evidence-closed task: two reviewers independently
-objected that the paper defines a class and measures one member. This narrates
-`analyze_dataset` through the same `evidence_contract` verifier, no branch
-naming either task. 24 columns / 13 statistics / 196 measured quantities
-against leakage's 10 / 1 / 10.
+## 2. Measure displacement
 
-Four arms, named to match the leakage battery so a difference is a difference
-in the tasks: `bare` (P-L1), `tier_a` (P-TIER-A-ONLY), `contract` (P-CONTRACT),
-`stress` (P-STRESS).
+```bash
+python -X utf8 scripts/measure_freetext_displacement.py --runs scripts/runs \
+  --json benchmark/freetext_displacement.json
+```
 
-## What is already known, and it is the good news
+The question: when Tier B strips a claim from the structured fields, does the
+model put it in the prose instead? Displacement predicts the arms that **strip**
+(`A-CONTRACT`, `A-STRESS`, `A-GR-OURS`, `A-GR-CHOICES`) carry *more* ungrounded
+prose than the arms that do not (`A-L1`, `A-GR-STOCK`, `A-STRICT-STATIC`,
+`A-STATIC-ENUM-STALE`). Schema-only arms count as non-stripping on purpose:
+the hypothesis is about deletion, not about lowering a rate.
 
-The floor arm fails, and **on a different channel than leakage**. The last
-measured run (now superseded for a separate reason) read:
+Report whichever way it comes out. What it cannot see, and must say so: a
+sentence naming only real columns and real numbers can still assert a causal
+story the evidence does not support. That half needs human raters.
 
-    entity      1/200    0.5 %
-    value      45/200   22.5 %
-    omission    0/200    0.0 %
+## 3. Write it into the manuscript
 
-Leakage fails on entity at 42 % (misfiling `r2` into a column field). Profile
-fails on value. So the class is real and the dominant failure *within* it
-depends on the evidence shape — which supports the paper's thesis harder than
-a second 42 % would have.
+Replace the §12 paragraph that currently says the free-text channel could not
+be measured because the narration was never recorded. It becomes either
+"measured, displacement not observed at the scale this design sees" or
+"measured, and here is how much". Keep the instrument-fault history — the field
+was dropped, then emptied on the enforced arms — because both are real.
 
-Expect the corrected run to read lower than 22.5 %: replaying the preserved
-responses under the fixed domain moved the value channel from 71 offending
-claims to 46. Whatever it reads is the number.
+Then recompile and re-run the table verification (`scratchpad/verify_tables.py`
+and `verify_rq5c.py` pattern: recompute every number from the run records, do
+not read them back from the text).
 
-## Two instrument faults found today, both ours, both fixed
+---
 
-**Ninth — the floor arm was repaired before it was scored.** `strip_unsound`
-ran unconditionally, so 60 of 200 bare responses had their violations deleted
-and the arm read 0/200 on a task that fails at 30 %. The tell was "Tier B
-catches: 60" printed for an arm with no Tier B. Fixed by `verify_response`,
-which now gates the retry loop and the strip together. `raw_columns` and
-`raw_claims` are preserved so this can never again be invisible.
+## 4. Remaining points from the senior review
 
-**Tenth — the domain renamed what the evidence called things.** The profiler
-writes `outliers: {iqr_count, z_score_count}`; the binder called them
-`iqr_outliers` and `z_score_outliers`. Narrators wrote the evidence's own word
-and scored as inventing. About a third of the measured failure was our
-vocabulary.
+Writing-level points 1, 2, 3, 4, 5, 8, 10, 11, 13, 14 are **done** (commit
+`f8a7ba4`). What is left needs runs or people:
 
-The real fault there is a design one and belongs in the paper: **the claim
-schema is flat and the evidence was nested.** Handed a nested quantity and a
-flat `(column, statistic, value)` slot, narrators invented five different
-flattenings — `z_score_count`, `outliers.z_score_count`, `outliers`,
-`iqr_count`, `outliers_iqr_count`. No domain can anticipate that. `compact()`
-now lifts them, so the name the narrator reads is the name the domain admits.
-The evidence hash changed to `bcaea394` as a result.
+| # | What | Cost | Note |
+|---|---|---|---|
+| 6 | Wider baseline matrix: prompt-only, schema-only, static enum, dynamic enum, validation-only, validation+retry, full — each with first-pass rate, retries, latency | ~$1 | Most arms exist; the gap is a clean prompt-only and a validation-without-retry arm |
+| 7 | Model × mechanism matrix | ~$2–3 | Needs a model that actually fails. `gpt-5.4-mini` and local `qwen2.5:7b` both score 0 unenforced, so they add nothing to a comparison |
+| 9 | Adversarial evidence benchmark — near-identical names across fields, nested evidence, duplicates | ~$1 + design | Strongest remaining experiment. The profile task already shows the mechanism: `cat_feature_07` misfiled onto `num_feature_07` by shared suffix. Build the benchmark to provoke that on purpose |
+| 12 | Independent human gold labels for the validator | people | Apparatus is ready in `benchmark/blind_review/`, including `rate.html`. Needs two people who are not authors. The Gemini-agent sheets in `pilot_llm/` do not count and must not be reported |
+| 16 | More evidence topologies | — | Partly done: RQ6 is a second shape, `--scale-table` measures 10–1000 columns. A nested-evidence shape would close it |
 
-## Then, in order
+Also open, not from the senior list:
 
-1. **Write RQ6.** The second task, as a compact section — not a parallel
-   repeat of RQ1–RQ4. EMSE is already 51 pp. and TSE 17; the advisor called 38
-   too long. TSE gets it tighter still.
-2. **Fold in the scalability numbers**, already measured and free:
+- **τ = 0.005 sensitivity** (Stanford Q3). Offline: rescore existing records at
+  τ ∈ {0.001, 0.01, 0.05}. No API cost.
+- **The unexplained entity catch** in `P-CONTRACT`: one entity violation in the
+  arm whose schema carries the enum. The profile harness now records every
+  attempt, so one re-run of that arm would say whether the provider ignored its
+  enum.
 
-   | columns | prompt | schema |
-   |---|---|---|
-   | 10 | 3,932 B | 1,515 B |
-   | 100 | 33,763 B | 4,738 B |
-   | 500 | 178,434 B | 19,920 B |
-   | 1000 | 358,107 B | 38,920 B |
+## 5. Submission items — the user's side
 
-   §12 worries a thousand-element enum will hit provider limits. It is aimed
-   at the wrong thing: the enum costs ~38 bytes per column, the evidence that
-   produced it ~358. Tier A's cost is a tenth of what you must carry anyway.
-   Reproduce with `--dry-run --frame-columns N --max-columns N`, no API spend.
-3. **Fold in the mutation tests** (`tests/test_tier_b_mutations.py`, 36 tests).
-   They answer "Tier A caught everything, what is Tier B for" with an argument
-   rather than an anecdote: value is a predicate over a continuum and
-   completeness is a property of the whole response, so two of three channels
-   cannot be expressed in any schema.
-4. **Say plainly what the paper establishes.** It is accumulating negative
-   results — RQ5's attribution withdrawn, RQ2/3 narrowed, ten instrument
-   faults, free-text unmeasurable — and the self-corrections are drowning the
-   claim that survives: *for evidence-closed narration, binding the admissible
-   set to the evidence at call time prevents fabrication on the validated
-   channels by construction, behind a black-box API.* That needs to be stated
-   loudly and early.
-5. Recompile both, verify tables and figures again, push.
+- **arXiv preprint.** The repository is public and the paper unpublished;
+  a dated priority record matters. IEEE allows preprints alongside TSE.
+- **GitHub release → Zenodo DOI.** The paper promises it. The integration does
+  nothing until a release is actually cut. Once there is a DOI, add it to
+  `CITATION.cff` and the Data Availability section.
+- **Page count.** 18 pages of body. Agreed 17 was fine; the formal definition
+  and the retry table added one. Revisit if the advisor objects.
 
-## Settled, do not reopen
+---
 
-- **#1b blind audit: not in the paper.** Sheets that arrived under human names
-  were Gemini agents; they are filed honestly under
-  `benchmark/blind_review/pilot_llm/` with the reasoning. §12 continues to say
-  the audit is built and unrun, which is true. The apparatus is fixed and
-  usable by real raters: the key now scores the redacted script with the
-  current checker, and blind ids are unchanged.
-- **Repo is private with no Zenodo DOI.** The paper says open-source and gives
-  the URL. Not a research task, but a submission blocker.
+## Settled — do not reopen
 
-## Background note
+- **Blind audit (#1b / senior #12):** not in the paper. The Gemini sheets are
+  filed honestly under `pilot_llm/`.
+- **Licence:** stays MIT. Fourteen versions already shipped under it; relicensing
+  would not protect them.
+- **"main2 was worse":** it was not. The Stanford review labelled main2 described
+  main1 (seven faults, rubric pending, attribution intact). Both reviews
+  recommended acceptance. The current build supersedes both.
+- **0/200:** never presented as a rate of zero. Enforced arms read "none observed
+  in 200; below 1.9 % at 95 % confidence", and the guarantee is stated as a
+  property of the verifier, not of the sample.
 
-`nohup` does not survive in this environment. Two runs died silently with empty
-logs before this was noticed. Use the harness's own background tracking.
+## Instrument faults so far: eleven
+
+Plus two found while running the free-text battery (the narration field empty
+on enforced arms, twice, for two different reasons). Whether those count as the
+twelfth and thirteenth depends on whether any number from them is reported —
+none has been. Decide when writing §12.
