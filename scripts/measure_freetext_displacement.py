@@ -88,16 +88,18 @@ ARM_ID = {
     "tier_a": "A-TIER-A-ONLY",
     "stress_mech": "A-CONTRACT-WORST",
 }
-# Arms where Tier B or an enum actually intervenes. Displacement, if it exists,
-# should show up as these carrying more ungrounded prose than the bare arms.
+# Arms where Tier B actually deletes something. The displacement hypothesis is
+# about *stripping*: if an unsound claim is removed from the structured fields,
+# does the model put it in the prose instead? An arm that only constrains the
+# schema never strips, so it belongs with the unenforced side of that question
+# however much it lowers the headline rate -- `tier_a`, `static_schema` and
+# `static_schema_noenum` are schema-only and are grouped accordingly.
 ENFORCED = {
     "guardrails_choices",
     "guardrails_tierb",
     "layer3_bare",
     "layer3_stress",
-    "tier_a",
     "stress_mech",
-    "static_schema",
 }
 
 _NUMBER = re.compile(r"(?<![\w.])(-?\d+(?:\.\d+)?)(?![\w.])")
@@ -217,7 +219,10 @@ def main() -> int:
                  "chars": 0, "no_field": 0, "examples": []}
     )
 
-    for directory in (args.runs, args.runs / "2026-09-18_choices"):
+    directories = [args.runs] + sorted(
+        d for d in args.runs.iterdir() if d.is_dir() and d.name[:2] == "20"
+    )
+    for directory in directories:
         if not directory.exists():
             continue
         for f in sorted(directory.glob("*_synthetic_*.jsonl")):

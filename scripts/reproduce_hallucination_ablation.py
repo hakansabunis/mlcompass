@@ -819,6 +819,13 @@ def _from_contract_result(result: dict[str, Any]) -> dict[str, Any]:
             "rejections": int(result["schema_rejections"]),
             "rejection_kinds": list(result.get("rejection_kinds") or []),
             "provider_calls": int(result.get("attempts_made") or 1),
+            # The contract path renames the narration to `primary_hypothesis`
+            # for the renderer, and this converter starts from _normalize({}),
+            # so the field arrives empty unless it is copied across here. It
+            # was, for one run: prose recorded on the floor arm and an empty
+            # string on every enforced arm, which is precisely the comparison
+            # the field exists to make.
+            "narration": str(result.get("primary_hypothesis") or ""),
         }
     )
     return out
@@ -854,7 +861,21 @@ def _normalize(tool_input: dict[str, Any]) -> dict[str, Any]:
         #
         # Records written earlier simply lack the key. No channel definition
         # changes and no published cell moves.
-        "narration": str(tool_input.get("narration", "")),
+        #
+        # Both spellings, because the two paths disagree on the name. The bare
+        # arms hand this function the raw tool payload, whose field is
+        # `narration`; the contract and Guardrails arms hand it the result of
+        # `investigate_leakage_bound`, which renames that field to
+        # `primary_hypothesis` for the renderer. Reading only the first spelling
+        # recorded prose for the floor arm and an empty string for every
+        # enforced arm --- which is precisely the comparison the field was added
+        # to make, so the fix is the difference between measuring displacement
+        # and measuring nothing.
+        "narration": str(
+            tool_input.get("narration")
+            or tool_input.get("primary_hypothesis")
+            or ""
+        ),
         "omitted": None,  # computed by the scorer for layers 1-2
         "rejections": 0,  # Tier B catches; nonzero only on contract arms
         "rejection_kinds": [],  # violation composition per catch (contract arms)
@@ -1072,6 +1093,13 @@ def _live_one_response(
             return _sampled(_error_response(e))
         record = _normalize({})
         record.update(result)
+        # Same rename, same reason: the Guardrails arms wrap the contract
+        # result, so whichever spelling survives has to be copied into the
+        # logged field.
+        if not record.get("narration"):
+            record["narration"] = str(
+                result.get("narration") or result.get("primary_hypothesis") or ""
+            )
         return _sampled(record)
 
     if layer in STATIC_SCHEMA_ARMS:

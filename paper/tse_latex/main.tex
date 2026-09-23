@@ -65,36 +65,33 @@ checkable quantities are finite and machine-enumerable at the moment of the
 call, which makes faithfulness decidable on the structured claim channels. A
 two-tier \emph{evidence-bound runtime contract} built on that property ships in
 the narration path of \textbf{mlcompass}, an open-source ML-pipeline
-assistant. We evaluate it over 3,800 live responses and 175 scored runs. The
-failure is not the one the literature names: the unconstrained narrator
-\emph{misfiles} real evidence names at 4--71\,\% while \emph{inventing} names
-at 0--7\,\%, and the two rates do not co-vary consistently under rewording, so
-the prompt that looks safest invents most. Varying only the validator inside
-one guardrail toolkit --- same loop, budget, prompt and model --- takes
-35.0\,\% to 0/200, and so does that toolkit's own generic choice-list check
-once the list is bound to the evidence: what does the work is the binding, not
-our validator. The rate is a property of nothing stable --- a second provider
-scores 0/200 on the unconstrained arm, and the same model name three days later
-moves the toolkit's default from 35.0\,\% to 43.5\,\%. Downstream, a fifth arm
-given only the names of the six scored rules and nothing about its own code
-beats the arm given the tool's real findings on the checklist (1 flagged defect
-against 8), so we withdraw the causal attribution an earlier draft made ---
-while writing code that executes 47\,\% of the time against 83\,\%. Bound to a
-second evidence shape --- a dataset profiler, 24 admissible columns and 13
-statistics against the first task's 10 and 1 --- the same verifier takes an
-8.5\,\% failure rate to 0/200, and the characteristic failure transposes with
-it: on both tasks the dominant error is \emph{misfiling a real item rather than
-inventing one}, relocating from the entity channel to the value channel with
-the shape of the evidence. For evidence-closed
-narration, faithfulness on the validated channels is enforceable by
-construction and independent of the provider; the contract's value is not that
-it lowers a rate, but that the rate it replaces is not a stable property of
-anything.
+assistant: Tier~A binds field-indexed admissible sets into the tool schema at
+call time, and Tier~B re-verifies the returned payload in host code. Over
+3,800 live responses and 175 scored runs, the dominant failure is not
+invention but \emph{misfiling} --- a real evidence item placed where it is not
+admissible: 162 of 162 flagged entities on a data-leakage task, and 11 of 12
+wrong values on a second, dataset-profiling task, were items the evidence
+genuinely contains. Inside one guardrail toolkit, with loop, budget, prompt and
+model held fixed, the stock validator leaves 35.0\,\% of responses with a
+structured-evidence violation; our validator --- and equally the toolkit's own
+choice check once its list is bound to the evidence --- leaves none observed
+in 200 responses, which bounds the true rate below 1.9\,\% at 95\,\%
+confidence. On an enforced arm that absence is a property of the verifier, not
+of the sample; what the sample measures is the verifier's cost: no response
+needed stripping, every violation was repaired by a corrective retry, and
+binding the schema removes those retries on the channel an enum can express
+and not on the one it cannot. The unconstrained rate is not stable: a second
+provider shows none, and the same model name three days later moves the
+toolkit default from 35.0\,\% to 43.5\,\%. Downstream, an arm given only the
+names of the six scored rules beats the arm given the tool's real findings on
+the checklist, and we withdraw the causal attribution an earlier draft made.
+The guarantee is relative to the evidence and covers the structured channels
+only; the free-text narration remains outside it.
 \end{abstract}
 
 \begin{IEEEkeywords}
-Large language models, hallucination, faithfulness, constrained generation,
-runtime verification, data leakage.
+Large language models, faithfulness, runtime verification, structured
+output, constrained generation, data leakage.
 \end{IEEEkeywords}}
 
 \maketitle
@@ -115,15 +112,30 @@ output, and explain --- the pattern formalised by ReAct~\cite{react} and
 Toolformer~\cite{toolformer} and operationalised by tool-integration
 standards~\cite{mcp}.
 
-The trouble is that LLMs hallucinate~\cite{ji,huang}, and assistants built on
-the same foundation models~\cite{codex} still fail real software tasks at
-substantial rates~\cite{swebench}. In an advisory ML setting the failure takes
-a specific shape. The narrated object is \emph{structured evidence} --- a
-dictionary of facts a deterministic tool actually measured --- and the narrator
-can report members of it that are not there: a column the data does not
-contain, a defect nobody detected, a number that contradicts the report. The
-cost is concrete, because a wrong diagnosis delivered fluently is worse than no
-diagnosis: the practitioner acts on it.
+LLMs are known to produce content their input does not
+support~\cite{ji,huang}, and assistants built on the same foundation
+models~\cite{codex} still fail real software tasks at substantial
+rates~\cite{swebench}. In an advisory ML setting the failure takes a specific
+shape. The narrated object is \emph{structured evidence} --- a dictionary of
+facts a deterministic tool actually measured --- and a structured claim about it
+can be wrong in two distinct ways. It can \emph{invent}: name an entity or
+quote a quantity that appears nowhere in the evidence. Or it can
+\emph{misfile}: take something the evidence really contains and put it where it
+is not admissible --- a metric's name in a column field, one column's
+measurement attributed to another. The literature's word for the first is
+hallucination, and it is the failure this line of work usually sets out to
+measure.
+
+It is not what we found. On both tasks in this paper the second class
+dominates: 162 of 162 flagged entities on the first were misfiled and none
+invented, and 11 of 12 wrong values on the second were real measurements of a
+different column. We therefore reserve \emph{hallucination} for invention, and
+call the problem this paper addresses what it is --- \emph{structured claims
+drawn from the evidence but inadmissible where they appear}. Misfiling is the
+more dangerous of the two for a reader, because every name and every number in
+a misfiled claim is one the tool really produced. The cost is concrete: a wrong
+diagnosis delivered fluently is worse than none, because the practitioner acts
+on it.
 
 This paper is built on one observation about that setting. What the narrator
 may cite is \emph{finite and machine-enumerable at the moment of the call}.
@@ -194,7 +206,7 @@ control the check, because a schema sent to a provider is a request.
 
 The withdrawals cost a claim about \emph{whose} validator does the work
 (Section~\ref{sec:rq3}: the toolkit's own generic check, given the same list,
-also reaches 0/200) and a causal claim about downstream code quality
+also leaves none observed) and a causal claim about downstream code quality
 (Section~\ref{sec:rq5-rubric}: a generic rubric beats the tool's findings on
 the checklist). Neither touches the sentence above.
 
@@ -223,22 +235,28 @@ actually fail, and does the failure match the name the literature gives it?
 \item[RQ2] Does the contract prevent that failure on the validated channels?
 \item[RQ3] How does it compare with the structured-output and
 validate-and-retry alternatives a practitioner would otherwise reach for?
-\item[RQ4] Can a prompt-level defence be certified from observed compliance?
-\item[RQ5] Does the tool change what an LLM downstream actually produces, and
-if so, which part of it does the work?
+\item[RQ4] How far does wording alone move observed compliance, and can a
+prompt therefore serve as a runtime guarantee?
+\item[RQ5] Does handing a model deterministic findings reduce a predefined set
+of deterministic defect classes in the code it writes, and which part of the
+treatment does the work?
 \item[RQ6] Does the contract transpose to a second evidence shape, and does
 the failure it prevents transpose with it?
 \end{description}
 
 We contribute: (i) \textbf{the evidence-closed class}
-(Definition~\ref{def:closed}) with the two facts the design rests on ---
-faithfulness verification is linear-time (Proposition~\ref{prop:linear}), and
-deletion repairs soundness safely while completeness admits no safe repair
-(Appendix~\ref{app:asym}); (ii) \textbf{a controlled swap of the validator
+(Definition~\ref{def:closed}) and a runtime contract defined over it
+(Definition~\ref{def:contract}) whose admissible domains are \emph{indexed by
+field and derived from the evidence at call time} --- which is what separates
+misfiling from invention, and what lets a generic check enforce it. Verification
+is linear-time (Proposition~\ref{prop:linear}), a feasibility property rather
+than a contribution; deletion repairs soundness safely while completeness
+admits no safe repair (Appendix~\ref{app:asym}); (ii) \textbf{a controlled swap of the validator
 inside a released guardrail toolkit, and the narrower claim it forced} ---
 holding reask loop, budget, prompt and model fixed, Guardrails~AI's default
-configuration leaves 35.0\,\% of responses unfaithful and our deterministic
-validators in the same loop leave 0/200, but so does the toolkit's \emph{own}
+configuration leaves 35.0\,\% of responses with a structured-evidence
+violation and our deterministic validators in the same loop leave none observed
+in 200, but so does the toolkit's \emph{own}
 generic acceptable-values check with the list built from $E$ at call time, so
 what does the work is the binding and not our validator; (iii) \textbf{a
 decomposition of the failure}, separating \emph{invented} from \emph{misfiled}
@@ -472,6 +490,36 @@ $f$ carrying it, and \emph{invented} when it is in neither. The distinction is
 definitional here and measurable in Section~\ref{sec:rq1}; it is also what
 Tier~A binds, since the enum attached to a field is $A_{E,f}$ and not $A_E$.
 
+\subsection{The contract, stated as an invariant}
+
+\begin{definitionx}[Evidence-bound runtime contract]\label{def:contract}
+Let $E$ define field-indexed admissible sets $\{A_{E,f}\}_{f\in F}$, a value
+table $V_E$ over (entity, statistic) pairs, a tolerance $\tau$, and an anchor
+$a^*$. A structured response $r$ \emph{satisfies} the contract
+$\mathcal{C}_E$ if
+\textbf{(C1)} every token $x$ that $r$ places in a field $f \in F$ has
+$x \in A_{E,f}$;
+\textbf{(C2)} every structured claim $(e,s,v)$ in $r$ has
+$(e,s) \in \mathrm{dom}(V_E)$ and $|v - V_E(e,s)| \le \tau$; and
+\textbf{(C3)} if $r$ commits to a verdict, $a^*$ is among the entities $r$
+references.
+\end{definitionx}
+
+Tier~B enforces (C1) and (C2) on the structured channels it returns. A response
+violating either is sent back, at most twice, with the violation named; whatever
+still violates it after the budget is deleted. Hence \emph{no structured claim
+that Tier~B returns violates (C1) or (C2)}. It cannot enforce (C3) the same way,
+because an omission is not repaired by removing things, so it flags it instead
+(Appendix~\ref{app:asym}).
+
+That is a property of the verifier, established by construction and pinned by
+offline mutation tests (Section~\ref{sec:rq3}). It is not an empirical rate,
+and no number of clean responses adds to it. What the batteries measure for an
+enforced arm is something else: how often the verifier had to act, and what
+acting cost (Table~\ref{tab:retry}). We keep the two apart throughout, and
+report a clean enforced arm as \emph{none observed in $N$} with its interval
+rather than as a rate of zero.
+
 \subsection{Verification is linear-time}
 
 \begin{proposition}[Linear-time verification]\label{prop:linear}
@@ -490,8 +538,8 @@ and one comparison per claim; completeness is one membership test. Each is
 $O(1)$ expected under hashed lookup with keys of bounded length.
 \end{IEEEproof}
 
-The proposition is not deep, and its shallowness is the point: it is the formal
-statement of why simple checks suffice here, and therefore of why the guarantee
+The proposition is not deep and we do not count it as a contribution: it is a
+feasibility property, the formal statement of why simple checks suffice here, and therefore of why the guarantee
 can be absolute in a setting where decode-time machinery cannot be attached at
 all. What is not shallow is the indexing. An earlier version of our own scorer
 keyed $V_E$ on the column alone and compared every claim against that column's
@@ -800,7 +848,7 @@ it. Three reasons, and one admission. It is the default of every endpoint we
 call, so it is what a narrator gets unless someone decides otherwise. It is the
 setting the shipped narrator uses, and the contract arms measure that narrator
 rather than a tuned variant. And it is conservative \emph{against} our own
-thesis where it matters: a contract arm reading 0/200 at the noisiest
+thesis where it matters: a contract arm showing no violation at the noisiest
 temperature cannot be an artefact of a quiet one. The admission is that this
 cuts the other way for the baselines --- \texttt{A-L1}'s 42.0\,\% is a property
 of this temperature as much as of this model and this date, a low-temperature
@@ -861,7 +909,7 @@ number is affected, but the measure is \emph{out-of-evidence}, not
 \subsection{The zeros are not cheap}
 
 Misquotation of a quantity the evidence carries, and critical omission, were
-0/200 in all seven arms. A narrator that escaped into abstention would score
+observed in none of the 1{,}400 responses of the seven arms. A narrator that escaped into abstention would score
 zero on every channel for free, so we measured whether it did. On both
 \texttt{A-L1} and \texttt{A-CONTRACT}: abstained 0/200, median 10 structured
 claims per response, never mentioned the anchor 0/200. The abstention count is
@@ -883,7 +931,8 @@ per arm, Wilson 95\,\% intervals. The three bold rows are the comparison, and
 all three are the same toolkit, reask loop, budget, prompt and model --- only
 the validator changes. \texttt{A-GR-STOCK} is Guardrails~AI in its default
 configuration at \textbf{35.0\,\%}; \texttt{A-GR-OURS} substitutes our
-deterministic validators at \textbf{0/200}; \texttt{A-GR-CHOICES} substitutes
+deterministic validators, with \textbf{none observed in 200};
+\texttt{A-GR-CHOICES} substitutes
 the toolkit's \emph{own} generic choice check with its list built from $E$ at
 call time and lands in the same place, which is why the claim is about the
 binding rather than our validator. The degenerate
@@ -892,9 +941,13 @@ binding rather than our validator. The degenerate
 \end{figure}
 
 \begin{table*}[t]
-\caption{User-facing entity-fabrication rate, eight arms, $N=200$ each,
-\texttt{deepseek-chat}. Wilson 95\,\% intervals. The rule separates
-arms that leave fabrication reaching the user from arms that do not. Seven arms
+\caption{Structured-evidence violations reaching the user, eight arms,
+$N=200$ each, \texttt{deepseek-chat}, Wilson 95\,\% intervals. Above the rule,
+arms that leave violations reaching the user. Below it, no violation was
+observed in 200 responses, which bounds the true rate below 1.9\,\% at 95\,\%
+confidence; for the arms with a verifier that absence is a property of the
+verifier rather than of the sample, and Table~\ref{tab:retry} reports what the
+verifier did. Seven arms
 ran 2026-09-15; \texttt{A-GR-CHOICES} was added afterwards and ran 2026-09-18
 ($^{\ddagger}$), on which date the whole table was re-run --- the enforcement
 conclusions replicate and the rates do not.}
@@ -902,17 +955,17 @@ conclusions replicate and the rates do not.}
 \centering
 \begin{tabular}{@{}llrcr@{}}
 \toprule
-Arm & Mechanism & Rate & 95\,\% CI & $k/N$ \\
+Arm & Mechanism & Observed & 95\,\% CI & $k/N$ \\
 \midrule
 \texttt{A-L1}                & no enforcement                  & 42.0\,\%            & [35.4, 48.9] & 84/200 \\
 \texttt{A-GR-STOCK}          & Guardrails~AI, stock validators & 35.0\,\%            & [28.7, 41.8] & 70/200 \\
 \texttt{A-STRICT-STATIC}     & provider strict mode, no enum   & 4.0\,\%             & [2.0, 7.7]   & 8/200 \\
 \midrule
-\texttt{A-GR-CHOICES}$^{\ddagger}$ & \textbf{Guardrails' own choice check} & \textbf{0.0\,\%} & [0.0, 1.9] & 0/200 \\
-\texttt{A-GR-OURS}           & \textbf{Guardrails' loop, our Tier~B} & \textbf{0.0\,\%} & [0.0, 1.9] & 0/200 \\
-\texttt{A-CONTRACT}          & Tier~A + Tier~B                 & \textbf{0.0\,\%}    & [0.0, 1.9]   & 0/200 \\
-\texttt{A-STRESS}            & Tier~B alone, no enum           & \textbf{0.0\,\%}    & [0.0, 1.9]   & 0/200 \\
-\texttt{A-STATIC-ENUM-STALE} & strict mode, author-time enum   & 0.0\,\%$^{\dagger}$ & [0.0, 1.9]   & 0/200 \\
+\texttt{A-GR-CHOICES}$^{\ddagger}$ & \textbf{Guardrails' own choice check} & \textbf{none} & $<$1.9\,\% & 0/200 \\
+\texttt{A-GR-OURS}           & \textbf{Guardrails' loop, our Tier~B} & \textbf{none} & $<$1.9\,\% & 0/200 \\
+\texttt{A-CONTRACT}          & Tier~A + Tier~B                 & \textbf{none}    & $<$1.9\,\%   & 0/200 \\
+\texttt{A-STRESS}            & Tier~B alone, no enum           & \textbf{none}    & $<$1.9\,\%   & 0/200 \\
+\texttt{A-STATIC-ENUM-STALE} & strict mode, author-time enum   & none$^{\dagger}$ & $<$1.9\,\%   & 0/200 \\
 \bottomrule
 \end{tabular}
 
@@ -920,7 +973,8 @@ Arm & Mechanism & Rate & 95\,\% CI & $k/N$ \\
 {\footnotesize $^{\dagger}$Degenerate on this task; the row carries no
 comparison. See Section~\ref{sec:rq3}.\quad
 $^{\ddagger}$Run 2026-09-18. On that date \texttt{A-L1} read 43.0\,\% and
-\texttt{A-GR-STOCK} 43.5\,\%; every 0/200 cell was 0/200 on both dates.}
+\texttt{A-GR-STOCK} 43.5\,\%; every arm below the rule showed no violation on
+both dates.}
 \end{table*}
 
 All eight arms share the task, the evidence, the model, the reask budget and
@@ -933,7 +987,7 @@ carries its own date for the reason the rest of this paper gives.
 
 The two rows to read together are \texttt{A-GR-STOCK} and \texttt{A-GR-OURS}.
 \textbf{The same toolkit, the same reask loop, the same budget of two, the same
-model, the same prompt: 35.0\,\% against 0/200.} The only thing that changed is
+model, the same prompt: 35.0\,\% against none in 200.} The only thing that changed is
 what the validator checks. Guardrails' stock configuration validates structure;
 nothing told it which column names the evidence contained, so nothing in it
 could check them.
@@ -947,7 +1001,7 @@ values, and a competent user could construct that list from $E$ at call time.
 transport and scorer, with one generic acceptable-values check on
 \texttt{columns\_referenced} whose list is built from $E$ at call time. It
 carries none of Tier~B --- no value tolerance, no anchor requirement --- and is
-strictly weaker than our validator by construction. \textbf{It reaches 0/200,
+strictly weaker than our validator by construction. \textbf{No violation reaches the user in 200 responses,
 with 88 catches.} A generic membership test, given the right list at the right
 moment, suffices.
 
@@ -968,7 +1022,7 @@ empty and the hub namespace exports nothing, so every validator --- the
 acceptable-values check included --- is a separate fetch from a remote service.
 Out of the box there is no faithfulness validator to configure.
 
-\texttt{A-STRESS} reaching 0/200 with the enum removed says the same from the
+\texttt{A-STRESS} holding the same with the enum removed says the same from the
 other side. Post-generation verification alone suffices, which is what makes
 the guarantee independent of the provider; Tier~B fired on 12 of 200 responses
 in that arm and passed none through.
@@ -992,9 +1046,56 @@ names one character from a real column, a real statistic on a column that does
 not carry it, an anchor removed by its own repair --- which is the only
 evidence here that is not a property of a model on a date.
 
+\begin{table}[t]
+\caption{What the verifier did on the enforced arms, $N=200$ each. A response
+is \emph{clean} if its first attempt already satisfied (C1)--(C2); otherwise
+the corrective retry repaired it at the second or third attempt, or it was
+stripped after the budget. Calls and wall-clock latency are per response;
+\texttt{A-L1} and \texttt{P-L1} are the unenforced baselines of each task.}
+\label{tab:retry}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3.3pt}
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+Arm & clean & retry 1 & retry 2 & stripped & calls & latency \\
+\midrule
+\texttt{A-L1}         & ---  & ---  & --- & --- & 1.00 & 2.8\,s \\
+\texttt{A-CONTRACT}   & 200  &   0  & 0   & 0   & 1.00 & 3.3\,s \\
+\texttt{A-STRESS}     & 188  &  12  & 0   & 0   & 1.06 & 3.6\,s \\
+\texttt{A-GR-OURS}    & 116  &  82  & 2   & 0   & 1.42 & 4.5\,s \\
+\texttt{A-GR-CHOICES} & 112  &  88  & 0   & 0   & 1.44 & 4.9\,s \\
+\midrule
+\texttt{P-L1}         & ---  & ---  & --- & --- & 1.00 & 5.0\,s \\
+\texttt{P-CONTRACT}   & 194  &   6  & 0   & 0   & 1.03 & 5.5\,s \\
+\texttt{P-STRESS}     & 187  &  13  & 0   & 0   & 1.06 & 5.0\,s \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{What the verifier cost, and what the schema is for}
+Table~\ref{tab:retry} is the measurement that replaces reading an enforced
+arm's zero as evidence, and three things follow from it. \textbf{Nothing was
+stripped}: across 1{,}200 enforced responses every violation was repaired by
+the corrective retry, all but two at the first one, so the deletion that
+guarantees (C1)--(C2) is the worst case here and never the common one.
+\textbf{The cost is small}: on the leakage task the full contract adds about
+half a second and no calls over the unenforced arm. And \textbf{this is what
+Tier~A is for}. Holding the loop and the verifier fixed and removing only the
+enum, retries rise from 0 to 12 on the leakage task and from 6 to 13 on the
+profiling task of Section~\ref{sec:rq6}. The schema does not add to the
+guarantee --- \texttt{A-STRESS} holds it without one --- it removes retries, and
+only on the channel it can express. Leakage fails on entities, which an enum
+constrains, so binding it eliminates the retries; the profile fails on values,
+which no enum can constrain, so binding it halves them. The Guardrails arms
+carry no enum and repair about four responses in ten, and pay for it in calls.
+Tier~A is steering, Tier~B is enforcement, and the division is now measured
+rather than asserted. Token counts are not reported because the contract path
+does not surface them; calls and wall-clock are the proxies.
+
 \texttt{A-GR-OURS} is the instructive
 middle: Tier~B caught 86 violations across 84 responses inside Guardrails'
-loop, and the user-facing rate was still 0/200. The loop is a perfectly
+loop, and no violation reached the user. The loop is a perfectly
 adequate delivery vehicle for a decidable check. It just does not contain one.
 
 \paragraph{The comparison replicates; the rate does not}
@@ -1002,7 +1103,7 @@ All eight arms were re-run on 2026-09-18, three days after the numbers above,
 same model name, evidence hash, prompts, scorer and $N$ --- 1{,}600 further
 live responses. Every enforcement conclusion holds: \texttt{A-GR-CHOICES},
 \texttt{A-GR-OURS}, \texttt{A-CONTRACT}, \texttt{A-STRESS} and
-\texttt{A-STATIC-ENUM-STALE} are 0/200 again. The \emph{rates} do not.
+\texttt{A-STATIC-ENUM-STALE} again show no violation. The \emph{rates} do not.
 \texttt{A-L1} reads 43.0\,\% [36.3, 49.9] against 42.0\,\%, a replication;
 \texttt{A-GR-STOCK} reads \textbf{43.5\,\%} [36.8, 50.4] against 35.0\,\%,
 which is not. \texttt{A-STRICT-STATIC} reads 7.0\,\% against 4.0\,\%. Nothing
@@ -1060,7 +1161,9 @@ The battery was re-run on a second provider and a different model family ---
 \texttt{gpt-5.4-mini}, same evidence hash, prompts, scorer and reask budget,
 temperature 1.0, zero transport errors. This ran before
 \texttt{A-GR-CHOICES} existed, so it covers the other seven arms. All seven
-score \textbf{0/200}, including \texttt{A-L1}. In 199 of 200 responses the floor arm cites exactly
+show \textbf{no violation in 200}, including \texttt{A-L1} --- which bounds
+even the unconstrained rate below 1.9\,\% at 95\,\% confidence on this
+model. In 199 of 200 responses the floor arm cites exactly
 the ten evidence columns and makes ten structured claims; it abstains in 0 of
 200 and never writes \texttt{r2} into a column field. Nothing reaches a user
 that any arm needed to prevent, so no comparison between arms exists on this
@@ -1076,7 +1179,8 @@ wrong by 42 percentage points against a model measured one day later. It
 provider where the failure occurs --- the only place a preventive mechanism can
 be compared at all. And it is \textbf{the case for structural enforcement
 rather than measured compliance}: an engineer who benchmarked prompt-level
-reliability on \texttt{gpt-5.4-mini} would measure 0/200 and conclude the
+reliability on \texttt{gpt-5.4-mini} would observe no violation in 200 and
+conclude the
 problem does not exist, while the same benchmark on another hosted model,
 the same week, the same task, measures 42\,\%. Note what this comparison can
 and cannot carry: provider, model family and date all differ, so it supports
@@ -1089,12 +1193,12 @@ number; it is that it makes the number irrelevant.
 Two caveats. Absence of failure on one model is not evidence it cannot occur
 there --- a paraphrase sweep on this provider is future work, and
 Section~\ref{sec:rq4} shows wording moves the rate by an order of magnitude on
-the model we did sweep. And a 0/200 floor contributes nothing to the
+the model we did sweep. And a floor with no observed violations contributes nothing to the
 comparison, so \textbf{the comparative claim remains single-provider} even
 though the study is not.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{RQ4: Can a Prompt-Level Defence Be Certified?}\label{sec:rq4}
+\section{RQ4: Prompt Sensitivity as the Case for Enforcement}\label{sec:rq4}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{table*}[t]
@@ -1180,8 +1284,8 @@ that does not exist. Abstention is 0/100 in every variant, so the low cells are
 low because the model cited cleanly, not because it declined.
 
 Two diagnostic arms ($N=200$ each) pull the tiers apart. Tier~A alone --- the
-evidence-bound enum over a bare prompt with no verification --- drove the rate
-to 0/200. The full contract under the sweep's worst paraphrase, the one that
+evidence-bound enum over a bare prompt with no verification --- left no
+violation observed in 200. The full contract under the sweep's worst paraphrase, the one that
 trips the check 72 times in 100 unenforced, produced zero first-attempt
 violations. Tier~A is a strong steering mechanism, and that is exactly why it
 cannot be the guarantee: it is enforced by the provider, and what a provider
@@ -1189,7 +1293,8 @@ enforces it may stop enforcing. Tier~B is what can be certified, because it
 runs in our process over a returned payload.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{RQ5: Does the Tool Change the Output?}\label{sec:rq5}
+\section{RQ5: Do Deterministic Findings Reduce Predefined Defect
+Classes?}\label{sec:rq5}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{table}[t]
@@ -1433,14 +1538,14 @@ to a different evidence shape through the same verifier.}
 Arm & Mechanism & Value & 95\,\% CI & Tier~B \\
 \midrule
 \texttt{P-L1}          & no enforcement        & 8.5\,\% & [5.4, 13.2] & --- \\
-\texttt{P-TIER-A-ONLY} & enum, no verification & 6.0\,\% & [3.5, 10.2] & --- \\
-\texttt{P-CONTRACT}    & \textbf{Tier A + Tier B} & \textbf{0/200} & [0.0, 1.9] & 6 \\
-\texttt{P-STRESS}      & \textbf{Tier B, no enum} & \textbf{0/200} & [0.0, 1.9] & 13 \\
+\texttt{P-TIER-A-ONLY} & enum only & 6.0\,\% & [3.5, 10.2] & --- \\
+\texttt{P-CONTRACT}    & \textbf{Tier A + B} & \textbf{none} & $<$1.9\,\% & 6 \\
+\texttt{P-STRESS}      & \textbf{Tier B only} & \textbf{none} & $<$1.9\,\% & 13 \\
 \bottomrule
 \end{tabular}
 
 \vspace{2pt}
-{\footnotesize The entity and omission channels are 0/200 on every arm; the
+{\footnotesize No entity or omission violation was observed on any arm; the
 value channel is where this task fails, which is itself the result.}
 \end{table}
 
@@ -1482,17 +1587,18 @@ Binding the admissible sets into the schema and verifying nothing removes
 almost none of this task's failure, and the intervals overlap heavily.
 
 This is the result that makes a second task worth running. On leakage, the
-enum arm reached 0/200 and the two tiers could not be told apart: Tier~B looked
+enum arm left no violation observed and the two tiers could not be told apart: Tier~B looked
 redundant because Tier~A had already closed the only channel that was failing.
 Here the failing channel is \emph{value}, and \textbf{no enum can constrain a
 number} --- the admissible set is a predicate over a continuum, parameterised
 by a sibling field. Section~\ref{sec:rq3} argues that two of the three channels
 are inexpressible in a schema; this measures it.
 
-Adding Tier~B closes the channel. \texttt{P-CONTRACT} is 0/200 with six
+Adding Tier~B closes the channel. \texttt{P-CONTRACT} shows no violation in
+200 responses, with six
 catches, five on the value channel and one on the entity channel.
 \texttt{P-STRESS} --- verification with the enum removed entirely --- is also
-0/200, and fires \textbf{thirteen} times to get there: eleven value violations
+shows none, and fires \textbf{thirteen} times to get there: eleven value violations
 and two responses carrying both an entity and a value violation. More reaches
 the verifier when nothing steers the model, and none of it reaches the user.
 
@@ -1701,7 +1807,7 @@ is not blind.
 \paragraph{Prompts are advisory; schemas steer; verification enforces} The
 paraphrase sweep moves a faithfulness rate eightfold on wording alone, and the
 sub-channels inside it decouple, so a prompt cannot be certified even against
-itself. A schema does better --- Tier~A alone reaches 0/200 --- but it is
+itself. A schema does better --- Tier~A alone leaves none observed --- but it is
 enforced by the provider, and what a provider enforces it may stop enforcing
 without telling anyone. Only the check that runs in our own process over a
 returned payload can be certified, and that is the whole of the design.
@@ -1716,7 +1822,7 @@ Proposition~\ref{prop:linear} describes at the level of a single response.
 \paragraph{Negative results are boundaries, not failures} Two arms show
 nothing, and both are load-bearing. The revision arm shows the extra attempt is
 worth nothing on its own, which is what makes the attribution to the findings
-possible. The second provider shows a 0/200 floor, which is what makes the
+possible. The second provider shows no violations even unenforced, which is what makes the
 argument for construction over measurement.
 
 \paragraph{Where the contract transposes} Three invariants make it portable: a
@@ -1848,7 +1954,8 @@ We measured a two-tier contract built on those facts, in the shipped narration
 path of an open-source tool. Against the nearest real alternative the outer loop
 was never the contribution: Guardrails~AI's own validators leave 35.0\,\% of
 responses unfaithful and the same loop running our deterministic validators
-leaves 0/200 --- and so does the toolkit's own generic choice check once its
+leaves none observed in 200 --- and so does the toolkit's own generic choice
+check once its
 list is bound to the evidence, which narrows the claim from our validator to the
 binding. Against six rule-free rewordings of one instruction the failure
 rate moves from 9\,\% to 72\,\% --- and the invention rate does not follow it,

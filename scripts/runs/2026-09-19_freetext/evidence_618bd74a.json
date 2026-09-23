@@ -1,0 +1,70 @@
+{
+  "task_label": "synthetic",
+  "evidence": {
+    "ok": true,
+    "row_count": 1000,
+    "trustworthy_sample_size": true,
+    "suspicious_metric": {
+      "name": "r2",
+      "value": 1.0
+    },
+    "target_feature_correlations": [
+      {
+        "feature": "log_target_v2",
+        "correlation": 0.998993270993271,
+        "method": "spearman"
+      },
+      {
+        "feature": "near_target_proxy",
+        "correlation": 0.998736261844771,
+        "method": "pearson"
+      },
+      {
+        "feature": "feature_12",
+        "correlation": -0.04045085245085245,
+        "method": "spearman"
+      },
+      {
+        "feature": "feature_10",
+        "correlation": -0.03542997826338144,
+        "method": "pearson"
+      },
+      {
+        "feature": "feature_5",
+        "correlation": -0.034701235683183805,
+        "method": "pearson"
+      },
+      {
+        "feature": "feature_9",
+        "correlation": 0.030375263548186173,
+        "method": "pearson"
+      },
+      {
+        "feature": "feature_8",
+        "correlation": -0.02793261051533749,
+        "method": "pearson"
+      },
+      {
+        "feature": "feature_4",
+        "correlation": -0.021505213658968608,
+        "method": "pearson"
+      },
+      {
+        "feature": "feature_7",
+        "correlation": -0.019689280762517365,
+        "method": "pearson"
+      },
+      {
+        "feature": "feature_6",
+        "correlation": 0.013371973371973373,
+        "method": "spearman"
+      }
+    ],
+    "perfect_match_rate": 0.0,
+    "candidate_leak_columns": [
+      "log_target_v2",
+      "near_target_proxy"
+    ],
+    "notes": []
+  }
+}
