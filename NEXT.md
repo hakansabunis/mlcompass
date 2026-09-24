@@ -3,8 +3,8 @@
 Submission target is **IEEE TSE**, `paper/tse_latex/`. The Springer long form in
 `paper/emse_latex/` is frozen and unmaintained (see its `UNMAINTAINED.md`).
 
-Current build: 20 pages, body through 19, no dangling references, no overfull
-boxes. Last paper commit: `55a39c5`.
+Current build: **15 pages including references** (the venue limit), no dangling
+references, one 1.5 pt overfull vbox. The 20-page version is commit `b916270`.
 
 ---
 
@@ -30,7 +30,7 @@ The run is also a third replication sample, now in the replication paragraph:
 A-GR-STOCK 35.0 → 43.5 → 47.5 %, A-STRESS retries 12 → 23 → 32, A-L1 stable,
 enforced arms none in all three.
 
-Page count: body now ends on page 19 (was 18), PDF still 20 pages.
+Page count: cut to 15 pages including references on 2026-09-24 (see §5).
 
 ---
 
@@ -63,8 +63,10 @@ Also open, not from the senior list:
 - **GitHub release → Zenodo DOI.** The paper promises it. The integration does
   nothing until a release is actually cut. Once there is a DOI, add it to
   `CITATION.cff` and the Data Availability section.
-- **Page count.** 19 pages of body. Agreed 17 was fine; the formal definition,
-  the retry table and the free-text result added two. Revisit if the advisor objects.
+- **Page count.** Hard limit 15 pages including references, no supplementary
+  file. Met: the appendices were folded into §3 and §4, three figures that
+  duplicated their tables were dropped, and every section was condensed. Nothing
+  measured was removed; any new material must displace something.
 
 ---
 
