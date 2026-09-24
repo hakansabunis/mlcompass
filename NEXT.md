@@ -3,8 +3,8 @@
 Submission target is **IEEE TSE**, `paper/tse_latex/`. The Springer long form in
 `paper/emse_latex/` is frozen and unmaintained (see its `UNMAINTAINED.md`).
 
-Current build: 20 pages, body through 18, no dangling references, one 1.5 pt
-overfull vbox. Last commit before this note: `f8a7ba4`.
+Current build: 20 pages, body through 19, no dangling references, no overfull
+boxes. Last paper commit: `55a39c5`.
 
 ---
 
@@ -63,8 +63,8 @@ Also open, not from the senior list:
 - **GitHub release → Zenodo DOI.** The paper promises it. The integration does
   nothing until a release is actually cut. Once there is a DOI, add it to
   `CITATION.cff` and the Data Availability section.
-- **Page count.** 18 pages of body. Agreed 17 was fine; the formal definition
-  and the retry table added one. Revisit if the advisor objects.
+- **Page count.** 19 pages of body. Agreed 17 was fine; the formal definition,
+  the retry table and the free-text result added two. Revisit if the advisor objects.
 
 ---
 
@@ -83,7 +83,5 @@ Also open, not from the senior list:
 
 ## Instrument faults so far: eleven
 
-Plus two found while running the free-text battery (the narration field empty
-on enforced arms, twice, for two different reasons). Whether those count as the
-twelfth and thirteenth depends on whether any number from them is reported —
-none has been. Decide when writing §12.
+Decided: the four repairs made during the free-text battery are named in §12
+and not counted, because no number from them was ever reported.
