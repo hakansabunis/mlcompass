@@ -789,6 +789,15 @@ one claim whose column is in $E$ but whose value is off by more than $\tau$.
 \emph{Critical omission}: a committed verdict that never references the anchor.
 We report Wilson 95\,\% intervals and raw $k/N$ throughout.
 
+The tolerance decides nothing in this corpus. Of the 24{,}337 claims scored
+before any verification could act on them (the unenforced leakage arms, and
+every profile arm's pre-verification record), all but 24 reproduce the measured
+value to floating-point precision. The 24 miss by more than 0.05: 23 carry the
+value of the categorical column sharing the numeric column's suffix, and one
+is a mistyped digit (826 for 846). None is a rounding. The
+value-channel count is therefore identical at every $\tau$ from
+$5\times10^{-4}$ to $0.05$ (\texttt{scripts/tau\_sensitivity.py}).
+
 Section~\ref{sec:rq1} introduces a decomposition of the entity channel that we
 did not have when the study began. \emph{Invented} is a name appearing nowhere
 in $E$ --- the phantom entity as the literature defines it. \emph{Misfiled} is
