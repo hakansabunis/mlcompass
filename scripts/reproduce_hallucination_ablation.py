@@ -1925,6 +1925,18 @@ def evidence_value_table(evidence: dict[str, Any]) -> dict[tuple[str, str], floa
     return table
 
 
+def _within_tolerance(val: Any, measured: float) -> bool:
+    """A finite, non-boolean number within VALUE_TOLERANCE of ``measured``.
+
+    Matches the verifier's own check. Without the finiteness test a NaN claim
+    scores clean, because every comparison with NaN is false.
+    """
+    if not isinstance(val, (int, float)) or isinstance(val, bool):
+        return False
+    v = float(val)
+    return math.isfinite(v) and abs(v - measured) <= VALUE_TOLERANCE
+
+
 def _normalise_statistic(raw: Any) -> str:
     """Lower-case, strip, and collapse separators, so `Abs Corr` meets `abs_corr`."""
     text = str(raw or "").strip().lower()
@@ -2018,7 +2030,7 @@ def score_one(
             # table score exactly as before. Correct for contract arms, where
             # Tier A pins the statistic; see evidence_value_table.
             measured = corr_map[col]
-            if not isinstance(val, (int, float)) or abs(float(val) - measured) > VALUE_TOLERANCE:
+            if not _within_tolerance(val, measured):
                 value = True
                 break
             continue
@@ -2031,7 +2043,7 @@ def score_one(
             unverifiable = True
             continue
         measured = value_table[key]
-        if not isinstance(val, (int, float)) or abs(float(val) - measured) > VALUE_TOLERANCE:
+        if not _within_tolerance(val, measured):
             value = True
     if response.get("omitted") is not None:
         omission = bool(response["omitted"])

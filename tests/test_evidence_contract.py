@@ -261,6 +261,27 @@ def test_booleans_are_not_numbers(leak_bound: BoundEvidence) -> None:
     assert verify(payload, leak_bound, LEAKAGE).value
 
 
+@pytest.mark.parametrize("bad", [float("nan"), float("inf"), float("-inf")])
+def test_non_finite_values_fail_and_are_stripped(
+    leak_bound: BoundEvidence, bad: float
+) -> None:
+    """Every comparison with NaN is false, so a tolerance test alone passes it.
+
+    Found in review: a NaN claim passed `verify` and survived `strip_unsound`,
+    which broke the invariant that no returned claim violates (C2).
+    """
+    payload = {
+        "verdict": "leakage_likely",
+        "confidence": "high",
+        "columns_referenced": ["log_target_v2"],
+        "claims": [{"column": "log_target_v2", "statistic": "correlation", "value": bad}],
+        "narration": "x",
+    }
+    assert verify(payload, leak_bound, LEAKAGE).value
+    _, claims = strip_unsound(payload, leak_bound, LEAKAGE)
+    assert claims == []
+
+
 # --------------------------------------------------------------------------- #
 # The second instance: a shape the entity-keyed check would get wrong          #
 # --------------------------------------------------------------------------- #

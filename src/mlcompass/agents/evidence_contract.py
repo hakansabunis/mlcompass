@@ -29,6 +29,7 @@ reproduces the shipped behaviour, and the existing test suite is the proof.
 
 from __future__ import annotations
 
+import math
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
@@ -188,6 +189,20 @@ def is_committed(payload: Mapping[str, Any], spec: ContractSpec) -> bool:
     return bool(payload) and verdict in spec.verdict_values and verdict != spec.abstention
 
 
+def _within(val: Any, measured: float, tolerance: float) -> bool:
+    """True when ``val`` is a finite number within ``tolerance`` of ``measured``.
+
+    Finiteness is part of the check, not a nicety: every comparison with NaN is
+    false, so ``abs(nan - m) > tolerance`` never fires and a NaN claim used to
+    pass verification and survive stripping. ``json.loads`` accepts ``NaN``,
+    so a provider can return one.
+    """
+    if not isinstance(val, (int, float)) or isinstance(val, bool):
+        return False
+    v = float(val)
+    return math.isfinite(v) and abs(v - measured) <= tolerance
+
+
 def verify(
     payload: Mapping[str, Any], bound: BoundEvidence, spec: ContractSpec
 ) -> Violations:
@@ -228,11 +243,7 @@ def verify(
         measured = bound.values.get((ent, stat))
         if measured is None:
             value.append(f"{label(ent, stat)}: not in evidence")
-        elif (
-            not isinstance(val, (int, float))
-            or isinstance(val, bool)
-            or abs(float(val) - measured) > bound.tolerance
-        ):
+        elif not _within(val, measured, bound.tolerance):
             value.append(
                 f"{label(ent, stat)}: cited {val}, evidence says {measured:.4f}"
             )
@@ -273,9 +284,7 @@ def strip_unsound(
         measured = bound.values.get((ent, stat))
         if measured is None:
             continue
-        if not isinstance(val, (int, float)) or isinstance(val, bool):
-            continue
-        if abs(float(val) - measured) > bound.tolerance:
+        if not _within(val, measured, bound.tolerance):
             continue
         claims_clean.append(claim)
 
