@@ -1,0 +1,43 @@
+{
+  "module": "C:\\Users\\SABUNIS\\AppData\\Local\\Temp\\claude\\C--Users-SABUNIS-Desktop-ml-copilot\\2c27340c-c374-4ac8-864c-089a79ae026f\\scratchpad\\contract_pre_review.py",
+  "cases_run": 99,
+  "seed": 0,
+  "failures": [
+    {
+      "case": 3,
+      "violations": [
+        "C2 value {'column': 'h3wqibnx', 'statistic': 'ss8ulfg7', 'value': nan} vs -1.0"
+      ],
+      "payload": "{'verdict': 'leakage_likely', 'columns_referenced': [], 'claims': [{'column': '1zl', 'statistic': 'lp2v6jw', 'value': -inf}, {'column': 'h3wqibnx', 'statistic': 'ss8ulfg7', 'value': -inf}, {'column': 'h3wqibnx', 'statistic': '5pplsx', 'value': '-1.0'}, {'column': 'h3wqibnx', 'statistic': 'ss8ulfg7',"
+    },
+    {
+      "case": 8,
+      "violations": [
+        "C2 value {'column': 'e', 'statistic': 'j18jcl5c', 'value': nan} vs 0.7718770296495847"
+      ],
+      "payload": "{'verdict': 'leakage_likely', 'columns_referenced': [True, ' '], 'claims': [{'column': 'e', 'statistic': 'j18jcl5c', 'value': nan}, {'column': 'jzt', 'statistic': 'ayl', 'value': 9.992826281993299}, {'column': 'e', 'statistic': 'b_09vpi', 'value': -2.7222981935711026}, {'column': 'i3c', 'statistic':"
+    },
+    {
+      "case": 38,
+      "violations": [
+        "C2 value {'column': '34n17yt', 'statistic': '4u', 'value': nan} vs 0.0"
+      ],
+      "payload": "{'verdict': 'leakage_likely', 'columns_referenced': ['ufgjo', 'ni1y', 'fqy', 's0vmb0', '34n17yt', 3], 'claims': [{'column': 'h62_', 'statistic': '17j5yfp2', 'value': -2.7189672614152816}, {'column': 'o_5l', 'statistic': ' ', 'value': -8.99623894404413}, {'column': '34n17yt', 'statistic': 'tv9vuftz',"
+    },
+    {
+      "case": 83,
+      "violations": [
+        "C2 value {'column': 'gifd', 'statistic': 'onftrcvf', 'value': nan} vs -1.0"
+      ],
+      "payload": "{'verdict': 'leakage_likely', 'columns_referenced': ['', 'qgeotq'], 'claims': [{'column': 'z', 'statistic': 'gtd', 'value': 3.1607036333494305}, {'column': 'gifd', 'statistic': 'onftrcvf', 'value': nan}, {'column': 'm', 'statistic': 'j024', 'value': -0.6408117702051971}, {'column': None, 'statistic'"
+    },
+    {
+      "case": 98,
+      "violations": [
+        "C2 value {'column': 'n', 'statistic': 'z1f', 'value': nan} vs -1.0"
+      ],
+      "payload": "{'verdict': 'leakage_likely', 'columns_referenced': ['stz'], 'claims': [{'column': 'n', 'statistic': True, 'value': True}, {'column': 'stz', 'value': '-3.1891933426399905'}, {'column': 'n', 'statistic': 'qx', 'value': nan}, {'column': 'n', 'statistic': 'z1f', 'value': nan}, {'column': '55', 'statist"
+    }
+  ],
+  "seconds": 0.0
+}

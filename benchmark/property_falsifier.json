@@ -1,0 +1,7 @@
+{
+  "module": "installed",
+  "cases_run": 1000000,
+  "seed": 0,
+  "failures": [],
+  "seconds": 74.8
+}

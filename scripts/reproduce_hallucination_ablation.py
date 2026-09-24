@@ -1966,7 +1966,10 @@ def _within_tolerance(val: Any, measured: float) -> bool:
     """
     if not isinstance(val, (int, float)) or isinstance(val, bool):
         return False
-    v = float(val)
+    try:
+        v = float(val)
+    except OverflowError:
+        return False
     return math.isfinite(v) and abs(v - measured) <= VALUE_TOLERANCE
 
 

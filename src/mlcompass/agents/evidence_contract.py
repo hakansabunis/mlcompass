@@ -199,7 +199,12 @@ def _within(val: Any, measured: float, tolerance: float) -> bool:
     """
     if not isinstance(val, (int, float)) or isinstance(val, bool):
         return False
-    v = float(val)
+    try:
+        # json.loads turns a 400-digit literal into a Python int, and float()
+        # of that raises; found by the property falsifier, not by a provider.
+        v = float(val)
+    except OverflowError:
+        return False
     return math.isfinite(v) and abs(v - measured) <= tolerance
 
 
