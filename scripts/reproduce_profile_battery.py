@@ -215,6 +215,8 @@ def main() -> int:
     ap.add_argument("--frame-columns", type=int, default=None,
                     help="Build a frame this wide. The Tier A scalability knob: "
                          "10/50/100/500/1000 gives the enum cost curve.")
+    ap.add_argument("--resume", action="store_true",
+                    help="Continue an interrupted arm, skipping indices already logged.")
     ap.add_argument("--natural-names", action="store_true",
                     help="Same frame, distinct column names with no shared suffix "
                          "(review item P0-4). Use a separate --log-dir.")
@@ -283,14 +285,25 @@ def main() -> int:
             f"{args.provider}_{model.replace(':', '-')}_profile_{arm}"
             f"_n{args.n}_seed{args.seed}_e{ehash}.jsonl"
         )
+        done: set[int] = set()
         if out.exists():
-            print(f"{arm}: {out.name} exists — refusing to overwrite paid responses")
-            continue
+            if not args.resume:
+                print(f"{arm}: {out.name} exists — refusing to overwrite paid responses "
+                      "(pass --resume to continue it)")
+                continue
+            done = {
+                int(json.loads(line)["i"])
+                for line in out.read_text(encoding="utf-8").splitlines()
+                if line.strip()
+            }
+            print(f"{arm}: resuming, {len(done)} responses already logged")
 
         flagged = {"entity": 0, "value": 0, "omission": 0}
         rows = []
         t0 = time.time()
         for i in range(args.n):
+            if i in done:
+                continue
             started = time.time()
             try:
                 res = narrate_profile_bound(
