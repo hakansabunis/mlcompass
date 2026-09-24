@@ -767,12 +767,35 @@ _OPEN_SCHEMA: dict[str, Any] = {
 }
 
 
+# Review item P0-4 (DA C2): 161 of 162 misfiled entities on A-L1 are `r2` in
+# `columns_referenced`, a field the open schema leaves undescribed while the
+# bare prompt says "list every column from the evidence you cite". The
+# described variant changes only the field descriptions, so a run with it
+# separates misfiling caused by an under-specified field from misfiling the
+# model does anyway. Off by default; selected with --describe-fields and
+# recorded in every record's arm_id and schema_variant.
+_DESCRIBE_FIELDS = False
+
+_OPEN_SCHEMA_DESCRIBED: dict[str, Any] = json.loads(json.dumps(_OPEN_SCHEMA))
+_OPEN_SCHEMA_DESCRIBED["properties"]["columns_referenced"]["description"] = (
+    "Names of dataset columns (features) from the evidence that you cite. "
+    "Column names only: not metric names such as r2, and not statistic names."
+)
+_OPEN_SCHEMA_DESCRIBED["properties"]["claims"]["items"]["properties"]["column"][
+    "description"
+] = "A dataset column name from the evidence, not a metric name."
+
+
+def _open_schema() -> dict[str, Any]:
+    return _OPEN_SCHEMA_DESCRIBED if _DESCRIBE_FIELDS else _OPEN_SCHEMA
+
+
 def _open_submit_tool_anthropic() -> dict[str, Any]:
     """Anthropic submit tool WITHOUT the evidence enum (layers 1 and 2)."""
     return {
         "name": SUBMIT_TOOL_NAME,
         "description": "Submit the leakage investigation result.",
-        "input_schema": _OPEN_SCHEMA,
+        "input_schema": _open_schema(),
     }
 
 
@@ -783,7 +806,7 @@ def _open_submit_tool_openai() -> dict[str, Any]:
         "function": {
             "name": SUBMIT_TOOL_NAME,
             "description": "Submit the leakage investigation result.",
-            "parameters": _OPEN_SCHEMA,
+            "parameters": _open_schema(),
         },
     }
 
@@ -1689,7 +1712,11 @@ def live_run(
                 "evidence_hash": ev_hash,
                 # Cell identity per §5: everything needed to re-derive this
                 # cell's rate from the log alone.
-                "arm_id": ARM_IDS.get(layer, "(unregistered arm)"),
+                "arm_id": ARM_IDS.get(layer, "(unregistered arm)")
+                + ("-DESCRIBED" if _DESCRIBE_FIELDS and layer in ("layer1", "layer2") else ""),
+                "schema_variant": (
+                    "described" if _DESCRIBE_FIELDS and layer in ("layer1", "layer2") else "plain"
+                ),
                 "strict": bool(strict),
                 "prompt_variant": (
                     "bare"
@@ -2237,6 +2264,14 @@ def main() -> int:
         help="Wiring validation: N=5, arms layer1+layer3 only (~10 cheap calls).",
     )
     ap.add_argument(
+        "--describe-fields",
+        action="store_true",
+        help=(
+            "Give the open (L1/L2) schema field descriptions saying columns_referenced "
+            "holds dataset column names only (review item P0-4). Use a separate --log-dir."
+        ),
+    )
+    ap.add_argument(
         "--strict",
         action="store_true",
         help=(
@@ -2356,6 +2391,8 @@ def main() -> int:
     )
     ap.add_argument("--json", action="store_true", help="Emit machine-readable JSON.")
     args = ap.parse_args()
+    global _DESCRIBE_FIELDS
+    _DESCRIBE_FIELDS = bool(args.describe_fields)
 
     # ---------------- Zero-cost wiring check ------------------------------- #
     if args.check_providers:
@@ -2562,6 +2599,10 @@ def main() -> int:
     )
     if args.no_stress or args.mode == "mock":
         arms = ("layer1", "layer2", "layer3")
+    if args.describe_fields:
+        # The descriptions live on the open schema only; the contract arms
+        # never see it, so running them again would cost without measuring.
+        arms = ("layer1", "layer2")
     if args.only_extra:
         if args.mode != "live":
             raise SystemExit("--only-extra is a live measurement; add --mode live.")
