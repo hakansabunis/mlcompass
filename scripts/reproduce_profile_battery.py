@@ -87,8 +87,28 @@ def wilson(k: int, n: int) -> tuple[float, float]:
     return (100 * max(0.0, c - h), 100 * min(1.0, c + h))
 
 
+# Review item P0-4 (DA C2, EIC W3): 10 of the 11 misfiled values on the
+# 24-column frame put cat_feature_07's number on num_feature_07, a pair our own
+# generator named with a shared suffix. With --natural-names the SAME data (same
+# RNG draws, same order) is written under distinct names that share no suffix or
+# stem across the numeric and categorical blocks, so a misfiling that survives
+# is not an artefact of our naming.
+_NATURAL_NUMERIC = (
+    "age", "income", "tenure_months", "balance", "credit_score", "monthly_spend",
+    "login_count", "session_minutes", "support_tickets", "page_views",
+    "days_since_purchase", "discount_rate", "basket_size", "referral_count",
+)
+_NATURAL_CATEGORICAL = (
+    "region", "plan_tier", "device_type", "acquisition_channel",
+    "payment_method", "language", "industry",
+)
+
+
 def build_profile_evidence(
-    seed: int = 0, n_rows: int = 1200, frame_columns: int | None = None
+    seed: int = 0,
+    n_rows: int = 1200,
+    frame_columns: int | None = None,
+    natural_names: bool = False,
 ) -> dict[str, Any]:
     """A wide frame with real data-quality problems, profiled by the shipped tool.
 
@@ -123,12 +143,16 @@ def build_profile_evidence(
         v[rng.random(n_rows) < (0.02 * (i % 5))] = np.nan
         if i % 4 == 0:
             v[rng.integers(0, n_rows, 8)] = 9999.0
-        cols[f"num_feature_{i:02d}"] = v
+        if natural_names:
+            name = _NATURAL_NUMERIC[i - 1] if i <= len(_NATURAL_NUMERIC) else f"metric_{i:03d}"
+        else:
+            name = f"num_feature_{i:02d}"
+        cols[name] = v
     for i in range(1, 8):
         k = 3 + i * 4
         c = rng.choice([f"cat{j}" for j in range(k)], n_rows).astype(object)
         c[rng.random(n_rows) < 0.03 * i] = None
-        cols[f"cat_feature_{i:02d}"] = c
+        cols[_NATURAL_CATEGORICAL[i - 1] if natural_names else f"cat_feature_{i:02d}"] = c
     cols["is_active"] = rng.random(n_rows) > 0.4
     cols["signup_date"] = pd.to_datetime("2024-01-01") + pd.to_timedelta(
         rng.integers(0, 700, n_rows), unit="D"
@@ -191,6 +215,9 @@ def main() -> int:
     ap.add_argument("--frame-columns", type=int, default=None,
                     help="Build a frame this wide. The Tier A scalability knob: "
                          "10/50/100/500/1000 gives the enum cost curve.")
+    ap.add_argument("--natural-names", action="store_true",
+                    help="Same frame, distinct column names with no shared suffix "
+                         "(review item P0-4). Use a separate --log-dir.")
     ap.add_argument("--temperature", type=float, default=1.0)
     ap.add_argument("--log-dir", type=pathlib.Path, default=RUNS)
     ap.add_argument("--dry-run", action="store_true",
@@ -219,7 +246,9 @@ def main() -> int:
         return 0
 
     arms = args.arm or ["bare"]
-    evidence = build_profile_evidence(seed=args.seed, frame_columns=args.frame_columns)
+    evidence = build_profile_evidence(
+        seed=args.seed, frame_columns=args.frame_columns, natural_names=args.natural_names
+    )
     trimmed = compact(evidence, max_columns=args.max_columns)
     bound = PROFILE.bind(trimmed)
     ehash = evidence_hash(trimmed)
@@ -317,6 +346,7 @@ def main() -> int:
                     "n_planned": args.n,
                     "max_columns": args.max_columns,
                     "frame_columns": args.frame_columns,
+                    "frame_names": "natural" if args.natural_names else "suffixed",
                     "columns": res["columns_referenced"],
                     "claims": res["claims"],
                     "raw_columns": res["raw_columns_referenced"],
