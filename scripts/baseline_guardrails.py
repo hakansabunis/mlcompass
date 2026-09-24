@@ -476,6 +476,11 @@ def run_guardrails_once(
         "columns": [str(c) for c in (user_facing.get("columns_referenced") or [])],
         "claims": [_as_dict(c) for c in (user_facing.get("claims") or []) if _as_dict(c)],
         "verdict": str(user_facing.get("verdict", "")),
+        # The free-text channel. The model's payload carries it and the
+        # validated output keeps it; this dict dropped it, so every
+        # Guardrails record logged an empty narration and the harness's
+        # fallback had nothing to copy.
+        "narration": str(user_facing.get("narration", "")),
         # The Tier-B-catch analogue: how often a deterministic check fired.
         "rejections": failed,
         "rejection_kinds": kinds,
@@ -498,6 +503,7 @@ def run_guardrails_once(
                 "columns": [str(c) for c in (last_payload.get("columns_referenced") or [])],
                 "claims": [_as_dict(c) for c in (last_payload.get("claims") or []) if _as_dict(c)],
                 "verdict": str(last_payload.get("verdict", "")),
+                "narration": str(last_payload.get("narration", "")),
             },
         },
     }
