@@ -197,104 +197,104 @@ protocols, the amendment log and the instrument faults.
 \section{Background and Related Work}\label{sec:related}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\subsection{Faithfulness, tool use and constrained generation}
+\subsection{Closed-world faithfulness, and where it has been measured}
 
-Ji \emph{et al.}~\cite{ji} and Huang \emph{et al.}~\cite{huang} survey
-hallucination; the failure we target is extrinsic in their taxonomy, but with
-structure the general problem lacks: the source is a finite dictionary, so the
-check is decidable. Xu~\cite{xu2025openworld} argues hallucination is
-unavoidable in an open world while a closed world admits mitigation;
-evidence-closed narration is a shipped closed world in which the mitigable case
-is eliminated on the verified channels. Luo \emph{et al.}~\cite{luo2026removal}
-use the same soundness and incompleteness vocabulary for a model's own
-explanations, where the object is the model's reasoning and the intervention is
-on the input. Data-to-text work scores generated text against a
-table~\cite{dhingra2019parent,maynez2020faithfulness}; what it lacks is a
-producer small enough to enumerate and pin into the call.
+Definition~\ref{def:closed} is a closed-world assumption~\cite{reiter1978closed}
+over $E$: what the evidence does not carry is, for the narrator, false. The
+setting is not new. Data-to-text and meaning-representation-to-text generation
+narrate a finite record and measure faithfulness against it offline --- slot
+error rate over the input's slots~\cite{dusek2020e2e}, relation-generation
+precision against the source table~\cite{wiseman2017challenges}, and
+table-grounded scoring~\cite{dhingra2019parent}. In the taxonomy of Ji
+\emph{et al.}~\cite{ji} and of Maynez \emph{et al.}~\cite{maynez2020faithfulness},
+a name absent from $E$ is an \emph{extrinsic} error and a real evidence item
+asserted in the wrong place is an \emph{intrinsic} one; we use \emph{invented}
+and \emph{misfiled} for these two classes on a structured channel, and do not
+claim either category as new. Xu~\cite{xu2025openworld} argues that
+hallucination is unavoidable under an open world and mitigable under a closed
+one; Luo \emph{et al.}~\cite{luo2026removal} repair a model's own explanations
+by removal. What an evidence-closed tool narrator adds to this line is only
+where the check runs: at call time, on the payload the user will see, rather
+than offline on a corpus.
 
-ReAct~\cite{react}, Toolformer~\cite{toolformer} and tool-integration
-standards~\cite{mcp} govern how an agent \emph{acts}, not what it may
-afterwards \emph{say} about a tool's output. Provenance surveys reconstruct
-evidence support from traces after the fact~\cite{wang2026agenttraces}; Ng
-\emph{et al.}~\cite{ng2026runtimecontract} argue independently that agent
-safety belongs in a runtime contract. We instantiate one at that boundary.
+Tool-use frameworks~\cite{react,toolformer,mcp} govern how an agent acts, not
+what it may afterwards say about a tool's output. Provenance work reconstructs
+evidence support from traces after the fact~\cite{wang2026agenttraces}, and Ng
+\emph{et al.}~\cite{ng2026runtimecontract} argue that agent safety belongs in
+a runtime contract. The enforcement mechanism itself is classical: Tier~B is a
+postcondition in the sense of Design by Contract~\cite{meyer1992dbc}, and
+deleting what violates it is \emph{suppression}, the weakest edit an edit
+automaton may make~\cite{ligatti2005edit}; which properties a monitor can
+enforce at all is characterised by Schneider~\cite{schneider2000enforceable}
+and Falcone \emph{et al.}~\cite{falcone2012verify}.
 
-Outlines~\cite{outlines}, LMQL~\cite{lmql}, grammar-constrained
-decoding~\cite{gcd} and Guidance~\cite{guidance} constrain decoding, and
-provider APIs validate tool calls against a declared schema~\cite{structured}.
-Varying a constraint with the input is not new: \cite{gcd} does it, and
-CHyD~\cite{signe2026chyd} restricts generation to spans present in the
-retrieved context --- but needs logit access, which a commercial endpoint
-withholds. What differs here is what the domain is bound to, \emph{when}, and
-who enforces it: a deterministic producer's output, bound at call time rather
-than at curation time~\cite{ren2026egvar} or decode time, and enforced in host
-code.
-
-\subsection{Where the enforcement lives}\label{sec:taxonomy}
+\subsection{Where the enforcement lives, and when it is bound}\label{sec:taxonomy}
 
 \begin{table}[t]
-\caption{Where enforcement lives. Only the last three rows are available behind
-a commercial endpoint, and only the last binds its admissible set to the
-evidence at the moment of the call.}
+\caption{Where enforcement lives and when its admissible set is bound. The
+mechanism of this paper shares its binding time and locus with practitioner
+validate-and-reask tools; what differs is the domain (field-indexed, derived
+from a deterministic producer) and what is measured, not the mechanism.}
 \label{tab:taxonomy}
 \centering
 \footnotesize
-\setlength{\tabcolsep}{3.4pt}
-\begin{tabular}{@{}llll@{}}
+\setlength{\tabcolsep}{2.6pt}
+\begin{tabular}{@{}lllll@{}}
 \toprule
-Position & Needs & Guarantees & Example \\
+Locus & Bound & Logits & Guarantees & Example \\
 \midrule
-Decode, token & logits & grammaticality & \cite{outlines, gcd} \\
-Decode, closed loop & logits & --- (empirical) & \cite{cruz2026atlasrtc} \\
-Decode, span & logits & verbatim spans & \cite{signe2026chyd} \\
-Provider schema & --- & structure, uncertifiable & \cite{structured} \\
-Code, author-time & --- & policy contracts & \cite{ahn2026harness} \\
-Code, accumulated & --- & per-claim provenance & \cite{du2026ledgermind} \\
-\textbf{Code, call-time} & \textbf{---} & \textbf{faithfulness to $E$}
-  & \textbf{here} \\
+Decode, grammar & author/call & yes & grammar & \cite{outlines,gcd,scholak2021picard,poesia2022synchromesh} \\
+Decode, span & call & yes & verbatim spans & \cite{signe2026chyd} \\
+Decode, closed loop & call & yes & --- (empirical) & \cite{cruz2026atlasrtc} \\
+Provider schema & author/call & no & structure, uncertified & \cite{structured} \\
+Code, policy & author & no & policy contract & \cite{ahn2026harness} \\
+Code, context + reask & call & no & what the validator checks & \cite{liu2023instructor,guardrailsai} \\
+Code, ledger & accumulating & no & per-claim provenance & \cite{du2026ledgermind} \\
+\textbf{Code, field-indexed} & \textbf{call} & \textbf{no} & \textbf{(C1)--(C2), (C3) flagged} & \textbf{here} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:taxonomy} locates this paper by where the thing that cannot be
-talked out of its job sits. The logit-level rows are stronger than anything we
-do and unavailable behind the endpoints we target.
-ATLAS-RTC~\cite{cruz2026atlasrtc} intervenes during decoding with masking and
-rollback, gaining 20--37.8 points of first-attempt success; its finding that
-many failures are decoding artefacts is the most plausible mechanism we know
-for our paraphrase sweep. Life-Harness~\cite{xu2026lifeharness} improves 116 of
-126 settings by evolving the harness alone, empirically rather than by
-guarantee, and Le~\cite{le2026schemakey} shows schema-key wording moves
-accuracy in both directions --- a reason to distrust an uncertified schema
-(Section~\ref{sec:rq3-degenerate}).
+Decode-time methods bind constraints to the input too: grammar-constrained
+decoding admits input-dependent grammars~\cite{gcd}, PICARD and Synchromesh
+check partial programs against a database schema or a program's
+scope~\cite{scholak2021picard,poesia2022synchromesh}, and
+CHyD~\cite{signe2026chyd} restricts generation to spans of the retrieved
+context. All need the token distribution, which a commercial endpoint
+withholds. ATLAS-RTC~\cite{cruz2026atlasrtc} intervenes during decoding with
+masking and rollback, and Life-Harness~\cite{xu2026lifeharness} improves 116 of
+126 settings by evolving the harness, both empirically rather than by
+guarantee; Le~\cite{le2026schemakey} shows schema-key wording moves accuracy in
+both directions, a reason to distrust an uncertified schema.
 
-\textbf{Closest in design.} Ahn and Kim~\cite{ahn2026harness} run our
-experimental design on a policy contract --- determinism in code, model fixed,
-enforcement layer varied --- and find what we find: prompts let violations
-through, a bolt-on guardrail over-refuses (88/120 utility against 120/120), and
-only code-owned enforcement keeps both, over 270 runs on three hosted models.
-Their contract is fixed when the harness is written; ours has no admissible
-domain until the evidence exists. An author-time contract cannot say ``cite
-only these ten column names''.
+The row this paper occupies is not empty. Instructor~\cite{liu2023instructor}
+validates a structured response against context supplied at call time and
+re-asks on failure, and Guardrails~AI~\cite{guardrailsai} and NeMo
+Guardrails~\cite{nemo} ship validate-and-reask loops whose validators may read
+call-time metadata. Our mechanism is an instance of that practice, and we do
+not claim it as new. What we add is (a) the field-indexed admissible domain,
+derived from a deterministic producer's output, that separates misfiling from
+invention and that a generic membership check can then enforce; (b)
+measurements of which failure actually occurs, what enforcement costs, and
+which alternatives reach the same place; and (c) a shipped artifact whose
+narration path is the one measured.
 
+\textbf{Closest in design.} Ahn and Kim~\cite{ahn2026harness} vary the
+enforcement layer with the model fixed and find what we find: prompts let
+violations through, a bolt-on guardrail over-refuses (88/120 utility against
+120/120), and code-owned enforcement keeps both, over 270 runs on three hosted
+models. Their contract is policy fixed when the harness is written; ours has
+no admissible domain until the evidence exists.
 \textbf{Closest in mechanism.} LedgerMind~\cite{du2026ledgermind} lets claims
 cite only active ledger entries, checks entity and numeric grounding, and
-restricts repair to transitions that cannot add content without provenance.
-Three of those are our Tier~B channels and the fourth is our repair asymmetry
-(Proposition~\ref{prop:asym}); we derived it independently and claim no
-priority. Their ledger accumulates, so the admissible set moves; ours is
-complete before the call, which is what lets the domain go into the schema as
-an enum.
-
-\textbf{Closest in domain.} EviBound~\cite{chen2025evibound} governs an ML
-research agent with an approval gate on acceptance-criteria schemas and a
-verification gate that queries MLflow for a run, its artifacts and a terminal
-status, optionally checking named metric values, with bounded retries; it
-reports 0\,\% hallucination on eight tasks, eleven months before our
-measurements. The two-gate shape, bounded retry and deterministic post-check
-are shared. EviBound verifies that a claimed \emph{action} occurred; we verify
-what may be \emph{said} about a measurement already taken, and bind that domain
-into the call's schema before the model writes.
+restricts repair to transitions that add no unprovenanced content --- three of
+our channels and our repair asymmetry (Proposition~\ref{prop:asym}), derived
+independently; its ledger accumulates, ours is complete before the call.
+\textbf{Closest in domain.} EviBound~\cite{chen2025evibound} gates an ML
+research agent by querying MLflow for a run, its artifacts and a terminal
+status, with bounded retries, eleven months before our measurements. It
+verifies that a claimed \emph{action} occurred; we constrain what may be
+\emph{said} about a measurement already taken.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Evidence-Closed Narration}\label{sec:theory}
@@ -315,41 +315,45 @@ filter.
 A single entity universe $A_E$ --- every string the evidence mentions --- is
 the obvious formalisation and the wrong one: under it, a \texttt{column} field
 reading \texttt{r2} is sound, because \texttt{r2} is in the evidence as the
-name of the \emph{metric}. Section~\ref{sec:rq1} shows this case, not
-invention, is what the unconstrained narrator does. We therefore index
-admissibility by field. For the schema's reference-bearing fields $F$ --- in
-the leakage contract \texttt{columns\_referenced}, \texttt{claims[].column} and
-\texttt{claims[].statistic} --- $A_{E,f}\subseteq A_E$ with
-$A_E=\bigcup_{f\in F}A_{E,f}$, and the column and statistic domains are
-disjoint. A token is \emph{misfiled} when it is in $A_E$ but not in $A_{E,f}$
-for its field $f$, and \emph{invented} when it is in neither. Tier~A binds
-$A_{E,f}$, not $A_E$, into each field's enum.
+name of the \emph{metric}. We therefore index admissibility by field.
 
 \subsection{The contract, stated as an invariant}
 
+Let $F$ be the schema's reference-bearing fields, each a JSON path whose leaves
+are compared as strings --- in the leakage contract
+\texttt{columns\_referenced[*]}, \texttt{claims[*].column} and
+\texttt{claims[*].statistic}. $E$ determines an admissible set $A_{E,f}$ per
+path, with the column and statistic domains disjoint, and a value table $V_E$
+with $\mathrm{dom}(V_E)\subseteq A_{E,\mathrm{col}}\times A_{E,\mathrm{stat}}$.
+A leaf is \emph{misfiled} when it lies in $\bigcup_f A_{E,f}$ but not in the
+$A_{E,f}$ of its own path, and \emph{invented} when it lies in none. A response
+\emph{commits} when its verdict is admissible and not the abstention
+\texttt{cannot\_determine}; the entities it \emph{references} are its leaves at
+the column paths.
+
 \begin{definitionx}[Evidence-bound runtime contract]\label{def:contract}
-Let $E$ define field-indexed admissible sets $\{A_{E,f}\}_{f\in F}$, a value
-table $V_E$ over (entity, statistic) pairs, a tolerance $\tau$, and an anchor
-$a^*$. A structured response $r$ \emph{satisfies} the contract
-$\mathcal{C}_E$ if
-\textbf{(C1)} every token $x$ that $r$ places in a field $f \in F$ has
-$x \in A_{E,f}$;
-\textbf{(C2)} every structured claim $(e,s,v)$ in $r$ has
-$(e,s) \in \mathrm{dom}(V_E)$ and $|v - V_E(e,s)| \le \tau$; and
-\textbf{(C3)} if $r$ commits to a verdict, $a^*$ is among the entities $r$
-references.
+A structured response $r$ \emph{satisfies} $\mathcal{C}_E$, with tolerance
+$\tau$ and anchor $a^*$, if \textbf{(C1)} every leaf of $r$ at a path $f \in F$
+lies in $A_{E,f}$; \textbf{(C2)} every claim $(e,s,v)$ in $r$ has
+$(e,s) \in \mathrm{dom}(V_E)$, $v$ a finite number, and
+$|v - V_E(e,s)| \le \tau$; and \textbf{(C3)} if $r$ commits, $a^*$ is among the
+entities $r$ references.
 \end{definitionx}
 
-Tier~B enforces (C1) and (C2) on the structured channels it returns: a response
-violating either is sent back, at most twice, with the violation named, and
-whatever still violates it is deleted. Hence \emph{no structured claim that
+The property (C1)--(C2) names is \emph{referential and value soundness with
+respect to $E$} on the structured channels. It is not faithfulness in the
+general sense: the verdict, the free-text narration and the suggested checks
+are outside it, and $E$ itself is trusted. Tier~B enforces (C1) and (C2): a
+response violating either is sent back, at most twice, with the violation
+named, and whatever still violates it is deleted. A response with no
+admissible verdict is retried the same way and, if it persists, aborted rather
+than completed on the narrator's behalf. Hence \emph{no structured claim that
 Tier~B returns violates (C1) or (C2)}. That is a property of the verifier,
-established by construction and pinned by offline mutation tests
-(Section~\ref{sec:rq3}), not an empirical rate; what a battery measures on an
-enforced arm is how often the verifier acted and what that cost
-(Table~\ref{tab:retry}). We report a clean enforced arm as \emph{none observed
-in $N$} with its interval, never as a rate of zero. (C3) cannot be enforced
-the same way.
+checked by 36 offline mutation tests and by a property-based search over
+$10^6$ generated (evidence, response) pairs that the analysis plan registered
+before the study (Section~\ref{sec:instruments}); it is not an empirical rate,
+and we report an enforced arm's clean result as what the verifier did, not as
+an interval. (C3) cannot be enforced the same way.
 
 \begin{proposition}[Repair asymmetry]\label{prop:asym}
 Soundness is safe-repairable by deletion: the projection $\Pi_E(r)$ removing
@@ -363,32 +367,20 @@ Deletion preserves membership and tolerance and can remove every violating
 element. For completeness, deleting the verdict would discharge the
 obligation, but the schema requires \texttt{verdict}, and substituting
 \texttt{cannot\_determine} would attribute to the narrator a stance it did not
-take; both premises are stipulations of this contract, not facts about
-narration. Given them, every remaining repair inserts an anchor reference
-absent from $r$.
+take; both premises are stipulations of this contract, which the artifact
+honours by aborting rather than substituting. Given them, every remaining
+repair inserts an anchor reference absent from $r$.
 \end{IEEEproof}
 
-So Tier~B strips unsound content and only \emph{flags} a persistent omission.
-This is a monotonicity argument, not the safety/liveness result it
-resembles~\cite{schneider2000enforceable,alpern1985liveness}, and it runs
-opposite to the security case: over a narrator, insertion is inadmissible,
-because an inserted reference fabricates attribution rather than correcting an
-action.
-
-\begin{proposition}[Linear-time verification]\label{prop:linear}
-With $m=\sum_f|A_{E,f}|$, deciding (C1)--(C3) for a structured response $r$
-takes $O(|r|)$ expected time after $O(m+|V_E|)$ preprocessing.
-\end{proposition}
-
-\begin{IEEEproof}
-Hash each $A_{E,f}$ and $V_E$ once; each entity, claim and anchor check is then
-one hashed lookup with keys of bounded length.
-\end{IEEEproof}
-
-The proposition is a feasibility property, not a contribution. What is not
-shallow is the indexing: an earlier version of our own scorer keyed $V_E$ on
-the column alone and compared every claim against that column's correlation,
-whatever statistic it named (Section~\ref{sec:instruments}).
+So Tier~B strips unsound content and only \emph{flags} a persistent omission:
+suppression without insertion, in edit-automaton terms~\cite{ligatti2005edit}.
+It runs opposite to the security case, where insertion is simply a stronger
+primitive; over a narrator an inserted reference fabricates attribution. The
+check is linear: hashing each $A_{E,f}$ and $V_E$ once makes every entity,
+claim and anchor test one lookup, so a response costs $O(|r|)$ after
+$O(\sum_f|A_{E,f}|+|V_E|)$ preprocessing. That is a feasibility property, not a
+contribution; what is not shallow is keying $V_E$ on the pair, which our own
+scorer once did not (Section~\ref{sec:instruments}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{The Artifact}\label{sec:contract}
@@ -413,24 +405,27 @@ Figure~\ref{fig:contract} splits the system at a trust boundary. On one side is
 everything deterministic: the pure-Python evidence producer, $E$, the Tier~B
 verifier and the user-facing output; on the other, the LLM narrator, untrusted
 whoever serves it. The system has three \emph{layers} --- evidence production;
-a narrator told the rules in words (Section~\ref{sec:rq4} measures what that is
-worth); and the evidence-bound schema, through whose
+a narrator told the rules in words (Section~\ref{sec:rq3} measures what that
+is worth); and the evidence-bound schema, through whose
 \texttt{submit\_investigation} tool answers arrive --- and the contract spans
 the last two as two enforcement \emph{tiers}. \textbf{Tier~A} restricts
 \texttt{columns\_referenced} and \texttt{claims[].column} by \texttt{enum}s
-built from $E$ at call time. \textbf{Tier~B} re-checks the returned tool input
-in plain code for \emph{entity soundness} (C1), \emph{value soundness} within
-$\tau=0.005$ (C2), and \emph{completeness}: a verdict other than
-\texttt{cannot\_determine} must address the top-ranked candidate (C3).
+built from $E$ at call time. It is a request: on \texttt{deepseek-chat} every
+Tier~A arm in the main battery ran without the provider's strict decoding
+flag, and the one arm run with it is reported separately. \textbf{Tier~B}
+re-checks the returned tool input in plain code for (C1), for (C2) within
+$\tau=0.005$, and for (C3).
 
 A failed check earns a corrective retry naming the offending items (budget 2).
 Whatever is still unsound is stripped, a persistent omission is flagged, and
 completeness is re-checked after stripping, because deleting an unsound claim
-can orphan the anchor. Every other failure closes the same way: a missing tool
-call or required field is retried and then aborted, leaving the deterministic
-evidence panel --- printed unconditionally --- as all the user sees, and a
-provider exception propagates rather than degrading. No unvalidated structured
-claim is reachable through any path.
+can orphan the anchor. A response carrying no admissible verdict --- no tool
+call, unparsable arguments, a verdict outside the enum --- is retried with a
+fixed correction and, if it persists, aborted: no verdict, claim or prose is
+shown, and the deterministic evidence panel, printed unconditionally, is what
+the user sees. A provider exception propagates. The abort path was added after
+review; in the records it matters for one response in 5{,}002, on an
+unenforced arm, which the earlier code passed as an empty answer.
 
 \subsection{One contract, two instances}\label{sec:generic}
 
@@ -442,29 +437,44 @@ domains, value table and anchor, and the verifier, stripper, retry text and
 schema builder name no task. Leakage is one spec of about forty lines; a
 dataset profiler is a second, with every column of the frame admissible,
 thirteen statistics per column, and a statistic set computed per call because
-a categorical column carries a cardinality and no mean.
+a categorical column carries a cardinality and no mean. The profile narrator
+runs in the measurement harness; the leakage narrator is the one the product
+ships.
 
 Extraction exposed what one task could not: \textbf{the value table must be
 keyed on $(\text{entity}, \text{statistic})$}. With one statistic per column
 the two keyings coincide; in a profile, \texttt{age.mean} is $38.5$ and
 \texttt{age.missing\_pct} is $0.012$, and an entity-keyed table checks a claim
-about one against the other --- the scorer defect of
+about one against the other --- a scorer defect of
 Section~\ref{sec:instruments}, reappearing in the production path. And the
 evidence's surface shape must match the flat claim slot: narrators handed a
 nested quantity invent a flattening, and they invented five.
 
-\subsection{What the invariant does not cover}
+\subsection{What the invariant does not cover, and a threat model}
 
-\emph{Within the validated channels}, any response the contract returns cites
-only entities in $E$ and quotes only values within $\tau$ of it, whoever the
-provider is. Three things fall outside, stated here rather than only among the
-limitations. \textbf{Free text}: the renderer prints it beneath the validated
-content, marked unverified; Section~\ref{sec:threats} measures it.
-\textbf{Correctness of $E$}: if \texttt{detect\_leakage} mis-ranks a candidate,
+Four things fall outside the invariant, and we state them here rather than
+only among the limitations. \textbf{The verdict and the prose.} The verdict is
+checked for admissibility, not for agreement with $E$: a narrator may cite the
+planted leak and still answer \texttt{score\_legitimate}. The free-text
+narration and the suggested checks are printed beneath the validated content,
+marked unverified; Section~\ref{sec:threats} measures what they carry.
+\textbf{Correctness of $E$.} If \texttt{detect\_leakage} mis-ranks a candidate,
 the contract faithfully narrates a wrong finding; the producer is trusted, not
-verified. \textbf{Other narrators}: on the tool-server surface~\cite{mcp} the
-calling model in the user's editor interprets the same evidence ungoverned;
-mlcompass guarantees its own narration and no one else's.
+verified, and (C3) names one anchor, not every finding. \textbf{Other
+narration surfaces.} The product prints two other narrations of the same
+evidence that no contract governs --- an interpretation panel shown first by
+\texttt{evaluate~--llm}, and a tool-server command whose calling model
+narrates in the user's editor~\cite{mcp} --- both marked unverified;
+mlcompass guarantees the contract panel and nothing else it prints.
+\textbf{Adversarial evidence.} Column names come from the user's data and
+reach the schema's enums, the prompt, the corrective retry and the rendered
+panel. Membership in $E$ does not make a string safe: a crafted header is a
+prompt-injection vector~\cite{greshake2023injection}, and a schema's keys and
+enums are part of the model's instructions~\cite{le2026schemakey}. The
+contract guarantees only that what is shown is in $E$. Rendered strings are
+escaped after review found that a header written as markup restyled the
+panel; bounding name length and screening instruction-like headers before
+binding are not implemented.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Study Design}\label{sec:design}
@@ -1000,201 +1010,7 @@ enforces it may stop enforcing. Tier~B is what can be certified, because it
 runs in our process over a returned payload.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{RQ5: Do Deterministic Findings Reduce Predefined Defect
-Classes?}\label{sec:rq5}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\begin{table}[t]
-\caption{Flagged defects, summed over each (model, arm) cell, and per scored
-run. The arms do not share a denominator: one \texttt{control+revise} run is
-excluded, so that arm has 35 scored scripts against 36.}
-\label{tab:ab}
-\centering
-\begin{tabular}{@{}lrrrr@{}}
-\toprule
-Model & \texttt{ctrl} & \texttt{+rev} & \texttt{adv} & \texttt{adv+aud} \\
-\midrule
-deepseek-flash        & 13 & 11 & 13 & \textbf{4} \\
-ministral-8b          &  6 &  6 &  2 & \textbf{0} \\
-qwen2.5-7b (local)    &  6 &  9 &  4 & \textbf{1} \\
-gpt-5.4-mini          &  6 &  9 &  5 & \textbf{3} \\
-\midrule
-\textbf{total}        & \textbf{31} & \textbf{35} & \textbf{24} & \textbf{8} \\
-$N$                   & 36 & 35 & 36 & 36 \\
-\textbf{per run}      & \textbf{0.86} & \textbf{1.00} & \textbf{0.67} & \textbf{0.22} \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-Table~\ref{tab:ab} gives the panel: 143 scored runs, four models, three
-datasets. The direction is consistent across every model.
-
-\subsection{Which rules moved, and which never fire}
-
-Section~\ref{sec:rq1} argues that a blended rate hides its composition; the
-same obligation applies here, so Table~\ref{tab:perrule} decomposes the fall.
-
-\begin{table}[t]
-\caption{The six-item checklist, per rule. Two rules carry the whole 23-defect
-fall; three never fire on this panel and one cannot.}
-\label{tab:perrule}
-\centering
-\begin{tabular}{@{}lrrrr@{}}
-\toprule
-Rule & \texttt{ctrl} & \texttt{+rev} & \texttt{adv} & \texttt{adv+aud} \\
-\midrule
-\texttt{leak\_duplicate\_rows}        & 24 & 24 & 14 & \textbf{8} \\
-\texttt{no\_validation}               &  7 & 10 &  9 & \textbf{0} \\
-\texttt{no\_seed}                     &  0 &  1 &  0 & \textbf{0} \\
-\texttt{leak\_fit\_before\_split}     &  0 &  0 &  1 & \textbf{0} \\
-\texttt{target\_in\_features}         &  0 &  0 &  0 & \textbf{0} \\
-\texttt{wrong\_metric\_for\_imbalance}&  0 &  0 &  0 & \textbf{0} \\
-\midrule
-\textbf{total}                        & \textbf{31} & \textbf{35} & \textbf{24} & \textbf{8} \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-Two rules carry the whole 23-defect fall, and one \emph{cannot fire at all}:
-\texttt{wrong\_metric\_for\_imbalance} has a precondition --- a minority class
-below 20\,\% --- that is false of all three datasets. A sixth of the instrument
-is inert on this panel, and we report the instrument as materially two rules
-rather than six.
-
-That matters for the strongest objection to this benchmark, which is
-treatment--outcome vocabulary overlap: the \texttt{advise+audit} arm is handed
-findings naming the same rules the outcome is scored on. An earlier draft
-offered a defence --- the largest single contributor,
-\texttt{leak\_duplicate\_rows} (24~$\rightarrow$~8), is named by no audit rule
---- and the next section reports the arm that tests it and the attribution we
-withdrew as a result.
-
-\subsection{The extra attempt is worth nothing, and the findings are worth
-less than we claimed}\label{sec:rq5-rubric}
-
-The obvious objection to a treatment arm that revises is that it differs from
-control in \emph{two} ways: it is told what is wrong, and it gets a second
-attempt. The \texttt{control+revise} arm exists to answer it, and was added as
-a numbered amendment after the first battery, run only once that amendment was
-written.
-
-A second attempt on its own does nothing: $31 \rightarrow 35$, one model down,
-one level and two up, noise around no effect.
-
-\paragraph{A fifth arm, and it does not go our way}
-That pair separates the attempt from the findings and leaves the second
-confound standing. \texttt{control+revise+rubric} holds the rubric and
-withholds the findings: its second turn is a frozen constant listing the six
-scored concerns, each phrased as a question about the concern and never as a
-claim about this script, with an explicit sentence saying the list is generic.
-It was pre-registered as amendment~A17, which recorded before the run that a
-result near 8 would mean the fall was largely the rubric and this section's
-causal claim would have to be rewritten.
-
-It landed at \textbf{1 flagged defect over 32 scored runs}
-(Table~\ref{tab:rubric}) against \texttt{advise+audit}'s 8 over 36. Telling the
-model what it will be scored on, with nothing said about its own code,
-outperforms handing it the tool's actual findings. \textbf{So the
-$31 \rightarrow 8$ fall is not attributable to the tool's findings on this
-metric, and we withdraw that attribution.} The vocabulary overlap is a confound
-large enough to account for the whole effect on the checklist.
-
-\begin{table}[t]
-\caption{The fifth arm, and where it pays. A script with no flagged defect is
-worth nothing if it does not run, so the last column is the outcome a
-practitioner receives: executes \emph{and} carries no flagged defect. Every rate is over the 36 planned runs of its arm, including calls that returned no script --- a run that produced no code did not execute, and shrinking the denominator to hide that would be the error this paper objects to elsewhere.}
-\label{tab:rubric}
-\centering
-\begin{tabular}{@{}lrrrr@{}}
-\toprule
-Arm & defects & per run & runnable & useful \\
-\midrule
-\texttt{control}               & 31 & 0.86 & 78\,\% & 22\,\% \\
-\texttt{control+revise}        & 35 & 1.00 & 81\,\% & 19\,\% \\
-\texttt{advise}                & 24 & 0.67 & 81\,\% & 39\,\% \\
-\texttt{advise+audit}          & \textbf{8} & 0.22 & \textbf{83\,\%} & \textbf{64\,\%} \\
-\texttt{control+revise+rubric} & \textbf{1} & \textbf{0.03} & \textbf{47\,\%} & 44\,\% \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\paragraph{The rubric arm pays where the checklist cannot see}
-Every other arm executes between 78\,\% and 83\,\% of the time. The rubric arm
-executes 17 of 36, \textbf{47\,\%} [32, 63]. Handed six conditions to satisfy
-and nothing about its own code, the model writes something that satisfies the
-checklist and does not run --- Goodhart's law inside our own instrument,
-measurable only because the benchmark records execution separately from the
-checklist, and the first evidence in the study of what optimising against six
-deterministic rules costs.
-
-On the joint outcome --- runs \emph{and} carries no flagged defect ---
-\texttt{advise+audit} is first at \textbf{64\,\%} [48, 78] against the rubric
-arm's 44\,\% [30, 60]. Those intervals overlap substantially. At $N=36$ this
-design separates the arms \emph{weakly} and we claim no more: the tool's
-findings buy a better joint outcome than the rubric alone, on evidence a larger
-panel could overturn.
-
-The claim below is that self-revision repaired nothing. It is true, and this
-arm tells us why. The within-arm view is sharper. A
-net count cannot carry the claim, because a run that repairs one rule and
-introduces another shows no movement, so we rescored both preserved sides of
-the turn rule by rule. Across all 35 pairs, \textbf{no rule flagged before the
-revision was clean after it}: 24 \texttt{leak\_duplicate\_rows}, 8
-\texttt{no\_validation} and 1 \texttt{no\_seed} persisted unchanged, and the
-two runs that got worse did so by introducing \texttt{no\_validation} where the
-first attempt had none. Zero repairs, two regressions, thirty-three unchanged.
-
-\textbf{Self-revision without the tool's findings did not repair a single
-defect in 35 runs.} The rubric arm, same models and datasets, repaired
-\textbf{21 of 25} and regressed none. So the reading this invites --- that
-models cannot repair their own code without external feedback --- is the wrong
-one, and our earlier draft made it. The correct reading is narrower:
-\textbf{a model asked to review its own script with nothing named fixes
-nothing; a model told what to look for fixes most of it, whether or not anyone
-tells it what is actually wrong with the code in front of it.}
-
-That still reads as a replication rather than a discovery:
-Huang \emph{et al.}~\cite{huang2024selfcorrect} show
-models cannot reliably correct their own reasoning without external feedback,
-and Olausson \emph{et al.}~\cite{olausson2024selfrepair} find self-repair in
-code generation is bottlenecked by the model's ability to critique its own
-code. Our contrast substitutes a \emph{deterministic} critic for a stronger
-model, on a task where the critic can be exactly right.
-
-\subsection{Execution, and what the arms cost}
-
-A script with fewer flagged defects is not worth much if it does not run.
-Across the first four arms, 27 of 143 scripts failed to execute and a further 24 ran but
-saved an artefact the scorer could not load. Per arm, execution failures are
-8/6/7/6 and unloadable artefacts 6/7/7/4, so \texttt{advise+audit} has the
-fewest failures and the most scored runs (26 against 22): the defect fall is
-not an artefact of that arm emitting less runnable code.
-
-Cost is the other thing a practitioner needs. Mean tokens per run are 1{,}627
-(\texttt{control}), 4{,}747 (\texttt{control+revise}), 2{,}327
-(\texttt{advise}) and 5{,}372 (\texttt{advise+audit}). The contract's price
-here is a longer prompt and a second turn, not verification overhead --- Tier~B
-is the linear-time check of Proposition~\ref{prop:linear} and does not appear
-in the timings.
-
-\subsection{The held-out score shows no consistent improvement}
-
-Across the nine (model, dataset) cells with both ends scored, the held-out
-score moved better in three, worse in three, and within $\pm0.01$ in three. No
-direction. The spread inside an arm frequently exceeds the gap between arms:
-one arm spans $0.2122$ across three repetitions while its median sits $0.0002$
-above control.
-
-We state the conclusion at the strength the data supports. \textbf{No
-consistent improvement in held-out score could be shown.} That is not the same
-as showing there is no effect, and with only 70 of 108 runs carrying a score
-this design cannot establish a null. The frozen protocol named ``the process
-improves, the metric does not'' as a probable and publishable outcome
-\emph{before any data existed}, and nothing here refuted it; but a
-pre-registered prediction that survives is not a measured null, and we do not
-report it as one.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{RQ6: Does the Contract Transpose?}\label{sec:rq6}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
