@@ -1606,7 +1606,7 @@ are inexpressible in a schema; this measures it.
 Adding Tier~B closes the channel. \texttt{P-CONTRACT} shows no violation in
 200 responses, with six
 catches, five on the value channel and one on the entity channel.
-\texttt{P-STRESS} --- verification with the enum removed entirely --- is also
+\texttt{P-STRESS} --- verification with the enum removed entirely --- also
 shows none, and fires \textbf{thirteen} times to get there: eleven value violations
 and two responses carrying both an entity and a value violation. More reaches
 the verifier when nothing steers the model, and none of it reaches the user.
@@ -1620,9 +1620,15 @@ One catch is worth flagging against ourselves. The single \emph{entity} catch
 occurred in the arm whose schema carries the column enum, where Tier~A should
 have made it impossible. We cannot say from the record whether the provider
 ignored the enum it was sent, because the run record preserves only the final
-attempt's payload and the violation was repaired on the retry. The harness now
-keeps every attempt; this one is reported as unexplained rather than as the
-provider-non-compliance it looks like.
+attempt's payload and the violation was repaired on the retry. We re-ran the
+arm with every attempt recorded: 200 further responses, eight catches, all on
+the value channel, and no entity violation on any first attempt. The enum held
+in 399 of 400 first attempts across the two runs, and the one exception stays
+unexplained rather than being reported as the provider non-compliance it looks
+like. The re-run adds one catch the schema could not have prevented from either
+side: \texttt{cat\_feature\_03.iqr\_count}, whose column and statistic are each
+admissible but whose pair the evidence does not carry. A per-field enum cannot
+express that; (C2)'s domain check does.
 
 \subsection{What this does and does not establish}
 

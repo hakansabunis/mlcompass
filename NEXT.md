@@ -87,8 +87,9 @@ Writing-level points 1, 2, 3, 4, 5, 8, 10, 11, 13, 14 are **done** (commit
 
 Also open, not from the senior list:
 
-- **τ = 0.005 sensitivity** (Stanford Q3). Offline: rescore existing records at
-  τ ∈ {0.001, 0.01, 0.05}. No API cost.
+- ~~**τ = 0.005 sensitivity** (Stanford Q3).~~ **Done** (`3025aa8`,
+  `scripts/tau_sensitivity.py`): counts identical at every τ from 5e-4 to 0.05;
+  in the paper's Measures subsection.
 - **The unexplained entity catch** in `P-CONTRACT`: one entity violation in the
   arm whose schema carries the enum. The profile harness now records every
   attempt, so one re-run of that arm would say whether the provider ignored its
