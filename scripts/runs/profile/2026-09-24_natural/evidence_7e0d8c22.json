@@ -1,0 +1,346 @@
+{
+ "task_label": "profile",
+ "evidence": {
+  "shape": {
+   "rows": 1200,
+   "cols": 24
+  },
+  "columns": [
+   {
+    "name": "age",
+    "type": "numeric",
+    "missing_count": 30,
+    "missing_pct": 0.025,
+    "stats": {
+     "mean": 50.617178821239285,
+     "std": 11.735530656671067,
+     "min": 4.206939239347932,
+     "max": 87.79244086858677,
+     "q25": 42.84521891792645,
+     "q50": 50.521080580472145,
+     "q75": 58.59356087285788
+    },
+    "zero_ratio": 0.0,
+    "iqr_count": 12,
+    "z_score_count": 6
+   },
+   {
+    "name": "income",
+    "type": "numeric",
+    "missing_count": 42,
+    "missing_pct": 0.035,
+    "stats": {
+     "mean": 51.89681135164584,
+     "std": 11.97518961688977,
+     "min": 15.862599095644626,
+     "max": 87.67089151159283,
+     "q25": 44.05871375652254,
+     "q50": 51.757270516091545,
+     "q75": 59.7077563811648
+    },
+    "zero_ratio": 0.0,
+    "iqr_count": 7,
+    "z_score_count": 1
+   },
+   {
+    "name": "tenure_months",
+    "type": "numeric",
+    "missing_count": 72,
+    "missing_pct": 0.06,
+    "stats": {
+     "mean": 53.12611473950945,
+     "std": 11.963232136979775,
+     "min": 18.11437953572465,
+     "max": 90.74041106406096,
+     "q25": 44.95876053358479,
+     "q50": 52.68436120641667,
+     "q75": 60.66504097545405
+    },
+    "zero_ratio": 0.0,
+    "iqr_count": 15,
+    "z_score_count": 3
+   },
+   {
+    "name": "balance",
+    "type": "numeric",
+    "missing_count": 102,
+    "missing_pct": 0.085,
+    "stats": {
+     "mean": 126.68524678790598,
+     "std": 846.2405882223285,
+     "min": 13.783849061638954,
+     "max": 9999.0,
+     "q25": 45.83123472813449,
+     "q50": 54.26420367344025,
+     "q75": 63.173578896351856
+    },
+    "zero_ratio": 0.0,
+    "iqr_count": 11,
+    "z_score_count": 8
+   },
+   {
+    "name": "credit_score",
+    "type": "numeric",
+    "missing_count": 0,
+    "missing_pct": 0.0,
+    "stats": {
+     "mean": 54.79106844017618,
+     "std": 11.876713046551275,
+     "min": 16.13278501193294,
+     "max": 102.34659623831892,
+     "q25": 46.68182777157904,
+     "q50": 55.095490229156795,
+     "q75": 62.76420772992401
+    },
+    "zero_ratio": 0.0,
+    "iqr_count": 11,
+    "z_score_count": 4
+   },
+   {
+    "name": "monthly_spend",
+    "type": "numeric",
+    "missing_count": 17,
+    "missing_pct": 0.014166666666666666,
+    "stats": {
+     "mean": 56.116958895015074,
+     "std": 11.630480295091024,
+     "min": 18.245358016498628,
+     "max": 88.69941146700828,
+     "q25": 48.635335012667895,
+     "q50": 55.904364922305525,
+     "q75": 64.51734585157391
+    },
+    "zero_ratio": 0.0,
+    "iqr_count": 7,
+    "z_score_count": 2
+   },
+   {
+    "name": "login_count",
+    "type": "numeric",
+    "missing_count": 47,
+    "missing_pct": 0.03916666666666667,
+    "stats": {
+     "mean": 57.07209558521759,
+     "std": 12.052923778374332,
+     "min": 8.722096229315909,
+     "max": 97.3032641740063,
+     "q25": 49.06339001313076,
+     "q50": 56.95939954703716,
+     "q75": 65.12454170815604
+    },
+    "zero_ratio": 0.0,
+    "iqr_count": 9,
+    "z_score_count": 4
+   },
+   {
+    "name": "session_minutes",
+    "type": "numeric",
+    "missing_count": 55,
+    "missing_pct": 0.04583333333333333,
+    "stats": {
+     "mean": 127.37149167568036,
+     "std": 828.4903130487685,
+     "min": 20.515663171527866,
+     "max": 9999.0,
+     "q25": 49.5396040366773,
+     "q50": 57.8148951757256,
+     "q75": 66.5958008806029
+    },
+    "zero_ratio": 0.0,
+    "iqr_count": 15,
+    "z_score_count": 8
+   },
+   {
+    "name": "support_tickets",
+    "type": "numeric",
+    "missing_count": 99,
+    "missing_pct": 0.0825,
+    "stats": {
+     "mean": 58.55581166202669,
+     "std": 11.871642905926155,
+     "min": 24.478037737027485,
+     "max": 96.64567530003374,
+     "q25": 50.93306091012568,
+     "q50": 58.829624277068,
+     "q75": 66.60640292885239
+    },
+    "zero_ratio": 0.0,
+    "iqr_count": 11,
+    "z_score_count": 2
+   },
+   {
+    "name": "page_views",
+    "type": "numeric",
+    "missing_count": 0,
+    "missing_pct": 0.0,
+    "stats": {
+     "mean": 60.03942916160059,
+     "std": 12.409532075116774,
+     "min": 6.070595517849995,
+     "max": 100.67087072844753,
+     "q25": 51.78254154375359,
+     "q50": 59.95077323943518,
+     "q75": 68.0128938092252
+    },
+    "zero_ratio": 0.0,
+    "iqr_count": 10,
+    "z_score_count": 6
+   },
+   {
+    "name": "days_since_purchase",
+    "type": "numeric",
+    "missing_count": 30,
+    "missing_pct": 0.025,
+    "stats": {
+     "mean": 61.40341195787281,
+     "std": 12.25321720094807,
+     "min": 18.926648070810423,
+     "max": 97.72217869482438,
+     "q25": 52.91157774839413,
+     "q50": 61.98191443445218,
+     "q75": 69.27410956959616
+    },
+    "zero_ratio": 0.0,
+    "iqr_count": 9,
+    "z_score_count": 2
+   },
+   {
+    "name": "discount_rate",
+    "type": "numeric",
+    "missing_count": 45,
+    "missing_pct": 0.0375,
+    "stats": {
+     "mean": 130.68424410997414,
+     "std": 824.5927764680694,
+     "min": 24.29859750626609,
+     "max": 9999.0,
+     "q25": 53.755085511222006,
+     "q50": 62.22747874554676,
+     "q75": 70.05223781359896
+    },
+    "zero_ratio": 0.0,
+    "iqr_count": 15,
+    "z_score_count": 8
+   },
+   {
+    "name": "basket_size",
+    "type": "numeric",
+    "missing_count": 94,
+    "missing_pct": 0.07833333333333334,
+    "stats": {
+     "mean": 62.50307861920643,
+     "std": 12.391407515213364,
+     "min": 21.250940014893665,
+     "max": 103.4194800685166,
+     "q25": 54.54236148991774,
+     "q50": 62.476032008411025,
+     "q75": 70.93222206940338
+    },
+    "zero_ratio": 0.0,
+    "iqr_count": 9,
+    "z_score_count": 5
+   },
+   {
+    "name": "referral_count",
+    "type": "numeric",
+    "missing_count": 103,
+    "missing_pct": 0.08583333333333333,
+    "stats": {
+     "mean": 63.85281614116623,
+     "std": 11.928596731605168,
+     "min": 24.583059231138563,
+     "max": 100.97281598350035,
+     "q25": 56.12490873404288,
+     "q50": 63.74091920725311,
+     "q75": 71.63737110714683
+    },
+    "zero_ratio": 0.0,
+    "iqr_count": 8,
+    "z_score_count": 3
+   },
+   {
+    "name": "region",
+    "type": "categorical",
+    "missing_count": 32,
+    "missing_pct": 0.02666666666666667,
+    "cardinality": 7
+   },
+   {
+    "name": "plan_tier",
+    "type": "categorical",
+    "missing_count": 71,
+    "missing_pct": 0.059166666666666666,
+    "cardinality": 11
+   },
+   {
+    "name": "device_type",
+    "type": "categorical",
+    "missing_count": 100,
+    "missing_pct": 0.08333333333333333,
+    "cardinality": 15
+   },
+   {
+    "name": "acquisition_channel",
+    "type": "categorical",
+    "missing_count": 152,
+    "missing_pct": 0.12666666666666668,
+    "cardinality": 19
+   },
+   {
+    "name": "payment_method",
+    "type": "categorical",
+    "missing_count": 167,
+    "missing_pct": 0.13916666666666666,
+    "cardinality": 23
+   },
+   {
+    "name": "language",
+    "type": "categorical",
+    "missing_count": 234,
+    "missing_pct": 0.195,
+    "cardinality": 27
+   },
+   {
+    "name": "industry",
+    "type": "categorical",
+    "missing_count": 265,
+    "missing_pct": 0.22083333333333333,
+    "cardinality": 31
+   },
+   {
+    "name": "is_active",
+    "type": "boolean",
+    "missing_count": 0,
+    "missing_pct": 0.0
+   },
+   {
+    "name": "signup_date",
+    "type": "datetime",
+    "missing_count": 0,
+    "missing_pct": 0.0
+   },
+   {
+    "name": "target",
+    "type": "categorical",
+    "missing_count": 0,
+    "missing_pct": 0.0,
+    "cardinality": 2
+   }
+  ],
+  "target_hint": {
+   "column": "target",
+   "reason": "User-specified via --target",
+   "confidence": "explicit"
+  },
+  "task_hint": {
+   "type": "binary_classification",
+   "class_balance": {
+    "0": 0.6891666666666667,
+    "1": 0.31083333333333335
+   }
+  },
+  "warnings": [
+   "4 column(s) have 10-50% missing values; decide on an imputation strategy."
+  ]
+ }
+}

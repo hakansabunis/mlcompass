@@ -1,0 +1,69 @@
+{
+  "task_label": "synthetic_crowded",
+  "evidence": {
+    "ok": true,
+    "row_count": 1200,
+    "trustworthy_sample_size": true,
+    "suspicious_metric": {
+      "name": "r2",
+      "value": 1.0
+    },
+    "target_feature_correlations": [
+      {
+        "feature": "sensor_ref",
+        "correlation": 0.995,
+        "method": "pearson"
+      },
+      {
+        "feature": "sensor_08",
+        "correlation": 0.9239999999999999,
+        "method": "pearson"
+      },
+      {
+        "feature": "sensor_07",
+        "correlation": 0.9209999999999999,
+        "method": "pearson"
+      },
+      {
+        "feature": "sensor_06",
+        "correlation": 0.918,
+        "method": "pearson"
+      },
+      {
+        "feature": "sensor_05",
+        "correlation": 0.915,
+        "method": "pearson"
+      },
+      {
+        "feature": "sensor_04",
+        "correlation": 0.9119999999999999,
+        "method": "pearson"
+      },
+      {
+        "feature": "sensor_03",
+        "correlation": 0.9089999999999997,
+        "method": "pearson"
+      },
+      {
+        "feature": "sensor_02",
+        "correlation": 0.9059999999999999,
+        "method": "pearson"
+      },
+      {
+        "feature": "sensor_01",
+        "correlation": 0.9029999999999999,
+        "method": "pearson"
+      },
+      {
+        "feature": "sensor_00",
+        "correlation": 0.8999999999999998,
+        "method": "pearson"
+      }
+    ],
+    "perfect_match_rate": 0.0,
+    "candidate_leak_columns": [
+      "sensor_ref"
+    ],
+    "notes": []
+  }
+}
