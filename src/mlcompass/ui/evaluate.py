@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from rich.console import Console
+from rich.markup import escape
 from rich.panel import Panel
 from rich.table import Table
 
@@ -344,11 +345,14 @@ def _leakage_evidence_panel(investigation: dict[str, Any]) -> Panel:
     smell = investigation.get("suspicious_metric")
     if smell:
         lines.append(
-            f"[bold red]Suspicious metric:[/bold red] {smell.get('name')} = {smell.get('value')}"
+            f"[bold red]Suspicious metric:[/bold red] {escape(str(smell.get('name')))} = "
+            f"{escape(str(smell.get('value')))}"
         )
     candidates = investigation.get("candidate_leak_columns") or []
     if candidates:
-        names = ", ".join(candidates)
+        # Column names come from the user's data; a header like "[green]x"
+        # must print as text, not restyle the panel.
+        names = ", ".join(escape(str(c)) for c in candidates)
         lines.append(f"[bold]Candidate leak columns:[/bold] {names}")
     else:
         lines.append("[dim]No column correlates ≥ 0.99 with the target.[/dim]")
@@ -364,7 +368,7 @@ def _leakage_evidence_panel(investigation: dict[str, Any]) -> Panel:
         lines.append("\n[bold]Top correlations with target:[/bold]")
         for entry in correlations[:5]:
             lines.append(
-                f"  • {entry['feature']:<30} r={entry['correlation']:+.4f} ({entry['method']})"
+                f"  • {escape(str(entry['feature'])):<30} r={entry['correlation']:+.4f} ({escape(str(entry['method']))})"
             )
 
     if not investigation.get("trustworthy_sample_size"):
@@ -386,6 +390,18 @@ def render_leakage_narration(
     narration: dict[str, Any],
 ) -> None:
     """Render the optional ``--llm`` leakage investigator output."""
+    if narration.get("aborted"):
+        console.print(
+            Panel(
+                "[bold yellow]No narration[/bold yellow] [dim yellow](contract: no admissible "
+                "answer)[/dim yellow]\n[yellow]The narrator did not return a valid answer "
+                "within the retry budget. Nothing it produced is shown; the evidence panel "
+                "above is the result.[/yellow]",
+                title="🔍 Leakage investigator (Claude)",
+                border_style="yellow",
+            )
+        )
+        return
     verdict = narration.get("verdict", "cannot_determine")
     confidence = narration.get("confidence", "cannot_determine")
     verdict_colour = {
@@ -397,8 +413,8 @@ def render_leakage_narration(
 
     lines: list[str] = []
     lines.append(
-        f"[bold]Verdict:[/bold] [{verdict_colour}]{verdict}[/{verdict_colour}]   "
-        f"[dim]confidence: {confidence}[/dim]"
+        f"[bold]Verdict:[/bold] [{verdict_colour}]{escape(str(verdict))}[/{verdict_colour}]   "
+        f"[dim]confidence: {escape(str(confidence))}[/dim]"
     )
 
     # Contract status, before the findings, because both flags qualify
@@ -419,7 +435,7 @@ def render_leakage_narration(
         # already knows, because the anchor is what it checked against.
         anchor = narration.get("critical_column")
         target = (
-            f"the top-ranked candidate leak column '{anchor}'"
+            f"the top-ranked candidate leak column '{escape(str(anchor))}'"
             if anchor
             else "the top-ranked candidate leak column"
         )
@@ -450,7 +466,7 @@ def render_leakage_narration(
     if cited:
         lines.append("\n[bold]Evidence cited[/bold] [dim](verified against the evidence)[/dim]")
         for e in cited:
-            lines.append(f"  • {e}")
+            lines.append(f"  • {escape(str(e))}")
 
     claims = narration.get("claims") or []
     if claims:
@@ -459,7 +475,7 @@ def render_leakage_narration(
             col = c.get("column", "—")
             stat = c.get("statistic", "—")
             val = c.get("value", "—")
-            lines.append(f"  • {col}: {stat} = {val}")
+            lines.append(f"  • {escape(str(col))}: {escape(str(stat))} = {escape(str(val))}")
 
     hypothesis = narration.get("primary_hypothesis", "").strip()
     if hypothesis:
@@ -467,13 +483,13 @@ def render_leakage_narration(
             "\n[bold]Hypothesis[/bold] [dim yellow](model prose — NOT verified; "
             "names and numbers here may not be in the evidence)[/dim yellow]"
         )
-        lines.append(f"[dim]{hypothesis}[/dim]")
+        lines.append(f"[dim]{escape(hypothesis)}[/dim]")
 
     checks = narration.get("recommended_checks") or []
     if checks:
         lines.append("\n[bold]Recommended manual checks[/bold] [dim](not verified)[/dim]")
         for i, c in enumerate(checks, 1):
-            lines.append(f"  [dim]{i}. {c}[/dim]")
+            lines.append(f"  [dim]{i}. {escape(str(c))}[/dim]")
 
     console.print(
         Panel(

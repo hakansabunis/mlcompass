@@ -168,6 +168,15 @@ def investigate_leakage(
 _VERDICT_VALUES = LEAKAGE_CONTRACT.verdict_values
 _CONFIDENCE_VALUES = LEAKAGE_CONTRACT.confidence_values
 
+# Sent when a response carries no admissible verdict (no tool call, unparsable
+# arguments, or a verdict outside the enum). Fixed text: there is nothing in
+# the response to name.
+_MALFORMED_CORRECTION = (
+    "\n\nYour previous response was not a valid submit_investigation call: it "
+    "carried no payload or no admissible verdict. Answer again by calling "
+    "submit_investigation with every required field and a verdict from its enum."
+)
+
 
 def _compact(evidence: dict[str, Any]) -> dict[str, Any]:
     """Drop fields the agent doesn't need — keep the prompt small."""
@@ -655,6 +664,19 @@ def investigate_leakage_bound(
         value_violations = list(violations.value)
         omitted = violations.omitted
 
+        # A payload with no admissible verdict is not an answer: no tool call,
+        # unparsable arguments, or a verdict outside the enum. It used to pass
+        # as clean (nothing to check) and have `cannot_determine` substituted
+        # for display, which attributes an abstention the narrator never made.
+        # It is retried like any violation and, if it persists, aborted.
+        malformed = str(tool_input.get("verdict", "")) not in _VERDICT_VALUES
+        if malformed:
+            schema_rejections += 1
+            rejection_kinds.append("malformed")
+            if attempt < max_retries:
+                correction = _MALFORMED_CORRECTION
+            continue
+
         if not violations:
             break
         # Deterministic rejection, independent of the provider.
@@ -680,9 +702,15 @@ def investigate_leakage_bound(
     cited_clean, claims_clean = strip_unsound(tool_input, bound, LEAKAGE_CONTRACT)
     had_unrecoverable = len(cited_clean) != len(cited) or len(claims_clean) != len(claims)
 
-    verdict = str(tool_input.get("verdict", "cannot_determine"))
-    if verdict not in _VERDICT_VALUES:
-        verdict = "cannot_determine"
+    # Still no admissible verdict after the budget: abort. Nothing the model
+    # returned is shown, and no verdict is put in its mouth; the renderer shows
+    # the deterministic evidence panel and says the narration failed.
+    aborted = str(tool_input.get("verdict", "")) not in _VERDICT_VALUES
+    if aborted:
+        tool_input = {}
+        cited_clean, claims_clean = [], []
+
+    verdict = str(tool_input.get("verdict", ""))
     confidence = str(tool_input.get("confidence", "cannot_determine"))
     if confidence not in _CONFIDENCE_VALUES:
         confidence = "cannot_determine"
@@ -718,6 +746,8 @@ def investigate_leakage_bound(
         # rediscover it from the evidence panel by hand.
         "critical_column": anchor,
         "evidence_bound": True,
+        # No admissible verdict after the budget; nothing above is the model's.
+        "aborted": aborted,
     }
 
 

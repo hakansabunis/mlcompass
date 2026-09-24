@@ -171,13 +171,36 @@ def test_persistent_phantom_is_stripped_after_retry_budget() -> None:
     assert out["schema_rejections"] == 3  # initial + 2 retries, each a violation
 
 
-def test_invalid_verdict_is_clamped() -> None:
+def test_invalid_verdict_is_retried_then_aborted() -> None:
+    """A verdict outside the enum is not an answer, and the host must not
+    substitute an abstention for it (Proposition 1). It is retried; if it
+    persists, the narration is aborted and nothing the model returned is shown.
+    """
+    bad = tool_use_response(
+        SUBMIT_TOOL_NAME,
+        {
+            "verdict": "definitely_leaking",  # not a valid enum value
+            "confidence": "extremely_high",
+            "columns_referenced": ["log_target_v2"],
+            "narration": "ok",
+        },
+    )
+    client = MockClient(responses=[bad, _clone(bad), _clone(bad)])
+    out = investigate_leakage_bound(EVIDENCE, client=client, max_retries=2)
+    assert out["aborted"] is True
+    assert out["verdict"] == ""
+    assert out["columns_referenced"] == [] and out["claims"] == []
+    assert out["primary_hypothesis"] == ""
+    assert out["rejection_kinds"] == ["malformed"] * 3
+
+
+def test_invalid_confidence_alone_is_clamped() -> None:
     client = MockClient(
         responses=[
             tool_use_response(
                 SUBMIT_TOOL_NAME,
                 {
-                    "verdict": "definitely_leaking",  # not a valid enum value
+                    "verdict": "leakage_likely",
                     "confidence": "extremely_high",  # not a valid enum value
                     "columns_referenced": ["log_target_v2"],
                     "narration": "ok",
@@ -186,7 +209,8 @@ def test_invalid_verdict_is_clamped() -> None:
         ]
     )
     out = investigate_leakage_bound(EVIDENCE, client=client)
-    assert out["verdict"] == "cannot_determine"
+    assert out["aborted"] is False
+    assert out["verdict"] == "leakage_likely"
     assert out["confidence"] == "cannot_determine"
 
 
@@ -318,13 +342,15 @@ def test_openai_persistent_phantom_is_stripped() -> None:
 
 
 def test_openai_declined_tool_call_is_safe() -> None:
-    # If the model declines to call the tool, no column reaches the user.
-    client = FakeOpenAIClient(payloads=[None])
+    # If the model keeps declining to call the tool, no column reaches the user
+    # and the narration is aborted rather than passed as a clean abstention.
+    client = FakeOpenAIClient(payloads=[None, None, None])
     out = investigate_leakage_bound(
         EVIDENCE, client=client, model="deepseek-chat", provider="openai"
     )
     assert out["columns_referenced"] == []
     assert out["had_unrecoverable_violation"] is False
+    assert out["aborted"] is True
 
 
 # --------------------------------------------------------------------------- #
@@ -623,3 +649,36 @@ def test_neutral_user_message_omits_contract_language() -> None:
     default_client = MockClient(responses=[_clone(clean)])
     investigate_leakage_bound(EVIDENCE, client=default_client)
     assert "strict contract" in default_client.last_create_kwargs["messages"][0]["content"]
+
+
+def test_openai_missing_tool_call_is_retried_not_passed() -> None:
+    """No tool call used to come back as an empty payload with no violations."""
+    client = FakeOpenAIClient(
+        payloads=[
+            None,  # the model declined to call the tool
+            {
+                "verdict": "leakage_likely",
+                "confidence": "high",
+                "columns_referenced": ["log_target_v2"],
+                "narration": "clean",
+            },
+        ]
+    )
+    out = investigate_leakage_bound(
+        EVIDENCE, client=client, model="deepseek-chat", provider="openai"
+    )
+    assert client.create_call_count == 2
+    assert out["rejection_kinds"] == ["malformed"]
+    assert out["aborted"] is False
+    assert out["columns_referenced"] == ["log_target_v2"]
+
+
+def test_openai_persistent_missing_tool_call_aborts() -> None:
+    client = FakeOpenAIClient(payloads=[None, None, None])
+    out = investigate_leakage_bound(
+        EVIDENCE, client=client, model="deepseek-chat", provider="openai", max_retries=2
+    )
+    assert client.create_call_count == 3
+    assert out["aborted"] is True
+    assert out["verdict"] == ""
+    assert out["omitted_critical_evidence"] is False
