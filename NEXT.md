@@ -8,67 +8,29 @@ overfull vbox. Last commit before this note: `f8a7ba4`.
 
 ---
 
-## 1. Finish the free-text battery — run this first
+## 1–3. Free-text battery — DONE (2026-09-24)
 
-It was running when the machine was shut down. Every response is written as it
-arrives, so nothing paid for is lost; resume picks up exactly where it stopped.
+All eight leakage arms re-run with the narration recorded, 1,600 responses in
+`scripts/runs/2026-09-19_freetext/`, every arm `empty: 0`. Measured with
+`scripts/measure_freetext_displacement.py` → `benchmark/freetext_displacement.json`.
 
-```bash
-source scripts/load_keys.sh
-python -X utf8 -u scripts/reproduce_hallucination_ablation.py \
-  --mode live --provider deepseek --n 200 --only-baselines \
-  --resume --log-dir scripts/runs/2026-09-19_freetext
-```
+Result, now in §12 (Threats, Construct): **displacement not observed.**
+Rejecting arms 10.4 % [8.4, 12.7], non-rejecting 9.6 % [7.8, 11.9]; retried
+responses 10.1 % vs first-pass 10.5 %. The residue is true bounds, derivations,
+and shortened real names; no invented column, no misquoted number. No arm
+stripped anything, so the pressure tested is correction, not deletion.
 
-State at shutdown: `layer1` 200/200, `layer3_bare` ~70/200, six arms not
-started. Roughly 1,700 calls and under a dollar on `deepseek-chat`.
+Four repairs on the way, none counted (nothing from them was reported, same rule
+as the killed P-CONTRACT run): contract-arm prose emptied twice, Guardrails-arm
+prose emptied once (`baseline_guardrails.py` never returned it; empty records in
+`superseded_2026-09-24_guardrails_noprose/`), and the first scoring pass
+compared signed values (78 % "ungrounded", all artefact).
 
-**Before trusting it, check the prose is really there** — this battery has
-already been lost once to an empty field:
+The run is also a third replication sample, now in the replication paragraph:
+A-GR-STOCK 35.0 → 43.5 → 47.5 %, A-STRESS retries 12 → 23 → 32, A-L1 stable,
+enforced arms none in all three.
 
-```bash
-python -X utf8 -c "
-import json,pathlib
-for f in sorted(pathlib.Path('scripts/runs/2026-09-19_freetext').glob('*.jsonl')):
-    L=[json.loads(l) for l in f.read_text(encoding='utf-8').splitlines() if l.strip()]
-    e=sum(1 for r in L if not (r.get('narration') or '').strip())
-    print(f.name.split('_synthetic_')[1].rsplit('_n',1)[0], len(L), 'empty:', e)"
-```
-
-Every arm must show `empty: 0`. The two bugs that emptied it are fixed —
-`_normalize` read only `narration`, and `_from_contract_result` started from
-`_normalize({})` and never copied `primary_hypothesis` across — and a smoke test
-confirmed every arm records prose. But check.
-
-## 2. Measure displacement
-
-```bash
-python -X utf8 scripts/measure_freetext_displacement.py --runs scripts/runs \
-  --json benchmark/freetext_displacement.json
-```
-
-The question: when Tier B strips a claim from the structured fields, does the
-model put it in the prose instead? Displacement predicts the arms that **strip**
-(`A-CONTRACT`, `A-STRESS`, `A-GR-OURS`, `A-GR-CHOICES`) carry *more* ungrounded
-prose than the arms that do not (`A-L1`, `A-GR-STOCK`, `A-STRICT-STATIC`,
-`A-STATIC-ENUM-STALE`). Schema-only arms count as non-stripping on purpose:
-the hypothesis is about deletion, not about lowering a rate.
-
-Report whichever way it comes out. What it cannot see, and must say so: a
-sentence naming only real columns and real numbers can still assert a causal
-story the evidence does not support. That half needs human raters.
-
-## 3. Write it into the manuscript
-
-Replace the §12 paragraph that currently says the free-text channel could not
-be measured because the narration was never recorded. It becomes either
-"measured, displacement not observed at the scale this design sees" or
-"measured, and here is how much". Keep the instrument-fault history — the field
-was dropped, then emptied on the enforced arms — because both are real.
-
-Then recompile and re-run the table verification (`scratchpad/verify_tables.py`
-and `verify_rq5c.py` pattern: recompute every number from the run records, do
-not read them back from the text).
+Page count: body now ends on page 19 (was 18), PDF still 20 pages.
 
 ---
 
@@ -90,10 +52,9 @@ Also open, not from the senior list:
 - ~~**τ = 0.005 sensitivity** (Stanford Q3).~~ **Done** (`3025aa8`,
   `scripts/tau_sensitivity.py`): counts identical at every τ from 5e-4 to 0.05;
   in the paper's Measures subsection.
-- **The unexplained entity catch** in `P-CONTRACT`: one entity violation in the
-  arm whose schema carries the enum. The profile harness now records every
-  attempt, so one re-run of that arm would say whether the provider ignored its
-  enum.
+- ~~**The unexplained entity catch** in `P-CONTRACT`.~~ **Re-run done** (`554286d`):
+  0 entity violations in 200 more first attempts; the enum held 399/400. The one
+  stays unexplained, as the paper says.
 
 ## 5. Submission items — the user's side
 

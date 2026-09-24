@@ -81,12 +81,13 @@ of the sample; what the sample measures is the verifier's cost: no response
 needed stripping, every violation was repaired by a corrective retry, and
 binding the schema removes those retries on the channel an enum can express
 and not on the one it cannot. The unconstrained rate is not stable: a second
-provider shows none, and the same model name three days later moves the
-toolkit default from 35.0\,\% to 43.5\,\%. Downstream, an arm given only the
+provider shows none, and three runs of the same model name over nine days
+move the toolkit default from 35.0\,\% to 43.5\,\% to 47.5\,\%. Downstream, an arm given only the
 names of the six scored rules beats the arm given the tool's real findings on
 the checklist, and we withdraw the causal attribution an earlier draft made.
 The guarantee is relative to the evidence and covers the structured channels
-only; the free-text narration remains outside it.
+only; the free-text narration remains outside it, though measuring it finds
+no content displaced into it by enforcement.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -1118,7 +1119,13 @@ live responses. Every enforcement conclusion holds: \texttt{A-GR-CHOICES},
 which is not. \texttt{A-STRICT-STATIC} reads 7.0\,\% against 4.0\,\%. Nothing
 changed between the runs but the date, and this is the one comparison in the
 paper that isolates it: a reader who took 35.0\,\% as a property of
-Guardrails~AI would be wrong by 8.5 points within a week. A local
+Guardrails~AI would be wrong by 8.5 points within a week. The narration re-run
+of 2026-09-24 (Section~\ref{sec:threats}) is a third sample: again no violation
+on any enforced arm, \texttt{A-L1} at 40.5\,\%, and \texttt{A-GR-STOCK} at
+47.5\,\% [40.7, 54.4]. Retries move with the rate: \texttt{A-STRESS}, which
+Table~\ref{tab:retry} shows repairing 12 responses, repaired 23 and 32 in the
+two re-runs. The cost of the guarantee is measured on a day; the zero it
+arrives at is not. A local
 \texttt{qwen2.5:7b} under Ollama ($N=20$) makes the point from the other
 direction: every arm 0/20 except \texttt{A-STRICT-STATIC} at 2/20 --- a third
 provider and a third floor at which there is nothing for any mechanism to
@@ -1867,22 +1874,40 @@ why Table~\ref{tab:rubric} reports the joint outcome and why the surviving
 also means the arms are not matched on denominators: the rubric arm's total
 rests on 17 scripts against 28--30. The entity channel
 blends invention with misfiling, which is why Section~\ref{sec:rq1} decomposes
-it. The free text that reaches the user is unmeasured, and enforcement pressure
-could in principle displace unfaithful content from the structured fields into
-it --- a narration can name only real columns and still assert a causal story
-the evidence does not support. We name it as the most important gap in the
-guarantee, and attempting to close it produced an eighth instrument finding,
-the first about the replication package rather than a scorer: \textbf{the
-narration text was never recorded}. The harness requests it and the schema
-marks it required; the record normaliser dropped it before writing, so all
-4{,}960 preserved responses carry the structured payload and no trace of this
-channel. The normaliser now keeps it and the analysis is committed, refusing to
-run on records that predate the fix rather than substituting \texttt{verdict}
---- which holds prose in the unconstrained arms and a schema-pinned enum in the
-contract arms, and scoring one against the other manufactures a 42\,\% against
-76\,\% effect out of a field name. Our first attempt did exactly that. The
-study therefore cannot say whether displacement occurs, and the reason is our
-instrumentation rather than the question.
+it. The free text that reaches the user is outside the guarantee, and
+enforcement pressure could in principle displace unfaithful content from the
+structured fields into it. Attempting to measure that produced an eighth
+instrument finding, the first about the replication package rather than a
+scorer: \textbf{the narration text was never recorded}. The record normaliser
+dropped it, so the 4{,}960 responses behind the tables above carry no trace of
+this channel, and substituting \texttt{verdict} --- prose in the unconstrained
+arms, a schema-pinned enum in the contract arms --- manufactures a 42\,\%
+against 76\,\% effect out of a field name; our first attempt did exactly that.
+We therefore re-ran all eight leakage arms on 2026-09-24 with the narration
+recorded, 1{,}600 responses. Getting there took four further repairs, each
+caught before it produced a reported number and so, by the rule of
+Section~\ref{sec:instruments}, not counted among the eleven: the prose was
+emptied twice on the contract arms and once on the Guardrails arms, by three
+different code paths, and the first scoring pass compared signed values
+against prose that writes $|r|$ and a Unicode minus, calling 78\,\% of
+responses ungrounded.
+
+\textbf{Displacement is not observed at the scale this design sees.} Every
+number in a narration is checked against every quantity in $E$ (as a
+magnitude, within $\tau$, rounded or as a percentage) and every identifier
+against every name in $E$. Arms that can reject a claim carry ungrounded
+content in 10.4\,\% [8.4, 12.7] of narrations, arms that cannot in 9.6\,\%
+[7.8, 11.9]; within the rejecting arms, the 207 responses that went through a
+corrective retry read 10.1\,\% against 10.5\,\% for the 593 that did not
+(\texttt{scripts/measure\_freetext\_displacement.py}). None of the residue is
+an invented column or a misquoted measurement. It is true bounds and
+derivations ($|r| < 0.05$, $r^2$ as 99.8\,\%, a 0.96 gap), real names shortened
+or reworded (\texttt{log\_target} for \texttt{log\_target\_v2}), and one
+apostrophe the toolkit HTML-escaped. Two limits hold. No enforced arm stripped
+anything, because every violation was repaired on retry, so the pressure tested
+is correction, not deletion. And a sentence naming only real columns and real
+numbers can still assert a causal story the evidence does not support; that
+half of the channel needs human raters and remains open.
 
 \paragraph{Internal} The \texttt{advise+audit} arm is handed findings naming
 the same rules the outcome is scored on, and \textbf{the overlap accounts for
@@ -1899,9 +1924,9 @@ joint outcome, 64\,\% [48, 78] against 44\,\% [30, 60], with intervals that
 overlap substantially --- a reader who concludes RQ5 does not establish a
 checklist-level benefit for the tool's findings is reading our result
 correctly. Provider nondeterminism at temperature 1.0 is real and is why every
-arm is $N=200$ with intervals rather than point estimates; the 2026-09-18
-re-run measures it directly, moving \texttt{A-GR-STOCK} 8.5 points on the same
-model name.
+arm is $N=200$ with intervals rather than point estimates; the two re-runs
+measure it directly, moving \texttt{A-GR-STOCK} 12.5 points in nine days on
+the same model name.
 
 \paragraph{External} RQ1--RQ4 use one synthetic leakage task with one leak
 pattern, and RQ5 three small tabular datasets. The contract has been evaluated

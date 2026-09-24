@@ -1,0 +1,227 @@
+{
+  "deepseek/guardrails_stock": {
+    "n": 600,
+    "with_prose": 200,
+    "dirty": 21,
+    "nums": 16,
+    "ids": 8,
+    "chars": 184480,
+    "no_field": 400
+  },
+  "deepseek/guardrails_tierb": {
+    "n": 600,
+    "with_prose": 200,
+    "dirty": 24,
+    "nums": 21,
+    "ids": 5,
+    "chars": 188166,
+    "no_field": 400
+  },
+  "deepseek/layer1": {
+    "n": 600,
+    "with_prose": 200,
+    "dirty": 22,
+    "nums": 22,
+    "ids": 1,
+    "chars": 186233,
+    "no_field": 400
+  },
+  "deepseek/layer3_bare": {
+    "n": 600,
+    "with_prose": 200,
+    "dirty": 21,
+    "nums": 20,
+    "ids": 2,
+    "chars": 182672,
+    "no_field": 400
+  },
+  "deepseek/layer3_stress": {
+    "n": 600,
+    "with_prose": 200,
+    "dirty": 13,
+    "nums": 11,
+    "ids": 3,
+    "chars": 191153,
+    "no_field": 400
+  },
+  "deepseek/static_schema": {
+    "n": 600,
+    "with_prose": 200,
+    "dirty": 10,
+    "nums": 10,
+    "ids": 0,
+    "chars": 176296,
+    "no_field": 400
+  },
+  "deepseek/static_schema_noenum": {
+    "n": 600,
+    "with_prose": 200,
+    "dirty": 24,
+    "nums": 21,
+    "ids": 5,
+    "chars": 173076,
+    "no_field": 400
+  },
+  "deepseek/stress_mech": {
+    "n": 200,
+    "with_prose": 0,
+    "dirty": 0,
+    "nums": 0,
+    "ids": 0,
+    "chars": 0,
+    "no_field": 200
+  },
+  "deepseek/tier_a": {
+    "n": 200,
+    "with_prose": 0,
+    "dirty": 0,
+    "nums": 0,
+    "ids": 0,
+    "chars": 0,
+    "no_field": 200
+  },
+  "ollama/guardrails_choices": {
+    "n": 20,
+    "with_prose": 0,
+    "dirty": 0,
+    "nums": 0,
+    "ids": 0,
+    "chars": 0,
+    "no_field": 20
+  },
+  "ollama/guardrails_stock": {
+    "n": 20,
+    "with_prose": 0,
+    "dirty": 0,
+    "nums": 0,
+    "ids": 0,
+    "chars": 0,
+    "no_field": 20
+  },
+  "ollama/guardrails_tierb": {
+    "n": 20,
+    "with_prose": 0,
+    "dirty": 0,
+    "nums": 0,
+    "ids": 0,
+    "chars": 0,
+    "no_field": 20
+  },
+  "ollama/layer1": {
+    "n": 20,
+    "with_prose": 0,
+    "dirty": 0,
+    "nums": 0,
+    "ids": 0,
+    "chars": 0,
+    "no_field": 20
+  },
+  "ollama/layer3_bare": {
+    "n": 20,
+    "with_prose": 0,
+    "dirty": 0,
+    "nums": 0,
+    "ids": 0,
+    "chars": 0,
+    "no_field": 20
+  },
+  "ollama/layer3_stress": {
+    "n": 20,
+    "with_prose": 0,
+    "dirty": 0,
+    "nums": 0,
+    "ids": 0,
+    "chars": 0,
+    "no_field": 20
+  },
+  "ollama/static_schema": {
+    "n": 20,
+    "with_prose": 0,
+    "dirty": 0,
+    "nums": 0,
+    "ids": 0,
+    "chars": 0,
+    "no_field": 20
+  },
+  "ollama/static_schema_noenum": {
+    "n": 20,
+    "with_prose": 0,
+    "dirty": 0,
+    "nums": 0,
+    "ids": 0,
+    "chars": 0,
+    "no_field": 20
+  },
+  "openai/guardrails_stock": {
+    "n": 200,
+    "with_prose": 0,
+    "dirty": 0,
+    "nums": 0,
+    "ids": 0,
+    "chars": 0,
+    "no_field": 200
+  },
+  "openai/guardrails_tierb": {
+    "n": 200,
+    "with_prose": 0,
+    "dirty": 0,
+    "nums": 0,
+    "ids": 0,
+    "chars": 0,
+    "no_field": 200
+  },
+  "openai/layer1": {
+    "n": 200,
+    "with_prose": 0,
+    "dirty": 0,
+    "nums": 0,
+    "ids": 0,
+    "chars": 0,
+    "no_field": 200
+  },
+  "openai/layer3_bare": {
+    "n": 200,
+    "with_prose": 0,
+    "dirty": 0,
+    "nums": 0,
+    "ids": 0,
+    "chars": 0,
+    "no_field": 200
+  },
+  "openai/layer3_stress": {
+    "n": 200,
+    "with_prose": 0,
+    "dirty": 0,
+    "nums": 0,
+    "ids": 0,
+    "chars": 0,
+    "no_field": 200
+  },
+  "openai/static_schema": {
+    "n": 200,
+    "with_prose": 0,
+    "dirty": 0,
+    "nums": 0,
+    "ids": 0,
+    "chars": 0,
+    "no_field": 200
+  },
+  "openai/static_schema_noenum": {
+    "n": 200,
+    "with_prose": 0,
+    "dirty": 0,
+    "nums": 0,
+    "ids": 0,
+    "chars": 0,
+    "no_field": 200
+  },
+  "deepseek/guardrails_choices": {
+    "n": 400,
+    "with_prose": 200,
+    "dirty": 25,
+    "nums": 21,
+    "ids": 4,
+    "chars": 186651,
+    "no_field": 200
+  }
+}
