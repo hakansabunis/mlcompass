@@ -1909,6 +1909,11 @@ _CORRELATION_ALIASES = frozenset(
     }
 )
 
+# Aliases that name the MAGNITUDE. Scoring them against the signed value flagged
+# a narrator who wrote abs_corr = 0.0215 for a correlation of -0.0215 -- a
+# correct claim (review F-13; the twelfth instrument fault).
+_ABSOLUTE_ALIASES = frozenset({"abs_corr", "max_abs_correlation"})
+
 
 def evidence_value_table(evidence: dict[str, Any]) -> dict[tuple[str, str], float]:
     """The quantities the evidence actually carries, keyed by (column, statistic).
@@ -1940,7 +1945,8 @@ def evidence_value_table(evidence: dict[str, Any]) -> dict[tuple[str, str], floa
         if feature is None or not isinstance(value, (int, float)):
             continue
         for alias in _CORRELATION_ALIASES:
-            table[(str(feature), alias)] = float(value)
+            v = abs(float(value)) if alias in _ABSOLUTE_ALIASES else float(value)
+            table[(str(feature), alias)] = v
 
     entries = evidence.get("target_feature_correlations") or []
     columns = {str(e.get("feature")) for e in entries if isinstance(e, dict)}

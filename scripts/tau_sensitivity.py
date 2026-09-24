@@ -123,16 +123,29 @@ def main() -> int:
     args = ap.parse_args()
 
     results = []
-    leak_table = evidence_value_table(_evidence(RUNS / "evidence_618bd74a.json"))
-    if not leak_table:
-        raise SystemExit("leakage value table is empty: evidence did not load")
-    for name, d, arm in LEAKAGE_ARMS:
-        f = next(d.glob(f"deepseek_*_synthetic_{arm}_n200_seed0_e618bd74a.jsonl"), None)
-        if f is None:
-            print(f"{name}: missing", file=sys.stderr)
+    # Every leakage record file, not a hand-picked list: the first version of
+    # this script read only the root battery and missed a sign-flipped claim in
+    # a re-run (review F-13). Each file is scored against the evidence dump that
+    # carries its own hash; superseded runs are skipped.
+    tables: dict[str, dict] = {}
+    for f in sorted(RUNS.rglob("deepseek_*_synthetic*_seed0_e*.jsonl")):
+        if "superseded" in f.parts[-2] or "superseded" in str(f.parent):
             continue
-        results.append(("leakage", _arm(name, _records(f), leak_table,
+        ehash = f.stem.rsplit("_e", 1)[1]
+        if ehash not in tables:
+            dump = next((d / f"evidence_{ehash}.json" for d in (f.parent, RUNS)
+                         if (d / f"evidence_{ehash}.json").exists()), None)
+            if dump is None:
+                print(f"{f.name}: no evidence dump for {ehash}", file=sys.stderr)
+                continue
+            tables[ehash] = evidence_value_table(_evidence(dump))
+        recs = _records(f)
+        arm_id = str(recs[0].get("arm_id") or f.stem) if recs else f.stem
+        where = "root" if f.parent == RUNS else f.parent.name
+        results.append(("leakage", _arm(f"{arm_id} [{where}]", recs, tables[ehash],
                                         _normalise_statistic, "claims")))
+    if not results:
+        raise SystemExit("no leakage records found")
 
     prof_table = dict(bind_profile(_evidence(RUNS / "profile" / "evidence_bcaea394.json")).values)
     if not prof_table:
@@ -149,16 +162,16 @@ def main() -> int:
 
     edges = ["=0", "<=5e-4", "<=1e-3", "<=5e-3", "<=1e-2", "<=5e-2", ">5e-2"]
     print("Claim deviations |cited - measured| (claims the evidence can check)")
-    print(f"{'task':8s} {'arm':20s} {'src':10s} {'claims':>6s} " + " ".join(f"{e:>7s}" for e in edges))
+    print(f"{'task':8s} {"arm":44s} {'src':10s} {'claims':>6s} " + " ".join(f"{e:>7s}" for e in edges))
     for task, r in results:
         h = [r["exact"], r["hist"][0] - r["exact"]] + r["hist"][1:]
-        print(f"{task:8s} {r['arm']:20s} {r['source']:10s} {r['claims_checked']:6d} "
+        print(f"{task:8s} {r["arm"][:44]:44s} {r['source']:10s} {r['claims_checked']:6d} "
               + " ".join(f"{x:7d}" for x in h))
     print()
     print("Responses carrying >= 1 value violation, by tau")
-    print(f"{'task':8s} {'arm':20s} {'N':>4s} " + " ".join(f"{t:>8g}" for t in TAUS))
+    print(f"{'task':8s} {"arm":44s} {'N':>4s} " + " ".join(f"{t:>8g}" for t in TAUS))
     for task, r in results:
-        print(f"{task:8s} {r['arm']:20s} {r['n']:4d} "
+        print(f"{task:8s} {r["arm"][:44]:44s} {r['n']:4d} "
               + " ".join(f"{r['responses_violating'][t]:8d}" for t in TAUS))
     print()
     print("Enforced arms ran at tau=0.005: their counts at a tighter tau are what the")
