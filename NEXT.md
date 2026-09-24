@@ -1,10 +1,65 @@
-# Where this stopped — 2026-09-24
+# Where this stopped — 2026-09-25
 
-Submission target is **IEEE TSE**, `paper/tse_latex/`. The Springer long form in
-`paper/emse_latex/` is frozen and unmaintained (see its `UNMAINTAINED.md`).
+**IN PROGRESS: revision after the ARS 5-reviewer panel (Major Revision).**
+Reviews and the editorial decision are in `paper/reviews/2026-09-24_ars_panel/`
+(not committed — the repo is public; they are local only). Roadmap: P0-1..P0-16
+in `editorial_decision.md`.
 
-Current build: **15 pages including references** (the venue limit), no dangling
-references, one 1.5 pt overfull vbox. The 20-page version is commit `b916270`.
+## 0. First thing tomorrow: finish the last battery (~825 calls, ~1 h)
+
+```bash
+source scripts/load_keys.sh
+python -X utf8 -u scripts/reproduce_hallucination_ablation.py --mode live   --provider deepseek --n 200 --resume --task synthetic-crowded --only-baselines   --log-dir scripts/runs/2026-09-24_revision
+python -X utf8 scripts/analyze_revision_runs.py --json benchmark/revision_runs.json
+```
+
+Remaining cells on the crowded instance: guardrails_stock (194/200),
+guardrails_choices, guardrails_tierb, static_schema_noenum, **static_schema =
+A-STATIC-ENUM-STALE, the arm P0-3 needs** (author-time list covers 0/10 of the
+crowded columns). Balance: ~$5 was added 2026-09-24.
+
+## Results so far (all N=200, deepseek-chat, re-scored by analyze_revision_runs.py)
+
+| arm | result |
+|---|---|
+| A-L1 (09-24) | 98/200, all misfiled r2 |
+| **A-L2** (shipped rule-bearing prompt, no enforcement) | **0/200** — as the plan predicted in §2.1 |
+| **A-L1-DESCRIBED** (field description only) | **1/200** — DA C2 confirmed: misfiling = under-specified field |
+| A-L2-DESCRIBED | 0/200 |
+| A-L3-SHIPPED | 0/200 (1 malformed retry — new abort path exercised live) |
+| A-STRESS / -GENERIC | 0 user-facing; 19 / 29 responses retried |
+| A-STRICT-ENUM with --strict | 0/200 (H9) |
+| crowded A-L1 / A-GR-STOCK | 122/200 / 110/194, all r2 |
+| crowded A-CONTRACT / A-STRESS / live enum | 0 / 0 (25 retried) / 0 |
+| RQ5 profile, natural names | 0 wrong numbers in 400; remaining violations = correct class balance in an inadmissible slot (fault 13) |
+
+Drift (`scripts/drift_tests.py`): A-L1 stable (p=0.34, pooled 43.6%);
+A-GR-STOCK heterogeneous (p=0.035, pooled 42.0%); A-STRESS retries 12/23/32 (p=0.006).
+
+## Manuscript state (`paper/tse_latex/main.tex`, commits 9ecc2e6 onward)
+
+Rewritten: related work (Table I = locus x binding time), theory (Def. 2 over
+JSON paths, property renamed "referential and value soundness"), artifact
+(abort path, threat model, three narration surfaces), study design (+ Table
+`tab:registered`, registered items and status), RQ4 (specification, `target`
+= 18 of 20 "inventions", no co-variation), RQ5 (ex-RQ6, natural names),
+corrections (one table, 13 faults), RQ5-downstream cut.
+
+**Still to write, after the last battery:** abstract, intro (RQs, contributions,
+reframe: every observed failure disappears under some reasonable
+specification change — rule prompt, field description, distinct names — and
+reappears under another; the contract's value is a guarantee independent of
+all of them), RQ1 (misfiling = under-specified field; description control;
+crowded instance), RQ2/3 table (add A-L2, A-L3-SHIPPED, strict enum, crowded +
+stale enum; drop "<1.9%" as evidence for verifier arms, keep per-cell bound
+per A3.12 labelled as describing the sample), Discussion (+ one paragraph on
+the cut downstream benchmark and where it lives), Threats, Conclusion, the
+remaining factual items of editorial_decision.md Part 3, then compile and fit
+15 pages. The build currently has dangling refs (sec:rq5-rubric, tab:rubric).
+
+Title question for the user: keep "Prompts Are Advisory..."? A-L2 = 0/200
+means a reviewer will read the title as contradicted; argument is about
+certification, not effectiveness.
 
 ---
 

@@ -37,7 +37,7 @@ from mlcompass.agents.evidence_contract import bind_profile  # noqa: E402
 
 RUNS = ROOT / "scripts" / "runs"
 LEAKAGE_DIRS = [RUNS / "2026-09-24_revision", RUNS / "2026-09-24_described"]
-PROFILE_DIR = RUNS / "profile" / "2026-09-24_natural"
+PROFILE_DIRS = [RUNS / "profile", RUNS / "profile" / "2026-09-24_natural"]
 
 
 def wilson(k: int, n: int) -> tuple[float, float]:
@@ -131,45 +131,74 @@ def leakage_cell(f: pathlib.Path) -> dict:
     }
 
 
+def _numbers(node, out=None) -> list[float]:
+    out = [] if out is None else out
+    if isinstance(node, dict):
+        for v in node.values():
+            _numbers(v, out)
+    elif isinstance(node, list):
+        for v in node:
+            _numbers(v, out)
+    elif isinstance(node, (int, float)) and not isinstance(node, bool):
+        out.append(float(node))
+    return out
+
+
 def profile_cell(f: pathlib.Path) -> dict:
+    """Classify every value-channel violation the verifier reports.
+
+    wrong number     -- the pair is admissible and the number is off
+    real, misplaced  -- the pair is not admissible, but the number is one E
+                        carries somewhere (within tau): a correct quantity in a
+                        slot the binder does not admit
+    not in E         -- neither the pair nor the number exists in E
+    The first pass of the manuscript called every class_balance claim an
+    invented quantity; E carries it in task_hint and every one was correct.
+    """
     ehash = f.stem.rsplit("_e", 1)[1]
-    bound = bind_profile(_evidence(f.parent / f"evidence_{ehash}.json"))
-    table = dict(bound.values)
-    by_value: dict[float, list] = {}
-    for k, v in table.items():
-        by_value.setdefault(round(v, 9), []).append(k)
+    ev = _evidence(f.parent / f"evidence_{ehash}.json")
+    bound = bind_profile(ev)
+    numbers = _numbers(ev)
     recs = _records(f)
     n = len(recs)
-    viol_resp = 0
-    kinds: Counter = Counter()
-    examples = []
+    resp: Counter = Counter()
+    items: Counter = Counter()
+    from mlcompass.agents.evidence_contract import PROFILE, verify  # noqa: PLC0415
+
     for r in recs:
-        bad = False
-        for c in r.get("raw_claims") or r.get("claims") or []:
+        claims = r.get("raw_claims") or r.get("claims") or []
+        payload = {"verdict": r.get("verdict"),
+                   "columns_referenced": r.get("raw_columns") or r.get("columns"),
+                   "claims": claims}
+        v = verify(payload, bound, PROFILE)
+        kinds = set()
+        for c in claims:
             key = (str(c.get("column", "")), str(c.get("statistic", "")))
-            v = c.get("value")
-            if key not in table or isinstance(v, bool) or not isinstance(v, (int, float)):
+            val = c.get("value")
+            if isinstance(val, bool) or not isinstance(val, (int, float)):
                 continue
-            if abs(float(v) - table[key]) <= 0.005:
+            if key in bound.values:
+                if abs(float(val) - bound.values[key]) > bound.tolerance:
+                    kinds.add("wrong number")
+                    items["wrong number"] += 1
                 continue
-            bad = True
-            owners = [k for k in by_value.get(round(float(v), 9), []) if k != key]
-            if owners:
-                same_stat = any(o[1] == key[1] for o in owners)
-                kinds["another column's value" if same_stat else "another statistic's value"] += 1
-            else:
-                kinds["not in evidence (misquote)"] += 1
-            if len(examples) < 6:
-                examples.append((key, v, round(table[key], 6), owners[:2]))
-        viol_resp += bad
+            real = any(abs(float(val) - x) <= bound.tolerance for x in numbers)
+            k = "real, misplaced" if real else "not in E"
+            kinds.add(k)
+            items[k] += 1
+        if v.entity:
+            kinds.add("entity")
+        for k in kinds:
+            resp[k] += 1
+        resp["any"] += bool(kinds)
     return {
         "file": f"{f.parent.name}/{f.name}",
         "arm": (recs[0].get("arm") if recs else None),
         "n": n,
-        "value_violating_responses": viol_resp,
-        "value_ci": wilson(viol_resp, n),
-        "wrong_values_by_kind": dict(kinds),
-        "examples": examples,
+        "responses": dict(resp),
+        "items": dict(items),
+        "any_ci": wilson(resp["any"], n),
+        "wrong_number_ci": wilson(resp["wrong number"], n),
         "anchor": bound.anchor,
     }
 
@@ -182,8 +211,9 @@ def main() -> int:
     for d in LEAKAGE_DIRS:
         for f in sorted(d.glob("deepseek_*.jsonl")):
             out["leakage"].append(leakage_cell(f))
-    for f in sorted(PROFILE_DIR.glob("*.jsonl")):
-        out["profile"].append(profile_cell(f))
+    for d in PROFILE_DIRS:
+        for f in sorted(d.glob("*_profile_*_n200_*.jsonl")):
+            out["profile"].append(profile_cell(f))
 
     print(f"{'cell':62s} {'N':>4s} {'ent':>4s} {'95% CI':>13s} {'inv':>4s} {'mis':>4s} "
           f"{'val':>4s} {'om':>3s} {'abst':>4s} {'rej':>4s}")
@@ -197,11 +227,7 @@ def main() -> int:
             print(f"{'':6s}tokens: {c['top_tokens']}")
     print()
     for c in out["profile"]:
-        lo, hi = c["value_ci"]
-        print(f"profile {c['arm']:8s} N={c['n']} value-violating {c['value_violating_responses']} "
-              f"[{lo:.1f},{hi:.1f}]  wrong values by kind: {c['wrong_values_by_kind']}")
-        for e in c["examples"]:
-            print(f"{'':6s}{e}")
+        print(f"profile {c['file'][:70]:70s} N={c['n']} responses {c['responses']} items {c['items']}")
     if args.json:
         pathlib.Path(args.json).write_text(json.dumps(out, indent=2, default=str), encoding="utf-8")
         print(f"wrote {args.json}")

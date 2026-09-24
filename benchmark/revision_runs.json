@@ -1,0 +1,490 @@
+{
+  "leakage": [
+    {
+      "file": "2026-09-24_revision/deepseek_deepseek-chat_synthetic_crowded_guardrails_stock_n200_seed0_ee469b75a.jsonl",
+      "arm_id": "A-GR-STOCK",
+      "task": "synthetic_crowded",
+      "strict": false,
+      "n": 194,
+      "entity": 110,
+      "entity_ci": [
+        49.66532787403565,
+        63.47650809653514
+      ],
+      "invented": 0,
+      "misfiled": 110,
+      "value": 0,
+      "omission": 0,
+      "abstained": 0,
+      "rejected_once_or_more": 0,
+      "stripped": 0,
+      "top_tokens": [
+        [
+          "r2",
+          110
+        ]
+      ],
+      "anchor": "sensor_ref",
+      "anchor_in_allowed": true
+    },
+    {
+      "file": "2026-09-24_revision/deepseek_deepseek-chat_synthetic_crowded_layer1_n200_seed0_ee469b75a.jsonl",
+      "arm_id": "A-L1",
+      "task": "synthetic_crowded",
+      "strict": false,
+      "n": 200,
+      "entity": 122,
+      "entity_ci": [
+        54.09374595716976,
+        67.49165686253038
+      ],
+      "invented": 0,
+      "misfiled": 122,
+      "value": 0,
+      "omission": 0,
+      "abstained": 0,
+      "rejected_once_or_more": 0,
+      "stripped": 0,
+      "top_tokens": [
+        [
+          "r2",
+          122
+        ]
+      ],
+      "anchor": "sensor_ref",
+      "anchor_in_allowed": true
+    },
+    {
+      "file": "2026-09-24_revision/deepseek_deepseek-chat_synthetic_crowded_layer3_bare_n200_seed0_ee469b75a.jsonl",
+      "arm_id": "A-CONTRACT",
+      "task": "synthetic_crowded",
+      "strict": false,
+      "n": 200,
+      "entity": 0,
+      "entity_ci": [
+        1.734723475976807e-16,
+        1.8845326377266574
+      ],
+      "invented": 0,
+      "misfiled": 0,
+      "value": 0,
+      "omission": 0,
+      "abstained": 2,
+      "rejected_once_or_more": 0,
+      "stripped": 0,
+      "top_tokens": [],
+      "anchor": "sensor_ref",
+      "anchor_in_allowed": true
+    },
+    {
+      "file": "2026-09-24_revision/deepseek_deepseek-chat_synthetic_crowded_layer3_stress_n200_seed0_ee469b75a.jsonl",
+      "arm_id": "A-STRESS",
+      "task": "synthetic_crowded",
+      "strict": false,
+      "n": 200,
+      "entity": 0,
+      "entity_ci": [
+        1.734723475976807e-16,
+        1.8845326377266574
+      ],
+      "invented": 0,
+      "misfiled": 0,
+      "value": 0,
+      "omission": 0,
+      "abstained": 0,
+      "rejected_once_or_more": 25,
+      "stripped": 0,
+      "top_tokens": [],
+      "anchor": "sensor_ref",
+      "anchor_in_allowed": true
+    },
+    {
+      "file": "2026-09-24_revision/deepseek_deepseek-chat_synthetic_crowded_stress_mech_n200_seed0_ee469b75a.jsonl",
+      "arm_id": "A-L3-WORST-PARAPHRASE",
+      "task": "synthetic_crowded",
+      "strict": false,
+      "n": 200,
+      "entity": 0,
+      "entity_ci": [
+        1.734723475976807e-16,
+        1.8845326377266574
+      ],
+      "invented": 0,
+      "misfiled": 0,
+      "value": 0,
+      "omission": 0,
+      "abstained": 0,
+      "rejected_once_or_more": 0,
+      "stripped": 0,
+      "top_tokens": [],
+      "anchor": "sensor_ref",
+      "anchor_in_allowed": true
+    },
+    {
+      "file": "2026-09-24_revision/deepseek_deepseek-chat_synthetic_crowded_tier_a_n200_seed0_ee469b75a.jsonl",
+      "arm_id": "A-STRICT-ENUM (needs --strict)",
+      "task": "synthetic_crowded",
+      "strict": false,
+      "n": 200,
+      "entity": 0,
+      "entity_ci": [
+        1.734723475976807e-16,
+        1.8845326377266574
+      ],
+      "invented": 0,
+      "misfiled": 0,
+      "value": 0,
+      "omission": 0,
+      "abstained": 0,
+      "rejected_once_or_more": 0,
+      "stripped": 0,
+      "top_tokens": [],
+      "anchor": "sensor_ref",
+      "anchor_in_allowed": true
+    },
+    {
+      "file": "2026-09-24_revision/deepseek_deepseek-chat_synthetic_layer1_n200_seed0_e618bd74a.jsonl",
+      "arm_id": "A-L1",
+      "task": "synthetic",
+      "strict": false,
+      "n": 200,
+      "entity": 98,
+      "entity_ci": [
+        42.15627833121317,
+        55.88141232154135
+      ],
+      "invented": 1,
+      "misfiled": 98,
+      "value": 0,
+      "omission": 0,
+      "abstained": 0,
+      "rejected_once_or_more": 0,
+      "stripped": 0,
+      "top_tokens": [
+        [
+          "r2",
+          98
+        ],
+        [
+          "target",
+          1
+        ],
+        [
+          "perfect_match_rate",
+          1
+        ]
+      ],
+      "anchor": "log_target_v2",
+      "anchor_in_allowed": true
+    },
+    {
+      "file": "2026-09-24_revision/deepseek_deepseek-chat_synthetic_layer2_n200_seed0_e618bd74a.jsonl",
+      "arm_id": "A-L2",
+      "task": "synthetic",
+      "strict": false,
+      "n": 200,
+      "entity": 0,
+      "entity_ci": [
+        1.734723475976807e-16,
+        1.8845326377266574
+      ],
+      "invented": 0,
+      "misfiled": 0,
+      "value": 0,
+      "omission": 0,
+      "abstained": 0,
+      "rejected_once_or_more": 0,
+      "stripped": 0,
+      "top_tokens": [],
+      "anchor": "log_target_v2",
+      "anchor_in_allowed": true
+    },
+    {
+      "file": "2026-09-24_revision/deepseek_deepseek-chat_synthetic_layer3_n200_seed0_e618bd74a.jsonl",
+      "arm_id": "A-L3-SHIPPED",
+      "task": "synthetic",
+      "strict": false,
+      "n": 200,
+      "entity": 0,
+      "entity_ci": [
+        1.734723475976807e-16,
+        1.8845326377266574
+      ],
+      "invented": 0,
+      "misfiled": 0,
+      "value": 0,
+      "omission": 0,
+      "abstained": 0,
+      "rejected_once_or_more": 1,
+      "stripped": 0,
+      "top_tokens": [],
+      "anchor": "log_target_v2",
+      "anchor_in_allowed": true
+    },
+    {
+      "file": "2026-09-24_revision/deepseek_deepseek-chat_synthetic_layer3_stress_generic_n200_seed0_e618bd74a.jsonl",
+      "arm_id": "A-STRESS-GENERIC",
+      "task": "synthetic",
+      "strict": false,
+      "n": 200,
+      "entity": 0,
+      "entity_ci": [
+        1.734723475976807e-16,
+        1.8845326377266574
+      ],
+      "invented": 0,
+      "misfiled": 0,
+      "value": 0,
+      "omission": 0,
+      "abstained": 0,
+      "rejected_once_or_more": 29,
+      "stripped": 0,
+      "top_tokens": [],
+      "anchor": "log_target_v2",
+      "anchor_in_allowed": true
+    },
+    {
+      "file": "2026-09-24_revision/deepseek_deepseek-chat_synthetic_layer3_stress_n200_seed0_e618bd74a.jsonl",
+      "arm_id": "A-STRESS",
+      "task": "synthetic",
+      "strict": false,
+      "n": 200,
+      "entity": 0,
+      "entity_ci": [
+        1.734723475976807e-16,
+        1.8845326377266574
+      ],
+      "invented": 0,
+      "misfiled": 0,
+      "value": 0,
+      "omission": 0,
+      "abstained": 0,
+      "rejected_once_or_more": 19,
+      "stripped": 0,
+      "top_tokens": [],
+      "anchor": "log_target_v2",
+      "anchor_in_allowed": true
+    },
+    {
+      "file": "2026-09-24_revision/deepseek_deepseek-chat_synthetic_stress_mech-strict_n200_seed0_e618bd74a.jsonl",
+      "arm_id": "A-L3-WORST-PARAPHRASE",
+      "task": "synthetic",
+      "strict": true,
+      "n": 200,
+      "entity": 0,
+      "entity_ci": [
+        1.734723475976807e-16,
+        1.8845326377266574
+      ],
+      "invented": 0,
+      "misfiled": 0,
+      "value": 0,
+      "omission": 0,
+      "abstained": 0,
+      "rejected_once_or_more": 0,
+      "stripped": 0,
+      "top_tokens": [],
+      "anchor": "log_target_v2",
+      "anchor_in_allowed": true
+    },
+    {
+      "file": "2026-09-24_revision/deepseek_deepseek-chat_synthetic_tier_a-strict_n200_seed0_e618bd74a.jsonl",
+      "arm_id": "A-STRICT-ENUM (needs --strict)",
+      "task": "synthetic",
+      "strict": true,
+      "n": 200,
+      "entity": 0,
+      "entity_ci": [
+        1.734723475976807e-16,
+        1.8845326377266574
+      ],
+      "invented": 0,
+      "misfiled": 0,
+      "value": 0,
+      "omission": 0,
+      "abstained": 0,
+      "rejected_once_or_more": 0,
+      "stripped": 0,
+      "top_tokens": [],
+      "anchor": "log_target_v2",
+      "anchor_in_allowed": true
+    },
+    {
+      "file": "2026-09-24_described/deepseek_deepseek-chat_synthetic_layer1_n200_seed0_e618bd74a.jsonl",
+      "arm_id": "A-L1-DESCRIBED",
+      "task": "synthetic",
+      "strict": false,
+      "n": 200,
+      "entity": 1,
+      "entity_ci": [
+        0.08831687156009814,
+        2.777370439789293
+      ],
+      "invented": 0,
+      "misfiled": 1,
+      "value": 0,
+      "omission": 0,
+      "abstained": 0,
+      "rejected_once_or_more": 0,
+      "stripped": 0,
+      "top_tokens": [
+        [
+          "r2",
+          1
+        ]
+      ],
+      "anchor": "log_target_v2",
+      "anchor_in_allowed": true
+    },
+    {
+      "file": "2026-09-24_described/deepseek_deepseek-chat_synthetic_layer2_n200_seed0_e618bd74a.jsonl",
+      "arm_id": "A-L2-DESCRIBED",
+      "task": "synthetic",
+      "strict": false,
+      "n": 200,
+      "entity": 0,
+      "entity_ci": [
+        1.734723475976807e-16,
+        1.8845326377266574
+      ],
+      "invented": 0,
+      "misfiled": 0,
+      "value": 0,
+      "omission": 0,
+      "abstained": 0,
+      "rejected_once_or_more": 0,
+      "stripped": 0,
+      "top_tokens": [],
+      "anchor": "log_target_v2",
+      "anchor_in_allowed": true
+    }
+  ],
+  "profile": [
+    {
+      "file": "profile/deepseek_deepseek-chat_profile_bare_n200_seed0_ebcaea394.jsonl",
+      "arm": "bare",
+      "n": 200,
+      "responses": {
+        "any": 17,
+        "wrong number": 9,
+        "real, misplaced": 9
+      },
+      "items": {
+        "wrong number": 12,
+        "real, misplaced": 13
+      },
+      "any_ci": [
+        5.374575017747561,
+        13.189587071565567
+      ],
+      "wrong_number_ci": [
+        2.3852543001493,
+        8.32967040018196
+      ],
+      "anchor": "cat_feature_07"
+    },
+    {
+      "file": "profile/deepseek_deepseek-chat_profile_contract_n200_seed0_ebcaea394.jsonl",
+      "arm": "contract",
+      "n": 200,
+      "responses": {
+        "any": 0
+      },
+      "items": {},
+      "any_ci": [
+        1.734723475976807e-16,
+        1.8845326377266574
+      ],
+      "wrong_number_ci": [
+        1.734723475976807e-16,
+        1.8845326377266574
+      ],
+      "anchor": "cat_feature_07"
+    },
+    {
+      "file": "profile/deepseek_deepseek-chat_profile_stress_n200_seed0_ebcaea394.jsonl",
+      "arm": "stress",
+      "n": 200,
+      "responses": {
+        "any": 0
+      },
+      "items": {},
+      "any_ci": [
+        1.734723475976807e-16,
+        1.8845326377266574
+      ],
+      "wrong_number_ci": [
+        1.734723475976807e-16,
+        1.8845326377266574
+      ],
+      "anchor": "cat_feature_07"
+    },
+    {
+      "file": "profile/deepseek_deepseek-chat_profile_tier_a_n200_seed0_ebcaea394.jsonl",
+      "arm": "tier_a",
+      "n": 200,
+      "responses": {
+        "any": 12,
+        "wrong number": 11,
+        "real, misplaced": 1
+      },
+      "items": {
+        "wrong number": 12,
+        "real, misplaced": 1
+      },
+      "any_ci": [
+        3.465219425433187,
+        10.193169295766271
+      ],
+      "wrong_number_ci": [
+        3.098534170345884,
+        9.57869987723084
+      ],
+      "anchor": "cat_feature_07"
+    },
+    {
+      "file": "2026-09-24_natural/deepseek_deepseek-chat_profile_bare_n200_seed0_e7e0d8c22.jsonl",
+      "arm": "bare",
+      "n": 200,
+      "responses": {
+        "any": 26,
+        "real, misplaced": 26,
+        "entity": 1
+      },
+      "items": {
+        "real, misplaced": 37
+      },
+      "any_ci": [
+        9.02820227966932,
+        18.36635187224841
+      ],
+      "wrong_number_ci": [
+        1.734723475976807e-16,
+        1.8845326377266574
+      ],
+      "anchor": "industry"
+    },
+    {
+      "file": "2026-09-24_natural/deepseek_deepseek-chat_profile_tier_a_n200_seed0_e7e0d8c22.jsonl",
+      "arm": "tier_a",
+      "n": 200,
+      "responses": {
+        "any": 6,
+        "real, misplaced": 4,
+        "entity": 2
+      },
+      "items": {
+        "real, misplaced": 4
+      },
+      "any_ci": [
+        1.3820314340111346,
+        6.389429245451924
+      ],
+      "wrong_number_ci": [
+        1.734723475976807e-16,
+        1.8845326377266574
+      ],
+      "anchor": "industry"
+    }
+  ]
+}
