@@ -60,8 +60,24 @@ from typing import Any
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+sys.path.insert(0, str(ROOT / "src"))
+
+from mlcompass.agents.evidence_contract import (  # noqa: E402
+    CONFIDENCE_VALUES,
+    LEAKAGE_VERDICTS,
+)
+
 RUNS = ROOT / "scripts" / "runs"
 TOLERANCE = 0.005
+
+# The response schema's own vocabulary. A narration that writes
+# "leakage_likely" is restating its verdict label, not naming something in E;
+# counting it made the contract arms look dirtier only because their schema
+# shows the model the label (20 and 23 responses, against 0 on the bare arm).
+_SCHEMA_VOCABULARY = set(LEAKAGE_VERDICTS) | set(CONFIDENCE_VALUES) | {
+    "columns_referenced",
+    "primary_hypothesis",
+}
 
 # Arm ids, in the order the manuscript's tables use.
 ARM_ORDER = [
@@ -135,10 +151,14 @@ def evidence_quantities(evidence: dict[str, Any]) -> set[float]:
             for v in node:
                 walk(v)
         elif isinstance(node, (int, float)) and not isinstance(node, bool):
-            out.add(float(node))
+            # Stored as magnitudes: prose writes "|r| <= 0.0405" for a
+            # correlation of -0.0405, and the sign is not what the sentence
+            # claims. Comparing signed values flagged every such restatement.
+            q = abs(float(node))
+            out.add(q)
             # A correlation of 0.9989 is routinely written as 99.89% or 0.999.
-            out.add(round(float(node), 3))
-            out.add(round(float(node) * 100, 2))
+            out.add(round(q, 3))
+            out.add(round(q * 100, 2))
 
     walk(evidence)
     return out
@@ -170,9 +190,11 @@ def score_narration(
     bad_ids = 0
     examples: list[str] = []
 
-    for raw in _NUMBER.findall(text or ""):
+    # U+2212 is what models write for a minus sign; the regex reads only "-".
+    text = (text or "").replace("\u2212", "-")
+    for raw in _NUMBER.findall(text):
         try:
-            v = float(raw)
+            v = abs(float(raw))
         except ValueError:
             continue
         if v in _PROMPT_LITERALS:
@@ -187,7 +209,7 @@ def score_narration(
             examples.append(raw)
 
     for ident in set(_IDENT.findall(text or "")):
-        if ident in names:
+        if ident in names or ident in _SCHEMA_VOCABULARY:
             continue
         bad_ids += 1
         if len(examples) < 6:
