@@ -1,227 +1,352 @@
 {
-  "deepseek/guardrails_stock": {
-    "n": 600,
-    "with_prose": 200,
-    "dirty": 21,
-    "nums": 16,
-    "ids": 8,
-    "chars": 184480,
-    "no_field": 400
+  "cells": {
+    "deepseek/reference/guardrails_choices/2026-09-19_freetext": {
+      "with_prose": 200,
+      "dirty": 25,
+      "retried": 84,
+      "retried_dirty": 12,
+      "first": 116,
+      "first_dirty": 13,
+      "no_evidence": 0
+    },
+    "deepseek/reference/guardrails_stock/2026-09-19_freetext": {
+      "with_prose": 200,
+      "dirty": 21,
+      "retried": 0,
+      "retried_dirty": 0,
+      "first": 200,
+      "first_dirty": 21,
+      "no_evidence": 0
+    },
+    "deepseek/reference/guardrails_tierb/2026-09-19_freetext": {
+      "with_prose": 200,
+      "dirty": 24,
+      "retried": 91,
+      "retried_dirty": 7,
+      "first": 109,
+      "first_dirty": 17,
+      "no_evidence": 0
+    },
+    "deepseek/reference/layer1/2026-09-19_freetext": {
+      "with_prose": 200,
+      "dirty": 22,
+      "retried": 0,
+      "retried_dirty": 0,
+      "first": 200,
+      "first_dirty": 22,
+      "no_evidence": 0
+    },
+    "deepseek/reference/layer3_bare/2026-09-19_freetext": {
+      "with_prose": 200,
+      "dirty": 21,
+      "retried": 0,
+      "retried_dirty": 0,
+      "first": 200,
+      "first_dirty": 21,
+      "no_evidence": 0
+    },
+    "deepseek/reference/layer3_stress/2026-09-19_freetext": {
+      "with_prose": 200,
+      "dirty": 13,
+      "retried": 32,
+      "retried_dirty": 2,
+      "first": 168,
+      "first_dirty": 11,
+      "no_evidence": 0
+    },
+    "deepseek/reference/static_schema/2026-09-19_freetext": {
+      "with_prose": 200,
+      "dirty": 10,
+      "retried": 0,
+      "retried_dirty": 0,
+      "first": 200,
+      "first_dirty": 10,
+      "no_evidence": 0
+    },
+    "deepseek/reference/static_schema_noenum/2026-09-19_freetext": {
+      "with_prose": 200,
+      "dirty": 24,
+      "retried": 0,
+      "retried_dirty": 0,
+      "first": 200,
+      "first_dirty": 24,
+      "no_evidence": 0
+    },
+    "deepseek/reference/layer1/2026-09-24_described": {
+      "with_prose": 200,
+      "dirty": 30,
+      "retried": 0,
+      "retried_dirty": 0,
+      "first": 200,
+      "first_dirty": 30,
+      "no_evidence": 0
+    },
+    "deepseek/reference/layer2/2026-09-24_described": {
+      "with_prose": 200,
+      "dirty": 32,
+      "retried": 0,
+      "retried_dirty": 0,
+      "first": 200,
+      "first_dirty": 32,
+      "no_evidence": 0
+    },
+    "deepseek/crowded/guardrails_choices/2026-09-24_revision": {
+      "with_prose": 200,
+      "dirty": 18,
+      "retried": 101,
+      "retried_dirty": 10,
+      "first": 99,
+      "first_dirty": 8,
+      "no_evidence": 0
+    },
+    "deepseek/crowded/guardrails_stock/2026-09-24_revision": {
+      "with_prose": 200,
+      "dirty": 8,
+      "retried": 0,
+      "retried_dirty": 0,
+      "first": 200,
+      "first_dirty": 8,
+      "no_evidence": 0
+    },
+    "deepseek/crowded/guardrails_tierb/2026-09-24_revision": {
+      "with_prose": 200,
+      "dirty": 13,
+      "retried": 118,
+      "retried_dirty": 10,
+      "first": 82,
+      "first_dirty": 3,
+      "no_evidence": 0
+    },
+    "deepseek/crowded/layer1/2026-09-24_revision": {
+      "with_prose": 200,
+      "dirty": 16,
+      "retried": 0,
+      "retried_dirty": 0,
+      "first": 200,
+      "first_dirty": 16,
+      "no_evidence": 0
+    },
+    "deepseek/crowded/layer3_bare/2026-09-24_revision": {
+      "with_prose": 200,
+      "dirty": 9,
+      "retried": 0,
+      "retried_dirty": 0,
+      "first": 200,
+      "first_dirty": 9,
+      "no_evidence": 0
+    },
+    "deepseek/crowded/layer3_stress/2026-09-24_revision": {
+      "with_prose": 200,
+      "dirty": 12,
+      "retried": 25,
+      "retried_dirty": 1,
+      "first": 175,
+      "first_dirty": 11,
+      "no_evidence": 0
+    },
+    "deepseek/crowded/static_schema/2026-09-24_revision": {
+      "with_prose": 199,
+      "dirty": 117,
+      "retried": 0,
+      "retried_dirty": 0,
+      "first": 199,
+      "first_dirty": 117,
+      "no_evidence": 0
+    },
+    "deepseek/crowded/static_schema_noenum/2026-09-24_revision": {
+      "with_prose": 199,
+      "dirty": 9,
+      "retried": 0,
+      "retried_dirty": 0,
+      "first": 199,
+      "first_dirty": 9,
+      "no_evidence": 0
+    },
+    "deepseek/crowded/stress_mech/2026-09-24_revision": {
+      "with_prose": 200,
+      "dirty": 17,
+      "retried": 0,
+      "retried_dirty": 0,
+      "first": 200,
+      "first_dirty": 17,
+      "no_evidence": 0
+    },
+    "deepseek/crowded/tier_a/2026-09-24_revision": {
+      "with_prose": 200,
+      "dirty": 11,
+      "retried": 0,
+      "retried_dirty": 0,
+      "first": 200,
+      "first_dirty": 11,
+      "no_evidence": 0
+    },
+    "deepseek/reference/layer1/2026-09-24_revision": {
+      "with_prose": 200,
+      "dirty": 23,
+      "retried": 0,
+      "retried_dirty": 0,
+      "first": 200,
+      "first_dirty": 23,
+      "no_evidence": 0
+    },
+    "deepseek/reference/layer2/2026-09-24_revision": {
+      "with_prose": 200,
+      "dirty": 44,
+      "retried": 0,
+      "retried_dirty": 0,
+      "first": 200,
+      "first_dirty": 44,
+      "no_evidence": 0
+    },
+    "deepseek/reference/layer3/2026-09-24_revision": {
+      "with_prose": 200,
+      "dirty": 12,
+      "retried": 1,
+      "retried_dirty": 0,
+      "first": 199,
+      "first_dirty": 12,
+      "no_evidence": 0
+    },
+    "deepseek/reference/layer3_stress_generic/2026-09-24_revision": {
+      "with_prose": 200,
+      "dirty": 22,
+      "retried": 29,
+      "retried_dirty": 5,
+      "first": 171,
+      "first_dirty": 17,
+      "no_evidence": 0
+    },
+    "deepseek/reference/layer3_stress/2026-09-24_revision": {
+      "with_prose": 200,
+      "dirty": 17,
+      "retried": 19,
+      "retried_dirty": 2,
+      "first": 181,
+      "first_dirty": 15,
+      "no_evidence": 0
+    },
+    "deepseek/reference/stress_mech-strict/2026-09-24_revision": {
+      "with_prose": 200,
+      "dirty": 13,
+      "retried": 0,
+      "retried_dirty": 0,
+      "first": 200,
+      "first_dirty": 13,
+      "no_evidence": 0
+    },
+    "deepseek/reference/tier_a-strict/2026-09-24_revision": {
+      "with_prose": 200,
+      "dirty": 21,
+      "retried": 0,
+      "retried_dirty": 0,
+      "first": 200,
+      "first_dirty": 21,
+      "no_evidence": 0
+    },
+    "deepseek/reference/layer1/2026-09-25_described_neutral": {
+      "with_prose": 200,
+      "dirty": 22,
+      "retried": 0,
+      "retried_dirty": 0,
+      "first": 200,
+      "first_dirty": 22,
+      "no_evidence": 0
+    },
+    "deepseek/reference/layer2/2026-09-25_described_neutral": {
+      "with_prose": 200,
+      "dirty": 32,
+      "retried": 0,
+      "retried_dirty": 0,
+      "first": 200,
+      "first_dirty": 32,
+      "no_evidence": 0
+    },
+    "deepseek/reference/layer2/2026-09-25_rules_prompt": {
+      "with_prose": 200,
+      "dirty": 23,
+      "retried": 0,
+      "retried_dirty": 0,
+      "first": 200,
+      "first_dirty": 23,
+      "no_evidence": 0
+    }
   },
-  "deepseek/guardrails_tierb": {
-    "n": 600,
-    "with_prose": 200,
-    "dirty": 24,
-    "nums": 21,
-    "ids": 5,
-    "chars": 188166,
-    "no_field": 400
-  },
-  "deepseek/layer1": {
-    "n": 600,
-    "with_prose": 200,
-    "dirty": 22,
-    "nums": 22,
-    "ids": 1,
-    "chars": 186233,
-    "no_field": 400
-  },
-  "deepseek/layer3_bare": {
-    "n": 600,
-    "with_prose": 200,
-    "dirty": 21,
-    "nums": 20,
-    "ids": 2,
-    "chars": 182672,
-    "no_field": 400
-  },
-  "deepseek/layer3_stress": {
-    "n": 600,
-    "with_prose": 200,
-    "dirty": 13,
-    "nums": 11,
-    "ids": 3,
-    "chars": 191153,
-    "no_field": 400
-  },
-  "deepseek/static_schema": {
-    "n": 600,
-    "with_prose": 200,
-    "dirty": 10,
-    "nums": 10,
-    "ids": 0,
-    "chars": 176296,
-    "no_field": 400
-  },
-  "deepseek/static_schema_noenum": {
-    "n": 600,
-    "with_prose": 200,
-    "dirty": 24,
-    "nums": 21,
-    "ids": 5,
-    "chars": 173076,
-    "no_field": 400
-  },
-  "deepseek/stress_mech": {
-    "n": 200,
-    "with_prose": 0,
-    "dirty": 0,
-    "nums": 0,
-    "ids": 0,
-    "chars": 0,
-    "no_field": 200
-  },
-  "deepseek/tier_a": {
-    "n": 200,
-    "with_prose": 0,
-    "dirty": 0,
-    "nums": 0,
-    "ids": 0,
-    "chars": 0,
-    "no_field": 200
-  },
-  "ollama/guardrails_choices": {
-    "n": 20,
-    "with_prose": 0,
-    "dirty": 0,
-    "nums": 0,
-    "ids": 0,
-    "chars": 0,
-    "no_field": 20
-  },
-  "ollama/guardrails_stock": {
-    "n": 20,
-    "with_prose": 0,
-    "dirty": 0,
-    "nums": 0,
-    "ids": 0,
-    "chars": 0,
-    "no_field": 20
-  },
-  "ollama/guardrails_tierb": {
-    "n": 20,
-    "with_prose": 0,
-    "dirty": 0,
-    "nums": 0,
-    "ids": 0,
-    "chars": 0,
-    "no_field": 20
-  },
-  "ollama/layer1": {
-    "n": 20,
-    "with_prose": 0,
-    "dirty": 0,
-    "nums": 0,
-    "ids": 0,
-    "chars": 0,
-    "no_field": 20
-  },
-  "ollama/layer3_bare": {
-    "n": 20,
-    "with_prose": 0,
-    "dirty": 0,
-    "nums": 0,
-    "ids": 0,
-    "chars": 0,
-    "no_field": 20
-  },
-  "ollama/layer3_stress": {
-    "n": 20,
-    "with_prose": 0,
-    "dirty": 0,
-    "nums": 0,
-    "ids": 0,
-    "chars": 0,
-    "no_field": 20
-  },
-  "ollama/static_schema": {
-    "n": 20,
-    "with_prose": 0,
-    "dirty": 0,
-    "nums": 0,
-    "ids": 0,
-    "chars": 0,
-    "no_field": 20
-  },
-  "ollama/static_schema_noenum": {
-    "n": 20,
-    "with_prose": 0,
-    "dirty": 0,
-    "nums": 0,
-    "ids": 0,
-    "chars": 0,
-    "no_field": 20
-  },
-  "openai/guardrails_stock": {
-    "n": 200,
-    "with_prose": 0,
-    "dirty": 0,
-    "nums": 0,
-    "ids": 0,
-    "chars": 0,
-    "no_field": 200
-  },
-  "openai/guardrails_tierb": {
-    "n": 200,
-    "with_prose": 0,
-    "dirty": 0,
-    "nums": 0,
-    "ids": 0,
-    "chars": 0,
-    "no_field": 200
-  },
-  "openai/layer1": {
-    "n": 200,
-    "with_prose": 0,
-    "dirty": 0,
-    "nums": 0,
-    "ids": 0,
-    "chars": 0,
-    "no_field": 200
-  },
-  "openai/layer3_bare": {
-    "n": 200,
-    "with_prose": 0,
-    "dirty": 0,
-    "nums": 0,
-    "ids": 0,
-    "chars": 0,
-    "no_field": 200
-  },
-  "openai/layer3_stress": {
-    "n": 200,
-    "with_prose": 0,
-    "dirty": 0,
-    "nums": 0,
-    "ids": 0,
-    "chars": 0,
-    "no_field": 200
-  },
-  "openai/static_schema": {
-    "n": 200,
-    "with_prose": 0,
-    "dirty": 0,
-    "nums": 0,
-    "ids": 0,
-    "chars": 0,
-    "no_field": 200
-  },
-  "openai/static_schema_noenum": {
-    "n": 200,
-    "with_prose": 0,
-    "dirty": 0,
-    "nums": 0,
-    "ids": 0,
-    "chars": 0,
-    "no_field": 200
-  },
-  "deepseek/guardrails_choices": {
-    "n": 400,
-    "with_prose": 200,
-    "dirty": 25,
-    "nums": 21,
-    "ids": 4,
-    "chars": 186651,
-    "no_field": 200
+  "summary": {
+    "reference": {
+      "rejecting": {
+        "dirty": 147,
+        "n": 1600,
+        "rate": 9.2,
+        "ci": [
+          7.9,
+          10.7
+        ]
+      },
+      "non-rejecting": {
+        "dirty": 304,
+        "n": 2400,
+        "rate": 12.7,
+        "ci": [
+          11.4,
+          14.1
+        ]
+      },
+      "retried": {
+        "dirty": 28,
+        "n": 256,
+        "rate": 10.9,
+        "ci": [
+          7.7,
+          15.4
+        ]
+      },
+      "first-pass": {
+        "dirty": 119,
+        "n": 1344,
+        "rate": 8.9,
+        "ci": [
+          7.5,
+          10.5
+        ]
+      }
+    },
+    "crowded": {
+      "rejecting": {
+        "dirty": 69,
+        "n": 1000,
+        "rate": 6.9,
+        "ci": [
+          5.5,
+          8.6
+        ]
+      },
+      "non-rejecting": {
+        "dirty": 161,
+        "n": 998,
+        "rate": 16.1,
+        "ci": [
+          14.0,
+          18.5
+        ]
+      },
+      "retried": {
+        "dirty": 21,
+        "n": 244,
+        "rate": 8.6,
+        "ci": [
+          5.7,
+          12.8
+        ]
+      },
+      "first-pass": {
+        "dirty": 48,
+        "n": 756,
+        "rate": 6.3,
+        "ci": [
+          4.8,
+          8.3
+        ]
+      }
+    }
   }
 }

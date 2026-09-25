@@ -179,15 +179,15 @@
           71
         ],
         [
+          "feature_8",
+          64
+        ],
+        [
           "feature_7",
           64
         ],
         [
           "feature_9",
-          64
-        ],
-        [
-          "feature_8",
           64
         ]
       ],
@@ -478,6 +478,82 @@
       "rejected_once_or_more": 0,
       "stripped": 0,
       "top_tokens": [],
+      "anchor": "log_target_v2",
+      "anchor_in_allowed": true
+    },
+    {
+      "file": "2026-09-25_described_neutral/deepseek_deepseek-chat_synthetic_layer1_n200_seed0_e618bd74a.jsonl",
+      "arm_id": "A-L1-DESCRIBED-NEUTRAL",
+      "task": "synthetic",
+      "strict": false,
+      "n": 200,
+      "entity": 1,
+      "entity_ci": [
+        0.08831687156009814,
+        2.777370439789293
+      ],
+      "invented": 0,
+      "misfiled": 1,
+      "value": 0,
+      "omission": 0,
+      "abstained": 0,
+      "rejected_once_or_more": 0,
+      "stripped": 0,
+      "top_tokens": [
+        [
+          "r2",
+          1
+        ]
+      ],
+      "anchor": "log_target_v2",
+      "anchor_in_allowed": true
+    },
+    {
+      "file": "2026-09-25_described_neutral/deepseek_deepseek-chat_synthetic_layer2_n200_seed0_e618bd74a.jsonl",
+      "arm_id": "A-L2-DESCRIBED-NEUTRAL",
+      "task": "synthetic",
+      "strict": false,
+      "n": 200,
+      "entity": 0,
+      "entity_ci": [
+        1.734723475976807e-16,
+        1.8845326377266574
+      ],
+      "invented": 0,
+      "misfiled": 0,
+      "value": 0,
+      "omission": 0,
+      "abstained": 0,
+      "rejected_once_or_more": 0,
+      "stripped": 0,
+      "top_tokens": [],
+      "anchor": "log_target_v2",
+      "anchor_in_allowed": true
+    },
+    {
+      "file": "2026-09-25_rules_prompt/deepseek_deepseek-chat_synthetic_layer2_n200_seed0_e618bd74a.jsonl",
+      "arm_id": "A-L2-RULES",
+      "task": "synthetic",
+      "strict": false,
+      "n": 200,
+      "entity": 14,
+      "entity_ci": [
+        4.215217182834281,
+        11.405480885610647
+      ],
+      "invented": 0,
+      "misfiled": 14,
+      "value": 0,
+      "omission": 0,
+      "abstained": 0,
+      "rejected_once_or_more": 0,
+      "stripped": 0,
+      "top_tokens": [
+        [
+          "r2",
+          14
+        ]
+      ],
       "anchor": "log_target_v2",
       "anchor_in_allowed": true
     }
