@@ -7,9 +7,10 @@ undefined references, abstract 247 words.
 
 ## Next
 
-1. **Title** — still "Prompts Are Advisory, Verification Is Enforcement".
-   A-L2 (rule-bearing prompt) = 0/200, so a reviewer may read the title as
-   contradicted. User to decide.
+1. **Title** — changed 2026-09-25 to "An Evidence-Bound Runtime Contract
+   for LLM Narration of Machine-Learning Pipeline Evidence" (TSE and
+   CITATION.cff). The old slogan read as contradicted by A-L2 = 0/200.
+   The EMSE manuscript and README still carry the old title.
 2. **Re-review** — run the ARS reviewer in `re-review` mode against
    `editorial_decision.md` to check every P0/P1 item and the 47 factual items.
 3. **Response letter** — `templates/revision_response_template.md`; answer DA

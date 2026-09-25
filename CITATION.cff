@@ -46,8 +46,8 @@ authors:
 preferred-citation:
   type: unpublished
   title: >-
-    Prompts Are Advisory, Verification Is Enforcement: An Evidence-Bound
-    Runtime Contract for LLM Narration of Pipeline Evidence
+    An Evidence-Bound Runtime Contract for LLM Narration of
+    Machine-Learning Pipeline Evidence
   authors:
     - family-names: "Sabuniş"
       given-names: "Hakan"
