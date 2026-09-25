@@ -66,9 +66,9 @@ assistant; we measure what it is up against over 12{,}360 live responses. Of
 three providers only \texttt{deepseek-chat} fails unenforced, and where no
 column domain is stated all 924 of its flagged responses on a data-leakage
 task \emph{misfile} a real evidence name into a field that does not admit
-it; none invents a column. A rule-bearing prompt (0/200) or one sentence of
-field description (1/200) removes the failure; it returns where they are
-absent (61\,\% on a second task instance), and a stock guardrail loop's rate
+it; none invents a column. A rule-bearing prompt or one sentence of field
+description removes the failure (49\,\% to 0\,\% and 0.5\,\%); it
+returns where they are absent (61\,\% on a second task instance), and a stock guardrail loop's rate
 moves from 35\,\% to 48\,\% over nine days. An enum fixed when the tool was
 written turns misfiling into invention (72.5\,\%) on data it predates; bound
 at call time it reads zero. The verifier held on two task instances and two
@@ -595,7 +595,7 @@ Strict prompt & Registered replicate run 2026-09-24 (\texttt{A-L2}, \texttt{A-L3
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 On the bare arm \texttt{deepseek-chat} put an out-of-evidence entity in
-\textbf{42.0\,\%} of 200 responses on 2026-09-15 (84/200, [35.4, 48.9]). Four
+\textbf{42.0\,\%} [35.4, 48.9] of 200 responses on 2026-09-15 (84/200). Four
 runs over nine days read 42.0, 43.0, 40.5 and 49.0\,\%, with no detectable
 heterogeneity ($\chi^2$, $p=0.34$; pooled 43.6\,\% [40.2, 47.1]). Read as
 published, that is a fabrication rate. It is not one.
@@ -617,13 +617,15 @@ The bare instruction says ``list every column from the evidence you cite'',
 and the open schema says nothing about \texttt{columns\_referenced}; the
 suspicious metric is the thing being investigated, and the model cites it.
 Adding one sentence of field description (column names only, not metric
-names) and changing nothing else takes the rate from 98/200 on the same day to
-\textbf{1/200} [0.1, 2.8] (\texttt{A-L1-DESCRIBED}). The shipped rule-bearing
-prompt, with no description and no enforcement, gives \textbf{0/200}
+names) and changing nothing else takes the rate from 49.0\,\% (98/200) on the
+same day to \textbf{0.5\,\%} [0.1, 2.8] (1/200, \texttt{A-L1-DESCRIBED}). The
+shipped rule-bearing prompt, with no description and no enforcement, gives
+\textbf{0\,\%} (0/200, below 1.9\,\% at 95\,\% confidence)
 (\texttt{A-L2}), as the analysis plan predicted when it chose the bare prompt
 for the comparison (Table~\ref{tab:registered}). The misfiling is not a
 property of our reference names: on the crowded instance, whose columns are
-all named differently, the undescribed field gives 122/200, every one
+all named differently, the undescribed field gives 61.0\,\% [54.1, 67.5]
+(122/200), every one
 \texttt{r2}. And it is not a property of narrators: \texttt{gpt-5.4-mini}
 never writes \texttt{r2} into a column field in 200 responses, and a local
 \texttt{qwen2.5:7b} never does in 20.
@@ -653,11 +655,11 @@ narrator that declined to speak.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{table}[t]
-\caption{Responses reaching the user with a structured violation, of 200 per
-cell, \texttt{deepseek-chat}. \emph{Reference}: the 2026-09-15 battery unless
+\caption{Percentage of responses reaching the user with a structured
+violation, 200 per cell, \texttt{deepseek-chat}. \emph{Reference}: the 2026-09-15 battery unless
 dated; \emph{crowded}: the second instance, 2026-09-24/25, on which the
-author-time enum covers none of the evidence columns. A zero in 200 bounds a
-sampled rate below 1.9\,\% (Wilson, 95\,\%); for the arms with a verifier
+author-time enum covers none of the evidence columns. A sampled 0 bounds the
+rate below 1.9\,\% (Wilson, 95\,\%); for the arms with a verifier
 (below the second rule) the zero holds by construction, and
 Table~\ref{tab:retry} reports what the verifier did.}
 \label{tab:arms}
@@ -667,18 +669,18 @@ Table~\ref{tab:retry} reports what the verifier did.}
 \resizebox{\columnwidth}{!}{%
 \begin{tabular}{@{}llrr@{}}
 \toprule
-Arm & Mechanism & Reference & Crowded \\
+Arm & Mechanism & Reference (\%) & Crowded (\%) \\
 \midrule
-\texttt{A-L1}                & no enforcement             & 84 & 122 \\
-\texttt{A-GR-STOCK}          & Guardrails, no faithfulness validator & 70 & 115 \\
-\texttt{A-STRICT-STATIC}     & schema, no column enum     & 8 & 55 \\
-\texttt{A-STATIC-ENUM-STALE} & author-time column enum    & 0$^{a}$ & 145$^{d}$ \\
+\texttt{A-L1}                & no enforcement             & 42.0 & 61.0 \\
+\texttt{A-GR-STOCK}          & Guardrails, no faithfulness validator & 35.0 & 57.5 \\
+\texttt{A-STRICT-STATIC}     & schema, no column enum     & 4.0 & 27.5 \\
+\texttt{A-STATIC-ENUM-STALE} & author-time column enum    & 0$^{a}$ & 72.5$^{d}$ \\
 \midrule
 \texttt{A-L2}                & rule-bearing prompt        & 0$^{b}$ & --- \\
-\texttt{A-L1-DESCRIBED}      & field description          & 1$^{b}$ & --- \\
+\texttt{A-L1-DESCRIBED}      & field description          & 0.5$^{b}$ & --- \\
 \texttt{A-TIER-A-ONLY}       & call-time enum             & 0 & 0 \\
 \texttt{A-STRICT-ENUM}       & call-time enum, strict flag & 0$^{b}$ & --- \\
-\texttt{A-GR-CHOICES}        & Guardrails, choice list bound to $E$ & 0$^{c}$ & 3$^{e}$ \\
+\texttt{A-GR-CHOICES}        & Guardrails, choice list bound to $E$ & 0$^{c}$ & 1.5$^{e}$ \\
 \midrule
 \texttt{A-GR-OURS}           & Guardrails, our checks     & 0 & 0 \\
 \texttt{A-CONTRACT}          & Tier~A + Tier~B            & 0 & 0 \\
@@ -690,9 +692,9 @@ Arm & Mechanism & Reference & Crowded \\
 \vspace{2pt}
 {\footnotesize $^{a}$On the reference task the author-time list equals the
 evidence's ten columns, so the arm is identical to the call-time enum.\quad
-$^{b}$2026-09-24.\quad $^{c}$2026-09-18, when \texttt{A-GR-STOCK} read 87.\quad
-$^{d}$All invented; 132 also omit the anchor, which the list does not
-contain, and 41 abstain.\quad $^{e}$One misfiled name in a claim's column
+$^{b}$2026-09-24.\quad $^{c}$2026-09-18, when \texttt{A-GR-STOCK} read 43.5.\quad
+$^{d}$145 of 200, all invented; 132 also omit the anchor, which the list does not
+contain, and 41 abstain.\quad $^{e}$3 of 200: one misfiled name in a claim's column
 field and two misquoted values: the fields a single choice list does not
 check.}
 \end{table}
@@ -705,14 +707,15 @@ a choice list in a guardrail loop, or our verifier --- reaches zero or one in
 200, and every arm that does not stays near the floor. The same-date
 comparison inside one toolkit is the cleanest: on 2026-09-18,
 \texttt{A-GR-STOCK} and \texttt{A-GR-CHOICES} ran the same Guard, reask loop,
-budget, prompt and model, and read 87/200 against 0/200 (88 catches, all
-repaired). The stock configuration validates structure and carries no
+budget, prompt and model, and read 43.5\,\% (87/200) against 0\,\% (0/200,
+with 88 responses sent back and repaired). The stock configuration validates structure and carries no
 faithfulness validator --- a fresh install registers none --- so nothing in it
 could reject \texttt{r2}. The choice arm is our reimplementation of the
 toolkit's acceptable-values semantics with its list built from $E$ at call
 time. It checks \texttt{columns\_referenced} and nothing else, and on the
 reference task reaches the same place as our validator (\texttt{A-GR-OURS},
-0/200 with 84 repairs). On the crowded instance it let three responses
+where no violation reached the user and 84 responses were repaired). On the
+crowded instance it let three responses
 through --- a misfiled name in a claim's column field and two misquoted
 values --- where our validator in the same loop let none through (118
 repairs). The binding does the work on the field it covers; the channels a
@@ -734,8 +737,8 @@ covers none of its ten evidence columns, and the model obeys it. It cites
 reference-task columns that do not exist in this frame in 145 of 200
 responses (72.5\,\% [65.9, 78.2]) --- every one an invention, the failure the
 undescribed field never produced --- 132 omit the anchor the list does not
-let them name, and 41 abstain. The same instance reads 55/200 with no column
-enum and 0/200 with the enum built at call time. Binding at call time is not
+let them name, and 41 abstain. The same instance reads 27.5\,\% (55/200)
+with no column enum and 0\,\% (0/200) with the enum built at call time. Binding at call time is not
 a refinement of the author-time list: on evidence the list predates, the list
 manufactures the failure.
 
@@ -800,7 +803,7 @@ transport errors) all seven arms that existed then show no violation in 200,
 the floor included: it cites exactly the ten evidence columns in 199 of 200
 responses and never writes \texttt{r2} into a column field. A local
 \texttt{qwen2.5:7b} ($N=20$) shows none except \texttt{A-STRICT-STATIC} at
-2/20. No comparison between arms exists on those providers, so the
+10\,\% (2/20). No comparison between arms exists on those providers, so the
 comparative claims of this section rest on one model, and its rates are
 properties of \texttt{deepseek-chat} on a date rather than of LLMs. An engineer
 who benchmarked prompt-level reliability on \texttt{gpt-5.4-mini} would
@@ -896,7 +899,8 @@ re-ran the unenforced arms on the same data under distinct natural names
 \begin{table}[t]
 \caption{The second task, $N=200$ per arm, \texttt{deepseek-chat}. A
 \emph{wrong number} is a claim on an admissible (column, statistic) pair whose
-value misses the measurement; a \emph{misplaced} one quotes a number $E$
+value misses the measurement, counted in responses of 200; a
+\emph{misplaced} one quotes a number $E$
 carries, correctly, under a pair the binder does not admit. Tier~B catches
 are responses the verifier sent back.}
 \label{tab:rq6}
@@ -906,15 +910,15 @@ are responses the verifier sent back.}
 \resizebox{\columnwidth}{!}{%
 \begin{tabular}{@{}llrrrr@{}}
 \toprule
-Arm & Names & wrong no. & misplaced & any (95\,\% CI) & Tier~B \\
+Arm & Names & wrong no. & misplaced & any, \% [95\,\% CI] & Tier~B \\
 \midrule
-\texttt{P-L1}          & suffixed & 9 & 9  & 17 [5.4, 13.2]\% & --- \\
-\texttt{P-TIER-A-ONLY} & suffixed & 11 & 1 & 12 [3.5, 10.2]\% & --- \\
+\texttt{P-L1}          & suffixed & 9 & 9  & 8.5 [5.4, 13.2] & --- \\
+\texttt{P-TIER-A-ONLY} & suffixed & 11 & 1 & 6.0 [3.5, 10.2] & --- \\
 \texttt{P-CONTRACT}    & suffixed & 0 & 0 & 0 & 6 \\
 \texttt{P-STRESS}      & suffixed & 0 & 0 & 0 & 13 \\
 \midrule
-\texttt{P-L1}          & natural  & \textbf{0} & 26 & 26 [9.0, 18.4]\% & --- \\
-\texttt{P-TIER-A-ONLY} & natural  & \textbf{0} & 4  & 6 [1.4, 6.4]\% & --- \\
+\texttt{P-L1}          & natural  & \textbf{0} & 26 & 13.0 [9.0, 18.4] & --- \\
+\texttt{P-TIER-A-ONLY} & natural  & \textbf{0} & 4  & 3.0 [1.4, 6.4] & --- \\
 \bottomrule
 \end{tabular}}
 \end{table}
@@ -1012,7 +1016,7 @@ signed value, and calling a class balance invented when the profiler reports
 one all penalised correct claims; the second was found because two readers
 disagreed about what a channel measured. \textbf{A control that silently
 receives the treatment produces the number the hypothesis wants} (9): the
-profile floor ran the deletion step unconditionally and read 0/200 on a task
+profile floor ran the deletion step unconditionally and read 0\,\% on a task
 that fails, and the tell was sixty Tier~B catches printed for an arm with no
 Tier~B. \textbf{Corrections do not run one way by accident}: the first four
 that moved the downstream checklist moved it toward our hypothesis, because
@@ -1037,10 +1041,10 @@ either value, so no reported number moves.
 
 \paragraph{Every failure we measured has a cheap fix, and none carries over}
 The misfiling of Section~\ref{sec:rq1} disappears with a rule-bearing prompt
-(0/200) or one sentence of field description (1/200); the wrong numbers of
+(0\,\%) or one sentence of field description (0.5\,\%); the wrong numbers of
 Section~\ref{sec:rq6} disappear under distinct column names; the whole
 failure disappears on another provider. Each reappears where its fix is
-absent --- 122/200 on a differently named instance, 49\,\% on the same model
+absent --- 61\,\% on a differently named instance, 49\,\% on the same model
 nine days later. A tool author controls the prompt and the schema, but not
 the names in the user's data, the provider behind an endpoint, or the date,
 and cannot know that every field is specified well enough for every model
