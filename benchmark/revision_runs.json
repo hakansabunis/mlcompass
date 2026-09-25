@@ -1,18 +1,45 @@
 {
   "leakage": [
     {
+      "file": "2026-09-24_revision/deepseek_deepseek-chat_synthetic_crowded_guardrails_choices_n200_seed0_ee469b75a.jsonl",
+      "arm_id": "A-GR-CHOICES",
+      "task": "synthetic_crowded",
+      "strict": false,
+      "n": 200,
+      "entity": 1,
+      "entity_ci": [
+        0.08831687156009814,
+        2.777370439789293
+      ],
+      "invented": 0,
+      "misfiled": 1,
+      "value": 2,
+      "omission": 0,
+      "abstained": 0,
+      "rejected_once_or_more": 101,
+      "stripped": 0,
+      "top_tokens": [
+        [
+          "r2",
+          1
+        ]
+      ],
+      "anchor": "sensor_ref",
+      "anchor_in_allowed": true
+    },
+    {
       "file": "2026-09-24_revision/deepseek_deepseek-chat_synthetic_crowded_guardrails_stock_n200_seed0_ee469b75a.jsonl",
       "arm_id": "A-GR-STOCK",
       "task": "synthetic_crowded",
       "strict": false,
-      "n": 194,
-      "entity": 110,
+      "n": 200,
+      "entity": 115,
       "entity_ci": [
-        49.66532787403565,
-        63.47650809653514
+        50.570932647854846,
+        64.14638745648614
       ],
       "invented": 0,
-      "misfiled": 110,
+      "misfiled": 115,
       "value": 0,
       "omission": 0,
       "abstained": 0,
@@ -21,9 +48,31 @@
       "top_tokens": [
         [
           "r2",
-          110
+          115
         ]
       ],
+      "anchor": "sensor_ref",
+      "anchor_in_allowed": true
+    },
+    {
+      "file": "2026-09-24_revision/deepseek_deepseek-chat_synthetic_crowded_guardrails_tierb_n200_seed0_ee469b75a.jsonl",
+      "arm_id": "A-GR-OURS",
+      "task": "synthetic_crowded",
+      "strict": false,
+      "n": 200,
+      "entity": 0,
+      "entity_ci": [
+        1.734723475976807e-16,
+        1.8845326377266574
+      ],
+      "invented": 0,
+      "misfiled": 0,
+      "value": 0,
+      "omission": 0,
+      "abstained": 0,
+      "rejected_once_or_more": 118,
+      "stripped": 0,
+      "top_tokens": [],
       "anchor": "sensor_ref",
       "anchor_in_allowed": true
     },
@@ -95,6 +144,80 @@
       "rejected_once_or_more": 25,
       "stripped": 0,
       "top_tokens": [],
+      "anchor": "sensor_ref",
+      "anchor_in_allowed": true
+    },
+    {
+      "file": "2026-09-24_revision/deepseek_deepseek-chat_synthetic_crowded_static_schema_n200_seed0_ee469b75a.jsonl",
+      "arm_id": "A-STATIC-ENUM-STALE",
+      "task": "synthetic_crowded",
+      "strict": false,
+      "n": 200,
+      "entity": 145,
+      "entity_ci": [
+        65.93166064233034,
+        78.22029967069265
+      ],
+      "invented": 145,
+      "misfiled": 0,
+      "value": 0,
+      "omission": 132,
+      "abstained": 41,
+      "rejected_once_or_more": 0,
+      "stripped": 0,
+      "top_tokens": [
+        [
+          "near_target_proxy",
+          89
+        ],
+        [
+          "feature_10",
+          79
+        ],
+        [
+          "feature_4",
+          71
+        ],
+        [
+          "feature_7",
+          64
+        ],
+        [
+          "feature_9",
+          64
+        ],
+        [
+          "feature_8",
+          64
+        ]
+      ],
+      "anchor": "sensor_ref",
+      "anchor_in_allowed": true
+    },
+    {
+      "file": "2026-09-24_revision/deepseek_deepseek-chat_synthetic_crowded_static_schema_noenum_n200_seed0_ee469b75a.jsonl",
+      "arm_id": "A-STRICT-STATIC",
+      "task": "synthetic_crowded",
+      "strict": false,
+      "n": 200,
+      "entity": 55,
+      "entity_ci": [
+        21.779700329307357,
+        34.06833935766965
+      ],
+      "invented": 0,
+      "misfiled": 55,
+      "value": 0,
+      "omission": 0,
+      "abstained": 0,
+      "rejected_once_or_more": 0,
+      "stripped": 0,
+      "top_tokens": [
+        [
+          "r2",
+          55
+        ]
+      ],
       "anchor": "sensor_ref",
       "anchor_in_allowed": true
     },

@@ -420,11 +420,11 @@
       "task": "leakage",
       "arm": "A-L1-DESCRIBED [2026-09-24_described]",
       "n": 200,
-      "claims_checked": 0,
+      "claims_checked": 1852,
       "source": "claims",
-      "exact": 0,
+      "exact": 1852,
       "hist": [
-        0,
+        1852,
         0,
         0,
         0,
@@ -445,11 +445,11 @@
       "task": "leakage",
       "arm": "A-L2-DESCRIBED [2026-09-24_described]",
       "n": 200,
-      "claims_checked": 0,
+      "claims_checked": 490,
       "source": "claims",
-      "exact": 0,
+      "exact": 490,
       "hist": [
-        0,
+        490,
         0,
         0,
         0,
@@ -470,36 +470,36 @@
       "task": "leakage",
       "arm": "A-GR-CHOICES [2026-09-24_revision]",
       "n": 200,
-      "claims_checked": 0,
+      "claims_checked": 1957,
       "source": "claims",
-      "exact": 0,
+      "exact": 816,
       "hist": [
+        1945,
         0,
+        9,
+        1,
         0,
-        0,
-        0,
-        0,
-        0
+        2
       ],
       "responses_violating": {
-        "0.0005": 0,
-        "0.001": 0,
-        "0.005": 0,
-        "0.01": 0,
-        "0.05": 0
+        "0.0005": 3,
+        "0.001": 3,
+        "0.005": 2,
+        "0.01": 2,
+        "0.05": 2
       },
-      "max_rel_dev_nonzero": 0.0,
-      "median_rel_dev_nonzero": 0.0
+      "max_rel_dev_nonzero": 0.07683982683982692,
+      "median_rel_dev_nonzero": 1.225411726959334e-16
     },
     {
       "task": "leakage",
       "arm": "A-GR-STOCK [2026-09-24_revision]",
       "n": 200,
-      "claims_checked": 0,
+      "claims_checked": 1994,
       "source": "claims",
-      "exact": 0,
+      "exact": 823,
       "hist": [
-        0,
+        1994,
         0,
         0,
         0,
@@ -513,18 +513,18 @@
         "0.01": 0,
         "0.05": 0
       },
-      "max_rel_dev_nonzero": 0.0,
-      "median_rel_dev_nonzero": 0.0
+      "max_rel_dev_nonzero": 3.6641023915021682e-16,
+      "median_rel_dev_nonzero": 1.225411726959334e-16
     },
     {
       "task": "leakage",
       "arm": "A-GR-OURS [2026-09-24_revision]",
       "n": 200,
-      "claims_checked": 0,
+      "claims_checked": 1951,
       "source": "claims",
-      "exact": 0,
+      "exact": 706,
       "hist": [
-        0,
+        1951,
         0,
         0,
         0,
@@ -538,18 +538,18 @@
         "0.01": 0,
         "0.05": 0
       },
-      "max_rel_dev_nonzero": 0.0,
-      "median_rel_dev_nonzero": 0.0
+      "max_rel_dev_nonzero": 3.6641023915021682e-16,
+      "median_rel_dev_nonzero": 1.225411726959334e-16
     },
     {
       "task": "leakage",
       "arm": "A-L1 [2026-09-24_revision]",
       "n": 200,
-      "claims_checked": 0,
+      "claims_checked": 1947,
       "source": "claims",
-      "exact": 0,
+      "exact": 810,
       "hist": [
-        0,
+        1947,
         0,
         0,
         0,
@@ -563,18 +563,18 @@
         "0.01": 0,
         "0.05": 0
       },
-      "max_rel_dev_nonzero": 0.0,
-      "median_rel_dev_nonzero": 0.0
+      "max_rel_dev_nonzero": 3.6641023915021682e-16,
+      "median_rel_dev_nonzero": 1.225411726959334e-16
     },
     {
       "task": "leakage",
       "arm": "A-CONTRACT [2026-09-24_revision]",
       "n": 200,
-      "claims_checked": 0,
+      "claims_checked": 1985,
       "source": "claims",
-      "exact": 0,
+      "exact": 1894,
       "hist": [
-        0,
+        1985,
         0,
         0,
         0,
@@ -588,18 +588,18 @@
         "0.01": 0,
         "0.05": 0
       },
-      "max_rel_dev_nonzero": 0.0,
-      "median_rel_dev_nonzero": 0.0
+      "max_rel_dev_nonzero": 3.6641023915021682e-16,
+      "median_rel_dev_nonzero": 1.225411726959334e-16
     },
     {
       "task": "leakage",
       "arm": "A-STRESS [2026-09-24_revision]",
       "n": 200,
-      "claims_checked": 0,
+      "claims_checked": 1992,
       "source": "claims",
-      "exact": 0,
+      "exact": 1768,
       "hist": [
-        0,
+        1992,
         0,
         0,
         0,
@@ -613,18 +613,18 @@
         "0.01": 0,
         "0.05": 0
       },
-      "max_rel_dev_nonzero": 0.0,
-      "median_rel_dev_nonzero": 0.0
+      "max_rel_dev_nonzero": 3.6641023915021682e-16,
+      "median_rel_dev_nonzero": 1.225411726959334e-16
     },
     {
       "task": "leakage",
       "arm": "A-STATIC-ENUM-STALE [2026-09-24_revision]",
       "n": 200,
-      "claims_checked": 0,
+      "claims_checked": 60,
       "source": "claims",
-      "exact": 0,
+      "exact": 58,
       "hist": [
-        0,
+        60,
         0,
         0,
         0,
@@ -638,18 +638,18 @@
         "0.01": 0,
         "0.05": 0
       },
-      "max_rel_dev_nonzero": 0.0,
-      "median_rel_dev_nonzero": 0.0
+      "max_rel_dev_nonzero": 2.467162276944793e-16,
+      "median_rel_dev_nonzero": 2.467162276944793e-16
     },
     {
       "task": "leakage",
       "arm": "A-STRICT-STATIC [2026-09-24_revision]",
       "n": 200,
-      "claims_checked": 0,
+      "claims_checked": 1803,
       "source": "claims",
-      "exact": 0,
+      "exact": 1680,
       "hist": [
-        0,
+        1803,
         0,
         0,
         0,
@@ -663,18 +663,18 @@
         "0.01": 0,
         "0.05": 0
       },
-      "max_rel_dev_nonzero": 0.0,
-      "median_rel_dev_nonzero": 0.0
+      "max_rel_dev_nonzero": 3.6641023915021682e-16,
+      "median_rel_dev_nonzero": 1.225411726959334e-16
     },
     {
       "task": "leakage",
       "arm": "A-L3-WORST-PARAPHRASE [2026-09-24_revision]",
       "n": 200,
-      "claims_checked": 0,
+      "claims_checked": 1991,
       "source": "claims",
-      "exact": 0,
+      "exact": 1886,
       "hist": [
-        0,
+        1991,
         0,
         0,
         0,
@@ -688,18 +688,18 @@
         "0.01": 0,
         "0.05": 0
       },
-      "max_rel_dev_nonzero": 0.0,
-      "median_rel_dev_nonzero": 0.0
+      "max_rel_dev_nonzero": 3.6641023915021682e-16,
+      "median_rel_dev_nonzero": 1.225411726959334e-16
     },
     {
       "task": "leakage",
       "arm": "A-STRICT-ENUM (needs --strict) [2026-09-24_revision]",
       "n": 200,
-      "claims_checked": 0,
+      "claims_checked": 1993,
       "source": "claims",
-      "exact": 0,
+      "exact": 1755,
       "hist": [
-        0,
+        1993,
         0,
         0,
         0,
@@ -713,8 +713,8 @@
         "0.01": 0,
         "0.05": 0
       },
-      "max_rel_dev_nonzero": 0.0,
-      "median_rel_dev_nonzero": 0.0
+      "max_rel_dev_nonzero": 3.6641023915021682e-16,
+      "median_rel_dev_nonzero": 1.225411726959334e-16
     },
     {
       "task": "leakage",
@@ -745,11 +745,11 @@
       "task": "leakage",
       "arm": "A-L2 [2026-09-24_revision]",
       "n": 200,
-      "claims_checked": 168,
+      "claims_checked": 441,
       "source": "claims",
-      "exact": 168,
+      "exact": 441,
       "hist": [
-        168,
+        441,
         0,
         0,
         0,
@@ -770,11 +770,11 @@
       "task": "leakage",
       "arm": "A-L3-SHIPPED [2026-09-24_revision]",
       "n": 200,
-      "claims_checked": 0,
+      "claims_checked": 507,
       "source": "claims",
-      "exact": 0,
+      "exact": 507,
       "hist": [
-        0,
+        507,
         0,
         0,
         0,
@@ -795,11 +795,11 @@
       "task": "leakage",
       "arm": "A-STRESS-GENERIC [2026-09-24_revision]",
       "n": 200,
-      "claims_checked": 0,
+      "claims_checked": 1850,
       "source": "claims",
-      "exact": 0,
+      "exact": 1850,
       "hist": [
-        0,
+        1850,
         0,
         0,
         0,
@@ -820,11 +820,11 @@
       "task": "leakage",
       "arm": "A-STRESS [2026-09-24_revision]",
       "n": 200,
-      "claims_checked": 0,
+      "claims_checked": 1864,
       "source": "claims",
-      "exact": 0,
+      "exact": 1864,
       "hist": [
-        0,
+        1864,
         0,
         0,
         0,
@@ -845,11 +845,11 @@
       "task": "leakage",
       "arm": "A-L3-WORST-PARAPHRASE [2026-09-24_revision]",
       "n": 200,
-      "claims_checked": 0,
+      "claims_checked": 1949,
       "source": "claims",
-      "exact": 0,
+      "exact": 1949,
       "hist": [
-        0,
+        1949,
         0,
         0,
         0,
@@ -870,11 +870,11 @@
       "task": "leakage",
       "arm": "A-STRICT-ENUM (needs --strict) [2026-09-24_revision]",
       "n": 200,
-      "claims_checked": 0,
+      "claims_checked": 1822,
       "source": "claims",
-      "exact": 0,
+      "exact": 1822,
       "hist": [
-        0,
+        1822,
         0,
         0,
         0,

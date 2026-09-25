@@ -55,29 +55,27 @@ E-mail: hakan.sabunis@std.medipol.edu.tr}}
 
 \IEEEtitleabstractindextext{%
 \begin{abstract}
-Software tools increasingly place a large language model between a
-deterministic analysis and the engineer who acts on it; when the explanation
-cites a column or number the analysis never produced, the engineer acts on
-something never observed. For narration whose citable entities and checkable
-quantities are finite and enumerable at call time, we bind each response
-field's admissible set to the evidence and verify the returned payload in host
-code, with a named retry and residual stripping. The mechanism is ordinary
-validate-and-reask; it ships as the narration path of \textbf{mlcompass}, an
-open-source ML-pipeline assistant, and we measure what it is up against over
-NRESPONSES live responses. Of three providers only \texttt{deepseek-chat} fails
-unenforced, and every one of its 864 flagged responses on a data-leakage task
-\emph{misfiles} a real evidence name into a field where it is not admissible;
-none invents a column. A rule-bearing prompt (0/200) or one sentence of field
-description (1/200) removes the failure, and it returns wherever they are
-absent (61\,\% on a differently named task instance); the unconstrained rate
-of a stock guardrail loop moves from 35\,\% to 48\,\% over nine days. The
-verifier holds on two task instances and two evidence shapes, and repaired
-every violation it met with one named retry at about half a second per
-response. A guardrail toolkit's own choice semantics, bound to the same
-evidence, reaches the same place, so what matters is binding the domain, not
-whose validator checks it. The guarantee is referential and value soundness
-on the structured channels; the verdict and the prose are outside it, and
-measuring the prose finds no content displaced into it.
+When a large language model explains a deterministic analysis to an
+engineer, a column or number the analysis never produced gets acted on. For
+narration whose citable entities and checkable quantities are finite and
+enumerable at call time, we bind each response field's admissible set to the
+evidence and verify the returned payload in host code, with a named retry and
+residual stripping. The mechanism is ordinary validate-and-reask, shipped as
+the narration path of \textbf{mlcompass}, an open-source ML-pipeline
+assistant; we measure what it is up against over 12{,}360 live responses. Of
+three providers only \texttt{deepseek-chat} fails unenforced, and where no
+column domain is stated all 924 of its flagged responses on a data-leakage
+task \emph{misfile} a real evidence name into a field that does not admit
+it; none invents a column. A rule-bearing prompt (0/200) or one sentence of
+field description (1/200) removes the failure; it returns where they are
+absent (61\,\% on a second task instance), and a stock guardrail loop's rate
+moves from 35\,\% to 48\,\% over nine days. An enum fixed when the tool was
+written turns misfiling into invention (72.5\,\%) on data it predates; bound
+at call time it reads zero. The verifier held on two task instances and two
+evidence shapes, repairing every violation with one named retry at about half
+a second. The guarantee is referential and value soundness on the structured
+channels; the verdict and the prose are outside it, and measuring the prose
+finds nothing displaced into it.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -109,7 +107,7 @@ nowhere in the evidence (an \emph{extrinsic} error), or put something the
 evidence really contains where it is not admissible --- a metric's name in a
 column field, one column's measurement on another (an \emph{intrinsic} one,
 which we call \emph{misfiling}). On the model that fails in this study, every
-one of 864 flagged responses on the leakage task is a misfiling, and we show
+one of 924 flagged responses on the leakage task is a misfiling, and we show
 what produces it: a field whose admissible set nobody stated. One sentence of
 field description, a rule-bearing prompt, or another provider removes it; it
 returns wherever they are absent.
@@ -168,9 +166,10 @@ under-specification, removable by cheap fixes that do not carry across
 configurations, while a verifier holds on two task instances and two evidence
 shapes and repairs every violation with one named retry; (iii) \textbf{a
 controlled comparison of the alternatives} inside one guardrail toolkit and
-one provider, including the toolkit's own choice semantics bound to the
-evidence, which reaches the same place as our validator --- so what matters is
-binding the domain, not whose validator checks it; and (iv) \textbf{a
+one provider, including an author-time enum on data it predates (worse than
+no enum) and the toolkit's own choice semantics bound to the evidence (as good
+as our validator on the field it checks, not on the fields it does not); and
+(iv) \textbf{a
 replication package}~\cite{replication} with every model reply, one record per
 live response, the frozen analysis plan with its amendments and deviations,
 the registered falsifier, and thirteen instrument faults with what each moved.
@@ -221,6 +220,7 @@ from a deterministic producer) and what is measured, not the mechanism.}
 \centering
 \footnotesize
 \setlength{\tabcolsep}{2.6pt}
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{@{}lllll@{}}
 \toprule
 Locus & Bound & Logits & Guarantees & Example \\
@@ -234,7 +234,7 @@ Code, context + reask & call & no & what the validator checks & \cite{liu2023ins
 Code, ledger & accumulating & no & per-claim provenance & \cite{du2026ledgermind} \\
 \textbf{Code, field-indexed} & \textbf{call} & \textbf{no} & \textbf{(C1)--(C2), (C3) flagged} & \textbf{here} \\
 \bottomrule
-\end{tabular}
+\end{tabular}}
 \end{table}
 
 Decode-time methods bind constraints to the input too: grammar-constrained
@@ -539,11 +539,12 @@ channel into wrong numbers and pairs $E$ does not carry. Artifacts --- a
 \texttt{null} column, several real names in one string --- are excluded.
 Transport errors are excluded from $N$ and reported.
 
-The tolerance decides almost nothing. Of 37{,}019 claims scored before any
+The tolerance decides almost nothing. Of 49{,}253 claims scored before any
 verification could act on them (every unenforced leakage and profile arm, all
-runs), 36{,}989 reproduce the measured value exactly and 4 differ by rounding
-below $5\times10^{-4}$; one drops a correlation's sign ($|\Delta| = 0.039$);
-the remaining 25 miss by more than 0.05. The number of responses with a value
+runs), 46{,}552 reproduce the measured value exactly and 2{,}675 round it by
+less than $5\times10^{-4}$, so only a tolerance below that would start to
+flag rounding; one drops a correlation's sign ($|\Delta| = 0.039$); the
+remaining 25 miss by more than 0.05. The number of responses with a value
 violation is 22 at every $\tau$ from $5\times10^{-4}$ to $0.01$ and 21 at
 $0.05$ (\texttt{scripts/tau\_sensitivity.py}).
 
@@ -600,8 +601,8 @@ heterogeneity ($\chi^2$, $p=0.34$; pooled 43.6\,\% [40.2, 47.1]). Read as
 published, that is a fabrication rate. It is not one.
 
 \paragraph{Every failure is a misfiling}
-Across every unenforced leakage arm in every run --- twelve cells on two task
-instances, 864 flagged responses --- every flagged response places a real
+Across every arm that states no column domain, in every run --- thirteen
+cells on two task instances, 924 flagged responses --- every one places a real
 evidence name where it is not admissible. The name is \texttt{r2}, which $E$
 carries as \texttt{suspicious\_metric.name}, written into
 \texttt{columns\_referenced}; twice it is \texttt{perfect\_match\_rate}. One
@@ -663,32 +664,37 @@ Table~\ref{tab:retry} reports what the verifier did.}
 \centering
 \footnotesize
 \setlength{\tabcolsep}{3pt}
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{@{}llrr@{}}
 \toprule
 Arm & Mechanism & Reference & Crowded \\
 \midrule
 \texttt{A-L1}                & no enforcement             & 84 & 122 \\
-\texttt{A-GR-STOCK}          & Guardrails, no faithfulness validator & 70 & @@STOCK@@ \\
-\texttt{A-STRICT-STATIC}     & schema, no column enum     & 8 & @@NOENUM@@ \\
-\texttt{A-STATIC-ENUM-STALE} & author-time column enum    & 0$^{a}$ & @@STALE@@ \\
+\texttt{A-GR-STOCK}          & Guardrails, no faithfulness validator & 70 & 115 \\
+\texttt{A-STRICT-STATIC}     & schema, no column enum     & 8 & 55 \\
+\texttt{A-STATIC-ENUM-STALE} & author-time column enum    & 0$^{a}$ & 145$^{d}$ \\
 \midrule
 \texttt{A-L2}                & rule-bearing prompt        & 0$^{b}$ & --- \\
 \texttt{A-L1-DESCRIBED}      & field description          & 1$^{b}$ & --- \\
 \texttt{A-TIER-A-ONLY}       & call-time enum             & 0 & 0 \\
 \texttt{A-STRICT-ENUM}       & call-time enum, strict flag & 0$^{b}$ & --- \\
+\texttt{A-GR-CHOICES}        & Guardrails, choice list bound to $E$ & 0$^{c}$ & 3$^{e}$ \\
 \midrule
-\texttt{A-GR-CHOICES}        & Guardrails, choice list bound to $E$ & 0$^{c}$ & @@CHOICES@@ \\
-\texttt{A-GR-OURS}           & Guardrails, our checks     & 0 & @@OURS@@ \\
+\texttt{A-GR-OURS}           & Guardrails, our checks     & 0 & 0 \\
 \texttt{A-CONTRACT}          & Tier~A + Tier~B            & 0 & 0 \\
 \texttt{A-STRESS}            & Tier~B alone               & 0 & 0 \\
 \texttt{A-L3-SHIPPED}        & as shipped, prompt included & 0$^{b}$ & --- \\
 \bottomrule
-\end{tabular}
+\end{tabular}}
 
 \vspace{2pt}
 {\footnotesize $^{a}$On the reference task the author-time list equals the
 evidence's ten columns, so the arm is identical to the call-time enum.\quad
-$^{b}$2026-09-24.\quad $^{c}$2026-09-18, when \texttt{A-GR-STOCK} read 87.}
+$^{b}$2026-09-24.\quad $^{c}$2026-09-18, when \texttt{A-GR-STOCK} read 87.\quad
+$^{d}$All invented; 132 also omit the anchor, which the list does not
+contain, and 41 abstain.\quad $^{e}$One misfiled name in a claim's column
+field and two misquoted values: the fields a single choice list does not
+check.}
 \end{table}
 
 \subsection{Binding the domain is what matters}
@@ -704,10 +710,13 @@ repaired). The stock configuration validates structure and carries no
 faithfulness validator --- a fresh install registers none --- so nothing in it
 could reject \texttt{r2}. The choice arm is our reimplementation of the
 toolkit's acceptable-values semantics with its list built from $E$ at call
-time. It checks columns and nothing else, and reaches the same place as our
-validator (\texttt{A-GR-OURS}, 0/200 with 84 repairs). What does the work is
-the binding, not whose code checks it; our validator's extra channels matter
-where values fail, which Section~\ref{sec:rq6} measures.
+time. It checks \texttt{columns\_referenced} and nothing else, and on the
+reference task reaches the same place as our validator (\texttt{A-GR-OURS},
+0/200 with 84 repairs). On the crowded instance it let three responses
+through --- a misfiled name in a claim's column field and two misquoted
+values --- where our validator in the same loop let none through (118
+repairs). The binding does the work on the field it covers; the channels a
+choice list does not cover are where Tier~B's other checks earn their place.
 
 \texttt{A-STRICT-STATIC}, a schema with types and required fields and no
 column enum, reads 4.0--7.0\,\% across runs against the floor's 42\,\%: a
@@ -717,7 +726,18 @@ violation on the reference task with or without the provider's strict flag
 (H9 holds on entity). Neither result is a guarantee: the enum ran as a request
 in the non-strict arms, and a strict flag's observance is the provider's.
 
-STALEPARAGRAPH
+\paragraph{A stale enum is worse than none}
+On the reference task the author-time list is the evidence's own column set,
+so the stale-enum arm is the call-time arm under another name. The crowded
+instance is where they part: the list written against the reference task
+covers none of its ten evidence columns, and the model obeys it. It cites
+reference-task columns that do not exist in this frame in 145 of 200
+responses (72.5\,\% [65.9, 78.2]) --- every one an invention, the failure the
+undescribed field never produced --- 132 omit the anchor the list does not
+let them name, and 41 abstain. The same instance reads 55/200 with no column
+enum and 0/200 with the enum built at call time. Binding at call time is not
+a refinement of the author-time list: on evidence the list predates, the list
+manufactures the failure.
 
 \begin{table}[t]
 \caption{What the verifier did on the enforced arms (reference battery and
@@ -883,6 +903,7 @@ are responses the verifier sent back.}
 \centering
 \footnotesize
 \setlength{\tabcolsep}{3pt}
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{@{}llrrrr@{}}
 \toprule
 Arm & Names & wrong no. & misplaced & any (95\,\% CI) & Tier~B \\
@@ -895,7 +916,7 @@ Arm & Names & wrong no. & misplaced & any (95\,\% CI) & Tier~B \\
 \texttt{P-L1}          & natural  & \textbf{0} & 26 & 26 [9.0, 18.4]\% & --- \\
 \texttt{P-TIER-A-ONLY} & natural  & \textbf{0} & 4  & 6 [1.4, 6.4]\% & --- \\
 \bottomrule
-\end{tabular}
+\end{tabular}}
 \end{table}
 
 \paragraph{The wrong numbers were our naming}
@@ -963,18 +984,18 @@ briefly given the strict prompt, and four repairs to the free-text pipeline
 \centering
 \footnotesize
 \setlength{\tabcolsep}{2.4pt}
-\begin{tabular}{@{}rp{4.0cm}lp{1.9cm}@{}}
+\begin{tabular}{@{}rp{3.55cm}lp{1.75cm}@{}}
 \toprule
 \# & Fault & Found by & Moved \\
 \midrule
-1  & checklist penalised unlisted correct forms & authors & defects 40/31/15$\rightarrow$31/24/8 \\
+1  & checklist penalised unlisted correct forms & authors & defects 40/31/15 $\rightarrow$ 31/24/8 \\
 2  & value scorer ignored the statistic field & two readers & sweep value flags 85$\rightarrow$2 \\
 3  & the fix for 1 matched keyword arguments & authors & within 1 \\
 4  & provider pin refused forced tool calls & authors & one battery $0/0\rightarrow$usable \\
 5  & June pilot (11.5\,\%, sweep 1--100\,\%) did not reproduce; rolling alias, records not kept & authors & pilot not reported as a result \\
 6  & target harvest missed parameter defaults & second scorer & control 33$\rightarrow$31 \\
 7  & runner executed cells off the frozen plan & authors & 48 runs relabelled \\
-8  & narration never recorded & authors & free text unmeasured$\rightarrow$re-run \\
+8  & narration never recorded & authors & free text re-run with it \\
 9  & profile floor stripped before scoring & its telemetry & \texttt{P-L1} 0$\rightarrow$17 \\
 10 & statistic names ours, not the profiler's & authors & ${\approx}\frac13$ of first rate \\
 11 & cost table transcribed by hand & authors & table regenerated \\
@@ -1029,7 +1050,12 @@ perfectly, and its effect is known only where it was measured, whereas the
 verifier's is a property of code that runs in our process.
 
 \paragraph{What binding at call time buys}
-STALEPLACEHOLDER
+The crowded instance answers this. An enum declared while authoring against
+one dataset turned a 61\,\% misfiling rate into a 72.5\,\% invention rate on
+the next and blocked the anchor in two responses in three; the same enum
+built at call time read zero. A stale schema is not a weaker guarantee but a
+source of error, and nothing in a static schema tells its author that the
+data has moved.
 
 \paragraph{Simpler designs}
 Two alternatives deserve naming. Rendering every structured fact
