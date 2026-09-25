@@ -104,8 +104,8 @@ built on them still fail real software tasks~\cite{codex,swebench}.
 A concrete case shows what is at stake. An engineer's regression model scores
 $R^2=1.0$ on held-out data. \textbf{mlcompass}, the open-source ML-pipeline
 assistant this paper studies, treats a score that high as a sign of data
-leakage: it fires when $R^2>0.999$, $\mathrm{AUC}>0.995$ or accuracy $>0.99$
-on at least 50 rows, thresholds of our own motivated by the leakage problem
+leakage: it fires, for example, when $R^2>0.999$, $\mathrm{AUC}>0.995$ or
+accuracy $>0.99$ on at least 50 rows, thresholds of our own motivated by the leakage problem
 Kaufman \emph{et al.} describe~\cite{leakage}. A
 deterministic detector then computes how strongly each feature correlates
 with the target and ranks the columns that could be carrying the target into
@@ -113,7 +113,8 @@ the features. Its output is the \emph{evidence}, a dictionary we write $E$.
 An LLM explains $E$ to the engineer by filling in a structured answer: a
 verdict chosen from four labels (leakage likely, leakage uncertain, score
 legitimate, cannot determine), the list of columns it cites, and claims of the
-form (column, statistic, value). A sound answer cites the planted leak
+form (column, statistic, value). On the frame this paper studies
+(Section~\ref{sec:design}), a sound answer cites the leak column
 \texttt{log\_target\_v2} with its measured correlation of 0.999.
 
 The narrated object is thus \emph{structured evidence}, and a structured
@@ -125,7 +126,8 @@ column's measurement on another (an \emph{intrinsic} error, which we call
 \emph{misfiling}). On the model that
 fails in this study, all 924 flagged responses under the bare instruction
 are misfilings, and they come from a field whose admissible set nobody stated.
-One sentence of field description or the shipped prompt removes the failure,
+One sentence of field description or the prompt mlcompass ships removes the
+failure,
 the prompt's rules without its claim of enforcement leave 7\,\%, and two other
 providers never show it. Where no fix is present, it returns.
 
@@ -320,8 +322,8 @@ correlation $E$ does not contain.
 
 \subsection{The evidence, and why admissibility is per field}
 
-In the leakage investigation this paper studies, the deterministic layer
-produces an evidence dictionary $E$. It holds the suspicious metric and its
+In the leakage investigation, the evidence dictionary $E$ holds the
+suspicious metric and its
 value; per-feature correlations against the target $y$, taking whichever of
 $\rho_P$ and $\rho_S$ has the larger magnitude and keeping its sign; a ranked
 candidate-leak set $C=\{c:\max(|\rho_P(c,y)|,|\rho_S(c,y)|)\ge 0.99\}$; and
@@ -332,7 +334,7 @@ Pearson-only filter.
 
 Let $N_E$ be every name $E$ carries, its keys and its string values. The
 obvious formalisation admits any member of $N_E$ in any reference field. Under
-it, a \texttt{column} field reading \texttt{r2} counts as sound, because
+it, a column field reading \texttt{r2} counts as sound, because
 \texttt{r2} is in $E$ as the name of the \emph{metric}. We therefore index
 admissibility by field.
 
@@ -343,10 +345,10 @@ the list of cited columns and the column and statistic of each claim
 (\texttt{columns\_referenced}, \texttt{claims[].column} and
 \texttt{claims[].statistic} in the schema). Their entries, the \emph{leaves},
 are names compared as strings. $E$ determines an admissible set $A_{E,f}$ per
-path, with the column and statistic domains disjoint, and a value table $V_E$
+field, with the column and statistic domains disjoint, and a value table $V_E$
 with $\mathrm{dom}(V_E)\subseteq A_{E,\mathrm{col}}\times A_{E,\mathrm{stat}}$.
 A leaf is \emph{misfiled} when it lies in $N_E$ but not in the $A_{E,f}$ of
-its own path, and \emph{invented} when it is not in $N_E$ at all. A
+its own field, and \emph{invented} when it is not in $N_E$ at all. A
 response \emph{commits} when its verdict is admissible and is not the
 abstention ``cannot determine''; the entities it \emph{references} are its
 leaves in the column fields.
@@ -455,9 +457,9 @@ responses occur only on arms without a verifier (4 on \texttt{deepseek-chat},
 For most of this study the code handled a single instance: one column set,
 each claim's statistic fixed to correlation, and each claim
 checked by looking its column up in the correlation map. The contract is now a
-layer. A spec says how to read one evidence shape, binding yields the
+layer. A specification says how to read one evidence shape, binding yields the
 field-indexed domains, the value table and the anchor, and the verifier,
-stripper, retry text and schema builder name no task. Leakage is one spec of
+stripper, retry text and schema builder name no task. Leakage is one specification of
 about forty lines. A dataset profiler is a second: every column of the frame
 is admissible, each column has up to thirteen statistics, and the statistic
 set is computed per call because a categorical column carries a cardinality
@@ -612,13 +614,18 @@ not statistic names.'' That sentence names the failing token, so the
 \texttt{-NEUTRAL} arms end it instead with ``Column names only, not the names
 of metrics or statistics.'' \texttt{A-L2-RULES} gives the bare prompt followed
 by the shipped prompt's first three rules, with no claim that anything is
-checked. These arms ran on 2026-09-24 and 2026-09-25 on later harness commits,
-which add the options, and each record pins its commit. The baseline arms were
+checked. These controls are not part of the registered plan. They ran on
+2026-09-24 and 2026-09-25 on later harness commits, which add the options, and
+each record pins its commit. The baseline arms were
 also run on the crowded instance, where the author-time enum is stale, and the
 profile arms of RQ5 were re-run under natural column names.
 
 \paragraph{Sample size and dates}
-Each arm has $N=200$, fixed in the analysis plan. A count of 0 in 200 bounds
+Each arm on \texttt{deepseek-chat} and \texttt{gpt-5.4-mini} has $N=200$,
+fixed in the analysis plan; the local \texttt{qwen2.5:7b} arms have $N=20$ and
+the RQ4 variants $N=100$. One arm's responses on one task instance and date
+form a \emph{cell}, and the arms run together on one date a \emph{battery}.
+A count of 0 in 200 bounds
 the rate below 1.9\,\% (Wilson, 95\,\%), and two arms about 4 percentage
 points apart are told apart with power 0.8 (Section~\ref{sec:threats}). The
 provider serves a rolling model name, so the same arm can read differently on
@@ -634,7 +641,7 @@ the same sweep (fault 5 in Table~\ref{tab:corrections}).
 \subsection{Measures}
 
 We score three structured channels on every response that reaches the user.
-An \emph{entity} violation is a leaf outside its path's admissible set; a
+An \emph{entity} violation is a leaf outside its field's admissible set; a
 \emph{value} violation is a claim whose column is in $E$ but whose value
 misses the measurement by more than $\tau$, or whose pair $E$ does not carry;
 an \emph{omission} is a committed verdict that never references the anchor.
@@ -718,7 +725,8 @@ fabricated column.
 
 \paragraph{Composition of the failures}
 We looked at every arm that runs the bare instruction with no column domain,
-in every run: thirteen cells on two task instances, with 924 flagged responses. Each of those
+in every run: thirteen cells of 200 on two task instances, with 924 flagged
+responses. Each of those
 responses places a real evidence name where it is not admissible. The name is
 \texttt{r2}, which $E$ carries as the name of the suspicious metric, written
 into the list of cited columns; three times it is \texttt{perfect\_match\_rate},
@@ -767,7 +775,7 @@ A narrator that retreated into ``cannot determine'' would score zero on
 every channel for free. Of the 46 abstentions in the study, 41 are on the
 crowded instance's stale-enum arm, whose list contains none of the evidence's
 columns, 2 on that instance's contract arm, and 3 on \texttt{qwen2.5:7b}
-(of 40 enforced responses); \texttt{gpt-5.4-mini} never abstains. A further
+(of 40 responses on its two contract arms); \texttt{gpt-5.4-mini} never abstains. A further
 12 responses carry an empty verdict (8 of 160 on \texttt{qwen2.5:7b}, 4 on
 \texttt{deepseek-chat}), all on arms without a verifier. The median response
 carries ten structured claims. The zeros of the enforced arms therefore come
@@ -919,8 +927,8 @@ retried responses where the named one needed 19, with no violation reaching
 the user in either. The cost therefore has to be reported per run, while the
 guarantee does not depend on it. Some arms appear in neither table:
 \texttt{A-L2-DESCRIBED} and \texttt{A-L2-DESCRIBED-NEUTRAL} read 0/200; the
-contract under the worst paraphrase
-returned no violation on the reference task with the strict flag and on the
+shipped contract under the RQ4 wording that fails most often without
+enforcement returned no violation on the reference task with the strict flag and on the
 crowded instance; and on the crowded instance \texttt{A-STRESS},
 \texttt{A-GR-CHOICES} and \texttt{A-GR-OURS} retried 25, 101 and 118 of 200
 responses. We do not report token counts because the
@@ -956,7 +964,8 @@ conclude, correctly for that model and date, that the problem does not exist.
 
 \begin{table*}[t]
 \caption{Rule-free instruction variants, $N=100$ each, \texttt{deepseek-chat},
-ordered by the blended entity rate. \emph{Outside E} is a name $E$ does not
+ordered by the blended entity rate, the share of responses with any entity
+violation. \emph{Outside E} is a name $E$ does not
 carry (18 of the 20 are \texttt{target}, the frame's real target column, which
 $E$ omits); \emph{misf.} is a name in $E$ that is not a column; \emph{misq.} is
 a wrong number on a pair $E$ carries; \emph{unver.} is a pair $E$ does not
@@ -1007,8 +1016,9 @@ Measured compliance belongs to a configuration: the wording, what the schema
 says about each field, the names in the data, the provider and the date. The
 shipped prompt removes the failure entirely on this model (\texttt{A-L2}),
 its first three rules alone leave 7.0\,\% (\texttt{A-L2-RULES}), and a field
-description removes the misfiling (Section~\ref{sec:rq1}). Both are cheap and worth using. Neither carries a
-guarantee to the next configuration, because its effect is known only where it
+description removes the misfiling (Section~\ref{sec:rq1}). The prompt and the
+description are cheap and worth using. Neither carries a guarantee to the next
+configuration, because its effect is known only where it
 was measured. Two diagnostic arms show the same from inside the contract. The
 evidence-bound enum alone, with no verification, left no violation in 200
 (\texttt{A-TIER-A-ONLY}), and the full contract under the variant that fails
@@ -1039,7 +1049,7 @@ share no suffix.
 \caption{The second task, $N=200$ per arm, \texttt{deepseek-chat}. A
 \emph{wrong number} is a claim on an admissible (column, statistic) pair whose
 value misses the measurement, counted in responses of 200. A \emph{misplaced}
-claim quotes a number $E$ carries, correctly, under a pair the binder does not
+claim quotes a number $E$ carries, correctly, under a pair the contract does not
 admit. Tier~B catches are the responses the verifier sent back.}
 \label{tab:rq6}
 \centering
@@ -1075,7 +1085,7 @@ our generator chose.
 Every other value violation, on both frames, quotes a number $E$ really
 carries, and quotes it correctly. Most are the class balance. The profiler
 reports it at task level, the narrator attaches it to the target column as
-\texttt{class\_balance}, and the binder admits only per-column statistics, so
+\texttt{class\_balance}, and the contract admits only per-column statistics, so
 the correct figure has no admissible slot. Counting these as an invented
 quantity kind, on the belief that the profiler computes no class balance, was
 fault 13 in Table~\ref{tab:corrections}. Under Definition~\ref{def:contract}
