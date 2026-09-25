@@ -403,6 +403,29 @@ correlation number you mention in claims as {"column": ..., "statistic":
 "correlation", "value": ...}. Include a verdict and a short narration.
 """
 
+# Re-review NEW-3: the shipped LEAKAGE_BOUND_PROMPT that A-L2 uses tells the
+# model a wrong column or number "is rejected and you will be asked to answer
+# again" -- in A-L2 nothing is checked, so that arm measured rules plus a
+# claimed threat. This prompt is the bare prompt plus rules 1-3 and nothing
+# about enforcement. Selected with --rules-prompt (layer2 only).
+LIVE_SYSTEM_PROMPT_RULES = """You are mlcompass-leakage-investigator.
+
+A deterministic tool gathered evidence about a suspicious metric on a
+predictions table. Call the submit_investigation tool once. In
+columns_referenced, list every column from the evidence you cite. Report each
+correlation number you mention in claims as {"column": ..., "statistic":
+"correlation", "value": ...}. Include a verdict and a short narration.
+
+Rules:
+1. In columns_referenced, cite only columns that appear in the evidence
+   dictionary.
+2. Copy every correlation number exactly from the evidence dictionary.
+3. If your verdict is not "cannot_determine", address the first column in
+   candidate_leak_columns.
+"""
+
+_RULES_PROMPT = False
+
 # Six bare-prompt paraphrases for the --sweep mode. All state the same task
 # and the same output fields; none states a faithfulness rule. The variation
 # is purely stylistic — the sweep measures how much the entity-fabrication
@@ -786,8 +809,23 @@ _OPEN_SCHEMA_DESCRIBED["properties"]["claims"]["items"]["properties"]["column"][
 ] = "A dataset column name from the evidence, not a metric name."
 
 
+# Re-review NEW-2: the described schema above names the failing token ("such
+# as r2"). The neutral variant describes the field by category only.
+_DESCRIBE_STYLE = "named"
+_OPEN_SCHEMA_NEUTRAL: dict[str, Any] = json.loads(json.dumps(_OPEN_SCHEMA))
+_OPEN_SCHEMA_NEUTRAL["properties"]["columns_referenced"]["description"] = (
+    "Names of dataset columns (features) from the evidence that you cite. "
+    "Column names only, not the names of metrics or statistics."
+)
+_OPEN_SCHEMA_NEUTRAL["properties"]["claims"]["items"]["properties"]["column"][
+    "description"
+] = "A dataset column name from the evidence."
+
+
 def _open_schema() -> dict[str, Any]:
-    return _OPEN_SCHEMA_DESCRIBED if _DESCRIBE_FIELDS else _OPEN_SCHEMA
+    if not _DESCRIBE_FIELDS:
+        return _OPEN_SCHEMA
+    return _OPEN_SCHEMA_NEUTRAL if _DESCRIBE_STYLE == "neutral" else _OPEN_SCHEMA_DESCRIBED
 
 
 def _open_submit_tool_anthropic() -> dict[str, Any]:
@@ -1324,7 +1362,12 @@ def _live_one_response(
                     temp = None
         return _sampled(_error_response(last_exc or RuntimeError("unknown")))
 
-    system = LIVE_SYSTEM_PROMPT_BARE if layer == "layer1" else LEAKAGE_BOUND_PROMPT
+    if layer == "layer1":
+        system = LIVE_SYSTEM_PROMPT_BARE
+    elif layer == "layer2" and _RULES_PROMPT:
+        system = LIVE_SYSTEM_PROMPT_RULES
+    else:
+        system = LEAKAGE_BOUND_PROMPT
     last_exc = None
     for _attempt in range(2):
         try:
@@ -1713,9 +1756,19 @@ def live_run(
                 # Cell identity per §5: everything needed to re-derive this
                 # cell's rate from the log alone.
                 "arm_id": ARM_IDS.get(layer, "(unregistered arm)")
-                + ("-DESCRIBED" if _DESCRIBE_FIELDS and layer in ("layer1", "layer2") else ""),
+                + ("-RULES" if _RULES_PROMPT and layer == "layer2" else "")
+                + (
+                    ("-DESCRIBED-NEUTRAL" if _DESCRIBE_STYLE == "neutral" else "-DESCRIBED")
+                    if _DESCRIBE_FIELDS and layer in ("layer1", "layer2")
+                    else ""
+                ),
                 "schema_variant": (
-                    "described" if _DESCRIBE_FIELDS and layer in ("layer1", "layer2") else "plain"
+                    ("described_neutral" if _DESCRIBE_STYLE == "neutral" else "described")
+                    if _DESCRIBE_FIELDS and layer in ("layer1", "layer2")
+                    else "plain"
+                ),
+                "system_prompt_variant": (
+                    "rules_only" if _RULES_PROMPT and layer == "layer2" else "default"
                 ),
                 "strict": bool(strict),
                 "prompt_variant": (
@@ -2273,6 +2326,20 @@ def main() -> int:
         help="Wiring validation: N=5, arms layer1+layer3 only (~10 cheap calls).",
     )
     ap.add_argument(
+        "--rules-prompt",
+        action="store_true",
+        help=(
+            "Run only layer2 with the bare prompt plus rules 1-3 and no claim that "
+            "anything is checked (A-L2-RULES; re-review NEW-3). Use a separate --log-dir."
+        ),
+    )
+    ap.add_argument(
+        "--describe-style",
+        choices=["named", "neutral"],
+        default="named",
+        help="With --describe-fields: 'neutral' describes the field without naming r2.",
+    )
+    ap.add_argument(
         "--describe-fields",
         action="store_true",
         help=(
@@ -2400,8 +2467,10 @@ def main() -> int:
     )
     ap.add_argument("--json", action="store_true", help="Emit machine-readable JSON.")
     args = ap.parse_args()
-    global _DESCRIBE_FIELDS
+    global _DESCRIBE_FIELDS, _DESCRIBE_STYLE, _RULES_PROMPT
     _DESCRIBE_FIELDS = bool(args.describe_fields)
+    _DESCRIBE_STYLE = args.describe_style
+    _RULES_PROMPT = bool(args.rules_prompt)
 
     # ---------------- Zero-cost wiring check ------------------------------- #
     if args.check_providers:
@@ -2612,6 +2681,8 @@ def main() -> int:
         # The descriptions live on the open schema only; the contract arms
         # never see it, so running them again would cost without measuring.
         arms = ("layer1", "layer2")
+    if args.rules_prompt:
+        arms = ("layer2",)
     if args.only_extra:
         if args.mode != "live":
             raise SystemExit("--only-extra is a live measurement; add --mode live.")
