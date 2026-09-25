@@ -170,7 +170,7 @@ duration --- and a claim of production use should be backed by those. It is
 \textbf{mlcompass}, an open-source (MIT) ML-pipeline assistant, guarding the
 investigation that fires when an evaluation metric looks too good to be true
 --- mlcompass fires at its own heuristic thresholds,
-$R^2>0.999$ or $\mathrm{AUC}>0.995$, motivated by the leakage problem
+$R^2>0.999$, $\mathrm{AUC}>0.995$ or accuracy $>0.99$ on at least 50 rows, motivated by the leakage problem
 Kaufman et al.\ describe~\cite{leakage} rather than by any threshold they
 propose.
 
@@ -905,7 +905,7 @@ The subject is the shipped leakage-investigation path of mlcompass. The
 \emph{synthetic} task is a 1{,}000-row frame of fourteen columns --- the
 target, the prediction, and twelve candidate features --- carrying a monotone
 transformed leak
-($\texttt{log\_target\_v2} = \log(y) + \mathcal{N}(0, 0.01^2)$) and a
+($\texttt{log\_target\_v2} = \log(y-\min y+1) + \varepsilon$, $\varepsilon\sim\mathcal{N}(0, 0.01^2)$, $y\sim\mathcal{N}(50,10^2)$) and a
 high-correlation distractor; ten evidence columns, anchor
 \texttt{log\_target\_v2}. In every arm the \emph{shipped}
 \texttt{detect\_leakage} produces $E$, so the narrator sees exactly the
