@@ -189,6 +189,26 @@ def is_committed(payload: Mapping[str, Any], spec: ContractSpec) -> bool:
     return bool(payload) and verdict in spec.verdict_values and verdict != spec.abstention
 
 
+def is_malformed(payload: Mapping[str, Any], spec: ContractSpec) -> bool:
+    """True when a response carries no admissible verdict.
+
+    No tool call, unparsable arguments and a verdict outside the enum all land
+    here. Such a response is not an answer: it is retried and, if it persists,
+    aborted. Substituting the abstention instead would put a stance in the
+    narrator's mouth, which Proposition 1's proof rules out.
+    """
+    return str(payload.get("verdict", "")) not in spec.verdict_values
+
+
+def malformed_correction(tool_name: str) -> str:
+    """Fixed corrective text for a malformed response; there is nothing to name."""
+    return (
+        f"\n\nYour previous response was not a valid {tool_name} call: it "
+        "carried no payload or no admissible verdict. Answer again by calling "
+        f"{tool_name} with every required field and a verdict from its enum."
+    )
+
+
 def _within(val: Any, measured: float, tolerance: float) -> bool:
     """True when ``val`` is a finite number within ``tolerance`` of ``measured``.
 

@@ -31,6 +31,8 @@ from .evidence_contract import (
     BoundEvidence,
     build_payload_schema,
     correction_text,
+    is_malformed,
+    malformed_correction,
     strip_unsound,
     verify,
 )
@@ -171,11 +173,7 @@ _CONFIDENCE_VALUES = LEAKAGE_CONTRACT.confidence_values
 # Sent when a response carries no admissible verdict (no tool call, unparsable
 # arguments, or a verdict outside the enum). Fixed text: there is nothing in
 # the response to name.
-_MALFORMED_CORRECTION = (
-    "\n\nYour previous response was not a valid submit_investigation call: it "
-    "carried no payload or no admissible verdict. Answer again by calling "
-    "submit_investigation with every required field and a verdict from its enum."
-)
+_MALFORMED_CORRECTION = malformed_correction("submit_investigation")
 
 
 def _compact(evidence: dict[str, Any]) -> dict[str, Any]:
@@ -669,7 +667,7 @@ def investigate_leakage_bound(
         # as clean (nothing to check) and have `cannot_determine` substituted
         # for display, which attributes an abstention the narrator never made.
         # It is retried like any violation and, if it persists, aborted.
-        malformed = str(tool_input.get("verdict", "")) not in _VERDICT_VALUES
+        malformed = is_malformed(tool_input, LEAKAGE_CONTRACT)
         if malformed:
             schema_rejections += 1
             rejection_kinds.append("malformed")
@@ -705,7 +703,7 @@ def investigate_leakage_bound(
     # Still no admissible verdict after the budget: abort. Nothing the model
     # returned is shown, and no verdict is put in its mouth; the renderer shows
     # the deterministic evidence panel and says the narration failed.
-    aborted = str(tool_input.get("verdict", "")) not in _VERDICT_VALUES
+    aborted = is_malformed(tool_input, LEAKAGE_CONTRACT)
     if aborted:
         tool_input = {}
         cited_clean, claims_clean = [], []

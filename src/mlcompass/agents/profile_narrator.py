@@ -47,6 +47,8 @@ from .evidence_contract import (
     build_payload_schema,
     correction_text,
     is_committed,
+    is_malformed,
+    malformed_correction,
     strip_unsound,
     verify,
 )
@@ -294,7 +296,17 @@ def narrate_profile_bound(
         # The violations are always computed, because the diagnostic arms need
         # to know what Tier B WOULD have caught. Whether anything is done about
         # them is `verify_response`, and on the floor arm the answer is nothing.
-        if not verify_response or not violations:
+        if not verify_response:
+            break
+        # No admissible verdict: retried and, if it persists, aborted -- the same
+        # semantics as the leakage narrator, from the shared layer.
+        if is_malformed(payload, PROFILE_CONTRACT):
+            schema_rejections += 1
+            rejection_kinds.append("malformed")
+            if attempt < max_retries:
+                correction = malformed_correction(SUBMIT_TOOL_NAME)
+            continue
+        if not violations:
             break
 
         schema_rejections += 1
@@ -324,13 +336,20 @@ def narrate_profile_bound(
         cited_clean, claims_clean = strip_unsound(payload, bound, PROFILE_CONTRACT)
     else:
         cited_clean, claims_clean = list(cited_raw), list(claims_raw)
+
+    # Still no admissible verdict after the budget: abort, and put nothing in
+    # the narrator's mouth. Only on verified arms; the floor keeps what it said.
+    aborted = verify_response and is_malformed(payload, PROFILE_CONTRACT)
+    if aborted:
+        payload = {}
+        cited_clean, claims_clean = [], []
     had_unrecoverable = (
         len(cited_clean) != len(cited_raw) or len(claims_clean) != len(claims_raw)
     )
 
-    verdict = str(payload.get("verdict", PROFILE_CONTRACT.abstention))
-    if verdict not in PROFILE_CONTRACT.verdict_values:
-        verdict = PROFILE_CONTRACT.abstention
+    # A verified arm has either an admissible verdict or has aborted; an
+    # unverified arm reports what the model wrote, unclamped.
+    verdict = str(payload.get("verdict", ""))
     confidence = str(payload.get("confidence", PROFILE_CONTRACT.abstention))
     if confidence not in PROFILE_CONTRACT.confidence_values:
         confidence = PROFILE_CONTRACT.abstention
@@ -339,7 +358,9 @@ def narrate_profile_bound(
     # through a claim the strip removed is no longer addressed, and an omission
     # cannot be repaired by deletion.
     omitted = violations.omitted
-    if not omitted and verdict != PROFILE_CONTRACT.abstention and bound.anchor is not None:
+    if aborted:
+        omitted = False
+    elif not omitted and verdict != PROFILE_CONTRACT.abstention and bound.anchor is not None:
         referenced = set(cited_clean) | {
             str(c.get("column", "")) for c in claims_clean
         }
@@ -370,6 +391,7 @@ def narrate_profile_bound(
         "critical_column": bound.anchor,
         "committed": is_committed(payload, PROFILE_CONTRACT),
         "evidence_bound": True,
+        "aborted": aborted,
         "admissible_columns": len(bound.domains["columns_referenced"]),
         "admissible_statistics": len(bound.domains["claims[].statistic"]),
     }
