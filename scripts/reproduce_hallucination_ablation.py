@@ -426,6 +426,29 @@ Rules:
 
 _RULES_PROMPT = False
 
+# Review question (paperreview.ai, 2026-09-26): does A-L2 work because of its
+# rules or because it tells the model violations "are rejected"? This variant
+# is the shipped prompt with exactly the two enforcement sentences removed and
+# nothing else changed, so A-L2 against it isolates the claim. Built from the
+# shipped text at import time; the assertion fails loudly if that text drifts.
+_ENFORCEMENT_CLAIMS = (
+    " The tool input schema\n   restricts this field to the evidence columns; naming any other column is\n"
+    "   rejected and you will be asked to answer again.",
+    " Each claim is checked against the measured\n   value; a mismatched number is rejected and you will be asked to answer\n"
+    "   again.",
+)
+
+
+def _shipped_prompt_without_claims() -> str:
+    text = LEAKAGE_BOUND_PROMPT
+    for sentence in _ENFORCEMENT_CLAIMS:
+        assert text.count(sentence) == 1, "shipped prompt changed; update _ENFORCEMENT_CLAIMS"
+        text = text.replace(sentence, "")
+    return text
+
+
+_NO_CLAIMS_PROMPT = False
+
 # Six bare-prompt paraphrases for the --sweep mode. All state the same task
 # and the same output fields; none states a faithfulness rule. The variation
 # is purely stylistic — the sweep measures how much the entity-fabrication
@@ -1366,6 +1389,8 @@ def _live_one_response(
         system = LIVE_SYSTEM_PROMPT_BARE
     elif layer == "layer2" and _RULES_PROMPT:
         system = LIVE_SYSTEM_PROMPT_RULES
+    elif layer == "layer2" and _NO_CLAIMS_PROMPT:
+        system = _shipped_prompt_without_claims()
     else:
         system = LEAKAGE_BOUND_PROMPT
     last_exc = None
@@ -1757,6 +1782,8 @@ def live_run(
                 # cell's rate from the log alone.
                 "arm_id": ARM_IDS.get(layer, "(unregistered arm)")
                 + ("-RULES" if _RULES_PROMPT and layer == "layer2" else "")
+                + ("-NOCLAIMS" if _NO_CLAIMS_PROMPT and layer == "layer2" else "")
+                + ("" if temperature == 1.0 else "-Tdefault" if temperature is None else f"-T{temperature:g}")
                 + (
                     ("-DESCRIBED-NEUTRAL" if _DESCRIBE_STYLE == "neutral" else "-DESCRIBED")
                     if _DESCRIBE_FIELDS and layer in ("layer1", "layer2")
@@ -1768,7 +1795,11 @@ def live_run(
                     else "plain"
                 ),
                 "system_prompt_variant": (
-                    "rules_only" if _RULES_PROMPT and layer == "layer2" else "default"
+                    "rules_only"
+                    if _RULES_PROMPT and layer == "layer2"
+                    else "shipped_no_claims"
+                    if _NO_CLAIMS_PROMPT and layer == "layer2"
+                    else "default"
                 ),
                 "strict": bool(strict),
                 "prompt_variant": (
@@ -2334,6 +2365,19 @@ def main() -> int:
         ),
     )
     ap.add_argument(
+        "--no-claims-prompt",
+        action="store_true",
+        help=(
+            "Run only layer2 with the shipped prompt minus its two sentences "
+            "claiming that violations are rejected (A-L2-NOCLAIMS). Use a separate --log-dir."
+        ),
+    )
+    ap.add_argument(
+        "--only-floor",
+        action="store_true",
+        help="Run only layer1 (A-L1), e.g. with --temperature 0. Use a separate --log-dir.",
+    )
+    ap.add_argument(
         "--describe-style",
         choices=["named", "neutral"],
         default="named",
@@ -2467,10 +2511,13 @@ def main() -> int:
     )
     ap.add_argument("--json", action="store_true", help="Emit machine-readable JSON.")
     args = ap.parse_args()
-    global _DESCRIBE_FIELDS, _DESCRIBE_STYLE, _RULES_PROMPT
+    global _DESCRIBE_FIELDS, _DESCRIBE_STYLE, _RULES_PROMPT, _NO_CLAIMS_PROMPT
     _DESCRIBE_FIELDS = bool(args.describe_fields)
     _DESCRIBE_STYLE = args.describe_style
     _RULES_PROMPT = bool(args.rules_prompt)
+    _NO_CLAIMS_PROMPT = bool(args.no_claims_prompt)
+    if _RULES_PROMPT and _NO_CLAIMS_PROMPT:
+        raise SystemExit("--rules-prompt and --no-claims-prompt select different prompts.")
 
     # ---------------- Zero-cost wiring check ------------------------------- #
     if args.check_providers:
@@ -2681,8 +2728,10 @@ def main() -> int:
         # The descriptions live on the open schema only; the contract arms
         # never see it, so running them again would cost without measuring.
         arms = ("layer1", "layer2")
-    if args.rules_prompt:
+    if args.rules_prompt or args.no_claims_prompt:
         arms = ("layer2",)
+    if args.only_floor:
+        arms = ("layer1",)
     if args.only_extra:
         if args.mode != "live":
             raise SystemExit("--only-extra is a live measurement; add --mode live.")
