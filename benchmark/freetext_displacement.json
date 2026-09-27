@@ -269,6 +269,24 @@
       "first": 200,
       "first_dirty": 23,
       "no_evidence": 0
+    },
+    "deepseek/reference/layer2/2026-09-27_noclaims": {
+      "with_prose": 200,
+      "dirty": 49,
+      "retried": 0,
+      "retried_dirty": 0,
+      "first": 200,
+      "first_dirty": 49,
+      "no_evidence": 0
+    },
+    "deepseek/reference/layer1/2026-09-27_t0": {
+      "with_prose": 200,
+      "dirty": 19,
+      "retried": 0,
+      "retried_dirty": 0,
+      "first": 200,
+      "first_dirty": 19,
+      "no_evidence": 0
     }
   },
   "summary": {
@@ -283,12 +301,12 @@
         ]
       },
       "non-rejecting": {
-        "dirty": 304,
-        "n": 2400,
-        "rate": 12.7,
+        "dirty": 372,
+        "n": 2800,
+        "rate": 13.3,
         "ci": [
-          11.4,
-          14.1
+          12.1,
+          14.6
         ]
       },
       "retried": {
