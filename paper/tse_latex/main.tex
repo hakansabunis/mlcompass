@@ -287,7 +287,10 @@ JSONSchemaBench~\cite{geng2025jsonschemabench}, which measures
 constrained-decoding frameworks on 10{,}000 real-world schemas, finds that they
 differ in which schema features they cover. What a schema enforces therefore
 depends on the engine applying it, which is a reason to distrust a schema
-whose effect has not been checked.
+whose effect has not been checked. Nor does a valid schema make an answer
+right: on OrderBench~\cite{li2026orderbench}, the strongest of four ordering
+agents produces schema-valid output every time and still gets about one order
+in five wrong.
 
 Other tools already sit in this paper's row of Table~\ref{tab:taxonomy}.
 Instructor~\cite{liu2023instructor}, a Python library for structured LLM
@@ -476,7 +479,9 @@ stripper, retry text and schema builder name no task. Leakage is one specificati
 about forty lines. A dataset profiler is a second: every column of the frame
 is admissible, each column has up to thirteen statistics, and the statistic
 set is computed per call because a categorical column carries a cardinality
-and no mean. The profile narrator runs in the measurement harness, and the
+and no mean. Each specification also names its anchor: the top-ranked
+candidate for leakage, and the column with the most missing data for the
+profile. The profile narrator runs in the measurement harness, and the
 leakage narrator is the one the product ships.
 
 Extracting the layer exposed something the single task could not: the value
@@ -504,6 +509,9 @@ and marked unverified; Section~\ref{sec:threats} measures what they carry.
 The second is the correctness of $E$. If the leakage detector mis-ranks a
 candidate, the contract faithfully narrates a wrong finding. The producer is
 trusted and not verified, and (C3) names one anchor rather than every finding.
+Where two candidates are nearly tied, a response that addresses the second
+would be flagged; a variant of (C3) that accepts any of several candidates is
+untested, since no instance we ran has a tie at the top.
 
 The third is the other narration surfaces. The product prints two other
 narrations of the same evidence that no contract governs: an optional LLM
@@ -681,7 +689,12 @@ less than $5\times10^{-4}$, so only a tolerance below that would begin to flag
 rounding. One claim drops a correlation's sign ($|\Delta| = 0.039$), and the
 remaining 25 miss by more than 0.05. The number of responses with a value
 violation is 22 at every $\tau$ from $5\times10^{-4}$ to $0.01$ and 21 at
-$0.05$ (\texttt{scripts/tau\_sensitivity.py}).
+$0.05$ (\texttt{scripts/tau\_sensitivity.py}). The narrators copy numbers
+rather than recompute them, which is why the choice matters so little here.
+An absolute $\tau$ suits bounded quantities such as correlations and rates;
+for unbounded ones, such as a column mean, a relative tolerance is the natural
+choice, and counts call for an exact match. The tolerance is a field of the
+bound evidence, so a specification can set its own; both of ours use 0.005.
 
 \texttt{deepseek-chat} is the model on which the failure occurs;
 \texttt{gpt-5.4-mini} and a local \texttt{qwen2.5:7b} are the null providers
@@ -814,6 +827,13 @@ columns, 2 on that instance's contract arm, and 3 on \texttt{qwen2.5:7b}
 carries ten structured claims. The zeros of the enforced arms therefore come
 from narrators that committed to a verdict.
 
+\paragraph{Answer to RQ1}
+On the one model that fails, the unconstrained narrator writes the evidence's
+own vocabulary, above all the metric name \texttt{r2}, into a column field
+that nobody described, and it invents no column. A field description, the
+shipped prompt or temperature 0 lowers the rate from 42--49\,\% to 0--2\,\%,
+and the failure returns wherever they are absent.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{RQ2 and RQ3: Enforcement, Its Cost, and the Alternatives}\label{sec:rq3}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -898,7 +918,10 @@ which rejects the registered hypothesis H8 (Table~\ref{tab:registered}). The evi
 left no violation on the reference task with or without the provider's strict
 flag, so hypothesis H9 holds on the entity channel. Neither result amounts to a
 guarantee. In the non-strict arms the enum ran as a request, and whether a
-strict flag is honoured is up to the provider.
+strict flag is honoured is up to the provider. None of the 400 responses sent
+with the strict flag carried a column outside the enum, but from outside the
+provider a model that obeyed and a server that quietly replaced a value look
+the same.
 
 \paragraph{An author-time enum on new data}
 On the reference task the author-time list is the evidence's own column set,
@@ -997,6 +1020,15 @@ claims of this section rest on one model, and its rates describe
 who benchmarked prompt-level reliability only on \texttt{gpt-5.4-mini} would
 conclude, correctly for that model and date, that the problem does not exist.
 
+\paragraph{Answer to RQ2 and RQ3}
+The contract let no structured violation reach the user in any configuration
+it ran in, repaired every violation with one named retry, and added about half
+a second when nothing needed repair. Of the alternatives, the stock guardrail
+loop stays near the floor, a typed schema lowers the rate without guaranteeing
+it, an enum written in advance causes invention on data it predates, and an
+enum or choice list bound to $E$ matches the contract on the column field
+only.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{RQ4: Wording and Specification Move Compliance}\label{sec:rq4}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1064,6 +1096,11 @@ evidence-bound enum alone, with no verification, left no violation in 200
 most often without enforcement produced no violation on any first attempt.
 Tier~B is the part whose effect does not have to be measured again for each
 configuration, because it runs in our process over the returned payload.
+
+\paragraph{Answer to RQ4}
+Wording alone moves the rate from 9 to 72\,\%, and how much of the answer an
+instruction specifies predicts the unverifiable channel. No wording carries its
+effect to another configuration.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{RQ5: Does the Contract Transpose?}\label{sec:rq6}
@@ -1159,6 +1196,11 @@ general property of narrators. On this model it followed our naming, and what
 survived distinct names reflects our binding choices as much as model error.
 Two tabular summaries from one tool are two members of the class, which is
 not the same as covering it.
+
+\paragraph{Answer to RQ5}
+The contract binds to a second evidence shape without task-specific code.
+There Tier~B catches wrong numbers that no enum can express, and the wrong
+numbers themselves came from our column naming.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Corrections to Our Own Instruments}\label{sec:instruments}
@@ -1319,7 +1361,9 @@ The instrument has one blind spot: a misfiled name is in $E$ and so counts as
 grounded in prose, so misfiling displaced into the narration would not
 register. No enforced arm stripped anything, which means the pressure we
 tested is correction and not deletion, and unsupported causal prose would need
-human raters.
+human raters. The same name and number matcher could run at call time and warn
+when the prose mentions something $E$ does not carry; mlcompass does not ship
+it.
 
 \paragraph{Internal} We compare arms within one date. The provider serves a
 rolling model name, and the unconstrained rates move between runs:
