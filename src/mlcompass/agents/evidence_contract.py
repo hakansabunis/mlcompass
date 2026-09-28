@@ -31,7 +31,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 __all__ = [
@@ -228,9 +228,7 @@ def _within(val: Any, measured: float, tolerance: float) -> bool:
     return math.isfinite(v) and abs(v - measured) <= tolerance
 
 
-def verify(
-    payload: Mapping[str, Any], bound: BoundEvidence, spec: ContractSpec
-) -> Violations:
+def verify(payload: Mapping[str, Any], bound: BoundEvidence, spec: ContractSpec) -> Violations:
     """Check one narration payload on all three channels.
 
     Entity soundness: every cited entity is in :math:`A_{E,f}` for the field
@@ -269,9 +267,7 @@ def verify(
         if measured is None:
             value.append(f"{label(ent, stat)}: not in evidence")
         elif not _within(val, measured, bound.tolerance):
-            value.append(
-                f"{label(ent, stat)}: cited {val}, evidence says {measured:.4f}"
-            )
+            value.append(f"{label(ent, stat)}: cited {val}, evidence says {measured:.4f}")
 
     omitted = (
         is_committed(payload, spec)
@@ -355,9 +351,7 @@ def correction_text(
 # --------------------------------------------------------------------------- #
 
 
-def _string_schema(
-    values: Sequence[str] | None, *, enumerate_it: bool
-) -> dict[str, Any]:
+def _string_schema(values: Sequence[str] | None, *, enumerate_it: bool) -> dict[str, Any]:
     if enumerate_it and values is not None:
         return {"type": "string", "enum": list(values)}
     return {"type": "string"}
@@ -412,9 +406,7 @@ def build_payload_schema(
         "confidence": {"type": "string", "enum": sorted(spec.confidence_values)},
         spec.cited_field: {
             "type": "array",
-            "items": _string_schema(
-                bound.domains.get(spec.cited_field), enumerate_it=cited_enum
-            ),
+            "items": _string_schema(bound.domains.get(spec.cited_field), enumerate_it=cited_enum),
         },
         "claims": {"type": "array", "items": claim_schema},
         "narration": {"type": "string"},
@@ -549,7 +541,7 @@ def bind_profile(evidence: Mapping[str, Any]) -> BoundEvidence:
         col = str(name)
         columns.append(col)
 
-        def put(stat: str, raw: Any) -> None:
+        def put(stat: str, raw: Any, col: str = col) -> None:
             if isinstance(raw, (int, float)) and not isinstance(raw, bool):
                 values[(col, stat)] = float(raw)
                 statistics.add(stat)
@@ -575,9 +567,12 @@ def bind_profile(evidence: Mapping[str, Any]) -> BoundEvidence:
             put("z_score_count", outliers.get("z_score_count"))
 
         pct = entry.get("missing_pct")
-        if isinstance(pct, (int, float)) and not isinstance(pct, bool):
-            if worst_missing is None or float(pct) > worst_missing[0]:
-                worst_missing = (float(pct), col)
+        if (
+            isinstance(pct, (int, float))
+            and not isinstance(pct, bool)
+            and (worst_missing is None or float(pct) > worst_missing[0])
+        ):
+            worst_missing = (float(pct), col)
 
     domain = tuple(sorted(set(columns)))
     return BoundEvidence(
@@ -601,9 +596,7 @@ def bind_profile(evidence: Mapping[str, Any]) -> BoundEvidence:
 LEAKAGE_VERDICTS = frozenset(
     {"leakage_likely", "leakage_uncertain", "score_legitimate", "cannot_determine"}
 )
-PROFILE_VERDICTS = frozenset(
-    {"ready_to_train", "needs_cleaning", "cannot_determine"}
-)
+PROFILE_VERDICTS = frozenset({"ready_to_train", "needs_cleaning", "cannot_determine"})
 CONFIDENCE_VALUES = frozenset({"high", "medium", "low", "cannot_determine"})
 
 #: The shipped leakage contract, re-expressed. Behaviour is unchanged; the
@@ -622,9 +615,7 @@ PROFILE = ContractSpec(
     name="profile",
     binder=bind_profile,
     entity_noun="column",
-    tier_a_fields=frozenset(
-        {"columns_referenced", "claims[].column", "claims[].statistic"}
-    ),
+    tier_a_fields=frozenset({"columns_referenced", "claims[].column", "claims[].statistic"}),
     verdict_values=PROFILE_VERDICTS,
     confidence_values=CONFIDENCE_VALUES,
 )

@@ -390,9 +390,7 @@ def _submit_input_schema(
     # list rather than with E, and every caller that has E goes through
     # evidence_contract.LEAKAGE.bind.
     bound = _bound_from_columns(allowed_columns)
-    return build_payload_schema(
-        bound, LEAKAGE_CONTRACT, enforce_enum=enforce_enum, strict=strict
-    )
+    return build_payload_schema(bound, LEAKAGE_CONTRACT, enforce_enum=enforce_enum, strict=strict)
 
 
 def build_submit_investigation_tool(
@@ -592,7 +590,6 @@ def investigate_leakage_bound(
     """
     bound = LEAKAGE_CONTRACT.bind(evidence)
     allowed = list(bound.domains["columns_referenced"])
-    allowed_set = set(allowed)
     system = system_prompt if system_prompt is not None else LEAKAGE_BOUND_PROMPT
     if provider == "openai":
         tool = build_submit_investigation_tool_openai(
@@ -631,7 +628,6 @@ def investigate_leakage_bound(
             f"```json\n{json.dumps(_compact(evidence), default=str)}\n```"
         )
 
-    corr_map = evidence_correlation_map(evidence)
     anchor = top_candidate(evidence)
 
     schema_rejections = 0
@@ -658,8 +654,6 @@ def investigate_leakage_bound(
         # against the (entity, statistic) table, (3) completeness of a
         # committed verdict with respect to the anchor.
         violations = verify(tool_input, bound, LEAKAGE_CONTRACT)
-        entity_violations = list(violations.entity)
-        value_violations = list(violations.value)
         omitted = violations.omitted
 
         # A payload with no admissible verdict is not an answer: no tool call,

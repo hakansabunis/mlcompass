@@ -55,15 +55,27 @@ LEAK_EVIDENCE = {
 PROFILE_EVIDENCE = {
     "columns": [
         {
-            "name": "age", "type": "numeric", "missing_count": 12,
+            "name": "age",
+            "type": "numeric",
+            "missing_count": 12,
             "missing_pct": 0.012,
-            "stats": {"mean": 38.5, "std": 13.2, "min": 18.0, "max": 92.0,
-                      "q25": 28.0, "q50": 37.0, "q75": 48.0},
+            "stats": {
+                "mean": 38.5,
+                "std": 13.2,
+                "min": 18.0,
+                "max": 92.0,
+                "q25": 28.0,
+                "q50": 37.0,
+                "q75": 48.0,
+            },
             "outliers": {"iqr_count": 7, "z_score_count": 3},
         },
         {
-            "name": "city", "type": "categorical", "missing_count": 240,
-            "missing_pct": 0.24, "cardinality": 14,
+            "name": "city",
+            "type": "categorical",
+            "missing_count": 240,
+            "missing_pct": 0.24,
+            "cardinality": 14,
         },
     ]
 }
@@ -105,13 +117,13 @@ def test_the_baseline_payload_is_actually_clean(leak: BoundEvidence) -> None:
 @pytest.mark.parametrize(
     "value,caught",
     [
-        (0.9990, False),   # the measured value
-        (0.9994, False),   # +0.0004, inside tolerance
-        (0.9945, False),   # -0.0045, inside tolerance
-        (0.9939, True),    # -0.0051, outside by 0.0001
-        (0.99, True),      # plausible-looking and wrong
+        (0.9990, False),  # the measured value
+        (0.9994, False),  # +0.0004, inside tolerance
+        (0.9945, False),  # -0.0045, inside tolerance
+        (0.9939, True),  # -0.0051, outside by 0.0001
+        (0.99, True),  # plausible-looking and wrong
         (0.0, True),
-        (-0.9990, True),   # right magnitude, wrong sign
+        (-0.9990, True),  # right magnitude, wrong sign
         # The suspicious metric's own value. A narrator confusing R^2 = 1.0
         # with this column's correlation of 0.9990 is off by 0.001, which is
         # inside tolerance, so the value channel does not fire. That is not a
@@ -219,8 +231,8 @@ def test_stripping_can_create_an_omission(leak: BoundEvidence) -> None:
         {"column": "feature_4", "statistic": "correlation", "value": -0.0215},
     ]
     before = verify(p, leak, LEAKAGE)
-    assert not before.omitted          # the anchor is mentioned
-    assert before.value                # but by an unsound claim
+    assert not before.omitted  # the anchor is mentioned
+    assert before.value  # but by an unsound claim
 
     cited, claims = strip_unsound(p, leak, LEAKAGE)
     survivors = set(cited) | {c["column"] for c in claims}
@@ -242,19 +254,17 @@ def test_entity_is_the_one_channel_a_schema_can_express(leak: BoundEvidence) -> 
 @pytest.mark.parametrize(
     "name",
     [
-        "r2",                    # in E, not a column: the misfiling failure
-        "suspicious_metric",     # an evidence KEY, not a value
-        "correlation",           # a statistic name
-        "log_target_v3",         # one character from a real column
-        "LOG_TARGET_V2",         # case
-        " log_target_v2",        # leading space
-        "log_target_v2 ",        # trailing space
-        "",                      # empty
+        "r2",  # in E, not a column: the misfiling failure
+        "suspicious_metric",  # an evidence KEY, not a value
+        "correlation",  # a statistic name
+        "log_target_v3",  # one character from a real column
+        "LOG_TARGET_V2",  # case
+        " log_target_v2",  # leading space
+        "log_target_v2 ",  # trailing space
+        "",  # empty
     ],
 )
-def test_entity_mutations_are_caught_without_the_enum(
-    leak: BoundEvidence, name: str
-) -> None:
+def test_entity_mutations_are_caught_without_the_enum(leak: BoundEvidence, name: str) -> None:
     """The stress configuration: enum removed, so only Tier B stands between
     these and the user. Near-misses are included deliberately -- a check that
     catches `banana` and not `log_target_v3` is not doing the job."""
@@ -288,7 +298,8 @@ def test_right_column_wrong_statistic_is_caught(prof: BoundEvidence) -> None:
     value table from an entity-keyed one.
     """
     p = {
-        "verdict": "needs_cleaning", "confidence": "high",
+        "verdict": "needs_cleaning",
+        "confidence": "high",
         "columns_referenced": ["city"],
         "claims": [{"column": "age", "statistic": "mean", "value": 0.012}],
         "narration": "x",
@@ -300,7 +311,8 @@ def test_a_statistic_the_column_does_not_carry_is_caught(prof: BoundEvidence) ->
     """`city` is categorical: it has a cardinality and no mean. The statistic is
     in the domain for the evidence as a whole and not for this column."""
     p = {
-        "verdict": "needs_cleaning", "confidence": "high",
+        "verdict": "needs_cleaning",
+        "confidence": "high",
         "columns_referenced": ["city"],
         "claims": [{"column": "city", "statistic": "mean", "value": 14.0}],
         "narration": "x",
@@ -310,7 +322,8 @@ def test_a_statistic_the_column_does_not_carry_is_caught(prof: BoundEvidence) ->
 
 def test_the_correct_pair_passes(prof: BoundEvidence) -> None:
     p = {
-        "verdict": "needs_cleaning", "confidence": "high",
+        "verdict": "needs_cleaning",
+        "confidence": "high",
         "columns_referenced": ["city"],
         "claims": [{"column": "city", "statistic": "cardinality", "value": 14.0}],
         "narration": "x",
@@ -325,7 +338,8 @@ def test_the_correct_pair_passes(prof: BoundEvidence) -> None:
 
 def test_all_three_channels_fire_together(leak: BoundEvidence) -> None:
     p = {
-        "verdict": "leakage_likely", "confidence": "high",
+        "verdict": "leakage_likely",
+        "confidence": "high",
         "columns_referenced": ["r2"],
         "claims": [{"column": "feature_4", "statistic": "correlation", "value": 0.5}],
         "narration": "x",
@@ -341,9 +355,7 @@ def test_repair_is_idempotent(leak: BoundEvidence) -> None:
     p = clean_leak()
     p["columns_referenced"].append("r2")
     cited, claims = strip_unsound(p, leak, LEAKAGE)
-    again = strip_unsound(
-        {**p, "columns_referenced": cited, "claims": claims}, leak, LEAKAGE
-    )
+    again = strip_unsound({**p, "columns_referenced": cited, "claims": claims}, leak, LEAKAGE)
     assert again == (cited, claims)
 
 

@@ -67,8 +67,15 @@ PROFILE_EVIDENCE = {
             "missing_count": 12,
             "missing_pct": 0.012,
             "zero_ratio": 0.0,
-            "stats": {"mean": 38.5, "std": 13.2, "min": 18.0, "max": 92.0,
-                      "q25": 28.0, "q50": 37.0, "q75": 48.0},
+            "stats": {
+                "mean": 38.5,
+                "std": 13.2,
+                "min": 18.0,
+                "max": 92.0,
+                "q25": 28.0,
+                "q50": 37.0,
+                "q75": 48.0,
+            },
             "outliers": {"iqr_count": 7, "z_score_count": 3},
         },
         {
@@ -84,8 +91,15 @@ PROFILE_EVIDENCE = {
             "missing_count": 0,
             "missing_pct": 0.0,
             "zero_ratio": 0.08,
-            "stats": {"mean": 51200.0, "std": 9100.0, "min": 0.0, "max": 250000.0,
-                      "q25": 44000.0, "q50": 50000.0, "q75": 58000.0},
+            "stats": {
+                "mean": 51200.0,
+                "std": 9100.0,
+                "min": 0.0,
+                "max": 250000.0,
+                "q25": 44000.0,
+                "q50": 50000.0,
+                "q75": 58000.0,
+            },
             "outliers": {"iqr_count": 31, "z_score_count": 12},
         },
     ],
@@ -125,9 +139,7 @@ def test_verdict_enum_is_exact() -> None:
 
 def test_binder_matches_the_shipped_helpers(leak_bound: BoundEvidence) -> None:
     """bind() agrees with the three functions callers have always used."""
-    assert list(leak_bound.domains["columns_referenced"]) == evidence_allowed_columns(
-        LEAK_EVIDENCE
-    )
+    assert list(leak_bound.domains["columns_referenced"]) == evidence_allowed_columns(LEAK_EVIDENCE)
     assert {k[0]: v for k, v in leak_bound.values.items()} == evidence_correlation_map(
         LEAK_EVIDENCE
     )
@@ -139,9 +151,7 @@ def test_binder_matches_the_shipped_helpers(leak_bound: BoundEvidence) -> None:
 @pytest.mark.parametrize("enforce_enum", [True, False])
 def test_schema_shape_is_pinned(enforce_enum: bool, strict: bool) -> None:
     """Field names, required list and the statistic enum, against literals."""
-    tool = build_submit_investigation_tool(
-        ["a", "b"], enforce_enum=enforce_enum, strict=strict
-    )
+    tool = build_submit_investigation_tool(["a", "b"], enforce_enum=enforce_enum, strict=strict)
     schema = tool["input_schema"]
     props = schema["properties"]
     assert set(props) == {
@@ -211,9 +221,7 @@ def test_clean_payload_fires_nothing(leak_bound: BoundEvidence) -> None:
         "verdict": "leakage_likely",
         "confidence": "high",
         "columns_referenced": ["log_target_v2", "feature_4"],
-        "claims": [
-            {"column": "log_target_v2", "statistic": "correlation", "value": 0.9990}
-        ],
+        "claims": [{"column": "log_target_v2", "statistic": "correlation", "value": 0.9990}],
         "narration": "x",
     }
     assert not verify(payload, leak_bound, LEAKAGE)
@@ -262,9 +270,7 @@ def test_booleans_are_not_numbers(leak_bound: BoundEvidence) -> None:
 
 
 @pytest.mark.parametrize("bad", [float("nan"), float("inf"), float("-inf")])
-def test_non_finite_values_fail_and_are_stripped(
-    leak_bound: BoundEvidence, bad: float
-) -> None:
+def test_non_finite_values_fail_and_are_stripped(leak_bound: BoundEvidence, bad: float) -> None:
     """Every comparison with NaN is false, so a tolerance test alone passes it.
 
     Found in review: a NaN claim passed `verify` and survived `strip_unsound`,
@@ -334,7 +340,9 @@ def test_profile_correction_names_the_statistic(profile_bound: BoundEvidence) ->
         "narration": "x",
     }
     text = correction_text(
-        verify(payload, profile_bound, PROFILE), profile_bound, PROFILE,
+        verify(payload, profile_bound, PROFILE),
+        profile_bound,
+        PROFILE,
         tool_name="submit_profile",
     )
     assert "income.std: cited 1.0, evidence says 9100.0000" in text
@@ -356,12 +364,18 @@ def test_the_same_verifier_serves_both_contracts(
 ) -> None:
     """No branch in verify() names either task."""
     bad_leak = {
-        "verdict": "leakage_likely", "confidence": "high",
-        "columns_referenced": ["nope"], "claims": [], "narration": "x",
+        "verdict": "leakage_likely",
+        "confidence": "high",
+        "columns_referenced": ["nope"],
+        "claims": [],
+        "narration": "x",
     }
     bad_profile = {
-        "verdict": "needs_cleaning", "confidence": "high",
-        "columns_referenced": ["nope"], "claims": [], "narration": "x",
+        "verdict": "needs_cleaning",
+        "confidence": "high",
+        "columns_referenced": ["nope"],
+        "claims": [],
+        "narration": "x",
     }
     assert verify(bad_leak, leak_bound, LEAKAGE).entity == ("nope",)
     assert verify(bad_profile, profile_bound, PROFILE).entity == ("nope",)

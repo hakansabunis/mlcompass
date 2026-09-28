@@ -45,6 +45,8 @@ EXPECTED_PROVIDERS = {
     "qwen",
     "groq",
     "vllm",
+    # The free local lane (qwen2.5:7b through Ollama), added 2026-09-18.
+    "ollama",
 }
 
 

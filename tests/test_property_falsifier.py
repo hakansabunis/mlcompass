@@ -30,11 +30,18 @@ def test_no_generated_pair_breaks_c1_or_c2() -> None:
 
 def test_an_int_too_large_for_a_float_is_a_violation_not_a_crash() -> None:
     bound = m.BoundEvidence(
-        domains={"columns_referenced": ("a",), "claims[].column": ("a",), "claims[].statistic": ("s",)},
+        domains={
+            "columns_referenced": ("a",),
+            "claims[].column": ("a",),
+            "claims[].statistic": ("s",),
+        },
         values={("a", "s"): 1.0},
         anchor="a",
     )
-    payload = {"verdict": "leakage_likely", "columns_referenced": ["a"],
-               "claims": [{"column": "a", "statistic": "s", "value": 10 ** 400}]}
+    payload = {
+        "verdict": "leakage_likely",
+        "columns_referenced": ["a"],
+        "claims": [{"column": "a", "statistic": "s", "value": 10**400}],
+    }
     assert m.verify(payload, bound, m.PROFILE).value
     assert m.strip_unsound(payload, bound, m.PROFILE)[1] == []

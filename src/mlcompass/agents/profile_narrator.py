@@ -114,8 +114,16 @@ def compact(evidence: dict[str, Any], *, max_columns: int | None = None) -> dict
         keep = {
             k: v
             for k, v in col.items()
-            if k in ("name", "type", "missing_count", "missing_pct",
-                     "cardinality", "zero_ratio", "stats")
+            if k
+            in (
+                "name",
+                "type",
+                "missing_count",
+                "missing_pct",
+                "cardinality",
+                "zero_ratio",
+                "stats",
+            )
         }
         # Flatten the outlier block. Nested under `outliers`, the two counts
         # have no single obvious name, and narrators guessed five different
@@ -126,8 +134,7 @@ def compact(evidence: dict[str, Any], *, max_columns: int | None = None) -> dict
         # the domain to the evidence is supposed to mean.
         outliers = col.get("outliers")
         if isinstance(outliers, dict):
-            for src, dst in (("iqr_count", "iqr_count"),
-                             ("z_score_count", "z_score_count")):
+            for src, dst in (("iqr_count", "iqr_count"), ("z_score_count", "z_score_count")):
                 if outliers.get(src) is not None:
                     keep[dst] = outliers[src]
         columns.append(keep)
@@ -280,12 +287,8 @@ def narrate_profile_bound(
         attempts.append(
             {
                 "attempt": attempt + 1,
-                "columns_referenced": [
-                    str(c) for c in (payload.get("columns_referenced") or [])
-                ],
-                "claims": [
-                    c for c in (payload.get("claims") or []) if isinstance(c, dict)
-                ],
+                "columns_referenced": [str(c) for c in (payload.get("columns_referenced") or [])],
+                "claims": [c for c in (payload.get("claims") or []) if isinstance(c, dict)],
                 "verdict": str(payload.get("verdict", "")),
                 "violations": violations.kinds,
                 "entity": list(violations.entity),
@@ -343,9 +346,7 @@ def narrate_profile_bound(
     if aborted:
         payload = {}
         cited_clean, claims_clean = [], []
-    had_unrecoverable = (
-        len(cited_clean) != len(cited_raw) or len(claims_clean) != len(claims_raw)
-    )
+    had_unrecoverable = len(cited_clean) != len(cited_raw) or len(claims_clean) != len(claims_raw)
 
     # A verified arm has either an admissible verdict or has aborted; an
     # unverified arm reports what the model wrote, unclamped.
@@ -361,9 +362,7 @@ def narrate_profile_bound(
     if aborted:
         omitted = False
     elif not omitted and verdict != PROFILE_CONTRACT.abstention and bound.anchor is not None:
-        referenced = set(cited_clean) | {
-            str(c.get("column", "")) for c in claims_clean
-        }
+        referenced = set(cited_clean) | {str(c.get("column", "")) for c in claims_clean}
         omitted = bool(payload) and bound.anchor not in referenced
 
     return {

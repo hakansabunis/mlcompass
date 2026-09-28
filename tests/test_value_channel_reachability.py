@@ -153,9 +153,7 @@ def test_statistic_field_is_now_read_by_the_verifier() -> None:
         "verdict": "leakage_likely",
         "confidence": "high",
         "columns_referenced": ["log_target_v2"],
-        "claims": [
-            {"column": "log_target_v2", "statistic": "perfect_match_rate", "value": 1.0}
-        ],
+        "claims": [{"column": "log_target_v2", "statistic": "perfect_match_rate", "value": 1.0}],
         "narration": "ok",
     }
     client = MockClient(

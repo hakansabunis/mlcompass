@@ -367,9 +367,9 @@ def _leakage_evidence_panel(investigation: dict[str, Any]) -> Panel:
     if correlations:
         lines.append("\n[bold]Top correlations with target:[/bold]")
         for entry in correlations[:5]:
-            lines.append(
-                f"  • {escape(str(entry['feature'])):<30} r={entry['correlation']:+.4f} ({escape(str(entry['method']))})"
-            )
+            feature = escape(str(entry["feature"]))
+            method = escape(str(entry["method"]))
+            lines.append(f"  • {feature:<30} r={entry['correlation']:+.4f} ({method})")
 
     if not investigation.get("trustworthy_sample_size"):
         lines.append(

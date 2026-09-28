@@ -624,6 +624,7 @@ PRICING_PER_M: dict[str, tuple[float, float]] = {
     "qwen-flash": (0.05, 0.40),
     "llama-3.1-8b-instant": (0.05, 0.08),
     "Qwen/Qwen2.5-3B-Instruct": (0.0, 0.0),  # local vLLM
+    "qwen2.5:7b": (0.0, 0.0),  # local Ollama
     # Strong tier (P2 spot-checks / judges):
     "gpt-5.5": (5.00, 30.00),
     "claude-opus-4-8": (5.00, 25.00),
@@ -666,6 +667,9 @@ ARM_CALL_FACTOR: dict[str, float] = {
     "stress_mech": 1.05,
     "guardrails_stock": 1.05,
     "guardrails_tierb": 1.5,
+    # Same loop and budget as guardrails_tierb; it retried 88 of 200 on
+    # 2026-09-18 (1.44 calls per response), so the same factor.
+    "guardrails_choices": 1.5,
     "static_schema": 1.0,
     "static_schema_noenum": 1.0,
 }
@@ -679,6 +683,7 @@ ARM_CALL_FACTOR: dict[str, float] = {
 ARM_INPUT_TOKEN_FACTOR: dict[str, float] = {
     "guardrails_stock": 1.6,
     "guardrails_tierb": 1.6,
+    "guardrails_choices": 1.6,
 }
 
 # --------------------------------------------------------------------------- #
