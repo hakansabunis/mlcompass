@@ -5,7 +5,44 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.10.0] — 2026-09-28
+
+The release archived with the TSE manuscript. The evidence-bound contract
+became a generic layer with a second instance, and a registered falsifier
+found two defects in its verifier.
+
+### Added
+
+- **A generic evidence-bound contract** (`mlcompass.agents.evidence_contract`).
+  The verifier, stripper, retry text and schema builder name no task; each
+  evidence shape is a short specification that yields field-indexed
+  admissible sets, a value table keyed on (entity, statistic), a tolerance
+  and a completeness anchor. Leakage is one specification.
+- **A profile narrator** bound by the same contract, as the second
+  instance (anchor: the column with the most missing data).
+- **Any OpenAI-compatible provider** for every `--llm` command, through a
+  base URL.
+- **`audit` reads scikit-learn code**; duplicate rows and censored targets
+  are detected.
+- The contract panel shows what was verified and marks what was not, and an
+  omission warning names the column it is about.
+- Research tooling: the registered measurement harness (arms, contrasts,
+  record provenance), a property-based falsifier over generated
+  (evidence, response) pairs, and the scripts that recompute every table of
+  the manuscript from the run records.
+
 ### Fixed
+
+- **A claim value of NaN passed the verifier** and survived stripping, and a
+  very large integer crashed the value check.
+- **A response with no admissible verdict** (no tool call, unparsable
+  arguments, a verdict outside the enum) is retried and then aborted, in both
+  narrators, instead of being shown as an empty answer.
+- User and model strings are escaped before the panels render them.
+- The `watch` detectors on ordinary training logs; the KS p-value; a boolean
+  hyperparameter; four wrong statistics, and `advise` inventing numbers.
+- Cross-process locking for the audit ledger; the permission boundary and
+  the README now match the code.
 
 - **Date columns in CSV / Excel / JSON files are now typed as `datetime`.**
   `_classify_column` returned `datetime` only for an already-`datetime64`
