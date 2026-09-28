@@ -527,7 +527,10 @@ and reach the schema's enums, the prompt, the corrective retry and the
 rendered panel. Membership in $E$ does not make a string safe. A crafted
 header is a prompt-injection vector~\cite{greshake2023injection}, and a
 schema's keys and enums are part of the model's
-instructions~\cite{le2026schemakey}. The contract guarantees only that what is
+instructions~\cite{le2026schemakey}. Because Tier~A copies column names into
+enum values, a crafted header reaches the channel that the EnumAttack of
+Zhang \emph{et al.}~\cite{zhang2025cda} uses to carry a harmful request past a
+model's safety training. The contract guarantees only that what is
 shown is in $E$. Rendered strings are escaped, because a header written as
 markup restyled the panel. We have not implemented the mitigations we would
 recommend: capping name length, restricting names to an identifier-like
@@ -689,12 +692,11 @@ less than $5\times10^{-4}$, so only a tolerance below that would begin to flag
 rounding. One claim drops a correlation's sign ($|\Delta| = 0.039$), and the
 remaining 25 miss by more than 0.05. The number of responses with a value
 violation is 22 at every $\tau$ from $5\times10^{-4}$ to $0.01$ and 21 at
-$0.05$ (\texttt{scripts/tau\_sensitivity.py}). The narrators copy numbers
-rather than recompute them, which is why the choice matters so little here.
-An absolute $\tau$ suits bounded quantities such as correlations and rates;
-for unbounded ones, such as a column mean, a relative tolerance is the natural
-choice, and counts call for an exact match. The tolerance is a field of the
-bound evidence, so a specification can set its own; both of ours use 0.005.
+$0.05$ (\texttt{scripts/tau\_sensitivity.py}). The narrators copy numbers,
+so the choice matters little here. An absolute $\tau$ suits bounded quantities
+such as correlations; unbounded ones call for a relative tolerance and counts
+for an exact match, and each specification can set its own (both of ours use
+0.005).
 
 \texttt{deepseek-chat} is the model on which the failure occurs;
 \texttt{gpt-5.4-mini} and a local \texttt{qwen2.5:7b} are the null providers
@@ -828,11 +830,10 @@ carries ten structured claims. The zeros of the enforced arms therefore come
 from narrators that committed to a verdict.
 
 \paragraph{Answer to RQ1}
-On the one model that fails, the unconstrained narrator writes the evidence's
-own vocabulary, above all the metric name \texttt{r2}, into a column field
-that nobody described, and it invents no column. A field description, the
-shipped prompt or temperature 0 lowers the rate from 42--49\,\% to 0--2\,\%,
-and the failure returns wherever they are absent.
+The failing model writes the evidence's own vocabulary, above all \texttt{r2},
+into an undescribed column field and invents no column. A field description,
+the shipped prompt or temperature 0 lowers the rate from 42--49\,\% to
+0--2\,\%.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{RQ2 and RQ3: Enforcement, Its Cost, and the Alternatives}\label{sec:rq3}
@@ -1021,13 +1022,11 @@ who benchmarked prompt-level reliability only on \texttt{gpt-5.4-mini} would
 conclude, correctly for that model and date, that the problem does not exist.
 
 \paragraph{Answer to RQ2 and RQ3}
-The contract let no structured violation reach the user in any configuration
-it ran in, repaired every violation with one named retry, and added about half
-a second when nothing needed repair. Of the alternatives, the stock guardrail
-loop stays near the floor, a typed schema lowers the rate without guaranteeing
-it, an enum written in advance causes invention on data it predates, and an
-enum or choice list bound to $E$ matches the contract on the column field
-only.
+Under the contract no structured violation reached the user; one named retry
+repaired each, and a clean answer cost about half a second more. A stock
+guardrail loop stays near the floor, an enum written in advance causes
+invention on new data, and an enum or choice list bound to $E$ matches the
+contract only on the column field.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{RQ4: Wording and Specification Move Compliance}\label{sec:rq4}
@@ -1363,7 +1362,10 @@ register. No enforced arm stripped anything, which means the pressure we
 tested is correction and not deletion, and unsupported causal prose would need
 human raters. The same name and number matcher could run at call time and warn
 when the prose mentions something $E$ does not carry; mlcompass does not ship
-it.
+it. As a warning it would fire on 5--13\,\% of narrations, mostly on true
+bounds and shortened names. The value channel was stressed less than the
+entity channel: the registered value-pressure instance (H14) did not activate
+it, and (C2) caught real errors only on the profile task.
 
 \paragraph{Internal} We compare arms within one date. The provider serves a
 rolling model name, and the unconstrained rates move between runs:
