@@ -66,7 +66,40 @@ ARMS = {
     "tier_a": (True, False, PROFILE_BARE_PROMPT, "P-TIER-A-ONLY"),
     "contract": (True, True, PROFILE_BARE_PROMPT, "P-CONTRACT"),
     "stress": (False, True, PROFILE_BARE_PROMPT, "P-STRESS"),
+    # Review 2026-09-30: the verifier against a well-specified configuration.
+    # Both arms send the shipped rule-bearing prompt, the call-time enums and
+    # field descriptions on every reference-bearing field (STRONG_DESCRIPTIONS);
+    # they differ only in whether the payload is verified.
+    "strong_noverify": (True, False, PROFILE_BOUND_PROMPT, "P-STRONG-NOVERIFY"),
+    "strong_verify": (True, True, PROFILE_BOUND_PROMPT, "P-STRONG-CONTRACT"),
 }
+
+STRONG_ARMS = ("strong_noverify", "strong_verify")
+STRONG_DESCRIPTIONS = {
+    "columns_referenced": (
+        "Names of dataset columns from the profile that you cite. "
+        "Column names only, not the names of statistics."
+    ),
+    "column": "A dataset column name from the profile.",
+    "statistic": "A statistic the profile reports for that column.",
+    "value": "The number exactly as the profile reports it for this column and statistic.",
+}
+
+
+def _described_schema(original):
+    """Wrap build_payload_schema so every reference-bearing field is described."""
+
+    def wrapped(*a, **k):
+        schema = original(*a, **k)
+        props = schema["properties"]
+        props["columns_referenced"]["description"] = STRONG_DESCRIPTIONS["columns_referenced"]
+        claim = props["claims"]["items"]["properties"]
+        for field in ("column", "statistic", "value"):
+            if field in claim:
+                claim[field]["description"] = STRONG_DESCRIPTIONS[field]
+        return schema
+
+    return wrapped
 
 PROVIDERS = {
     "deepseek": ("DEEPSEEK_API_KEY", "https://api.deepseek.com/v1", "deepseek-chat"),
@@ -279,8 +312,14 @@ def main() -> int:
     )
     prov = provenance()
 
+    import mlcompass.agents.profile_narrator as _pn  # noqa: PLC0415
+
+    plain_schema = _pn.build_payload_schema
     for arm in arms:
         enforce, do_verify, prompt, arm_id = ARMS[arm]
+        _pn.build_payload_schema = (
+            _described_schema(plain_schema) if arm in STRONG_ARMS else plain_schema
+        )
         out = args.log_dir / (
             f"{args.provider}_{model.replace(':', '-')}_profile_{arm}"
             f"_n{args.n}_seed{args.seed}_e{ehash}.jsonl"
