@@ -379,3 +379,51 @@ def test_the_same_verifier_serves_both_contracts(
     }
     assert verify(bad_leak, leak_bound, LEAKAGE).entity == ("nope",)
     assert verify(bad_profile, profile_bound, PROFILE).entity == ("nope",)
+
+
+def test_a_column_named_like_a_statistic_is_admissible_per_field() -> None:
+    """Review 2026-09-30: nothing requires the column and statistic domains to
+    be disjoint. A frame may have a column called ``mean``; the field-indexed
+    check admits it as a column and as a statistic, each in its own field."""
+    from mlcompass.agents import evidence_contract as ec
+
+    bound = ec.BoundEvidence(
+        domains={
+            "columns_referenced": ("age", "mean"),
+            "claims[].column": ("age", "mean"),
+            "claims[].statistic": ("mean", "std"),
+        },
+        values={("age", "mean"): 38.5, ("mean", "mean"): 1.25, ("mean", "std"): 0.5},
+        anchor="mean",
+    )
+    sound = {
+        "verdict": "needs_cleaning",
+        "columns_referenced": ["mean", "age"],
+        "claims": [
+            {"column": "mean", "statistic": "mean", "value": 1.25},
+            {"column": "age", "statistic": "mean", "value": 38.5},
+        ],
+    }
+    assert not ec.verify(sound, bound, ec.PROFILE)
+
+    # The same word in the wrong role is still caught: "std" is a statistic,
+    # not a column, so it is misfiled in the column field.
+    misfiled = {**sound, "columns_referenced": ["mean", "std"]}
+    assert ec.verify(misfiled, bound, ec.PROFILE).entity
+
+
+def test_no_anchor_makes_completeness_vacuous() -> None:
+    """With no candidate there is no anchor, and (C3) cannot fire."""
+    from mlcompass.agents import evidence_contract as ec
+
+    bound = ec.BoundEvidence(
+        domains={
+            "columns_referenced": ("a",),
+            "claims[].column": ("a",),
+            "claims[].statistic": ("s",),
+        },
+        values={("a", "s"): 1.0},
+        anchor=None,
+    )
+    committed = {"verdict": "needs_cleaning", "columns_referenced": [], "claims": []}
+    assert ec.verify(committed, bound, ec.PROFILE).omitted is False
