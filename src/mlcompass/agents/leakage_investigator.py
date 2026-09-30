@@ -521,6 +521,7 @@ def investigate_leakage_bound(
     correction_style: str = "named",
     neutral_user: bool = False,
     temperature: float | None = None,
+    verify_response: bool = True,
 ) -> dict[str, Any]:
     """Narrate the evidence under the evidence-bound runtime-schema contract.
 
@@ -572,6 +573,10 @@ def investigate_leakage_bound(
             call, or None (default) to omit the parameter entirely and use
             the provider default. Measurement runs pin this so cross-provider
             rates are compared at a common decoding setting.
+        verify_response: False makes one call and returns the model's payload
+            verbatim: no Tier B, no retry, no stripping, no abort. It exists
+            so a measurement can hold prompt, user message and schema fixed
+            and vary only the verifier. Production callers leave it True.
 
     Returns:
         Dict with the renderer-compatible keys (``verdict``, ``confidence``,
@@ -648,6 +653,8 @@ def investigate_leakage_bound(
             tool_input = _emit_anthropic(api, model, system, user, tool, temperature=temperature)
         cited = [str(c) for c in (tool_input.get("columns_referenced") or [])]
         claims = [c for c in (tool_input.get("claims") or []) if isinstance(c, dict)]
+        if not verify_response:
+            break
 
         # Tier B, all three channels, through the task-agnostic verifier:
         # (1) entity soundness, (2) value soundness of structured claims
@@ -691,13 +698,16 @@ def investigate_leakage_bound(
     # Final deterministic strip — the worst-case guarantee. Any entity or claim
     # still unsound after the retry budget is removed before it reaches the
     # user. Omissions cannot be stripped; they are flagged instead.
-    cited_clean, claims_clean = strip_unsound(tool_input, bound, LEAKAGE_CONTRACT)
+    if verify_response:
+        cited_clean, claims_clean = strip_unsound(tool_input, bound, LEAKAGE_CONTRACT)
+    else:
+        cited_clean, claims_clean = cited, claims
     had_unrecoverable = len(cited_clean) != len(cited) or len(claims_clean) != len(claims)
 
     # Still no admissible verdict after the budget: abort. Nothing the model
     # returned is shown, and no verdict is put in its mouth; the renderer shows
     # the deterministic evidence panel and says the narration failed.
-    aborted = is_malformed(tool_input, LEAKAGE_CONTRACT)
+    aborted = verify_response and is_malformed(tool_input, LEAKAGE_CONTRACT)
     if aborted:
         tool_input = {}
         cited_clean, claims_clean = [], []
@@ -706,12 +716,14 @@ def investigate_leakage_bound(
     confidence = str(tool_input.get("confidence", "cannot_determine"))
     if confidence not in _CONFIDENCE_VALUES:
         confidence = "cannot_determine"
+    if not verify_response:
+        omitted = False
 
     # Completeness is re-checked AFTER stripping: if the anchor was referenced
     # only through a claim that the strip removed, the returned response no
     # longer addresses it, and the omission flag must reflect that (an
     # omission cannot be repaired by deletion — Proposition 2).
-    if not omitted and verdict != "cannot_determine" and anchor is not None:
+    if verify_response and not omitted and verdict != "cannot_determine" and anchor is not None:
         referenced_clean = set(cited_clean) | {str(c.get("column", "")) for c in claims_clean}
         omitted = bool(tool_input) and anchor not in referenced_clean
 

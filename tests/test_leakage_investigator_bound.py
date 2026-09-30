@@ -682,3 +682,24 @@ def test_openai_persistent_missing_tool_call_aborts() -> None:
     assert out["aborted"] is True
     assert out["verdict"] == ""
     assert out["omitted_critical_evidence"] is False
+
+
+def test_unverified_mode_returns_the_first_payload_verbatim() -> None:
+    """verify_response=False is the measurement's no-verifier arm: one call,
+    nothing retried, stripped or aborted, so the same prompt, user message
+    and schema can be compared with and without Tier B."""
+    phantom = tool_use_response(
+        SUBMIT_TOOL_NAME,
+        {
+            "verdict": "leakage_likely",
+            "confidence": "high",
+            "columns_referenced": ["log_target_v2", "shadow_target"],
+            "narration": "unverified",
+        },
+    )
+    client = MockClient(responses=[phantom, _clone(phantom)])
+    out = investigate_leakage_bound(EVIDENCE, client=client, verify_response=False)
+    assert out["attempts_made"] == 1
+    assert out["schema_rejections"] == 0
+    assert out["columns_referenced"] == ["log_target_v2", "shadow_target"]
+    assert out["aborted"] is False

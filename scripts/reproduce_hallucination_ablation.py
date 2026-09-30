@@ -670,6 +670,8 @@ ARM_CALL_FACTOR: dict[str, float] = {
     # Same loop and budget as guardrails_tierb; it retried 88 of 200 on
     # 2026-09-18 (1.44 calls per response), so the same factor.
     "guardrails_choices": 1.5,
+    "strong_noverify": 1.0,
+    "strong_verify": 1.05,
     "static_schema": 1.0,
     "static_schema_noenum": 1.0,
 }
@@ -840,6 +842,12 @@ _OPEN_SCHEMA_DESCRIBED["properties"]["claims"]["items"]["properties"]["column"][
 # Re-review NEW-2: the described schema above names the failing token ("such
 # as r2"). The neutral variant describes the field by category only.
 _DESCRIBE_STYLE = "named"
+_NEUTRAL_COLUMNS_DESCRIPTION = (
+    "Names of dataset columns (features) from the evidence that you cite. "
+    "Column names only, not the names of metrics or statistics."
+)
+_NEUTRAL_CLAIM_COLUMN_DESCRIPTION = "A dataset column name from the evidence."
+STRONG_BASELINE_ARMS: tuple[str, ...] = ("strong_noverify", "strong_verify")
 _OPEN_SCHEMA_NEUTRAL: dict[str, Any] = json.loads(json.dumps(_OPEN_SCHEMA))
 _OPEN_SCHEMA_NEUTRAL["properties"]["columns_referenced"]["description"] = (
     "Names of dataset columns (features) from the evidence that you cite. "
@@ -1350,6 +1358,56 @@ def _live_one_response(
                 last_exc = e
                 if _param_rejected(e):
                     temp = None
+        return _sampled(_error_response(last_exc or RuntimeError("unknown")))
+
+    if layer in STRONG_BASELINE_ARMS:
+        # Review (2026-09-30): what does Tier B add over a configuration that
+        # is already specified well? Both arms send the shipped prompt, the
+        # shipped user message and the call-time enum schema with the neutral
+        # field descriptions added; they differ only in whether the returned
+        # payload is verified (one call, verbatim, when it is not).
+        import mlcompass.agents.leakage_investigator as _li  # noqa: PLC0415
+
+        original = _li._submit_input_schema
+
+        def _described(*a: Any, **k: Any) -> dict[str, Any]:
+            schema = original(*a, **k)
+            props = schema["properties"]
+            props["columns_referenced"]["description"] = _NEUTRAL_COLUMNS_DESCRIPTION
+            props["claims"]["items"]["properties"]["column"]["description"] = (
+                _NEUTRAL_CLAIM_COLUMN_DESCRIPTION
+            )
+            return schema
+
+        _li._submit_input_schema = _described
+        last_exc = None
+        try:
+            for _attempt in range(2):
+                try:
+                    result = investigate_leakage_bound(
+                        evidence,
+                        client=client,
+                        model=model,
+                        provider=("openai" if kind == "openai" else "anthropic"),
+                        system_prompt=None,
+                        enforce_schema_enum=True,
+                        strict_tools=strict,
+                        neutral_user=False,
+                        temperature=temp,
+                        verify_response=(layer == "strong_verify"),
+                    )
+                    rec = _from_contract_result(result)
+                    if layer == "strong_noverify":
+                        # Nothing checked the payload, so there is no contract
+                        # flag to trust; let the scorer compute the omission.
+                        rec["omitted"] = None
+                    return _sampled(rec)
+                except Exception as e:  # noqa: BLE001 - SDK exception types vary
+                    last_exc = e
+                    if _param_rejected(e):
+                        temp = None
+        finally:
+            _li._submit_input_schema = original
         return _sampled(_error_response(last_exc or RuntimeError("unknown")))
 
     if layer in ("layer3", "layer3_bare", "layer3_stress", "layer3_stress_generic"):
@@ -2233,6 +2291,8 @@ LAYER_LABELS = {
     "guardrails_tierb": "BASE Guardrails (+TierB)",
     "static_schema_noenum": "BASE strict, no enum",
     "static_schema": "BASE strict, stale enum",
+    "strong_noverify": "STRONG shipped+described+enum, no verify",
+    "strong_verify": "STRONG shipped+described+enum+TierB",
 }
 
 # The plan arm id for every harness arm (plan 2026-09 §2.1 + §9 A1).
@@ -2248,6 +2308,8 @@ ARM_IDS: dict[str, str] = {
     "layer2": "A-L2",
     "layer3": "A-L3-SHIPPED",
     "layer3_bare": "A-CONTRACT",
+    "strong_noverify": "A-STRONG-NOVERIFY",
+    "strong_verify": "A-STRONG-CONTRACT",
     "layer3_stress": "A-STRESS",
     "layer3_stress_generic": "A-STRESS-GENERIC",
     "tier_a": "A-STRICT-ENUM (needs --strict)",
@@ -2375,6 +2437,14 @@ def main() -> int:
         help=(
             "Run only layer2 with the shipped prompt minus its two sentences "
             "claiming that violations are rejected (A-L2-NOCLAIMS). Use a separate --log-dir."
+        ),
+    )
+    ap.add_argument(
+        "--strong-baseline",
+        action="store_true",
+        help=(
+            "Run only the two strong-baseline arms: shipped prompt + described "
+            "fields + call-time enum, without and with Tier B. Use a separate --log-dir."
         ),
     )
     ap.add_argument(
@@ -2737,6 +2807,8 @@ def main() -> int:
         arms = ("layer2",)
     if args.only_floor:
         arms = ("layer1",)
+    if args.strong_baseline:
+        arms = STRONG_BASELINE_ARMS
     if args.only_extra:
         if args.mode != "live":
             raise SystemExit("--only-extra is a live measurement; add --mode live.")
