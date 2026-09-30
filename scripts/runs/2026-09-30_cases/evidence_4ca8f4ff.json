@@ -1,0 +1,67 @@
+{
+  "task_label": "case:sambanis",
+  "evidence": {
+    "ok": true,
+    "row_count": 7140,
+    "trustworthy_sample_size": true,
+    "suspicious_metric": {
+      "name": "r2",
+      "value": 0.2044
+    },
+    "target_feature_correlations": [
+      {
+        "feature": "warstnsb",
+        "correlation": 0.6526625434902571,
+        "method": "pearson"
+      },
+      {
+        "feature": "warhist2cow",
+        "correlation": 0.37067333987686685,
+        "method": "pearson"
+      },
+      {
+        "feature": "warstns",
+        "correlation": 0.35522980667960674,
+        "method": "pearson"
+      },
+      {
+        "feature": "atwards",
+        "correlation": 0.3390292657767965,
+        "method": "pearson"
+      },
+      {
+        "feature": "yrend",
+        "correlation": 0.2768211689857346,
+        "method": "pearson"
+      },
+      {
+        "feature": "yrbeg",
+        "correlation": 0.27333464037042254,
+        "method": "pearson"
+      },
+      {
+        "feature": "atwarns",
+        "correlation": 0.2729397021021505,
+        "method": "pearson"
+      },
+      {
+        "feature": "moend",
+        "correlation": 0.26487752612723897,
+        "method": "pearson"
+      },
+      {
+        "feature": "mobeg",
+        "correlation": 0.25769946136683186,
+        "method": "spearman"
+      },
+      {
+        "feature": "ld_warstns",
+        "correlation": 0.19570047117099293,
+        "method": "spearman"
+      }
+    ],
+    "perfect_match_rate": 0.0,
+    "candidate_leak_columns": [],
+    "notes": []
+  }
+}

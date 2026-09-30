@@ -128,7 +128,8 @@ def main() -> int:
     # a re-run (review F-13). Each file is scored against the evidence dump that
     # carries its own hash; superseded runs are skipped.
     tables: dict[str, dict] = {}
-    for f in sorted(RUNS.rglob("deepseek_*_synthetic*_seed0_e*.jsonl")):
+    files = [*RUNS.rglob("deepseek_*_synthetic*_seed0_e*.jsonl"), *RUNS.rglob("deepseek_*_case-*_seed0_e*.jsonl")]
+    for f in sorted(files):
         if "superseded" in f.parts[-2] or "superseded" in str(f.parent):
             continue
         ehash = f.stem.rsplit("_e", 1)[1]

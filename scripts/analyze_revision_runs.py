@@ -38,7 +38,9 @@ from mlcompass.agents.evidence_contract import bind_profile  # noqa: E402
 RUNS = ROOT / "scripts" / "runs"
 LEAKAGE_DIRS = [RUNS / "2026-09-24_revision", RUNS / "2026-09-24_described",
                 RUNS / "2026-09-25_described_neutral", RUNS / "2026-09-25_rules_prompt",
-                RUNS / "2026-09-27_noclaims", RUNS / "2026-09-27_t0"]
+                RUNS / "2026-09-27_noclaims", RUNS / "2026-09-27_t0",
+                RUNS / "2026-09-30_strong", RUNS / "2026-09-30_cases",
+                RUNS / "2026-09-30_cases_strong"]
 PROFILE_DIRS = [RUNS / "profile", RUNS / "profile" / "2026-09-24_natural"]
 
 

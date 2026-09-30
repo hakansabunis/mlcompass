@@ -179,7 +179,7 @@
           71
         ],
         [
-          "feature_7",
+          "feature_8",
           64
         ],
         [
@@ -187,7 +187,7 @@
           64
         ],
         [
-          "feature_8",
+          "feature_7",
           64
         ]
       ],
@@ -605,6 +605,324 @@
       ],
       "anchor": "log_target_v2",
       "anchor_in_allowed": true
+    },
+    {
+      "file": "2026-09-30_strong/deepseek_deepseek-chat_synthetic_crowded_strong_noverify_n200_seed0_ee469b75a.jsonl",
+      "arm_id": "A-STRONG-NOVERIFY",
+      "task": "synthetic_crowded",
+      "strict": false,
+      "n": 200,
+      "entity": 0,
+      "entity_ci": [
+        1.734723475976807e-16,
+        1.8845326377266574
+      ],
+      "invented": 0,
+      "misfiled": 0,
+      "value": 0,
+      "omission": 0,
+      "abstained": 0,
+      "rejected_once_or_more": 0,
+      "stripped": 0,
+      "top_tokens": [],
+      "anchor": "sensor_ref",
+      "anchor_in_allowed": true
+    },
+    {
+      "file": "2026-09-30_strong/deepseek_deepseek-chat_synthetic_crowded_strong_verify_n200_seed0_ee469b75a.jsonl",
+      "arm_id": "A-STRONG-CONTRACT",
+      "task": "synthetic_crowded",
+      "strict": false,
+      "n": 200,
+      "entity": 0,
+      "entity_ci": [
+        1.734723475976807e-16,
+        1.8845326377266574
+      ],
+      "invented": 0,
+      "misfiled": 0,
+      "value": 0,
+      "omission": 0,
+      "abstained": 0,
+      "rejected_once_or_more": 0,
+      "stripped": 0,
+      "top_tokens": [],
+      "anchor": "sensor_ref",
+      "anchor_in_allowed": true
+    },
+    {
+      "file": "2026-09-30_strong/deepseek_deepseek-chat_synthetic_strong_noverify_n200_seed0_e618bd74a.jsonl",
+      "arm_id": "A-STRONG-NOVERIFY",
+      "task": "synthetic",
+      "strict": false,
+      "n": 200,
+      "entity": 0,
+      "entity_ci": [
+        1.734723475976807e-16,
+        1.8845326377266574
+      ],
+      "invented": 0,
+      "misfiled": 0,
+      "value": 0,
+      "omission": 0,
+      "abstained": 0,
+      "rejected_once_or_more": 0,
+      "stripped": 0,
+      "top_tokens": [],
+      "anchor": "log_target_v2",
+      "anchor_in_allowed": true
+    },
+    {
+      "file": "2026-09-30_strong/deepseek_deepseek-chat_synthetic_strong_verify_n200_seed0_e618bd74a.jsonl",
+      "arm_id": "A-STRONG-CONTRACT",
+      "task": "synthetic",
+      "strict": false,
+      "n": 200,
+      "entity": 0,
+      "entity_ci": [
+        1.734723475976807e-16,
+        1.8845326377266574
+      ],
+      "invented": 0,
+      "misfiled": 0,
+      "value": 0,
+      "omission": 0,
+      "abstained": 0,
+      "rejected_once_or_more": 0,
+      "stripped": 0,
+      "top_tokens": [],
+      "anchor": "log_target_v2",
+      "anchor_in_allowed": true
+    },
+    {
+      "file": "2026-09-30_cases/deepseek_deepseek-chat_case-bodyfat_layer1_n200_seed0_ebfa49367.jsonl",
+      "arm_id": "A-L1",
+      "task": "case:bodyfat",
+      "strict": false,
+      "n": 200,
+      "entity": 43,
+      "entity_ci": [
+        16.37187625450758,
+        27.702307348996612
+      ],
+      "invented": 0,
+      "misfiled": 43,
+      "value": 0,
+      "omission": 0,
+      "abstained": 0,
+      "rejected_once_or_more": 0,
+      "stripped": 0,
+      "top_tokens": [
+        [
+          "r2",
+          43
+        ]
+      ],
+      "anchor": "Density",
+      "anchor_in_allowed": true
+    },
+    {
+      "file": "2026-09-30_cases/deepseek_deepseek-chat_case-bodyfat_layer2_n200_seed0_ebfa49367.jsonl",
+      "arm_id": "A-L2",
+      "task": "case:bodyfat",
+      "strict": false,
+      "n": 200,
+      "entity": 0,
+      "entity_ci": [
+        1.734723475976807e-16,
+        1.8845326377266574
+      ],
+      "invented": 0,
+      "misfiled": 0,
+      "value": 0,
+      "omission": 0,
+      "abstained": 0,
+      "rejected_once_or_more": 0,
+      "stripped": 0,
+      "top_tokens": [],
+      "anchor": "Density",
+      "anchor_in_allowed": true
+    },
+    {
+      "file": "2026-09-30_cases/deepseek_deepseek-chat_case-bodyfat_layer3_n200_seed0_ebfa49367.jsonl",
+      "arm_id": "A-L3-SHIPPED",
+      "task": "case:bodyfat",
+      "strict": false,
+      "n": 200,
+      "entity": 0,
+      "entity_ci": [
+        1.734723475976807e-16,
+        1.8845326377266574
+      ],
+      "invented": 0,
+      "misfiled": 0,
+      "value": 0,
+      "omission": 0,
+      "abstained": 0,
+      "rejected_once_or_more": 0,
+      "stripped": 0,
+      "top_tokens": [],
+      "anchor": "Density",
+      "anchor_in_allowed": true
+    },
+    {
+      "file": "2026-09-30_cases/deepseek_deepseek-chat_case-sambanis_layer1_n200_seed0_e4ca8f4ff.jsonl",
+      "arm_id": "A-L1",
+      "task": "case:sambanis",
+      "strict": false,
+      "n": 200,
+      "entity": 41,
+      "entity_ci": [
+        15.486176203836207,
+        26.625698052422514
+      ],
+      "invented": 0,
+      "misfiled": 41,
+      "value": 0,
+      "omission": 0,
+      "abstained": 0,
+      "rejected_once_or_more": 0,
+      "stripped": 0,
+      "top_tokens": [
+        [
+          "r2",
+          41
+        ]
+      ],
+      "anchor": null,
+      "anchor_in_allowed": false
+    },
+    {
+      "file": "2026-09-30_cases/deepseek_deepseek-chat_case-sambanis_layer2_n200_seed0_e4ca8f4ff.jsonl",
+      "arm_id": "A-L2",
+      "task": "case:sambanis",
+      "strict": false,
+      "n": 200,
+      "entity": 0,
+      "entity_ci": [
+        1.734723475976807e-16,
+        1.8845326377266574
+      ],
+      "invented": 0,
+      "misfiled": 0,
+      "value": 0,
+      "omission": 0,
+      "abstained": 114,
+      "rejected_once_or_more": 0,
+      "stripped": 0,
+      "top_tokens": [],
+      "anchor": null,
+      "anchor_in_allowed": false
+    },
+    {
+      "file": "2026-09-30_cases/deepseek_deepseek-chat_case-sambanis_layer3_n200_seed0_e4ca8f4ff.jsonl",
+      "arm_id": "A-L3-SHIPPED",
+      "task": "case:sambanis",
+      "strict": false,
+      "n": 200,
+      "entity": 0,
+      "entity_ci": [
+        1.734723475976807e-16,
+        1.8845326377266574
+      ],
+      "invented": 0,
+      "misfiled": 0,
+      "value": 0,
+      "omission": 0,
+      "abstained": 78,
+      "rejected_once_or_more": 0,
+      "stripped": 0,
+      "top_tokens": [],
+      "anchor": null,
+      "anchor_in_allowed": false
+    },
+    {
+      "file": "2026-09-30_cases_strong/deepseek_deepseek-chat_case-bodyfat_strong_noverify_n200_seed0_ebfa49367.jsonl",
+      "arm_id": "A-STRONG-NOVERIFY",
+      "task": "case:bodyfat",
+      "strict": false,
+      "n": 200,
+      "entity": 0,
+      "entity_ci": [
+        1.734723475976807e-16,
+        1.8845326377266574
+      ],
+      "invented": 0,
+      "misfiled": 0,
+      "value": 0,
+      "omission": 0,
+      "abstained": 0,
+      "rejected_once_or_more": 0,
+      "stripped": 0,
+      "top_tokens": [],
+      "anchor": "Density",
+      "anchor_in_allowed": true
+    },
+    {
+      "file": "2026-09-30_cases_strong/deepseek_deepseek-chat_case-bodyfat_strong_verify_n200_seed0_ebfa49367.jsonl",
+      "arm_id": "A-STRONG-CONTRACT",
+      "task": "case:bodyfat",
+      "strict": false,
+      "n": 200,
+      "entity": 0,
+      "entity_ci": [
+        1.734723475976807e-16,
+        1.8845326377266574
+      ],
+      "invented": 0,
+      "misfiled": 0,
+      "value": 0,
+      "omission": 0,
+      "abstained": 0,
+      "rejected_once_or_more": 0,
+      "stripped": 0,
+      "top_tokens": [],
+      "anchor": "Density",
+      "anchor_in_allowed": true
+    },
+    {
+      "file": "2026-09-30_cases_strong/deepseek_deepseek-chat_case-sambanis_strong_noverify_n200_seed0_e4ca8f4ff.jsonl",
+      "arm_id": "A-STRONG-NOVERIFY",
+      "task": "case:sambanis",
+      "strict": false,
+      "n": 200,
+      "entity": 0,
+      "entity_ci": [
+        1.734723475976807e-16,
+        1.8845326377266574
+      ],
+      "invented": 0,
+      "misfiled": 0,
+      "value": 0,
+      "omission": 0,
+      "abstained": 95,
+      "rejected_once_or_more": 0,
+      "stripped": 0,
+      "top_tokens": [],
+      "anchor": null,
+      "anchor_in_allowed": false
+    },
+    {
+      "file": "2026-09-30_cases_strong/deepseek_deepseek-chat_case-sambanis_strong_verify_n200_seed0_e4ca8f4ff.jsonl",
+      "arm_id": "A-STRONG-CONTRACT",
+      "task": "case:sambanis",
+      "strict": false,
+      "n": 200,
+      "entity": 0,
+      "entity_ci": [
+        1.734723475976807e-16,
+        1.8845326377266574
+      ],
+      "invented": 0,
+      "misfiled": 0,
+      "value": 0,
+      "omission": 0,
+      "abstained": 94,
+      "rejected_once_or_more": 0,
+      "stripped": 0,
+      "top_tokens": [],
+      "anchor": null,
+      "anchor_in_allowed": false
     }
   ],
   "profile": [

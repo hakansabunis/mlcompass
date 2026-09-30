@@ -287,26 +287,62 @@
       "first": 200,
       "first_dirty": 19,
       "no_evidence": 0
+    },
+    "deepseek/crowded/strong_noverify/2026-09-30_strong": {
+      "with_prose": 200,
+      "dirty": 1,
+      "retried": 0,
+      "retried_dirty": 0,
+      "first": 200,
+      "first_dirty": 1,
+      "no_evidence": 0
+    },
+    "deepseek/crowded/strong_verify/2026-09-30_strong": {
+      "with_prose": 200,
+      "dirty": 2,
+      "retried": 0,
+      "retried_dirty": 0,
+      "first": 200,
+      "first_dirty": 2,
+      "no_evidence": 0
+    },
+    "deepseek/reference/strong_noverify/2026-09-30_strong": {
+      "with_prose": 200,
+      "dirty": 6,
+      "retried": 0,
+      "retried_dirty": 0,
+      "first": 200,
+      "first_dirty": 6,
+      "no_evidence": 0
+    },
+    "deepseek/reference/strong_verify/2026-09-30_strong": {
+      "with_prose": 200,
+      "dirty": 11,
+      "retried": 0,
+      "retried_dirty": 0,
+      "first": 200,
+      "first_dirty": 11,
+      "no_evidence": 0
     }
   },
   "summary": {
     "reference": {
       "rejecting": {
-        "dirty": 147,
-        "n": 1600,
-        "rate": 9.2,
+        "dirty": 158,
+        "n": 1800,
+        "rate": 8.8,
         "ci": [
-          7.9,
-          10.7
+          7.6,
+          10.2
         ]
       },
       "non-rejecting": {
-        "dirty": 372,
-        "n": 2800,
-        "rate": 13.3,
+        "dirty": 378,
+        "n": 3000,
+        "rate": 12.6,
         "ci": [
-          12.1,
-          14.6
+          11.5,
+          13.8
         ]
       },
       "retried": {
@@ -319,32 +355,32 @@
         ]
       },
       "first-pass": {
-        "dirty": 119,
-        "n": 1344,
-        "rate": 8.9,
+        "dirty": 130,
+        "n": 1544,
+        "rate": 8.4,
         "ci": [
-          7.5,
-          10.5
+          7.1,
+          9.9
         ]
       }
     },
     "crowded": {
       "rejecting": {
-        "dirty": 69,
-        "n": 1000,
-        "rate": 6.9,
+        "dirty": 71,
+        "n": 1200,
+        "rate": 5.9,
         "ci": [
-          5.5,
-          8.6
+          4.7,
+          7.4
         ]
       },
       "non-rejecting": {
-        "dirty": 161,
-        "n": 998,
-        "rate": 16.1,
+        "dirty": 162,
+        "n": 1198,
+        "rate": 13.5,
         "ci": [
-          14.0,
-          18.5
+          11.7,
+          15.6
         ]
       },
       "retried": {
@@ -357,12 +393,12 @@
         ]
       },
       "first-pass": {
-        "dirty": 48,
-        "n": 756,
-        "rate": 6.3,
+        "dirty": 50,
+        "n": 956,
+        "rate": 5.2,
         "ci": [
-          4.8,
-          8.3
+          4.0,
+          6.8
         ]
       }
     }

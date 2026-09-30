@@ -1,0 +1,69 @@
+{
+  "task_label": "case:bodyfat",
+  "evidence": {
+    "ok": true,
+    "row_count": 252,
+    "trustworthy_sample_size": true,
+    "suspicious_metric": {
+      "name": "r2",
+      "value": 0.9781
+    },
+    "target_feature_correlations": [
+      {
+        "feature": "Density",
+        "correlation": -0.9934043231872762,
+        "method": "spearman"
+      },
+      {
+        "feature": "Abdomen",
+        "correlation": 0.8162482501535308,
+        "method": "spearman"
+      },
+      {
+        "feature": "Chest",
+        "correlation": 0.7026203388938643,
+        "method": "pearson"
+      },
+      {
+        "feature": "Hip",
+        "correlation": 0.6252009175086622,
+        "method": "pearson"
+      },
+      {
+        "feature": "Weight",
+        "correlation": 0.6128685128963016,
+        "method": "spearman"
+      },
+      {
+        "feature": "Thigh",
+        "correlation": 0.5596075319940895,
+        "method": "pearson"
+      },
+      {
+        "feature": "Knee",
+        "correlation": 0.5086652428854677,
+        "method": "pearson"
+      },
+      {
+        "feature": "Biceps",
+        "correlation": 0.49365184179591665,
+        "method": "spearman"
+      },
+      {
+        "feature": "Neck",
+        "correlation": 0.49125228079160405,
+        "method": "spearman"
+      },
+      {
+        "feature": "Forearm",
+        "correlation": 0.3926963881465552,
+        "method": "spearman"
+      }
+    ],
+    "perfect_match_rate": 0.0,
+    "candidate_leak_columns": [
+      "Density"
+    ],
+    "notes": []
+  }
+}

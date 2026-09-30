@@ -248,6 +248,7 @@ def _prompt_vocabulary() -> set[str]:
 REJECTING = {
     "guardrails_choices", "guardrails_tierb", "layer3", "layer3_bare",
     "layer3_stress", "layer3_stress_generic", "stress_mech", "stress_mech-strict",
+    "strong_verify",
 }
 
 
