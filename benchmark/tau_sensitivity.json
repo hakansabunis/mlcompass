@@ -893,6 +893,481 @@
     },
     {
       "task": "leakage",
+      "arm": "A-L1-DESCRIBED-NEUTRAL [2026-09-25_described_neutral]",
+      "n": 200,
+      "claims_checked": 1910,
+      "source": "claims",
+      "exact": 1910,
+      "hist": [
+        1910,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "responses_violating": {
+        "0.0005": 0,
+        "0.001": 0,
+        "0.005": 0,
+        "0.01": 0,
+        "0.05": 0
+      },
+      "max_rel_dev_nonzero": 0.0,
+      "median_rel_dev_nonzero": 0.0
+    },
+    {
+      "task": "leakage",
+      "arm": "A-L2-DESCRIBED-NEUTRAL [2026-09-25_described_neutral]",
+      "n": 200,
+      "claims_checked": 513,
+      "source": "claims",
+      "exact": 513,
+      "hist": [
+        513,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "responses_violating": {
+        "0.0005": 0,
+        "0.001": 0,
+        "0.005": 0,
+        "0.01": 0,
+        "0.05": 0
+      },
+      "max_rel_dev_nonzero": 0.0,
+      "median_rel_dev_nonzero": 0.0
+    },
+    {
+      "task": "leakage",
+      "arm": "A-L2-RULES [2026-09-25_rules_prompt]",
+      "n": 200,
+      "claims_checked": 1810,
+      "source": "claims",
+      "exact": 1810,
+      "hist": [
+        1810,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "responses_violating": {
+        "0.0005": 0,
+        "0.001": 0,
+        "0.005": 0,
+        "0.01": 0,
+        "0.05": 0
+      },
+      "max_rel_dev_nonzero": 0.0,
+      "median_rel_dev_nonzero": 0.0
+    },
+    {
+      "task": "leakage",
+      "arm": "A-L2-NOCLAIMS [2026-09-27_noclaims]",
+      "n": 200,
+      "claims_checked": 423,
+      "source": "claims",
+      "exact": 423,
+      "hist": [
+        423,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "responses_violating": {
+        "0.0005": 0,
+        "0.001": 0,
+        "0.005": 0,
+        "0.01": 0,
+        "0.05": 0
+      },
+      "max_rel_dev_nonzero": 0.0,
+      "median_rel_dev_nonzero": 0.0
+    },
+    {
+      "task": "leakage",
+      "arm": "A-L1-T0 [2026-09-27_t0]",
+      "n": 200,
+      "claims_checked": 2000,
+      "source": "claims",
+      "exact": 2000,
+      "hist": [
+        2000,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "responses_violating": {
+        "0.0005": 0,
+        "0.001": 0,
+        "0.005": 0,
+        "0.01": 0,
+        "0.05": 0
+      },
+      "max_rel_dev_nonzero": 0.0,
+      "median_rel_dev_nonzero": 0.0
+    },
+    {
+      "task": "leakage",
+      "arm": "A-L1 [2026-09-30_cases]",
+      "n": 200,
+      "claims_checked": 1871,
+      "source": "claims",
+      "exact": 1831,
+      "hist": [
+        1871,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "responses_violating": {
+        "0.0005": 0,
+        "0.001": 0,
+        "0.005": 0,
+        "0.01": 0,
+        "0.05": 0
+      },
+      "max_rel_dev_nonzero": 9.755499727942071e-05,
+      "median_rel_dev_nonzero": 5.1376605317146705e-05
+    },
+    {
+      "task": "leakage",
+      "arm": "A-L2 [2026-09-30_cases]",
+      "n": 200,
+      "claims_checked": 431,
+      "source": "claims",
+      "exact": 431,
+      "hist": [
+        431,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "responses_violating": {
+        "0.0005": 0,
+        "0.001": 0,
+        "0.005": 0,
+        "0.01": 0,
+        "0.05": 0
+      },
+      "max_rel_dev_nonzero": 0.0,
+      "median_rel_dev_nonzero": 0.0
+    },
+    {
+      "task": "leakage",
+      "arm": "A-L3-SHIPPED [2026-09-30_cases]",
+      "n": 200,
+      "claims_checked": 563,
+      "source": "claims",
+      "exact": 558,
+      "hist": [
+        563,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "responses_violating": {
+        "0.0005": 0,
+        "0.001": 0,
+        "0.005": 0,
+        "0.01": 0,
+        "0.05": 0
+      },
+      "max_rel_dev_nonzero": 5.9112106545576146e-05,
+      "median_rel_dev_nonzero": 2.8947203401973903e-05
+    },
+    {
+      "task": "leakage",
+      "arm": "A-L1 [2026-09-30_cases]",
+      "n": 200,
+      "claims_checked": 1996,
+      "source": "claims",
+      "exact": 1996,
+      "hist": [
+        1996,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "responses_violating": {
+        "0.0005": 0,
+        "0.001": 0,
+        "0.005": 0,
+        "0.01": 0,
+        "0.05": 0
+      },
+      "max_rel_dev_nonzero": 0.0,
+      "median_rel_dev_nonzero": 0.0
+    },
+    {
+      "task": "leakage",
+      "arm": "A-L2 [2026-09-30_cases]",
+      "n": 200,
+      "claims_checked": 432,
+      "source": "claims",
+      "exact": 432,
+      "hist": [
+        432,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "responses_violating": {
+        "0.0005": 0,
+        "0.001": 0,
+        "0.005": 0,
+        "0.01": 0,
+        "0.05": 0
+      },
+      "max_rel_dev_nonzero": 0.0,
+      "median_rel_dev_nonzero": 0.0
+    },
+    {
+      "task": "leakage",
+      "arm": "A-L3-SHIPPED [2026-09-30_cases]",
+      "n": 200,
+      "claims_checked": 530,
+      "source": "claims",
+      "exact": 530,
+      "hist": [
+        530,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "responses_violating": {
+        "0.0005": 0,
+        "0.001": 0,
+        "0.005": 0,
+        "0.01": 0,
+        "0.05": 0
+      },
+      "max_rel_dev_nonzero": 0.0,
+      "median_rel_dev_nonzero": 0.0
+    },
+    {
+      "task": "leakage",
+      "arm": "A-STRONG-NOVERIFY [2026-09-30_cases_strong]",
+      "n": 200,
+      "claims_checked": 481,
+      "source": "claims",
+      "exact": 481,
+      "hist": [
+        481,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "responses_violating": {
+        "0.0005": 0,
+        "0.001": 0,
+        "0.005": 0,
+        "0.01": 0,
+        "0.05": 0
+      },
+      "max_rel_dev_nonzero": 0.0,
+      "median_rel_dev_nonzero": 0.0
+    },
+    {
+      "task": "leakage",
+      "arm": "A-STRONG-CONTRACT [2026-09-30_cases_strong]",
+      "n": 200,
+      "claims_checked": 402,
+      "source": "claims",
+      "exact": 402,
+      "hist": [
+        402,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "responses_violating": {
+        "0.0005": 0,
+        "0.001": 0,
+        "0.005": 0,
+        "0.01": 0,
+        "0.05": 0
+      },
+      "max_rel_dev_nonzero": 0.0,
+      "median_rel_dev_nonzero": 0.0
+    },
+    {
+      "task": "leakage",
+      "arm": "A-STRONG-NOVERIFY [2026-09-30_cases_strong]",
+      "n": 200,
+      "claims_checked": 538,
+      "source": "claims",
+      "exact": 538,
+      "hist": [
+        538,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "responses_violating": {
+        "0.0005": 0,
+        "0.001": 0,
+        "0.005": 0,
+        "0.01": 0,
+        "0.05": 0
+      },
+      "max_rel_dev_nonzero": 0.0,
+      "median_rel_dev_nonzero": 0.0
+    },
+    {
+      "task": "leakage",
+      "arm": "A-STRONG-CONTRACT [2026-09-30_cases_strong]",
+      "n": 200,
+      "claims_checked": 618,
+      "source": "claims",
+      "exact": 618,
+      "hist": [
+        618,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "responses_violating": {
+        "0.0005": 0,
+        "0.001": 0,
+        "0.005": 0,
+        "0.01": 0,
+        "0.05": 0
+      },
+      "max_rel_dev_nonzero": 0.0,
+      "median_rel_dev_nonzero": 0.0
+    },
+    {
+      "task": "leakage",
+      "arm": "A-STRONG-NOVERIFY [2026-09-30_strong]",
+      "n": 200,
+      "claims_checked": 566,
+      "source": "claims",
+      "exact": 559,
+      "hist": [
+        566,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "responses_violating": {
+        "0.0005": 0,
+        "0.001": 0,
+        "0.005": 0,
+        "0.01": 0,
+        "0.05": 0
+      },
+      "max_rel_dev_nonzero": 3.6641023915021682e-16,
+      "median_rel_dev_nonzero": 1.225411726959334e-16
+    },
+    {
+      "task": "leakage",
+      "arm": "A-STRONG-CONTRACT [2026-09-30_strong]",
+      "n": 200,
+      "claims_checked": 532,
+      "source": "claims",
+      "exact": 531,
+      "hist": [
+        532,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "responses_violating": {
+        "0.0005": 0,
+        "0.001": 0,
+        "0.005": 0,
+        "0.01": 0,
+        "0.05": 0
+      },
+      "max_rel_dev_nonzero": 1.2015400699406456e-16,
+      "median_rel_dev_nonzero": 1.2015400699406456e-16
+    },
+    {
+      "task": "leakage",
+      "arm": "A-STRONG-NOVERIFY [2026-09-30_strong]",
+      "n": 200,
+      "claims_checked": 630,
+      "source": "claims",
+      "exact": 630,
+      "hist": [
+        630,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "responses_violating": {
+        "0.0005": 0,
+        "0.001": 0,
+        "0.005": 0,
+        "0.01": 0,
+        "0.05": 0
+      },
+      "max_rel_dev_nonzero": 0.0,
+      "median_rel_dev_nonzero": 0.0
+    },
+    {
+      "task": "leakage",
+      "arm": "A-STRONG-CONTRACT [2026-09-30_strong]",
+      "n": 200,
+      "claims_checked": 584,
+      "source": "claims",
+      "exact": 584,
+      "hist": [
+        584,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "responses_violating": {
+        "0.0005": 0,
+        "0.001": 0,
+        "0.005": 0,
+        "0.01": 0,
+        "0.05": 0
+      },
+      "max_rel_dev_nonzero": 0.0,
+      "median_rel_dev_nonzero": 0.0
+    },
+    {
+      "task": "leakage",
       "arm": "A-GR-STOCK [root]",
       "n": 200,
       "claims_checked": 1952,
