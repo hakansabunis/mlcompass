@@ -25,7 +25,8 @@ _get() {
 
 for _pair in "deepseek_api:DEEPSEEK_API_KEY" \
              "chatgpt_api:OPENAI_API_KEY" \
-             "mistral_api:MISTRAL_API_KEY"; do
+             "mistral_api:MISTRAL_API_KEY" \
+             "anthropic_api:ANTHROPIC_API_KEY"; do
     _src="${_pair%%:*}"
     _dst="${_pair##*:}"
     _val="$(_get "$_src")"

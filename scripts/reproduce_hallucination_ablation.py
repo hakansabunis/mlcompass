@@ -628,6 +628,7 @@ PRICING_PER_M: dict[str, tuple[float, float]] = {
     # Strong tier (P2 spot-checks / judges):
     "gpt-5.5": (5.00, 30.00),
     "claude-opus-4-8": (5.00, 25.00),
+    "claude-opus-4-7": (5.00, 25.00),  # product default narrator (A3 R3)
     "gemini-3.1-pro-preview": (2.00, 12.00),
 }
 

@@ -819,3 +819,85 @@ Slots reserved, to be filled before the corresponding first live call:
   provider.
 - **B4 — panel additions (§3.1).** Any provider added to the Round-2 panel, with
   its reason, logged before its first cell.
+
+### A3 — confirmatory and generalization battery (2026-09-30, before any of its calls)
+
+**Why.** A simulated three-reviewer panel (2026-09-30) made four objections
+the existing runs cannot answer. (a) Against a well-specified configuration
+the verifier shows no measured benefit: on the leakage task both strong arms
+read 0/200 on every instance, and on the natural-name profile frame the
+unverified strong arm delivered 4/200 against 0/200 (Fisher p ≈ 0.12), a
+difference found in an exploratory run. (b) 16,160 responses come from four
+leakage instances and one profile frame. (c) The shipped default narrator,
+`claude-opus-4-7`, was never measured. (d) No one outside the scorer checked
+its labels. R1–R4 below answer them. Everything here is fixed before the first
+call; the commit that adds this section is the harness commit every record
+must pin, and a run from a dirty tree is discarded.
+
+**Common settings.** Temperature 1.0 (the default of every earlier cell), the
+shipped rule-bearing prompt in the strong arms, `max_retries = 2` where the
+verifier is on, transport errors excluded from N and reported. A *delivered
+violation* is a response whose final payload, as it reaches the user, has any
+of `scored.entity`, `scored.value`, `scored.omission` true, the fields both
+harnesses already write.
+
+**R1 — confirmatory: the verifier on the natural-name profile frame.**
+`deepseek-chat`, frame seed 0, `--natural-names`, arms `strong_noverify` and
+`strong_verify`, N = 600 each, fresh log directory
+`scripts/runs/profile/2026-09-30_confirm_natural`. Hypothesis: the delivered
+rate is higher without the verifier. Test: Fisher exact, two-sided, on the
+600 + 600 new responses only. The 400 exploratory responses of
+`2026-09-30_strong_natural` are **not pooled**; pooling data chosen after its
+result was seen is optional stopping. Power: with the verified arm at 0, the
+test rejects at k ≥ 6 of 600; that has probability 0.98 at a true rate of 2 %
+(the exploratory estimate) and 0.55 at 1 %. **Rejected if** p ≥ α after Holm.
+Either way the run is not repeated or extended.
+
+**R2 — generalization: the 12 FabBench instances frozen on 2026-07-07 (v1.0
+§8 A1).** They were frozen before any live run and have never been run; the
+prompts, schemas and contract were written against the synthetic reference
+task. `deepseek-chat`, `--task csv`, each instance's registered dataset,
+target and injector, evidence seed 0. Arms `A-L1` (`--only-floor`),
+`A-STRONG-NOVERIFY` and `A-STRONG-CONTRACT` (`--strong-baseline`), N = 200
+each per instance: 7,200 responses. Log directory
+`scripts/runs/2026-09-30_fabbench12`.
+
+- *R2a, descriptive.* Per instance, the `A-L1` entity rate with the
+  three-way split misfiled / unlisted / invented. Prediction: misfiling is the
+  dominant kind wherever the floor fires, and invented names are under 5 % of
+  flagged `A-L1` responses pooled over the 12 instances. **Rejected if**
+  invented names are 5 % or more.
+- *R2b, confirmatory.* Delivered violations pooled over the 12 instances,
+  `A-STRONG-NOVERIFY` against `A-STRONG-CONTRACT` (2,400 each), Fisher exact,
+  two-sided. Per-instance counts are reported beside it. **Rejected if**
+  p ≥ α after Holm. A pooled 0 against 0 is reported as no measured benefit on
+  twelve further instances, in those words.
+- The three contamination instances have no anchor, so anchor coverage is
+  vacuous there; entity and value are scored as everywhere else.
+
+**Holm family.** {R1, R2b}, α = 0.05. Everything else in this amendment is
+descriptive.
+
+**R3 — descriptive: the shipped default narrator.** `anthropic`,
+`claude-opus-4-7`, the product default of both narrators, logged as panel
+addition B4. Reference synthetic task: `A-L1`, `A-L2`, `A-L3-SHIPPED`
+(`--no-stress`) and the strong pair, N = 200 each. Profile natural-name
+frame: the strong pair, N = 200 each. Budget cap USD 40 through
+`--max-cost-usd`. If the API refuses the temperature pin, the pin is dropped
+for that cell and the record says so. No test: N = 200 per cell is reported
+with Wilson intervals as a measurement of the configuration mlcompass ships.
+
+**R4 — blind audit of the scorer.** From the R2 records, 200 responses drawn
+with seed 20260930: 100 the scorer flags (stratified by kind in proportion,
+topped up from the committed 2026-09-24 to 2026-09-30 leakage runs if R2
+flags fewer than 100) and 100 it does not. One author (Y. Ünlü) labels them
+from a sheet that shows, per response, the evidence's admissible names and
+values, the full frame column list and the structured payload. The sheet
+hides arm, model, provider, the scorer's label and the flagged/unflagged
+split, and the order is shuffled. Labels per cited name: column in E /
+misfiled / unlisted / invented; per claim: value matches E / does not /
+pair not in E. Reported: response-level agreement and Cohen's κ against the
+scorer, name-level class agreement, and every disagreement, adjudicated by a
+second author. Threshold stated now: κ ≥ 0.8 is reported as agreement; below
+it, the paper's counts are reported with the audit beside them and the
+disagreements are described.

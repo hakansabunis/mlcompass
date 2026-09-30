@@ -106,6 +106,8 @@ PROVIDERS = {
     "openai": ("OPENAI_API_KEY", None, "gpt-5.4-mini"),
     "mistral": ("MISTRAL_API_KEY", "https://api.mistral.ai/v1", "ministral-8b-latest"),
     "ollama": ("OLLAMA_NO_KEY", "http://localhost:11434/v1", "qwen2.5:7b"),
+    # The product default of the profile narrator (PROFILE_MODEL_DEFAULT).
+    "anthropic": ("ANTHROPIC_API_KEY", None, "claude-opus-4-7"),
 }
 
 
@@ -209,13 +211,17 @@ def evidence_hash(evidence: dict[str, Any]) -> str:
 
 def make_client(provider: str) -> tuple[Any, str]:
     env, base, model = PROVIDERS[provider]
-    from openai import OpenAI
-
     key = os.environ.get(env) or ("ollama" if provider == "ollama" else None)
     if not key:
         raise SystemExit(
             f"{env} is not set. Run `source scripts/load_keys.sh` first."
         )
+    if provider == "anthropic":
+        import anthropic
+
+        return anthropic.Anthropic(api_key=key), model
+    from openai import OpenAI
+
     return OpenAI(api_key=key, base_url=base) if base else OpenAI(api_key=key), model
 
 
@@ -349,7 +355,7 @@ def main() -> int:
                     evidence,
                     client=client,
                     model=model,
-                    provider="openai",
+                    provider="anthropic" if args.provider == "anthropic" else "openai",
                     max_retries=2 if do_verify else 0,
                     # Every arm gets the bare prompt. Giving the contract arm
                     # the strict one would confound the mechanism with the
