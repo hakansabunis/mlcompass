@@ -930,3 +930,12 @@ errors to its console only.
 - R3 is not run and is reported as such.
 - R4 is drawn from the valid R2 records as they stand (1,938 responses), with
   the registered seed, strata and sizes.
+
+### A5 — R4 not run (2026-09-30, before any label was collected)
+
+The authors decided not to run the blind audit of R4. No label was collected,
+so nothing is discarded. The sheet (`benchmark/scorer_audit_A3/audit_sheet.html`)
+and the script that draws it and scores returned labels
+(`scripts/make_scorer_audit.py`) stay in the package; the key is regenerated
+deterministically from the committed records and the registered seed, so the
+audit can still be run by anyone. The manuscript reports R4 as not run.

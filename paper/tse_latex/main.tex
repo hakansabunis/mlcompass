@@ -783,7 +783,7 @@ belonged to an earlier round). Differences are in percentage points (pp) of
 the rate of responses reaching the user with any violation, on the 2026-09-15
 runs, with Newcombe 95\,\% intervals and Holm-adjusted Fisher tests. The five rows
 after the first rule record where the study departed from the plan; the last
-three are amendment A3, registered for this revision.}
+four are amendment A3, registered for this revision.}
 \label{tab:registered}
 \centering
 \footnotesize
@@ -807,7 +807,7 @@ H12 & Wording effects differ between providers & Not run: the sweep ran on one p
 H13 & Every contract arm reads 0 on every provider & Held \\
 H14 & The value channel activates under designed pressure & Not on leakage; the profile task activated it outside the registered design \\
 H15 & The omission channel activates under low anchor salience & Not run \\
-H16 & The post-strip completeness re-check fires on live data & Not exercised: nothing was stripped \\
+H16 & The post-strip anchor-coverage re-check fires on live data & Not exercised: nothing was stripped \\
 \midrule
 Falsifier & Property-based falsifier with automated mutants & Built after the runs ($10^6$ cases); 36 hand-written mutation tests instead of generated mutants \\
 Strict prompt & Replicate of the arms under the shipped prompt & Run for \texttt{A-L2} and \texttt{A-L3-SHIPPED} only, plus the unregistered \texttt{A-L2-RULES} and \texttt{A-L2-NOCLAIMS} \\
@@ -818,6 +818,7 @@ Pilot & Report the June floor rates & 15.0 and 11.5\,\% (rolling alias, records 
 A3 R2a & On 12 instances frozen in July, misfiling dominates and invented names stay under 5\,\% of flagged responses & Held: 12 of 817 (1.5\,\%), on 1{,}888 valid floor responses \\
 A3 R1, R2b & The verifier lowers delivered violations in a well-specified configuration (profile, $N=600$; 12 instances) & Not run: the provider balance ran out (A4); partial cells reported descriptively \\
 A3 R3 & Measure the shipped default narrator & Not run: no budget \\
+A3 R4 & Blind human audit of the scorer on 200 responses & Not run (A5); the sheet and sealed key are in the package \\
 \bottomrule
 \end{tabular}
 \end{table*}
@@ -861,8 +862,7 @@ name in neither $E$ nor the frame: ten write \texttt{target} for the target
 column, and two respell a real one (\texttt{charged\_est},
 \texttt{total\_charges}). The registered prediction that such names stay
 under 5\,\% of flagged responses holds (1.5\,\%). The composition found on
-four instances thus holds on twelve that played no part in the design, with
-column names taken from real tables.
+four instances thus holds on twelve that played no part in the design.
 
 \paragraph{Cause: an undescribed field}
 The bare instruction says ``list every column from the evidence you cite'',
@@ -889,13 +889,10 @@ writes \texttt{r2} into a column field in 200 responses, and a local
 \texttt{qwen2.5:7b} never does so in 20.
 
 \paragraph{Temperature}
-Every other rate in this paper is at $T=1.0$, the endpoints' default and the
-shipped narrator's setting. Rerun at $T=0$ on 2026-09-27, the bare arm
-misfiles in 2.0\,\% [0.8, 5.0] of responses (4/200, \texttt{A-L1-T0}), every
-one \texttt{r2}. Temperature is thus as strong a lever as the field
-description. It is also one more setting of the configuration: at $T=0$ the
-failure is rarer but not gone, and the temperature is chosen by whoever calls
-the endpoint.
+Rerun at $T=0$ on 2026-09-27, the bare arm misfiles in 2.0\,\% [0.8, 5.0] of
+responses (4/200, \texttt{A-L1-T0}), every one \texttt{r2}. The failure is
+rarer but not gone, and the temperature is one more setting chosen by whoever
+calls the endpoint.
 
 \paragraph{Consequences}
 On this model the characteristic failure is the evidence's own vocabulary
@@ -1434,7 +1431,8 @@ would be consistency with the tool's output, not correctness.
 
 \paragraph{Construct} The guaranteed property is referential and value
 soundness on the structured channels. The verdict, the prose and the
-correctness of $E$ lie outside it (Section~\ref{sec:contract}). The free text
+correctness of $E$ lie outside it (Section~\ref{sec:contract}). We measure
+faithfulness to $E$, not its effect on an engineer's decisions. The free text
 could in principle absorb what enforcement removes from the structured fields.
 Every run on the two synthetic instances since the record normaliser was
 fixed (fault 8) keeps the narration: 7{,}198 narrations on
