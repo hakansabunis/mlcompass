@@ -209,8 +209,8 @@ registered falsifier, and fourteen instrument faults with what each moved.
 \subsection{Closed-world faithfulness, and where it has been measured}
 
 Definition~\ref{def:closed} is a closed-world assumption~\cite{reiter1978closed}
-over $E$: whatever the evidence does not carry is false as far as the
-narrator is concerned. The setting is old. Data-to-text and
+over $E$: whatever the evidence does not carry is not admissible under the
+contract. The setting is old. Data-to-text and
 meaning-representation-to-text generation narrate a finite record and measure
 faithfulness against it offline, with slot error rate over the input's
 slots~\cite{dusek2020e2e}, relation-generation precision against the source
@@ -382,7 +382,7 @@ A structured response $r$ \emph{satisfies} $\mathcal{C}_E$, with tolerance
 $\tau$ and anchor $a^*$, if \textbf{(C1, entity soundness)} every leaf of
 $r$ in a field $f \in F$ lies in $A_{E,f}$; \textbf{(C2, value soundness)}
 every claim $(e,s,v)$ in $r$ has $(e,s) \in \mathrm{dom}(V_E)$, $v$ a finite
-number, and $|v - V_E(e,s)| \le \tau$; and \textbf{(C3, completeness)} if $r$
+number, and $|v - V_E(e,s)| \le \tau$; and \textbf{(C3, anchor coverage)} if $r$
 commits, the anchor $a^*$, the top-ranked candidate, is among the entities
 $r$ references.
 \end{definitionx}
@@ -410,13 +410,13 @@ vacuously.
 \begin{proposition}[Repair asymmetry]\label{prop:asym}
 Soundness is safe-repairable by deletion: the projection $\Pi_E(r)$ removing
 every violating element is sound, idempotent, and the identity on sound
-responses. Completeness is not: any repair must add a reference the model did
-not produce.
+responses. Anchor coverage is not: any repair must add a reference the model
+did not produce.
 \end{proposition}
 
 \begin{IEEEproof}[Proof sketch]
 Deletion preserves membership and tolerance and can remove every violating
-element. For completeness, deleting the verdict would discharge the
+element. For anchor coverage, deleting the verdict would discharge the
 obligation, but the schema requires a verdict, and substituting ``cannot
 determine'' would attribute to the narrator a stance it did not take. Both premises are stipulations of this contract, and the artifact
 honours them by aborting instead of substituting. Given them, every remaining
@@ -491,7 +491,7 @@ for (C2) within $\tau=0.005$, and for (C3).
 \end{algorithmic}
 \end{algorithm}
 
-Algorithm~\ref{alg:contract} gives the control flow. Completeness is checked
+Algorithm~\ref{alg:contract} gives the control flow. Anchor coverage is checked
 after stripping, because deleting an unsound claim can orphan the anchor. A
 response with no admissible verdict (no tool call, unparsable arguments, or a
 verdict outside the enum) is aborted after the budget, and no verdict, claim or
@@ -499,7 +499,7 @@ prose is shown. The deterministic evidence panel is printed in every case and
 lists the candidate leak columns with the anchor first, so neither an abort
 nor a flagged omission hides it. The abort path is recent; the earlier code
 passed such a response as an empty answer. In the records they occur only on
-arms without a verifier (4 on \texttt{deepseek-chat}, 8 on
+arms without a verifier (5 on \texttt{deepseek-chat}, 8 on
 \texttt{qwen2.5:7b}), so no reported number depends on the change.
 
 \subsection{One contract, two instances}\label{sec:generic}
@@ -611,8 +611,11 @@ reaches $R^2=0.978$ and the detector names \texttt{Density} ($|\rho|=0.993$) as
 the only candidate. \emph{Sambanis} is the civil-war onset data of Hegre and
 Sambanis as distributed by Muchlinski \emph{et al.}~\cite{muchlinski2016civilwar}
 (7{,}140 country-years); the fit reaches $R^2=0.204$ and no column is a
-candidate, so it is a negative control with no anchor. Its score would not
-trigger the product's investigation; we run the narrator on it directly. In
+candidate, so it is a negative control with no anchor. Neither score reaches
+the product's trigger ($R^2>0.999$), so on both datasets we call the narrator
+directly. The prompts, schemas and contract were written against the reference
+task; the crowded instance and the two datasets played no part in their
+design. In
 every arm the shipped leakage detector produces $E$. Section~\ref{sec:rq6} describes
 the profile task of RQ5.
 
@@ -730,13 +733,17 @@ An \emph{entity} violation is a leaf outside its field's admissible set; a
 \emph{value} violation is a claim whose column is in $E$ but whose value
 misses the measurement by more than $\tau$, or whose pair $E$ does not carry;
 an \emph{omission} is a committed verdict that never references the anchor.
-We report percentages with Wilson 95\,\% intervals and the raw $k/N$. For an
+A \emph{response} is one narration as it reaches the user, however many
+provider calls its retries took; the replication package lists every run file
+with its responses and calls. We report percentages with Wilson 95\,\%
+intervals and the raw $k/N$. For an
 arm with a verifier we report what the verifier did (Table~\ref{tab:retry})
 and do not read its zero as a rate. The entity channel decomposes into
 \emph{invented} and \emph{misfiled}, and the value channel into wrong numbers
 and pairs $E$ does not carry. We exclude artifacts, namely a \texttt{null}
-column and several real names in one string, and exclude transport errors from
-$N$ while reporting them.
+column and several real names in one string; counting them as violations
+changes one response in 13{,}200. Transport errors are excluded from $N$ and
+reported.
 
 The tolerance decides almost nothing. Of 62{,}854 claims scored before any
 verification could act on them (every unenforced leakage and profile arm, all
@@ -748,16 +755,16 @@ violation is 22 at every $\tau$ from $5\times10^{-4}$ to $0.01$ and 21 at
 $0.05$ (\texttt{scripts/tau\_sensitivity.py}). The narrators copy numbers,
 so the choice matters little here. An absolute $\tau$ suits bounded quantities
 such as correlations; unbounded ones call for a relative tolerance and counts
-for an exact match, and each specification can set its own (both of ours use
-0.005).
+for an exact match, and each specification can set its own. Both of ours use
+0.005, which on an integer count already demands an exact match.
 
 \texttt{deepseek-chat} is the model on which the failure occurs;
 \texttt{gpt-5.4-mini} and a local \texttt{qwen2.5:7b} are the null providers
 (Section~\ref{sec:rq3-second}). Temperature is 1.0 everywhere except in
 \texttt{A-L1-T0}, sent explicitly and recorded. That is every endpoint's default and the shipped
 narrator's setting. It also works against our thesis where it matters, since
-a contract arm with no violation at the noisiest temperature cannot be an
-artefact of a quiet one. For the baselines it cuts the other way: their rates
+a contract arm with no violation at the default temperature is not an
+artefact of a lowered one. For the baselines it cuts the other way: their rates
 are conditioned on $T=1.0$, and at $T=0$ the floor falls to 2.0\,\%
 (Section~\ref{sec:rq1}).
 
@@ -1052,8 +1059,9 @@ the contract arm took 3.3\,s per response against 2.8\,s for the floor
 (medians 3.3 and 2.8\,s, 95th percentiles 3.9 and 3.3\,s). The check is not
 what costs: offline, verification and stripping take a median of 18\,$\mu$s
 per response, and \texttt{A-TIER-A-ONLY}, which sends the same enum schema
-without verifying, took 3.5\,s on another date. The difference comes with the
-larger schema, not the verifier. Arms whose responses need retries cost more on
+without verifying, took 3.5\,s on another date. The difference is therefore
+not the check; the larger schema is the likely cause, although runs on
+different dates cannot separate it from provider variation. Arms whose responses need retries cost more on
 average: 3.6\,s per response on \texttt{A-STRESS} and 4.5--4.9\,s on the
 Guardrails arms. Removing the enum while keeping the loop and verifier raises
 the number of retried responses from 0 to 12 on leakage and from 6 to 13 on
@@ -1272,8 +1280,8 @@ express that relation, and (C2)'s domain check does.
 
 \paragraph{Scope of the result}
 The contract binds to a second evidence shape without task-specific
-verification, and the two tiers separate once the failing channel is one a
-schema cannot express. The result does not show that misfiling numbers is a
+verification, and the two tiers separate once the failing channel is one the
+per-field enums we use cannot express. The result does not show that misfiling numbers is a
 general property of narrators. On this model it followed our naming, and what
 survived distinct names reflects our binding choices as much as model error.
 Two tabular summaries from one tool are two members of the class, which is
@@ -1495,8 +1503,7 @@ wherever the fix is absent, including on two real datasets. Added to a
 well-specified configuration, the verifier changed no rate; it held in every
 configuration in which it ran,
 repaired every violation it met with one named retry, and costs microseconds
-per response; the half second a clean answer took longer came with the larger
-schema. We report fourteen faults in our own instruments and two defects in
+per response; the half second a clean answer took longer is not the check. We report fourteen faults in our own instruments and two defects in
 the verifier, found by readers and by a falsifier we had registered but not
 built, together with what each moved. The main gap between what this paper
 guarantees and what a user of the tool receives is that the check does not yet
