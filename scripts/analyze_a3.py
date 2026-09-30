@@ -177,8 +177,12 @@ def main() -> int:
     ap.add_argument("--json", default=None)
     args = ap.parse_args()
     res = {"R1": r1(), "R2": r2(), "R3": r3()}
-    ps = {k: res[k]["p"] for k in ("R1", "R2") if res[k]["p"] is not None}
-    res["holm"] = holm(ps) if ps else {}
+    # Amendment A4: the budget ran out before R1 and R2b were complete, so
+    # neither test is run and the Holm family is empty. The partial cells are
+    # descriptive. The functions still compute p for a completed rerun.
+    res["R1"]["p"] = res["R2"]["p"] = None
+    res["holm"] = {}
+    res["note"] = "A4: R1 and R2b not run (budget); partial cells descriptive only."
 
     c = res["R1"]["cells"]
     print("R1 profile natural, delivered violations")

@@ -138,12 +138,16 @@ def build() -> int:
     strata: dict[str, list] = {}
     for p in flagged:
         strata.setdefault(p["scorer"]["kinds"][0] if p["scorer"]["kinds"] else "value", []).append(p)
+    # Largest-remainder allocation, so the strata sum to exactly N_FLAGGED.
+    quota = {k: N_FLAGGED * len(v) / len(flagged) for k, v in strata.items()}
+    share = {k: int(q) for k, q in quota.items()}
+    for k in sorted(quota, key=lambda k: quota[k] - share[k], reverse=True)[
+        : N_FLAGGED - sum(share.values())
+    ]:
+        share[k] += 1
     picks = []
     for kind, items in sorted(strata.items()):
-        share = max(1, round(N_FLAGGED * len(items) / len(flagged)))
-        picks += rng.sample(items, min(share, len(items)))
-    rng.shuffle(picks)
-    picks = picks[:N_FLAGGED]
+        picks += rng.sample(items, min(share[kind], len(items)))
     picks += rng.sample(clean, N_CLEAN)
     rng.shuffle(picks)
 

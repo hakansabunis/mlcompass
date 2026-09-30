@@ -20,7 +20,7 @@
         "retried": 1
       }
     },
-    "p": 1.0
+    "p": null
   },
   "R2": {
     "instances": {
@@ -433,11 +433,11 @@
               2
             ],
             [
-              "row_count",
+              "candidate_leak_columns",
               1
             ],
             [
-              "candidate_leak_columns",
+              "row_count",
               1
             ]
           ],
@@ -517,7 +517,6 @@
     "invented_share": 0.014687882496940025
   },
   "R3": {},
-  "holm": {
-    "R1": 1.0
-  }
+  "holm": {},
+  "note": "A4: R1 and R2b not run (budget); partial cells descriptive only."
 }
