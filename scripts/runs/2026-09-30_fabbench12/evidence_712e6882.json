@@ -1,0 +1,69 @@
+{
+  "task_label": "csv:ames_housing.csv/SalePrice/inverse_target",
+  "evidence": {
+    "ok": true,
+    "row_count": 2930,
+    "trustworthy_sample_size": true,
+    "suspicious_metric": {
+      "name": "r2",
+      "value": 1.0
+    },
+    "target_feature_correlations": [
+      {
+        "feature": "SalePrice_norm",
+        "correlation": -1.0,
+        "method": "spearman"
+      },
+      {
+        "feature": "Overall Qual",
+        "correlation": 0.808800483142651,
+        "method": "spearman"
+      },
+      {
+        "feature": "Pool QC",
+        "correlation": -0.7344617194313966,
+        "method": "spearman"
+      },
+      {
+        "feature": "Gr Liv Area",
+        "correlation": 0.7233420361092493,
+        "method": "spearman"
+      },
+      {
+        "feature": "Garage Cars",
+        "correlation": 0.7018128798567488,
+        "method": "spearman"
+      },
+      {
+        "feature": "Year Built",
+        "correlation": 0.6808223586258558,
+        "method": "spearman"
+      },
+      {
+        "feature": "Garage Area",
+        "correlation": 0.6606755562082455,
+        "method": "spearman"
+      },
+      {
+        "feature": "Exter Qual",
+        "correlation": -0.6476162540955587,
+        "method": "pearson"
+      },
+      {
+        "feature": "Garage Yr Blt",
+        "correlation": 0.63767440094894,
+        "method": "spearman"
+      },
+      {
+        "feature": "Full Bath",
+        "correlation": 0.6341608170156627,
+        "method": "spearman"
+      }
+    ],
+    "perfect_match_rate": 0.0,
+    "candidate_leak_columns": [
+      "SalePrice_norm"
+    ],
+    "notes": []
+  }
+}

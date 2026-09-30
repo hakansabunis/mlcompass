@@ -901,3 +901,32 @@ scorer, name-level class agreement, and every disagreement, adjudicated by a
 second author. Threshold stated now: κ ≥ 0.8 is reported as agreement; below
 it, the paper's counts are reported with the audit beside them and the
 disagreements are described.
+
+### A4 — A3 stopped by budget (2026-09-30, after the stop, before any test)
+
+**What happened.** All A3 DeepSeek cells were launched at once. The account
+balance ran out during the run and every later call returned 402
+(Insufficient Balance); 63 calls also returned 429 (rate limit), a result of
+the concurrency. No test in A3 has been computed. The provider balance cannot
+be refilled for this study, and R3 has no key or budget.
+
+**What exists.** R2 `A-L1`: 1,888 valid responses on the 12 instances (136 to
+177 per instance). R2 `A-STRONG-NOVERIFY`: 50. R2 `A-STRONG-CONTRACT`: 0.
+R1: 93 and 91. The 5,262 error records are kept, unaltered, in
+`scripts/runs/2026-09-30_fabbench12/transport_errors/`; the R1 harness logs
+errors to its console only.
+
+**Consequences, fixed now.**
+
+- R2a is reported as registered, on the valid responses, with each cell's N
+  and the excluded count (§6 and A3: transport errors are excluded from N and
+  reported). Its prediction and rejecting outcome are unchanged.
+- R1 and R2b are **not run**. Their Holm family is empty. The partial cells
+  are reported descriptively with their N, and no test is computed on them,
+  because a test on a sample cut short by an event unrelated to the model has
+  no registered size or power. The exploratory natural-name profile result
+  (4/200 against 0/200) stays exploratory, and the paper says the
+  confirmatory test was registered and not completed.
+- R3 is not run and is reported as such.
+- R4 is drawn from the valid R2 records as they stand (1,938 responses), with
+  the registered seed, strata and sizes.

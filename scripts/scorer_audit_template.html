@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scorer Audit</title>
+<style>
+  :root { --bg:#fbfbfa; --fg:#1d1d1b; --muted:#6b6b66; --line:#dddcd6; --card:#fff;
+          --accent:#2d5b8a; --ok:#2f7a45; --warn:#a4561b; --chip:#efeee9; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#161615; --fg:#ecebe6; --muted:#9a9993; --line:#34332f; --card:#1f1f1d;
+            --accent:#79a7d6; --ok:#6cc08a; --warn:#e0955a; --chip:#2a2a27; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg);
+         font:15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 20px; margin: 4px 0 8px; }
+  h2 { font-size: 15px; margin: 18px 0 6px; color: var(--muted); font-weight: 600; }
+  details.help { background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+                 padding: 10px 14px; margin-bottom: 14px; }
+  .bar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin: 8px 0 14px; }
+  button { font: inherit; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--line);
+           background: var(--card); color: var(--fg); cursor: pointer; }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  code { font: 13px/1.4 ui-monospace, "Cascadia Mono", Consolas, monospace; }
+  .chips { display:flex; flex-wrap:wrap; gap:4px; }
+  .chip { background: var(--chip); border-radius: 4px; padding: 1px 6px; font: 12.5px ui-monospace, Consolas, monospace; }
+  select { font: inherit; padding: 3px 6px; border-radius: 6px; border: 1px solid var(--line);
+           background: var(--bg); color: var(--fg); min-width: 180px; }
+  select.unset { border-color: var(--warn); }
+  .status { color: var(--muted); }
+  .done { color: var(--ok); font-weight: 600; }
+  .scroll { overflow-x: auto; }
+</style>
+</head>
+<body>
+<main>
+<h1>Scorer audit (A3 R4)</h1>
+<details class="help" open>
+<summary><b>Nasıl etiketlenir</b></summary>
+<p>Her öğe bir narrator yanıtıdır. Üstte kanıtın (E) taşıdığı bilgiler, altta yanıtın yapılandırılmış alanları var.
+Hangi koldan, hangi modelden geldiğini ve puanlayıcının ne dediğini göremezsin; bu kasıtlı.</p>
+<p><b>Her atıflı isim</b> (<code>columns_referenced</code> ve iddiaların <code>column</code> alanı) için:</p>
+<ul>
+<li><b>column in E</b>: “E'nin listelediği kolonlar” tablosundaki bir kolon adı, birebir aynı yazımla.</li>
+<li><b>misfiled</b>: E'de geçen ama kolon olmayan bir ad (ör. bir metrik ya da istatistik adı; “E'deki diğer adlar” listesinde).</li>
+<li><b>unlisted</b>: veri çerçevesinde gerçekten olan ama E'nin listelemediği bir kolon (“Çerçevenin kolonları” listesinde).</li>
+<li><b>invented</b>: yukarıdakilerin hiçbiri.</li>
+<li><b>artifact</b>: isim değil okuma hatası: boş/null kolon ya da tek alana virgül veya eğik çizgiyle yazılmış birden fazla gerçek kolon.</li>
+</ul>
+<p><b>Her iddia</b> için: kolon E'nin listelediği bir kolonsa ve (kolon, istatistik) çifti tabloda varsa değeri karşılaştır:
+<b>matches E</b> (±0.005) ya da <b>differs from E</b>. Çift tabloda yoksa <b>pair not in E</b>.
+Kolon E'nin kolonu değilse <b>covered by name label</b>.</p>
+<p>İlerleme tarayıcıda kendiliğinden saklanır. Bitince <b>CSV indir</b> ile dosyayı Hakan'a gönder.</p>
+</details>
+
+<div class="bar">
+  <button id="prev">← Önceki</button>
+  <button id="next">Sonraki →</button>
+  <button id="nextOpen">Sıradaki eksik</button>
+  <span class="status" id="pos"></span>
+  <span style="flex:1"></span>
+  <button class="primary" id="export">CSV indir</button>
+</div>
+
+<div class="card" id="item"></div>
+</main>
+
+<script>
+const ITEMS = __ITEMS__;
+const NAME_LABELS = __NAME_LABELS__;
+const CLAIM_LABELS = __CLAIM_LABELS__;
+const STORE = "scorer-audit-a3-labels";
+let labels = {};
+try { labels = JSON.parse(localStorage.getItem(STORE) || "{}"); } catch (e) { labels = {}; }
+let idx = 0;
+try { idx = Math.min(ITEMS.length - 1, parseInt(localStorage.getItem(STORE + "-pos") || "0", 10) || 0); } catch (e) {}
+
+function save() {
+  try { localStorage.setItem(STORE, JSON.stringify(labels)); localStorage.setItem(STORE + "-pos", String(idx)); } catch (e) {}
+}
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function uniqNames(it) {
+  const out = [];
+  for (const c of it.columns_referenced) if (!out.includes(String(c))) out.push(String(c));
+  // Same stringification as the scorer: a missing key is "", JSON null is "None".
+  for (const c of it.claims) { const n = c.column === undefined ? "" : String(c.column ?? "None"); if (!out.includes(n)) out.push(n); }
+  return out;
+}
+function needed(it) { return uniqNames(it).length + it.claims.length; }
+function have(it) { const l = labels[it.id] || {}; return Object.keys(l.names || {}).length + Object.keys(l.claims || {}).length; }
+function complete(it) { return have(it) >= needed(it); }
+
+function select(opts, value, onchange) {
+  const s = document.createElement("select");
+  s.innerHTML = '<option value="">—</option>' + opts.map(o => `<option${o === value ? " selected" : ""}>${esc(o)}</option>`).join("");
+  if (!value) s.classList.add("unset");
+  s.addEventListener("change", () => { onchange(s.value); s.classList.toggle("unset", !s.value); render(false); });
+  return s;
+}
+
+function render(full = true) {
+  const it = ITEMS[idx];
+  const doneN = ITEMS.filter(complete).length;
+  document.getElementById("pos").innerHTML =
+    `Öğe ${idx + 1} / ${ITEMS.length} · <code>#${it.id}</code> · ` +
+    (complete(it) ? '<span class="done">tamam</span>' : `${have(it)}/${needed(it)} etiket`) +
+    ` · toplam tamamlanan ${doneN}`;
+  if (!full) return;
+  const l = labels[it.id] = labels[it.id] || { names: {}, claims: {} };
+  const el = document.getElementById("item");
+  el.innerHTML = `
+    <h2>E'nin listelediği kolonlar ve değerleri</h2>
+    <div class="scroll"><table><tr><th>kolon</th><th>istatistik</th><th>değer</th></tr>
+      ${it.evidence_values.map(v => `<tr><td><code>${esc(v[0])}</code></td><td><code>${esc(v[1])}</code></td><td><code>${esc(v[2])}</code></td></tr>`).join("")}
+    </table></div>
+    <h2>E'deki diğer adlar (kolon değil)</h2>
+    <div class="chips">${it.evidence_other_names.map(n => `<span class="chip">${esc(n)}</span>`).join("")}</div>
+    <details><summary><h2 style="display:inline">Çerçevenin kolonları (${it.frame_columns.length})</h2></summary>
+      <div class="chips">${it.frame_columns.map(n => `<span class="chip">${esc(n)}</span>`).join("")}</div></details>
+    <h2>Yanıt: verdict</h2><code>${esc(it.verdict)}</code>
+    <h2>Atıflı isimler</h2><div class="scroll"><table id="names"><tr><th>isim</th><th>etiket</th></tr></table></div>
+    <h2>İddialar</h2><div class="scroll"><table id="claims"><tr><th>#</th><th>column</th><th>statistic</th><th>value</th><th>etiket</th></tr></table></div>`;
+  const nt = el.querySelector("#names");
+  for (const n of uniqNames(it)) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td><code>${esc(n)}</code></td><td></td>`;
+    tr.lastChild.appendChild(select(NAME_LABELS, l.names[n], v => { if (v) l.names[n] = v; else delete l.names[n]; save(); }));
+    nt.appendChild(tr);
+  }
+  const ct = el.querySelector("#claims");
+  it.claims.forEach((c, i) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${i}</td><td><code>${esc(c.column)}</code></td><td><code>${esc(c.statistic)}</code></td><td><code>${esc(c.value)}</code></td><td></td>`;
+    tr.lastChild.appendChild(select(CLAIM_LABELS, l.claims[i], v => { if (v) l.claims[i] = v; else delete l.claims[i]; save(); }));
+    ct.appendChild(tr);
+  });
+  if (!it.claims.length) ct.insertAdjacentHTML("beforeend", '<tr><td colspan="5" class="status">iddia yok</td></tr>');
+}
+
+function go(d) { idx = Math.max(0, Math.min(ITEMS.length - 1, idx + d)); save(); render(); window.scrollTo(0, 0); }
+document.getElementById("prev").onclick = () => go(-1);
+document.getElementById("next").onclick = () => go(1);
+document.getElementById("nextOpen").onclick = () => {
+  for (let k = 1; k <= ITEMS.length; k++) { const j = (idx + k) % ITEMS.length; if (!complete(ITEMS[j])) { idx = j; save(); render(); window.scrollTo(0, 0); return; } }
+  alert("Hepsi tamam.");
+};
+document.getElementById("export").onclick = () => {
+  const rows = [["id", "kind", "target", "label"]];
+  for (const it of ITEMS) {
+    const l = labels[it.id] || { names: {}, claims: {} };
+    for (const [n, v] of Object.entries(l.names || {})) rows.push([it.id, "name", n, v]);
+    for (const [i, v] of Object.entries(l.claims || {})) rows.push([it.id, "claim", i, v]);
+  }
+  const q = s => `"${String(s).replace(/"/g, '""')}"`;
+  const blob = new Blob([rows.map(r => r.map(q).join(",")).join("\n")], { type: "text/csv" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "scorer_audit_labels.csv"; a.click();
+  const missing = ITEMS.filter(it => !complete(it)).length;
+  if (missing) alert(`${missing} öğe eksik; dosya yine de indirildi.`);
+};
+render();
+</script>
+</body>
+</html>

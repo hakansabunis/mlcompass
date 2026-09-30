@@ -1,0 +1,523 @@
+{
+  "R1": {
+    "cells": {
+      "strong_noverify": {
+        "n": 93,
+        "delivered": 0,
+        "ci": [
+          0.0,
+          3.966750261173514
+        ],
+        "retried": 0
+      },
+      "strong_verify": {
+        "n": 91,
+        "delivered": 0,
+        "ci": [
+          0.0,
+          4.0504003928880215
+        ],
+        "retried": 1
+      }
+    },
+    "p": 1.0
+  },
+  "R2": {
+    "instances": {
+      "csv:ames_housing.csv/SalePrice/exact_copy": {
+        "A-L1": {
+          "n": 152,
+          "entity": 49,
+          "ci": [
+            25.32361547962858,
+            40.02578486053984
+          ],
+          "value": 0,
+          "omission": 0,
+          "misfiled": 49,
+          "unlisted": 1,
+          "invented": 0,
+          "top_tokens": [
+            [
+              "r2",
+              49
+            ],
+            [
+              "SalePrice",
+              1
+            ]
+          ],
+          "anchor": "SalePrice_adj"
+        },
+        "A-STRONG-NOVERIFY": {
+          "n": 4,
+          "delivered": 0,
+          "ci": [
+            0.0,
+            48.98908364545973
+          ],
+          "retried": 0
+        }
+      },
+      "csv:ames_housing.csv/SalePrice/inverse_target": {
+        "A-L1": {
+          "n": 149,
+          "entity": 49,
+          "ci": [
+            25.855641436944392,
+            40.77644883914319
+          ],
+          "value": 0,
+          "omission": 0,
+          "misfiled": 49,
+          "unlisted": 0,
+          "invented": 0,
+          "top_tokens": [
+            [
+              "r2",
+              49
+            ],
+            [
+              "suspicious_metric",
+              1
+            ]
+          ],
+          "anchor": "SalePrice_norm"
+        },
+        "A-STRONG-NOVERIFY": {
+          "n": 6,
+          "delivered": 0,
+          "ci": [
+            2.7755575615628914e-15,
+            39.033428790216526
+          ],
+          "retried": 0
+        }
+      },
+      "csv:ames_housing.csv/SalePrice/monotone_log": {
+        "A-L1": {
+          "n": 159,
+          "entity": 65,
+          "ci": [
+            33.54183722021749,
+            48.649430157255416
+          ],
+          "value": 0,
+          "omission": 0,
+          "misfiled": 58,
+          "unlisted": 14,
+          "invented": 0,
+          "top_tokens": [
+            [
+              "r2",
+              58
+            ],
+            [
+              "SalePrice",
+              14
+            ]
+          ],
+          "anchor": "SalePrice_idx"
+        },
+        "A-STRONG-NOVERIFY": {
+          "n": 5,
+          "delivered": 0,
+          "ci": [
+            0.0,
+            43.44824647831748
+          ],
+          "retried": 0
+        }
+      },
+      "csv:heart_cleveland.csv/chol/binned_target": {
+        "A-L1": {
+          "n": 159,
+          "entity": 75,
+          "ci": [
+            39.569050738329125,
+            54.90410120640385
+          ],
+          "value": 0,
+          "omission": 0,
+          "misfiled": 73,
+          "unlisted": 4,
+          "invented": 3,
+          "top_tokens": [
+            [
+              "r2",
+              73
+            ],
+            [
+              "chol",
+              4
+            ],
+            [
+              "target",
+              3
+            ],
+            [
+              "perfect_match_rate",
+              1
+            ]
+          ],
+          "anchor": "chol_grp"
+        },
+        "A-STRONG-NOVERIFY": {
+          "n": 3,
+          "delivered": 0,
+          "ci": [
+            5.551115123125783e-15,
+            56.14970317550454
+          ],
+          "retried": 0
+        }
+      },
+      "csv:heart_cleveland.csv/chol/exact_copy": {
+        "A-L1": {
+          "n": 162,
+          "entity": 60,
+          "ci": [
+            29.98159760621741,
+            44.69301011933936
+          ],
+          "value": 0,
+          "omission": 0,
+          "misfiled": 60,
+          "unlisted": 1,
+          "invented": 0,
+          "top_tokens": [
+            [
+              "r2",
+              60
+            ],
+            [
+              "chol",
+              1
+            ]
+          ],
+          "anchor": "chol_adj"
+        },
+        "A-STRONG-NOVERIFY": {
+          "n": 3,
+          "delivered": 0,
+          "ci": [
+            5.551115123125783e-15,
+            56.14970317550454
+          ],
+          "retried": 0
+        }
+      },
+      "csv:heart_cleveland.csv/chol/inverse_target": {
+        "A-L1": {
+          "n": 163,
+          "entity": 84,
+          "ci": [
+            43.91498607613197,
+            59.08187096128673
+          ],
+          "value": 0,
+          "omission": 0,
+          "misfiled": 83,
+          "unlisted": 1,
+          "invented": 3,
+          "top_tokens": [
+            [
+              "r2",
+              83
+            ],
+            [
+              "target",
+              3
+            ],
+            [
+              "chol",
+              1
+            ]
+          ],
+          "anchor": "chol_norm"
+        },
+        "A-STRONG-NOVERIFY": {
+          "n": 4,
+          "delivered": 0,
+          "ci": [
+            0.0,
+            48.98908364545973
+          ],
+          "retried": 0
+        }
+      },
+      "csv:insurance.csv/charges/contamination": {
+        "A-L1": {
+          "n": 155,
+          "entity": 86,
+          "ci": [
+            47.62137826315126,
+            63.08111724791691
+          ],
+          "value": 0,
+          "omission": 0,
+          "misfiled": 85,
+          "unlisted": 3,
+          "invented": 0,
+          "top_tokens": [
+            [
+              "r2",
+              85
+            ],
+            [
+              "perfect_match_rate",
+              17
+            ],
+            [
+              "charges",
+              3
+            ],
+            [
+              "candidate_leak_columns",
+              1
+            ]
+          ],
+          "anchor": null
+        },
+        "A-STRONG-NOVERIFY": {
+          "n": 5,
+          "delivered": 0,
+          "ci": [
+            0.0,
+            43.44824647831748
+          ],
+          "retried": 0
+        }
+      },
+      "csv:insurance.csv/charges/monotone_log": {
+        "A-L1": {
+          "n": 175,
+          "entity": 85,
+          "ci": [
+            41.277065946101175,
+            55.927161735236965
+          ],
+          "value": 0,
+          "omission": 0,
+          "misfiled": 85,
+          "unlisted": 3,
+          "invented": 1,
+          "top_tokens": [
+            [
+              "r2",
+              85
+            ],
+            [
+              "charges",
+              3
+            ],
+            [
+              "target",
+              1
+            ]
+          ],
+          "anchor": "charges_idx"
+        },
+        "A-STRONG-NOVERIFY": {
+          "n": 7,
+          "delivered": 0,
+          "ci": [
+            5.551115123125783e-15,
+            35.433043506668746
+          ],
+          "retried": 0
+        }
+      },
+      "csv:insurance.csv/charges/noisy_proxy": {
+        "A-L1": {
+          "n": 177,
+          "entity": 91,
+          "ci": [
+            44.09793170146304,
+            58.66692102235708
+          ],
+          "value": 0,
+          "omission": 0,
+          "misfiled": 90,
+          "unlisted": 0,
+          "invented": 3,
+          "top_tokens": [
+            [
+              "r2",
+              90
+            ],
+            [
+              "target",
+              2
+            ],
+            [
+              "charged_est",
+              1
+            ]
+          ],
+          "anchor": "charges_est"
+        },
+        "A-STRONG-NOVERIFY": {
+          "n": 3,
+          "delivered": 0,
+          "ci": [
+            5.551115123125783e-15,
+            56.14970317550454
+          ],
+          "retried": 0
+        }
+      },
+      "csv:telco_churn.csv/MonthlyCharges/binned_target": {
+        "A-L1": {
+          "n": 149,
+          "entity": 59,
+          "ci": [
+            32.101031319479475,
+            47.61651375029924
+          ],
+          "value": 0,
+          "omission": 0,
+          "misfiled": 58,
+          "unlisted": 4,
+          "invented": 1,
+          "top_tokens": [
+            [
+              "r2",
+              58
+            ],
+            [
+              "MonthlyCharges",
+              4
+            ],
+            [
+              "target",
+              1
+            ],
+            [
+              "row_count",
+              1
+            ]
+          ],
+          "anchor": "MonthlyCharges_grp"
+        },
+        "A-STRONG-NOVERIFY": {
+          "n": 4,
+          "delivered": 0,
+          "ci": [
+            0.0,
+            48.98908364545973
+          ],
+          "retried": 0
+        }
+      },
+      "csv:telco_churn.csv/MonthlyCharges/contamination": {
+        "A-L1": {
+          "n": 136,
+          "entity": 36,
+          "ci": [
+            19.77632605742592,
+            34.4575609888603
+          ],
+          "value": 0,
+          "omission": 0,
+          "misfiled": 36,
+          "unlisted": 0,
+          "invented": 0,
+          "top_tokens": [
+            [
+              "r2",
+              35
+            ],
+            [
+              "perfect_match_rate",
+              2
+            ],
+            [
+              "row_count",
+              1
+            ],
+            [
+              "candidate_leak_columns",
+              1
+            ]
+          ],
+          "anchor": null
+        },
+        "A-STRONG-NOVERIFY": {
+          "n": 3,
+          "delivered": 0,
+          "ci": [
+            5.551115123125783e-15,
+            56.14970317550454
+          ],
+          "retried": 0
+        }
+      },
+      "csv:telco_churn.csv/MonthlyCharges/noisy_proxy": {
+        "A-L1": {
+          "n": 152,
+          "entity": 78,
+          "ci": [
+            43.43588180184466,
+            59.13082928406881
+          ],
+          "value": 0,
+          "omission": 0,
+          "misfiled": 69,
+          "unlisted": 14,
+          "invented": 1,
+          "top_tokens": [
+            [
+              "r2",
+              69
+            ],
+            [
+              "MonthlyCharges",
+              14
+            ],
+            [
+              "total_charges",
+              1
+            ]
+          ],
+          "anchor": "MonthlyCharges_est"
+        },
+        "A-STRONG-NOVERIFY": {
+          "n": 3,
+          "delivered": 0,
+          "ci": [
+            5.551115123125783e-15,
+            56.14970317550454
+          ],
+          "retried": 0
+        }
+      }
+    },
+    "pooled": {
+      "A-STRONG-NOVERIFY": {
+        "n": 50,
+        "delivered": 0,
+        "ci": [
+          6.938893903907228e-16,
+          7.134759913335873
+        ]
+      },
+      "A-STRONG-CONTRACT": {
+        "n": 0,
+        "delivered": 0,
+        "ci": [
+          0.0,
+          0.0
+        ]
+      }
+    },
+    "p": null,
+    "floor_flagged": 817,
+    "floor_invented": 12,
+    "invented_share": 0.014687882496940025
+  },
+  "R3": {},
+  "holm": {
+    "R1": 1.0
+  }
+}

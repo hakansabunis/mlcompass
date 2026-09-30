@@ -1,0 +1,67 @@
+{
+  "task_label": "csv:telco_churn.csv/MonthlyCharges/contamination",
+  "evidence": {
+    "ok": true,
+    "row_count": 7043,
+    "trustworthy_sample_size": true,
+    "suspicious_metric": {
+      "name": "r2",
+      "value": 1.0
+    },
+    "target_feature_correlations": [
+      {
+        "feature": "MultipleLines",
+        "correlation": 0.46421002311514553,
+        "method": "spearman"
+      },
+      {
+        "feature": "StreamingMovies",
+        "correlation": 0.37194089511564604,
+        "method": "spearman"
+      },
+      {
+        "feature": "StreamingTV",
+        "correlation": 0.37164401237057615,
+        "method": "spearman"
+      },
+      {
+        "feature": "PaperlessBilling",
+        "correlation": 0.35214996779598695,
+        "method": "pearson"
+      },
+      {
+        "feature": "InternetService",
+        "correlation": -0.3232601923373479,
+        "method": "pearson"
+      },
+      {
+        "feature": "TotalCharges",
+        "correlation": 0.28510935182199154,
+        "method": "spearman"
+      },
+      {
+        "feature": "tenure",
+        "correlation": 0.27641678933130215,
+        "method": "spearman"
+      },
+      {
+        "feature": "PhoneService",
+        "correlation": 0.2473979632141361,
+        "method": "pearson"
+      },
+      {
+        "feature": "SeniorCitizen",
+        "correlation": 0.22106666467394193,
+        "method": "spearman"
+      },
+      {
+        "feature": "PaymentMethod",
+        "correlation": -0.20663886440529902,
+        "method": "spearman"
+      }
+    ],
+    "perfect_match_rate": 0.9677694164418572,
+    "candidate_leak_columns": [],
+    "notes": []
+  }
+}
