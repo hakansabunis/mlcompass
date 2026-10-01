@@ -56,6 +56,14 @@ Hangi koldan, hangi modelden geldiğini ve puanlayıcının ne dediğini göreme
 <p><b>Her iddia</b> için: kolon E'nin listelediği bir kolonsa ve (kolon, istatistik) çifti tabloda varsa değeri karşılaştır:
 <b>matches E</b> (±0.005) ya da <b>differs from E</b>. Çift tabloda yoksa <b>pair not in E</b>.
 Kolon E'nin kolonu değilse <b>covered by name label</b>.</p>
+<p>İstatistik sütununda yalnızca E'nin o kolon için kabul ettiği adlar listelenir; kanıtın kullandığı yöntemin
+(Pearson ya da Spearman) dışındaki yöntemin adı listede yoksa o çift <b>pair not in E</b> olur.</p>
+<p><b>Her yanıt için son soru:</b> yanıt, kanıt hakkında yanlış bir şey söylüyor mu?
+<b>no false statement</b> / <b>false statement</b> (kanıtta olmayan ya da kanıtla çelişen bir şey) /
+<b>correct but in the wrong field</b> (doğru bilgi, ama yanlış alana yazılmış) / <b>unclear</b>.</p>
+<p><b>Kısayol:</b> Bir yanıtın bütün isimlerini ve iddialarını kontrol ettiysen ve hepsi tutarlıysa
+“Kalan boşları tutarlı say” düğmesi boş kalan isimleri <b>column in E</b>, iddiaları <b>matches E</b> yapar.
+Kontrol etmeden kullanma; tutarsız olanları önce elle seç.</p>
 <p>İlerleme tarayıcıda kendiliğinden saklanır. Bitince <b>CSV indir</b> ile dosyayı Hakan'a gönder.</p>
 </details>
 
@@ -75,7 +83,10 @@ Kolon E'nin kolonu değilse <b>covered by name label</b>.</p>
 const ITEMS = __ITEMS__;
 const NAME_LABELS = __NAME_LABELS__;
 const CLAIM_LABELS = __CLAIM_LABELS__;
-const STORE = "scorer-audit-a3-labels";
+const RESPONSE_LABELS = __RESPONSE_LABELS__;
+// v2: the sheet regenerated with the method-aware statistic names; labels
+// typed into the first sheet do not carry over.
+const STORE = "scorer-audit-a3-labels-v2";
 let labels = {};
 try { labels = JSON.parse(localStorage.getItem(STORE) || "{}"); } catch (e) { labels = {}; }
 let idx = 0;
@@ -92,8 +103,8 @@ function uniqNames(it) {
   for (const c of it.claims) { const n = c.column === undefined ? "" : String(c.column ?? "None"); if (!out.includes(n)) out.push(n); }
   return out;
 }
-function needed(it) { return uniqNames(it).length + it.claims.length; }
-function have(it) { const l = labels[it.id] || {}; return Object.keys(l.names || {}).length + Object.keys(l.claims || {}).length; }
+function needed(it) { return uniqNames(it).length + it.claims.length + 1; }
+function have(it) { const l = labels[it.id] || {}; return Object.keys(l.names || {}).length + Object.keys(l.claims || {}).length + (l.response ? 1 : 0); }
 function complete(it) { return have(it) >= needed(it); }
 
 function select(opts, value, onchange) {
@@ -125,7 +136,10 @@ function render(full = true) {
       <div class="chips">${it.frame_columns.map(n => `<span class="chip">${esc(n)}</span>`).join("")}</div></details>
     <h2>Yanıt: verdict</h2><code>${esc(it.verdict)}</code>
     <h2>Atıflı isimler</h2><div class="scroll"><table id="names"><tr><th>isim</th><th>etiket</th></tr></table></div>
-    <h2>İddialar</h2><div class="scroll"><table id="claims"><tr><th>#</th><th>column</th><th>statistic</th><th>value</th><th>etiket</th></tr></table></div>`;
+    <h2>İddialar</h2><div class="scroll"><table id="claims"><tr><th>#</th><th>column</th><th>statistic</th><th>value</th><th>etiket</th></tr></table></div>
+    <div class="bar"><button id="fillRest">Kalan boşları tutarlı say</button>
+      <span class="status">boş isimler → column in E, boş iddialar → matches E</span></div>
+    <h2>Bu yanıt kanıt hakkında yanlış bir şey söylüyor mu?</h2><div id="resp"></div>`;
   const nt = el.querySelector("#names");
   for (const n of uniqNames(it)) {
     const tr = document.createElement("tr");
@@ -141,6 +155,12 @@ function render(full = true) {
     ct.appendChild(tr);
   });
   if (!it.claims.length) ct.insertAdjacentHTML("beforeend", '<tr><td colspan="5" class="status">iddia yok</td></tr>');
+  el.querySelector("#resp").appendChild(select(RESPONSE_LABELS, l.response, v => { if (v) l.response = v; else delete l.response; save(); }));
+  el.querySelector("#fillRest").onclick = () => {
+    for (const n of uniqNames(it)) if (!l.names[n]) l.names[n] = "column in E";
+    it.claims.forEach((c, i) => { if (!l.claims[i]) l.claims[i] = "matches E"; });
+    save(); render();
+  };
 }
 
 function go(d) { idx = Math.max(0, Math.min(ITEMS.length - 1, idx + d)); save(); render(); window.scrollTo(0, 0); }
@@ -156,6 +176,7 @@ document.getElementById("export").onclick = () => {
     const l = labels[it.id] || { names: {}, claims: {} };
     for (const [n, v] of Object.entries(l.names || {})) rows.push([it.id, "name", n, v]);
     for (const [i, v] of Object.entries(l.claims || {})) rows.push([it.id, "claim", i, v]);
+    if (l.response) rows.push([it.id, "response", "", l.response]);
   }
   const q = s => `"${String(s).replace(/"/g, '""')}"`;
   const blob = new Blob([rows.map(r => r.map(q).join(",")).join("\n")], { type: "text/csv" });

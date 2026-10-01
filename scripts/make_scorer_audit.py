@@ -40,6 +40,9 @@ SEED = 20260930
 N_FLAGGED = N_CLEAN = 100
 NAME_LABELS = ["column in E", "misfiled", "unlisted", "invented", "artifact"]
 CLAIM_LABELS = ["matches E", "differs from E", "pair not in E", "covered by name label"]
+# Added after the V1.8 review (R1.1): is a contract violation a false statement?
+RESPONSE_LABELS = ["no false statement", "false statement", "correct but in the wrong field",
+                   "unclear"]
 
 
 def _is_identifier(s: str) -> bool:
@@ -169,7 +172,8 @@ def build() -> int:
     template = (ROOT / "scripts" / "scorer_audit_template.html").read_text(encoding="utf-8")
     page = (template.replace("__ITEMS__", json.dumps(items, default=str))
                     .replace("__NAME_LABELS__", json.dumps(NAME_LABELS))
-                    .replace("__CLAIM_LABELS__", json.dumps(CLAIM_LABELS)))
+                    .replace("__CLAIM_LABELS__", json.dumps(CLAIM_LABELS))
+                    .replace("__RESPONSE_LABELS__", json.dumps(RESPONSE_LABELS)))
     (OUT / "audit_sheet.html").write_text(page, encoding="utf-8")
     (OUT / "KEY_sealed.json").write_text(json.dumps(key, indent=1), encoding="utf-8")
     counts = Counter(k for p in picks for k in (p["scorer"]["kinds"] or ["clean"]))
@@ -191,8 +195,12 @@ def score(labels_csv: str) -> int:
     rows = list(csv.DictReader(open(labels_csv, encoding="utf-8")))
     human_resp: dict[str, bool] = {}
     name_pairs, claim_pairs, disagreements = [], [], []
+    substantive: dict[str, Counter] = {"flagged": Counter(), "clean": Counter()}
     for row in rows:
         k = key[row["id"]]
+        if row["kind"] == "response":
+            substantive["flagged" if k["flagged"] else "clean"][row["label"]] += 1
+            continue
         if row["kind"] == "name":
             s = k["names"].get(row["target"])
             name_pairs.append((s, row["label"]))
@@ -213,6 +221,7 @@ def score(labels_csv: str) -> int:
         "responses": len(ids), "response_agreement": agree, "response_kappa": kappa(sc, hu),
         "name_agreement": sum(x == y for x, y in name_pairs), "names": len(name_pairs),
         "claim_agreement": sum(x == y for x, y in claim_pairs), "claims": len(claim_pairs),
+        "false_statement_by_scorer_flag": {k: dict(v) for k, v in substantive.items()},
         "disagreements": disagreements,
     }
     (OUT / "audit_result.json").write_text(json.dumps(res, indent=1), encoding="utf-8")
