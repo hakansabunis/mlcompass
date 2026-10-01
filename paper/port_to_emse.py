@@ -1,9 +1,12 @@
-"""Port the IEEE TSE manuscript to the Springer sn-jnl class for EMSE.
+"""Port the IEEE TSE manuscript to Springer's SVJour3 class for EMSE.
 
-The body is taken verbatim from tse_latex/main.tex; only the frame changes:
-preamble, title block, abstract and keywords, the IEEE-only commands, table
-scaling (a two-column \\columnwidth is not a one-column page), and the back
-matter Springer requires. Run it again after any edit to the TSE source.
+SVJour3 is the template EMSE's own FAQ points to and the LaTeX package its
+submission page links (paper/emse_latex/svjour3.cls, from Springer's
+LaTeX_DL_468198 package). The body is taken verbatim from tse_latex/main.tex;
+only the frame changes: preamble, title block, abstract and keywords, the
+IEEE-only commands, table scaling (a two-column \\columnwidth is not a
+one-column page), and what the journal's guidelines require. Run it again
+after any edit to the TSE source.
 
     python paper/port_to_emse.py
 """
@@ -35,7 +38,11 @@ data_avail = between(src, r"\section*{Data Availability}", r"\balance").strip()
 
 # IEEE-only commands
 body = body.replace(r"\IEEEPARstart{M}{achine-learning}", "Machine-learning")
-body = body.replace(r"\begin{IEEEproof}", r"\begin{proof}").replace(r"\end{IEEEproof}", r"\end{proof}")
+# SVJour3 predefines `definition` and its own `proof`; amsthm cannot be loaded
+# beside it, so the sketch gets an environment of its own.
+body = body.replace(r"\begin{IEEEproof}[Proof sketch]", r"\begin{proofsketch}")
+body = body.replace(r"\end{IEEEproof}", r"\end{proofsketch}")
+body = body.replace(r"\begin{definitionx}", r"\begin{definition}").replace(r"\end{definitionx}", r"\end{definition}")
 
 # A table scaled to a two-column \columnwidth would be blown up on a one-column
 # page, so the scaling goes; adjustbox's max width is not an option, because
@@ -155,28 +162,27 @@ body = body.replace(r"\input{table_fabbench12}",
 assert "\\input{" not in body
 assert "IEEE" not in body.replace("IEEE policy", ""), "an IEEE command is left in the body"
 
-preamble = r"""%% Empirical Software Engineering (Springer) submission.
+preamble = r"""%% Empirical Software Engineering (Springer) submission, SVJour3.
 %% Generated from ../tse_latex/main.tex by ../port_to_emse.py; edit the TSE
 %% source and re-run the script rather than editing this file.
 %% Compile: tectonic -X compile main.tex
-% The pdflatex option is required: without it sn-jnl loads breakurl, which
-% fails under any engine that writes PDF directly (see BUILD.md).
-% sn-basic without the Numbered option: EMSE cites by name and year.
-\documentclass[pdflatex,sn-basic]{sn-jnl}
+\RequirePackage{fix-cm}
+% smallextended: the one-column format of the template; natbib: author-year
+% citations punctuated as Springer asks, "(Thompson 1990)".
+\documentclass[smallextended,natbib]{svjour3}
+\smartqed
 
 \usepackage{graphicx}
-\usepackage{amsmath,amssymb,amsfonts}
-\usepackage{amsthm}
+\usepackage{amsmath,amssymb}
 \usepackage{booktabs}
-
 \usepackage{xcolor}
 \usepackage{textcomp}
-\usepackage{url}
-\usepackage{manyfoot}   % required by sn-jnl's footnote hook (see BUILD.md)
 \usepackage{algorithm}
 \usepackage{algpseudocode}
 \usepackage{microtype}
 \usepackage[htt]{hyphenat}
+\usepackage{url}
+\usepackage[hidelinks]{hyperref}
 \tolerance=1200
 \emergencystretch=2em
 \renewcommand{\topfraction}{0.9}
@@ -186,33 +192,38 @@ preamble = r"""%% Empirical Software Engineering (Springer) submission.
 \setcounter{topnumber}{3}
 \setcounter{totalnumber}{4}
 
-\theoremstyle{definition}
-\newtheorem{definitionx}{Definition}
-\theoremstyle{plain}
-\newtheorem{observation}{Observation}
+\spnewtheorem{observation}{Observation}{\bfseries}{\itshape}
+\spnewtheorem*{proofsketch}{Proof sketch}{\itshape}{\rmfamily}
 
 \hyphenation{mlcompass evi-dence-closed}
 
+\journalname{Empirical Software Engineering}
+
 \begin{document}
 
-\title[An Evidence-Bound Runtime Contract for LLM Narration]{An Evidence-Bound
-Runtime Contract for LLM Narration of Machine-Learning Pipeline Evidence}
+\title{An Evidence-Bound Runtime Contract for LLM Narration of
+Machine-Learning Pipeline Evidence}
+\titlerunning{An Evidence-Bound Runtime Contract for LLM Narration}
 
-\author*[1]{\fnm{Hakan} \sur{Sabuni\c{s}}}\email{hakan.sabunis@std.medipol.edu.tr}
-\author[1]{\fnm{Yusuf} \sur{\"Unl\"u}}\email{yusuf.unlu@std.medipol.edu.tr}
-\author[1]{\fnm{Mehmet Kemal} \sur{\"Ozdemir}}\email{mkozdemir@medipol.edu.tr}
+\author{Hakan~Sabuni\c{s} \and Yusuf~\"Unl\"u \and Mehmet~Kemal~\"Ozdemir}
+\authorrunning{H. Sabuni\c{s} et al.}
 
-\affil[1]{\orgdiv{School of Engineering and Natural Sciences},
-\orgname{Istanbul Medipol University},
-\orgaddress{\city{Istanbul}, \country{T\"urkiye}}}
+\institute{H. Sabuni\c{s} (corresponding author) \and Y. \"Unl\"u \and
+M. K. \"Ozdemir \at
+School of Engineering and Natural Sciences, Istanbul Medipol University,
+Istanbul, T\"urkiye \\
+\email{hakan.sabunis@std.medipol.edu.tr}}
+
+\date{Received: date / Accepted: date}
+
+\maketitle
 
 """
 
 backmatter = r"""
-\backmatter
-
-\bmhead{Acknowledgements}
+\begin{acknowledgements}
 """ + acks + r"""
+\end{acknowledgements}
 
 \section*{Statements and Declarations}
 
@@ -242,6 +253,7 @@ MIT licence; the development repository is
 
 \paragraph{Use of AI tools.} Documented in Section~\ref{sec:ai}.
 
+\bibliographystyle{spbasic}
 \bibliography{references}
 
 \end{document}
@@ -249,9 +261,9 @@ MIT licence; the development repository is
 
 out = (
     preamble
-    + "\\abstract{%\n" + abstract + "}\n\n"
-    + "\\keywords{" + keywords + "}\n\n"
-    + "\\maketitle\n"
+    + "\\begin{abstract}\n" + abstract + "\n"
+    + "\\keywords{" + " \\and ".join(k.strip() for k in keywords.split(",")) + "}\n"
+    + "\\end{abstract}\n"
     + body.rstrip() + "\n"
     + backmatter
 )
@@ -261,6 +273,10 @@ shutil.copyfile(TSE / "references.bib", EMSE / "references.bib")
 # The upload set: one flat folder, as Editorial Manager wants it.
 SUB = PAPER / "emse_submission"
 SUB.mkdir(exist_ok=True)
-for name in ("main.tex", "references.bib", "sn-jnl.cls", "sn-basic.bst", "Fig1.pdf"):
+UPLOAD = ("main.tex", "references.bib", "svjour3.cls", "svglov3.clo", "spbasic.bst", "Fig1.pdf")
+for stale in SUB.iterdir():
+    if stale.is_file() and stale.name not in UPLOAD:
+        stale.unlink()
+for name in UPLOAD:
     shutil.copyfile(EMSE / name, SUB / name)
 print(f"wrote {EMSE / 'main.tex'} ({len(out)} chars) and the upload set in {SUB}")

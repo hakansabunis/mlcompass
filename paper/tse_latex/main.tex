@@ -582,6 +582,54 @@ before the runs they govern and are in the replication package, and
 Table~\ref{tab:registered} reports what the plan registered and what became of
 each item.
 
+\begin{table*}[t]
+\caption{What the analysis plan predicted, and what happened. X-items are
+planned comparisons between two arms; X1, X3, X4 and X5 form the
+Holm-corrected family. H-items are hypotheses, numbered as in the plan (H1--H6
+belonged to an earlier round). Differences are in percentage points (pp) of
+the rate of responses reaching the user with any violation, on the 2026-09-15
+runs, with Newcombe 95\,\% intervals and Holm-adjusted Fisher tests. The five rows
+after the first rule record where the study departed from the plan; the last
+four are amendment A3, registered for this revision.}
+\label{tab:registered}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{2.4pt}
+\begin{tabular}{@{}lp{6.1cm}p{9.5cm}@{}}
+\toprule
+Item & Prediction & Outcome \\
+\midrule
+X1 & Contract below the stock Guardrails loop & Stock loop higher by 35.0\,pp [28.5, 41.8], $p_{\mathrm{Holm}}<10^{-23}$; registered on a real-data task, where only the floor, shipped and strong arms were later run; reported on the synthetic one \\
+X2 & Contract below the strict call-time enum on a channel other than entity & Void: no such channel activated on leakage \\
+X3 & Contract below a typed schema without column list & Schema higher by 4.0\,pp [1.3, 7.7], $p_{\mathrm{Holm}}=0.015$; that arm ran without the strict flag \\
+X3b & Contract against the author-time list (exploratory) & Equal on the reference task; 72.5 against 0\,\% on the crowded instance \\
+X4 & Our checks inside the Guardrails loop tie the contract & 0.0\,pp [$-1.9$, 1.9], $p=1$ \\
+X5 & Contract against NeMo Guardrails & Not run: the adapter was not built \\
+H7 & Stock Guardrails loop within 2\,pp of the floor & Not met: 35.0 against 42.0\,\%, but not the 10\,pp drop that rejects it \\
+H8 & Typed schema without column list within 2\,pp of the floor & Neither held nor rejected: the registered rule rejects only at 0/200, so it cannot register the large drop observed (4.0 against 42.0\,\%) \\
+H9 & Strict call-time enum ties the contract on entity & Held (2026-09-24); the run without the flag is \texttt{A-TIER-A-ONLY} \\
+H10 & Strict enum fails on an activated non-entity channel & Void with X2 \\
+H11 & Our checks inside Guardrails match the contract on every channel & Held \\
+H12 & Wording effects differ between providers & Not run: the sweep ran on one provider \\
+H13 & Every contract arm reads 0 on every provider & Held \\
+H14 & The value channel activates under designed pressure & Not on leakage; the profile task activated it outside the registered design \\
+H15 & The omission channel activates under low anchor salience & Not run \\
+H16 & The post-strip anchor-coverage re-check fires on live data & Not exercised: nothing was stripped \\
+\midrule
+Falsifier & Property-based falsifier with automated mutants & Built after the runs ($10^6$ cases); 36 hand-written mutation tests instead of generated mutants \\
+Strict prompt & Replicate of the arms under the shipped prompt & Run for \texttt{A-L2} and \texttt{A-L3-SHIPPED} only, plus the unregistered \texttt{A-L2-RULES} and \texttt{A-L2-NOCLAIMS} \\
+Panel & \texttt{deepseek-v4-flash}, \texttt{gpt-5.4-mini}, \texttt{Qwen2.5-3B} (vLLM) & \texttt{deepseek-chat}, \texttt{gpt-5.4-mini}, \texttt{qwen2.5:7b} (Ollama), without an amendment \\
+Pooling & No pooled rates for floor, baseline or sweep arms & None, except the share of invented names over the twelve A3 instances, which A3 registered pooled \\
+Pilot & Report the June floor rates & 15.0 and 11.5\,\% (rolling alias, records not kept; fault 5) \\
+\midrule
+A3 R2a & On 12 instances frozen in July, misfiling dominates and invented names stay under 5\,\% of flagged responses & Held: 12 of 817 (1.5\,\%), on 1{,}888 valid floor responses \\
+A3 R1, R2b & The verifier lowers delivered violations in a well-specified configuration (profile, $N=600$; 12 instances) & Not run: the provider balance ran out (A4); partial cells reported descriptively \\
+A3 R3 & Measure the shipped default narrator & Not run: no budget \\
+A3 R4 & Blind human audit of the scorer on 200 responses & Not run (A5); the sheet and sealed key are in the package \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
 \subsection{Subjects}
 
 The subject is the shipped leakage-investigation path. The \emph{reference}
@@ -729,7 +777,7 @@ For RQ4 the bare instruction was rewritten six ways (\emph{terse},
 \emph{baseline}, \emph{cautious}, \emph{expert}, \emph{helpful},
 \emph{mechanical}), with $N=100$ per variant. None contains a faithfulness
 rule, and all were written before the September runs. A June pilot measured
-the same sweep (fault 5 in Table~\ref{tab:corrections}).
+the same sweep (fault 5, Section~\ref{sec:instruments}).
 
 \subsection{Measures}
 
@@ -742,8 +790,8 @@ A \emph{response} is one narration as it reaches the user, however many
 provider calls its retries took; the replication package lists every run file
 with its responses and calls. We report percentages with Wilson 95\,\%
 intervals and the raw $k/N$. For an
-arm with a verifier we report what the verifier did (Table~\ref{tab:retry})
-and do not read its zero as a rate. The entity channel decomposes into
+arm with a verifier we report what the verifier did and do not read its zero
+as a rate. The entity channel decomposes into
 \emph{invented} and \emph{misfiled}, and the value channel into wrong numbers
 and pairs $E$ does not carry. We exclude artifacts, namely a \texttt{null}
 column and several real names in one string; counting them as violations
@@ -771,53 +819,7 @@ with no violation at the default is therefore not an artefact of a lowered
 temperature, and the baselines' rates are conditioned on it (at $T=0$ the
 floor falls to 2.0\,\%, Section~\ref{sec:rq1}).
 
-\begin{table*}[t]
-\caption{What the analysis plan predicted, and what happened. X-items are
-planned comparisons between two arms; X1, X3, X4 and X5 form the
-Holm-corrected family. H-items are hypotheses, numbered as in the plan (H1--H6
-belonged to an earlier round). Differences are in percentage points (pp) of
-the rate of responses reaching the user with any violation, on the 2026-09-15
-runs, with Newcombe 95\,\% intervals and Holm-adjusted Fisher tests. The five rows
-after the first rule record where the study departed from the plan; the last
-four are amendment A3, registered for this revision.}
-\label{tab:registered}
-\centering
-\footnotesize
-\setlength{\tabcolsep}{2.4pt}
-\begin{tabular}{@{}lp{6.1cm}p{9.5cm}@{}}
-\toprule
-Item & Prediction & Outcome \\
-\midrule
-X1 & Contract below the stock Guardrails loop & Stock loop higher by 35.0\,pp [28.5, 41.8], $p_{\mathrm{Holm}}<10^{-23}$; registered on a real-data task, where only the floor, shipped and strong arms were later run; reported on the synthetic one \\
-X2 & Contract below the strict call-time enum on a channel other than entity & Void: no such channel activated on leakage \\
-X3 & Contract below a typed schema without column list & Schema higher by 4.0\,pp [1.3, 7.7], $p_{\mathrm{Holm}}=0.015$; that arm ran without the strict flag \\
-X3b & Contract against the author-time list (exploratory) & Equal on the reference task; 72.5 against 0\,\% on the crowded instance \\
-X4 & Our checks inside the Guardrails loop tie the contract & 0.0\,pp [$-1.9$, 1.9], $p=1$ \\
-X5 & Contract against NeMo Guardrails & Not run: the adapter was not built \\
-H7 & Stock Guardrails loop within 2\,pp of the floor & Not met: 35.0 against 42.0\,\%, but not the 10\,pp drop that rejects it \\
-H8 & Typed schema without column list within 2\,pp of the floor & Neither held nor rejected: the registered rule rejects only at 0/200, so it cannot register the large drop observed (4.0 against 42.0\,\%) \\
-H9 & Strict call-time enum ties the contract on entity & Held (2026-09-24); the run without the flag is \texttt{A-TIER-A-ONLY} \\
-H10 & Strict enum fails on an activated non-entity channel & Void with X2 \\
-H11 & Our checks inside Guardrails match the contract on every channel & Held \\
-H12 & Wording effects differ between providers & Not run: the sweep ran on one provider \\
-H13 & Every contract arm reads 0 on every provider & Held \\
-H14 & The value channel activates under designed pressure & Not on leakage; the profile task activated it outside the registered design \\
-H15 & The omission channel activates under low anchor salience & Not run \\
-H16 & The post-strip anchor-coverage re-check fires on live data & Not exercised: nothing was stripped \\
-\midrule
-Falsifier & Property-based falsifier with automated mutants & Built after the runs ($10^6$ cases); 36 hand-written mutation tests instead of generated mutants \\
-Strict prompt & Replicate of the arms under the shipped prompt & Run for \texttt{A-L2} and \texttt{A-L3-SHIPPED} only, plus the unregistered \texttt{A-L2-RULES} and \texttt{A-L2-NOCLAIMS} \\
-Panel & \texttt{deepseek-v4-flash}, \texttt{gpt-5.4-mini}, \texttt{Qwen2.5-3B} (vLLM) & \texttt{deepseek-chat}, \texttt{gpt-5.4-mini}, \texttt{qwen2.5:7b} (Ollama), without an amendment \\
-Pooling & No pooled rates for floor, baseline or sweep arms & None, except the share of invented names over the twelve A3 instances, which A3 registered pooled \\
-Pilot & Report the June floor rates & 15.0 and 11.5\,\% (rolling alias, records not kept; fault 5) \\
-\midrule
-A3 R2a & On 12 instances frozen in July, misfiling dominates and invented names stay under 5\,\% of flagged responses & Held: 12 of 817 (1.5\,\%), on 1{,}888 valid floor responses \\
-A3 R1, R2b & The verifier lowers delivered violations in a well-specified configuration (profile, $N=600$; 12 instances) & Not run: the provider balance ran out (A4); partial cells reported descriptively \\
-A3 R3 & Measure the shipped default narrator & Not run: no budget \\
-A3 R4 & Blind human audit of the scorer on 200 responses & Not run (A5); the sheet and sealed key are in the package \\
-\bottomrule
-\end{tabular}
-\end{table*}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{RQ1: How the Unconstrained Narrator Fails}\label{sec:rq1}
@@ -974,7 +976,7 @@ check.}
 
 \subsection{Comparing the mechanisms}
 
-On the reference task, every arm that states the admissible column set
+Table~\ref{tab:arms} gives the rates. On the reference task, every arm that states the admissible column set
 reaches zero or one violation in 200, whether it states the set in the
 shipped prompt, a description on the field, an enum in the schema, a choice
 list in a guardrail loop, or our verifier. The one exception is the shipped
@@ -1173,7 +1175,7 @@ mechanical & the field, not its content     & 72.0\,\% & [62.5, 79.9] & 1 & 71 &
 \end{table*}
 
 \paragraph{Wording and specification}
-Six rule-free variants of the bare instruction, over identical evidence and
+Table~\ref{tab:sweep} gives the six variants. Six rule-free variants of the bare instruction, over identical evidence and
 schema, move the blended entity rate from 9.0\,\% to 72.0\,\%. It is already
 established that wording moves behaviour this much~\cite{sclar2024formatspread}.
 The variants also differ in how much of the answer they specify, and that
@@ -1257,7 +1259,7 @@ Arm & Names & wrong no. & misplaced & entity & any, \% [95\,\% CI] & Tier~B \\
 \end{table}
 
 \paragraph{Wrong numbers and column naming}
-On the suffixed frame the unconstrained arm put a wrong number in 9 of 200
+Table~\ref{tab:rq6} gives the counts. On the suffixed frame the unconstrained arm put a wrong number in 9 of 200
 responses (4.5\,\% [2.4, 8.3]). Eleven of its 12 wrong numbers are a real
 measurement of the column that shares the suffix, such as
 \texttt{cat\_feature\_07}'s missing rate reported for

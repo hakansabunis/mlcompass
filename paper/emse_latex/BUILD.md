@@ -1,6 +1,8 @@
 # Building the PDF
 
-This is the submission (EMSE, Springer `sn-jnl`), since 2026-10-01. `main.tex` is
+This is the submission (EMSE), since 2026-10-01, in Springer's SVJour3 class
+(`svjour3.cls`, `svglov3.clo`, `spbasic.bst`, from the LaTeX package the EMSE
+submission page links). The upload set is `../emse_submission/`. `main.tex` is
 generated: edit `../tse_latex/main.tex` and run `python paper/port_to_emse.py`,
 which ports the body and adds what only this version carries (the
 per-instance table from `scripts/table_fabbench12.py`). The figure and table

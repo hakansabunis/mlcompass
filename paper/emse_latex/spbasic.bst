@@ -13,6 +13,8 @@
 %%   computer science publications.                                               %%
 %% For use with the natbib package (see below). Default is author-year citations. %%
 %%   When citations are numbered, please use \usepackage[numbers]{natbib}.        %%
+%% A lack of punctuation is the key feature. Springer-Verlag 2004/10/15           %%
+%% Report bugs and improvements to: Joylene Vette-Guillaume or Frank Holzwarth    %%
 %%                                                                                %%
 %%********************************************************************************%%
 %%
@@ -74,7 +76,6 @@ ENTRY
     institution
     journal
     key
-    keywords
     month
     note
     number
@@ -88,11 +89,6 @@ ENTRY
     url
     volume
     year
-    archivePrefix
-    primaryClass
-    adsurl
-    adsnote
-    version
   }
   {}
   { label extra.label sort.label short.list }
@@ -238,7 +234,7 @@ FUNCTION {bbl.and}
 { "and"}
 
 FUNCTION {bbl.etal}
-{ "et~al" }
+{ "et~al." }
 
 FUNCTION {bbl.editors}
 { "eds" }
@@ -250,7 +246,7 @@ FUNCTION {bbl.edby}
 { "edited by" }
 
 FUNCTION {bbl.edition}
-{ "edn." }
+{ "edn" }
 
 FUNCTION {bbl.volume}
 { "vol" }
@@ -269,9 +265,6 @@ FUNCTION {bbl.in}
 
 FUNCTION {bbl.pages}
 { "pp" }
-
-FUNCTION {bbl.incoll.pages}
-{ "p" }
 
 FUNCTION {bbl.page}
 { "p" }
@@ -437,7 +430,6 @@ FUNCTION {bibinfo.warn}
     }
   if$
 }
-
 FUNCTION {format.eprint}
 { eprint duplicate$ empty$
     'skip$
@@ -450,57 +442,6 @@ FUNCTION {format.eprint}
     }
   if$
 }
-
-FUNCTION {format.archive}
-{
-  archivePrefix empty$
-      { "" }
-      { archivePrefix ":" *}
-  if$           
-}
-
-FUNCTION {format.primaryClass}
-{
-  primaryClass empty$
-      { "" }
-      { "{[" primaryClass * "]}" *}
-  if$           
-}
-
-FUNCTION {format.soft.eprint}
-{ eprint empty$
-     { ""}
-     { archive empty$
-          {"{\href{https://arxiv.org/abs/" eprint * "}" *
-             "{{" * format.archive * eprint * "}}}" *}
-          {"{\href{https://arxiv.org/abs/" eprint * "}" *
-             "{{" * format.archive * eprint * "}}}" *}
-       if$
-     }
-     if$
-}
-
-FUNCTION {format.softmisc.archive}
-{
-  archivePrefix empty$
-      { "" }
-      { "" }
-  if$           
-}
-
-FUNCTION {format.softmisc.eprint}
-{ eprint empty$
-     { ""}
-     { archive empty$
-          {"{\href{https://ascl.net/" format.softmisc.archive * eprint * "}" *
-             "{{" * format.archive * eprint * "}}}" *}
-          {"{\href{https://ascl.net/" format.softmisc.archive * eprint * "}" *
-             "{{" * format.archive * eprint * "}}}" *}
-       if$
-     }
-     if$
-}
-
 FUNCTION {format.url}
 { url empty$
     { "" }
@@ -521,18 +462,13 @@ FUNCTION {format.names}
   numnames 'namesleft :=
     { namesleft #0 > }
     { s nameptr
-      "{vv~}{ll}{ f{}}{jj}"
-      format.name$ 't :=
-     nameptr #1 >
-         {
-          nameptr #3
-          #1 + =
-          numnames #3
-          > and
-            { "others" 't :=
-              #1 'namesleft := }
-            'skip$
-          if$
+      "{vv~}{ll}{ f{}}{ jj}"
+      format.name$
+      remove.dots
+      bibinfo bibinfo.check
+      't :=
+      nameptr #1 >
+        {
           namesleft #1 >
             { ", " * t * }
             {
@@ -558,7 +494,6 @@ FUNCTION {format.names}
   while$
   } if$
 }
-
 FUNCTION {format.names.ed}
 {
   format.names
@@ -771,7 +706,6 @@ FUNCTION {n.separate}
 }
 FUNCTION {n.dashify}
 {
-%%  n.separate
   't :=
   ""
     { t empty$ not }
@@ -990,45 +924,6 @@ FUNCTION {format.journal.eid}
     }
   if$
 }
-
-FUNCTION {format.incoll.pages}
-{ pages duplicate$ empty$ 'skip$
-    { duplicate$ multi.page.check
-        {
-          bbl.incoll.pages swap$
-          n.dashify
-        }
-        {
-          bbl.page swap$
-        }
-      if$
-      tie.or.space.prefix
-      "pages" bibinfo.check
-      * *
-    }
-  if$
-}
-
-FUNCTION {format.incoll.chapter.pages}
-{ chapter empty$
-    'format.incoll.pages
-    { type empty$
-        { bbl.chapter }
-        { type "l" change.case$
-          "type" bibinfo.check
-        }
-      if$
-      chapter tie.or.space.prefix
-      "chapter" bibinfo.check
-      * *
-      pages empty$
-        'skip$
-        { ", " * format.incoll.pages * }
-      if$
-    }
-  if$
-}
-
 FUNCTION {format.vol.num.pages}
 { volume field.or.null
   duplicate$ empty$ 'skip$
@@ -1181,16 +1076,12 @@ FUNCTION {article}
       format.pages output
     }
   if$
-  new.sentence
   format.doi output
   format.url output
   format.note output
-  format.soft.eprint output
-  add.blank
-  format.primaryClass output
+  format.eprint output
   fin.entry
 }
-
 FUNCTION {book}
 { output.bibitem
   author empty$
@@ -1293,13 +1184,12 @@ FUNCTION {incollection}
     { format.in.ed.booktitle "booktitle" output.check
       format.bvolume output
       format.edition output
-      new.sentence
       format.number.series output
       format.publisher.address output
-      format.incoll.chapter.pages output
+      format.chapter.pages output
     }
     { format.incoll.inproc.crossref output.nonnull
-      format.incoll.chapter.pages output
+      format.chapter.pages output
     }
   if$
   format.doi output
@@ -1321,11 +1211,10 @@ FUNCTION {inproceedings}
       publisher empty$
         { format.organization.address output }
         { organization "organization" bibinfo.check output
-	format.bvolume output
-	new.sentence
-    format.publisher.address output
+          format.publisher.address output
         }
       if$
+      format.bvolume output
       format.number.series output
       format.pages output
     }
@@ -1392,32 +1281,6 @@ FUNCTION {misc}
   format.eprint output
   fin.entry
 }
-
-FUNCTION {insert.comma}
-{ duplicate$ empty$
-    'skip$
-    { ", " * add.blank }
-  if$
-}
-
-FUNCTION {softmisc}
-{ output.bibitem
-  format.authors output
-  author format.key output
-  format.date "year" output.check
-  date.block
-  format.title output
-  insert.comma
-  version output
-  new.sentence
-  howpublished "howpublished" bibinfo.check output
-  format.doi output
-  format.url output
-  format.note output
-  format.softmisc.eprint output
-  fin.entry
-}
-
 FUNCTION {phdthesis}
 { output.bibitem
   format.authors "author" output.check
@@ -1772,16 +1635,13 @@ FUNCTION {begin.bib}
   write$ newline$
   "\providecommand{\urlprefix}{URL }"
   write$ newline$
-  %%"\expandafter\ifx\csname urlstyle\endcsname\relax"
-  %%write$ newline$
-  %%"  \providecommand{\doi}[1]{\discretionary{}{}{}https://doi.org/#1}\else"
-  %%write$ newline$
-  %%"  \providecommand{\doi}{\discretionary{}{}{}\begingroup \urlstyle{rm}\Url}\fi"
-  "\providecommand{\doi}[1]{\url{https://doi.org/#1}}"
+  "\expandafter\ifx\csname urlstyle\endcsname\relax"
+  write$ newline$
+  "  \providecommand{\doi}[1]{DOI~\discretionary{}{}{}#1}\else"
+  write$ newline$
+  "  \providecommand{\doi}{DOI~\discretionary{}{}{}\begingroup \urlstyle{rm}\Url}\fi"
   write$ newline$
   "\providecommand{\eprint}[2][]{\url{#2}}"
-  write$ newline$
-  " \bibcommenthead "
   write$ newline$
 }
 EXECUTE {begin.bib}
