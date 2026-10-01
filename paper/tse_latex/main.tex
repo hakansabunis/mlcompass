@@ -650,8 +650,8 @@ check on the returned answer. \emph{Open}: the answer's fields with no
 admissible values listed. \emph{Call-time enum}: value lists built from $E$
 for each request. \emph{Tier~B}: our verifier with named retries. Leakage arms
 run on \texttt{deepseek-chat} with $N=200$; the profile arms of RQ5 (prefix
-\texttt{P-}) mirror \texttt{A-L1}, \texttt{A-TIER-A-ONLY}, \texttt{A-CONTRACT}
-and \texttt{A-STRESS}.}
+\texttt{P-}) mirror \texttt{A-L1}, \texttt{A-TIER-A-ONLY}, \texttt{A-CONTRACT},
+\texttt{A-STRESS} and the two strong arms.}
 \label{tab:armsdef}
 \centering
 \footnotesize
@@ -1016,8 +1016,9 @@ the same.
 Each alternative above lacks something. The two strong arms give the narrator
 the shipped prompt, the call-time enum and the neutral field description, and
 differ only in whether the payload is verified. On 2026-09-30 both read 0/200
-on all four instances, the reference, the crowded instance and the two real
-datasets. The verifier never had to send a response back, and median
+on the reference, the crowded instance and the two real datasets; on the
+twelve frozen instances the budget left 50 unverified responses, none with a
+violation, and no verified ones (A4). The verifier never had to send a response back, and median
 latencies were within 0.1\,s of each other (2.4--2.7\,s). In a configuration
 this well specified we observed no gain in rate on leakage. The profile task
 of RQ5 gave the one difference we observed. Under natural column names the
@@ -1222,8 +1223,8 @@ column, and $E$ carries 196 measured quantities against 10. The evidence comes
 from running the profiler on a frame with ordinary data-quality problems:
 mixed types, missingness that rises across the categorical block, and injected
 outliers. That frame named its columns \texttt{num\_feature\_$k$} and
-\texttt{cat\_feature\_$k$}. We also ran the unverified arms on the same data
-under distinct natural names (\texttt{age}, \texttt{region}, \ldots) that
+\texttt{cat\_feature\_$k$}. We also ran the unverified and strong arms on the
+same data under distinct natural names (\texttt{age}, \texttt{region}, \ldots) that
 share no suffix.
 
 \begin{table}[t]
