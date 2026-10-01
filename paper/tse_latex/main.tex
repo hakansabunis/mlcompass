@@ -198,7 +198,9 @@ validator on the field they check and miss what they do not check. (iv) It
 provides a replication package~\cite{replication} with every model reply, one
 record per live response, the frozen analysis plan with its amendments and
 deviations, the registered falsifier, and fifteen instrument faults with what
-each moved.
+each moved. The diagnosis (i) rests on sixteen instances and three models; the
+added value of a verifier over a well-specified configuration (iii) is measured
+on leakage, where it is nil, and remains open on profiling.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Background and Related Work}\label{sec:related}
@@ -263,7 +265,7 @@ Locus & Bound & Logits & Guarantees & Example \\
 Decode, grammar & author/call & yes & grammar & \cite{outlines,gcd,scholak2021picard,poesia2022synchromesh} \\
 Decode, span & call & yes & verbatim spans & \cite{signe2026chyd} \\
 Decode, closed loop & call & yes & none (empirical) & \cite{cruz2026atlasrtc} \\
-Provider schema & author/call & no & structure, uncertified & \cite{structured} \\
+Provider schema & author/call & no & structure, as a service guarantee & \cite{structured} \\
 Code, policy & author & no & policy contract & \cite{ahn2026harness,zhang2025rvllm,winston2026solver} \\
 Code, context + reask & call & no & what the validator checks & \cite{liu2023instructor,guardrailsai} \\
 Code, ledger & accumulating & no & per-claim provenance & \cite{du2026ledgermind} \\
@@ -356,30 +358,33 @@ admissibility by field.
 
 \subsection{The contract, stated as an invariant}
 
-Let $F$ be the answer's reference-bearing fields: in the leakage contract,
-the list of cited columns and the column and statistic of each claim
-(\texttt{columns\_referenced}, \texttt{claims[].column} and
-\texttt{claims[].statistic} in the schema). Their entries, the \emph{leaves},
-are names compared as strings. $E$ determines an admissible set $A_{E,f}$ per
-field and a value table $V_E$ with
-$\mathrm{dom}(V_E)\subseteq A_{E,\mathrm{col}}\times A_{E,\mathrm{stat}}$. The
-sets of different fields may share a name, as when a frame has a column called
-\texttt{mean}; each is checked in its own field. A leaf outside the $A_{E,f}$ of
-its field is \emph{misfiled} when it lies in $N_E$. Otherwise it is outside the
+Let $F$ be the answer's entity fields: the list of cited columns and the
+column of each claim (\texttt{columns\_referenced} and
+\texttt{claims[].column} in the schema). Their entries, the \emph{leaves}, are
+names compared as strings. $E$ determines the admissible column set
+$A_{E,\mathrm{col}}$ and a value table $V_E$ keyed by (column, statistic); the
+statistic names it uses form $A_{E,\mathrm{stat}}$, which Tier~A also binds
+into the schema's statistic field, so
+$\mathrm{dom}(V_E)\subseteq A_{E,\mathrm{col}}\times A_{E,\mathrm{stat}}$. A
+statistic outside $A_{E,\mathrm{stat}}$ is therefore a pair $E$ does not carry,
+under (C2). Column and statistic sets may share a name, as when a frame has a
+column called \texttt{mean}; each is checked in its own field. A leaf outside
+$A_{E,\mathrm{col}}$ is \emph{misfiled} when it lies in $N_E$. Otherwise it is outside the
 evidence, and for measurement we split that case by the data: a real column of
 the frame that $E$ does not list is \emph{unlisted}, and a name that exists in
 neither $E$ nor the frame is \emph{invented}. The verifier sees only $E$ and
 treats all three alike. A
-response \emph{commits} when its verdict is admissible and is not the
+response \emph{commits} when its verdict is not empty and is not the
 abstention ``cannot determine''; the entities it \emph{references} are its
 leaves in the column fields.
 
 \begin{definitionx}[Evidence-bound runtime contract]\label{def:contract}
 A structured response $r$ \emph{satisfies} $\mathcal{C}_E$, with tolerance
 $\tau$ and anchor $a^*$, if \textbf{(C1, entity soundness)} every leaf of
-$r$ in a field $f \in F$ lies in $A_{E,f}$; \textbf{(C2, value soundness)}
-every claim $(e,s,v)$ in $r$ has $(e,s) \in \mathrm{dom}(V_E)$, $v$ a finite
-number, and $|v - V_E(e,s)| \le \tau$; and \textbf{(C3, anchor coverage)} if $r$
+$r$ in a field of $F$ lies in $A_{E,\mathrm{col}}$; \textbf{(C2, value
+soundness)} every claim $(e,s,v)$ in $r$ with $e \in A_{E,\mathrm{col}}$ has
+$(e,s) \in \mathrm{dom}(V_E)$, $v$ a finite number, and
+$|v - V_E(e,s)| \le \tau$; and \textbf{(C3, anchor coverage)} if $r$
 commits, the anchor $a^*$, the top-ranked candidate, is among the entities
 $r$ references.
 \end{definitionx}
@@ -580,7 +585,8 @@ instruction wording (RQ4), or the naming and description of the evidence (the
 controls of RQ1 and RQ5). The analysis plan and its amendments were frozen
 before the runs they govern and are in the replication package, and
 Table~\ref{tab:registered} reports what the plan registered and what became of
-each item.
+each item. The plan is a pre-registration kept in the replication package with
+its commit history; it is not a Registered Report accepted by a journal.
 
 \begin{table*}[t]
 \caption{What the analysis plan predicted, and what happened. X-items are
@@ -588,7 +594,8 @@ planned comparisons between two arms; X1, X3, X4 and X5 form the
 Holm-corrected family. H-items are hypotheses, numbered as in the plan (H1--H6
 belonged to an earlier round). Differences are in percentage points (pp) of
 the rate of responses reaching the user with any violation, on the 2026-09-15
-runs, with Newcombe 95\,\% intervals and Holm-adjusted Fisher tests. The five rows
+runs, with Newcombe 95\,\% intervals and Fisher tests Holm-adjusted over the
+three family comparisons that ran (X5 was not run). The five rows
 after the first rule record where the study departed from the plan; the last
 four are amendment A3, registered for this revision.}
 \label{tab:registered}
@@ -599,13 +606,13 @@ four are amendment A3, registered for this revision.}
 \toprule
 Item & Prediction & Outcome \\
 \midrule
-X1 & Contract below the stock Guardrails loop & Stock loop higher by 35.0\,pp [28.5, 41.8], $p_{\mathrm{Holm}}<10^{-23}$; registered on a real-data task, where only the floor, shipped and strong arms were later run; reported on the synthetic one \\
+X1 & Contract below the stock Guardrails loop & Stock loop higher by 35.5\,pp [28.9, 42.3], $p_{\mathrm{Holm}}<10^{-23}$; registered on a real-data task, where only the floor, shipped and strong arms were later run; reported on the synthetic one \\
 X2 & Contract below the strict call-time enum on a channel other than entity & Void: no such channel activated on leakage \\
 X3 & Contract below a typed schema without column list & Schema higher by 4.0\,pp [1.3, 7.7], $p_{\mathrm{Holm}}=0.015$; that arm ran without the strict flag \\
 X3b & Contract against the author-time list (exploratory) & Equal on the reference task; 72.5 against 0\,\% on the crowded instance \\
 X4 & Our checks inside the Guardrails loop tie the contract & 0.0\,pp [$-1.9$, 1.9], $p=1$ \\
 X5 & Contract against NeMo Guardrails & Not run: the adapter was not built \\
-H7 & Stock Guardrails loop within 2\,pp of the floor & Not met: 35.0 against 42.0\,\%, but not the 10\,pp drop that rejects it \\
+H7 & Stock Guardrails loop within 2\,pp of the floor & Not met: 35.5 against 42.0\,\%, but not the 10\,pp drop that rejects it \\
 H8 & Typed schema without column list within 2\,pp of the floor & Neither held nor rejected: the registered rule rejects only at 0/200, so it cannot register the large drop observed (4.0 against 42.0\,\%) \\
 H9 & Strict call-time enum ties the contract on entity & Held (2026-09-24); the run without the flag is \texttt{A-TIER-A-ONLY} \\
 H10 & Strict enum fails on an activated non-entity channel & Void with X2 \\
@@ -623,7 +630,7 @@ Pooling & No pooled rates for floor, baseline or sweep arms & None, except the s
 Pilot & Report the June floor rates & 15.0 and 11.5\,\% (rolling alias, records not kept; fault 5) \\
 \midrule
 A3 R2a & On 12 instances frozen in July, misfiling dominates and invented names stay under 5\,\% of flagged responses & Held: 12 of 817 (1.5\,\%), on 1{,}888 valid floor responses \\
-A3 R1, R2b & The verifier lowers delivered violations in a well-specified configuration (profile, $N=600$; 12 instances) & Not run: the provider balance ran out (A4); partial cells reported descriptively \\
+A3 R1, R2b & The verifier lowers delivered violations in a well-specified configuration (profile, $N=600$; 12 instances) & Started, not completed: 93 and 91 of 600 profile responses, 50 and 0 of 2{,}400 on the instances, when the provider balance ran out (A4); no test run, partial cells descriptive \\
 A3 R3 & Measure the shipped default narrator & Not run: no budget \\
 A3 R4 & Blind human audit of the scorer on 200 responses & Not run (A5); the sheet and sealed key are in the package \\
 \bottomrule
@@ -683,7 +690,12 @@ confounded with instruction. \texttt{A-STRESS} removes the Tier~A enums so
 that every Tier~B catch is observable. \texttt{A-GR-CHOICES} is our
 reimplementation of the toolkit's acceptable-values validator with its list
 built from $E$ at call time, because a fresh install of Guardrails~AI~0.11
-registers no validator. Every arm with a retry loop has a budget of 2.
+registers no validator; it is not the library's own implementation. Every
+arm with a retry loop has a budget of 2. Tier~B and \texttt{A-GR-OURS} check
+(C1) and (C2) and flag (C3); \texttt{A-GR-CHOICES} checks (C1) on the cited
+list only; \texttt{A-GR-STOCK} checks structure only. The comparisons therefore
+measure what each configuration checks, not what each library can be made to
+check.
 \texttt{A-GR-STOCK} and \texttt{A-STATIC-ENUM-STALE} are controls, not
 competitors of equal strength: they are what a practitioner gets by default,
 a toolkit's stock validators, which check structure, and a column list written
@@ -781,11 +793,20 @@ the same sweep (fault 5, Section~\ref{sec:instruments}).
 
 \subsection{Measures}
 
-We score three structured channels on every response that reaches the user.
-An \emph{entity} violation is a leaf outside its field's admissible set; a
-\emph{value} violation is a claim whose column is in $E$ but whose value
-misses the measurement by more than $\tau$, or whose pair $E$ does not carry;
-an \emph{omission} is a committed verdict that never references the anchor.
+We score the three conditions on every response that reaches the user, once,
+into one table with a row per response from which every count in this paper
+is computed (\texttt{scripts/unified\_scoring.py}). A (C1) violation is a cited
+column or a claim's column outside $A_{E,\mathrm{col}}$. A (C2) violation is a
+claim on an admissible column whose pair $E$ does not carry (a \emph{pair not
+carried}) or whose number misses the measurement by more than $\tau$ (a
+\emph{wrong number}). A (C3) violation, an \emph{omission}, is a committed
+verdict that never references the anchor. A response \emph{violates} when it
+has any of the three, and the tables give the channels apart. Unconstrained
+arms name the statistic themselves, so on the leakage task the measurement's
+$V_E$ also accepts the correlation's usual names (Pearson, Spearman, their
+absolute forms) and the dataset-level quantities $E$ carries; the verifier
+admits only the schema's statistic. The verifier's own telemetry files a
+claim's inadmissible column under its value message; we score it under (C1).
 A \emph{response} is one narration as it reaches the user, however many
 provider calls its retries took; the replication package lists every run file
 with its responses and calls. We report percentages with Wilson 95\,\%
@@ -794,17 +815,17 @@ arm with a verifier we report what the verifier did and do not read its zero
 as a rate. The entity channel decomposes into
 \emph{invented} and \emph{misfiled}, and the value channel into wrong numbers
 and pairs $E$ does not carry. We exclude artifacts, namely a \texttt{null}
-column and several real names in one string; counting them as violations
-changes one response in 13{,}200. Transport errors are excluded from $N$ and
+column and several real names in one string; two responses carry one, and
+counting them as violations changes one response in 19{,}132. Transport errors are excluded from $N$ and
 reported.
 
-The tolerance decides almost nothing. Of 62{,}854 claims scored before any
-verification could act on them (every unenforced leakage and profile arm, all
-runs), 60{,}106 reproduce the measured value exactly and 2{,}722 round it by
+The tolerance decides almost nothing. Of 100{,}642 claims on pairs $E$ carries
+in the 10{,}941 responses of every arm without a verifier, both tasks and all
+providers, 99{,}008 reproduce the measured value exactly and 1{,}608 round it by
 less than $5\times10^{-4}$, so only a tolerance below that would begin to flag
 rounding. One claim drops a correlation's sign ($|\Delta| = 0.039$), and the
-remaining 25 miss by more than 0.05. The number of responses with a value
-violation is 22 at every $\tau$ from $5\times10^{-4}$ to $0.01$ and 21 at
+remaining 25 miss by more than 0.05. The number of responses with a wrong
+number is 22 at every $\tau$ from $5\times10^{-4}$ to $0.01$ and 21 at
 $0.05$ (\texttt{scripts/tau\_sensitivity.py}). The narrators copy numbers,
 so the choice matters little here. An absolute $\tau$ suits bounded quantities
 such as correlations; unbounded ones call for a relative tolerance and counts
@@ -850,7 +871,8 @@ responses, every one \texttt{r2}, and the shipped prompt and the contract read
 0/200 on both.
 
 \paragraph{Twelve further instances}
-On the twelve instances frozen in July the floor arm misfiles in 26.5 to
+On the twelve instances frozen in July the floor arm cites an inadmissible
+name in 26.5 to
 55.5\,\% of responses per instance, 817 of 1{,}888 responses in all; 512
 calls lost when the provider balance ran out (23 to 64 per instance, all
 errors 402 or 429) are excluded (amendment A4). Of the 817, 795 misfile \texttt{r2} or
@@ -926,7 +948,8 @@ the shipped prompt or temperature 0 lowers the rate from 42--49\,\% to
 \caption{Percentage of responses reaching the user with a structured
 violation, 200 per cell, \texttt{deepseek-chat}. \emph{Date} is the 2026 run
 date of the reference cell; the crowded instance, whose evidence columns the
-author-time enum does not cover, ran on 2026-09-24/25. A sampled 0 bounds the
+author-time enum does not cover, ran on 2026-09-24/25, and the strong arms
+ran on 2026-09-30 on both. A sampled 0 bounds the
 rate below 1.9\,\% (Wilson, 95\,\%). For the arms with a verifier (below the
 second rule) the zero holds by construction, and Table~\ref{tab:retry} reports
 what the verifier did. Table~\ref{tab:armsdef} defines the arms.}
@@ -941,9 +964,9 @@ Arm & Mechanism & Date & Reference (\%) & Crowded (\%) \\
 \midrule
 \texttt{A-L1}                & no enforcement             & 09-15 & 42.0 & 61.0 \\
 \texttt{A-L1-T0}             & no enforcement, $T=0$      & 09-27 & 2.0 & --- \\
-\texttt{A-GR-STOCK}          & Guardrails, no faithfulness check & 09-15 & 35.0 & 57.5 \\
+\texttt{A-GR-STOCK}          & Guardrails, no faithfulness check & 09-15 & 35.5 & 57.5 \\
 \texttt{A-STRICT-STATIC}     & schema, no column enum     & 09-15 & 4.0 & 27.5 \\
-\texttt{A-STATIC-ENUM-STALE} & author-time column enum    & 09-15 & 0$^{a}$ & 72.5$^{b}$ \\
+\texttt{A-STATIC-ENUM-STALE} & author-time column enum    & 09-15 & 0$^{a}$ & 76.0$^{b}$ \\
 \midrule
 \texttt{A-L2}                & shipped prompt             & 09-24 & 0 & --- \\
 \texttt{A-L2-NOCLAIMS}       & shipped, no enforcement claim & 09-27 & 0 & --- \\
@@ -967,8 +990,9 @@ Arm & Mechanism & Date & Reference (\%) & Crowded (\%) \\
 \vspace{2pt}
 {\footnotesize $^{a}$On the reference task the author-time list equals the
 evidence's ten columns, so the arm is identical to the call-time enum.\quad
-$^{b}$145 of 200, all invented; 132 of them also omit the anchor, which the
-list does not contain, and 41 abstain.\quad $^{c}$\texttt{A-GR-STOCK} read
+$^{b}$152 of 200: 145 cite invented names (72.5\,\%), 132 of them also
+omitting the anchor, which the list does not contain, and 7 more commit while
+citing nothing; 41 abstain.\quad $^{c}$\texttt{A-GR-STOCK} read
 43.5 that day.\quad $^{d}$3 of 200, with one misfiled name in a claim's column
 field and two misquoted values, in the fields a single choice list does not
 check.}
@@ -1129,7 +1153,7 @@ On \texttt{gpt-5.4-mini} (same evidence, prompts, scorer and budget, and no
 transport errors) all seven arms that existed at the time show no violation in
 200, the floor included. That model cites exactly the ten evidence columns in
 199 of 200 responses and never writes \texttt{r2} into a column field. A local
-\texttt{qwen2.5:7b} ($N=20$) shows none except \texttt{A-STRICT-STATIC} at
+\texttt{qwen2.5:7b} ($N=20$, so a 0 bounds its rate only below 16.1\,\%) shows none except \texttt{A-STRICT-STATIC} at
 10\,\% (2/20), both the invented name \texttt{suspicious\_metric.name}. Those providers offer nothing to compare, so the comparative
 claims of this section rest on one model, and its rates describe
 \texttt{deepseek-chat} on particular dates, not LLMs in general.
@@ -1229,11 +1253,13 @@ same data under distinct natural names (\texttt{age}, \texttt{region}, \ldots) t
 share no suffix.
 
 \begin{table}[t]
-\caption{The second task, $N=200$ per arm, \texttt{deepseek-chat}. A
-\emph{wrong number} is a claim on an admissible (column, statistic) pair whose
-value misses the measurement, counted in responses of 200. A \emph{misplaced}
-claim quotes a number $E$ carries, correctly, under a pair the contract does not
-admit. Tier~B catches are the responses the verifier sent back.}
+\caption{The second task, $N=200$ per arm, \texttt{deepseek-chat}, counted
+in responses. \emph{C1}: a name outside the column domain, in the cited list or
+a claim's column. \emph{Wrong no.}: a claim on a pair $E$ carries whose value
+misses the measurement. \emph{Not carried}: a claim on an admissible column
+whose pair $E$ does not carry; every one quotes a number $E$ carries elsewhere.
+\emph{Tier~B}: responses the verifier sent back, for content / for a verdict
+outside its enum. Generated by \texttt{scripts/unified\_scoring.py}.}
 \label{tab:rq6}
 \centering
 \footnotesize
@@ -1241,19 +1267,18 @@ admit. Tier~B catches are the responses the verifier sent back.}
 \resizebox{\columnwidth}{!}{%
 \begin{tabular}{@{}llrrrrr@{}}
 \toprule
-Arm & Names & wrong no. & misplaced & entity & any, \% [95\,\% CI] & Tier~B \\
+Arm & Names & C1 & wrong no. & not carried & any, \% [95\,\% CI] & Tier~B \\
 \midrule
-\texttt{P-L1}          & suffixed & 9 & 9  & 0 & 8.5 [5.4, 13.2] & --- \\
-\texttt{P-TIER-A-ONLY} & suffixed & 11 & 1 & 0 & 6.0 [3.5, 10.2] & --- \\
-\texttt{P-CONTRACT}    & suffixed & 0 & 0 & 0 & 0 & 6 \\
-\texttt{P-STRESS}      & suffixed & 0 & 0 & 0 & 0 & 13 \\
-\midrule
-\texttt{P-L1}          & natural  & 0 & 26 & 1 & 13.0 [9.0, 18.4] & --- \\
-\texttt{P-TIER-A-ONLY} & natural  & 0 & 4  & 2 & 3.0 [1.4, 6.4] & --- \\
-\midrule
-\texttt{P-STRONG-NOVERIFY} & natural & 0 & 3 & 1 & 2.0 [0.8, 5.0] & --- \\
-\texttt{P-STRONG-CONTRACT} & natural & 0 & 0 & 0 & 0 & 4 \\
-\texttt{P-STRONG-}$\ast$ & suffixed & 0 & 0 & 0 & 0 & 0 \\
+\texttt{P-L1} & suffixed & 0 & 9 & 9 & 8.5 [5.4, 13.2] & --- \\
+\texttt{P-TIER-A-ONLY} & suffixed & 1 & 11 & 0 & 6.0 [3.5, 10.2] & --- \\
+\texttt{P-CONTRACT} & suffixed & 0 & 0 & 0 & 0 & 6/0 \\
+\texttt{P-STRESS} & suffixed & 0 & 0 & 0 & 0 & 13/0 \\
+\texttt{P-L1} & natural & 8 & 0 & 20 & 13.0 [9.0, 18.4] & --- \\
+\texttt{P-TIER-A-ONLY} & natural & 5 & 0 & 1 & 3.0 [1.4, 6.4] & --- \\
+\texttt{P-STRONG-NOVERIFY} & natural & 3 & 0 & 1 & 2.0 [0.8, 5.0] & --- \\
+\texttt{P-STRONG-CONTRACT} & natural & 0 & 0 & 0 & 0 & 3/1 \\
+\texttt{P-STRONG-NOVERIFY} & suffixed & 0 & 0 & 0 & 0 & --- \\
+\texttt{P-STRONG-CONTRACT} & suffixed & 0 & 0 & 0 & 0 & 0/0 \\
 \bottomrule
 \end{tabular}}
 \end{table}
@@ -1269,8 +1294,8 @@ unverified responses. The failure the original frame measured came from names
 our generator chose.
 
 \paragraph{Correct quantities in inadmissible slots}
-Every other value violation, on both frames, quotes a number $E$ really
-carries, and quotes it correctly. Most are the class balance, which
+Every claim on a pair $E$ does not carry, on both frames, quotes a number $E$
+really carries, and quotes it correctly. Most are the class balance, which
 \texttt{gpt-5.4-mini} also misplaces in 3 of 50 probe responses. The profiler
 reports it at task level, the narrator attaches it to the target column as
 \texttt{class\_balance}, and the contract admits only per-column statistics, so
@@ -1289,9 +1314,9 @@ of suffixed names, other real quantities such as the frame's shape attached
 to a column, and one invented name.
 
 \paragraph{How the tiers separate}
-Binding the enum removes misplaced claims almost entirely (26 to 4 under
-natural names) and leaves wrong numbers in place (9 against 11 under suffixed
-ones). An enum can refuse a pair outside the admissible statistics, but it
+Binding the enum removes pairs $E$ does not carry almost entirely (20 to 1
+under natural names), lowers inadmissible column names less (8 to 5), and
+leaves wrong numbers in place (9 against 11 under suffixed ones). An enum can refuse a pair outside the admissible statistics, but it
 cannot constrain a number whose admissible set is a band around a value chosen
 by a sibling field. Tier~B handles both. \texttt{P-CONTRACT} returned no
 violation and sent back 6 responses, and \texttt{P-STRESS}, with the enum
@@ -1299,8 +1324,8 @@ removed, sent back 13. A re-run of \texttt{P-CONTRACT} that recorded every
 attempt (200 responses, 8 catches) found no entity violation on any first
 attempt. The enum therefore held on 399 of 400 first attempts there, and we
 have no explanation for the one exception. It did not hold everywhere: without
-the strict flag, 2 of 200 natural-name \texttt{P-TIER-A-ONLY} responses wrote
-statistic names into the column field. The re-run also caught an interquartile-range outlier count claimed for
+the strict flag, 5 of 200 natural-name \texttt{P-TIER-A-ONLY} responses put a
+name outside the column domain into a column field. The re-run also caught an interquartile-range outlier count claimed for
 \texttt{cat\_feature\_03}: the column and the statistic are each admissible,
 but $E$ does not carry the pair; a per-field enum cannot
 express that relation, and (C2)'s domain check does.
@@ -1482,11 +1507,16 @@ shortened names; mlcompass does not ship it. The value channel was stressed less
 entity channel: the registered value-pressure instance (H14) did not activate
 it, and (C2) caught real errors only on the profile task.
 
-\paragraph{Internal} We compare arms within one date. Arms ran in
+\paragraph{Internal} We compare arms within one date where we can. The field
+description ran on the same day as its floor (2026-09-24); the neutral
+description, temperature 0 and the prompt without its claim ran one to three
+days later against that floor. Their differences (49\,\% against 0--2\,\%) are
+far larger than the floor's movement between runs (40.5--49\,\%), but they are
+not same-day controls. Arms ran in
 blocks, not interleaved, so drift within a day is not controlled. The provider serves a
 rolling model name, and the unconstrained rates move between runs:
-\texttt{A-GR-STOCK} read 35.0, 43.5 and 47.5\,\% over nine days
-(heterogeneity $p=0.035$), and \texttt{A-STRESS} repaired 12, 23, 32 and 19
+\texttt{A-GR-STOCK} read 35.5, 43.5 and 47.5\,\% over nine days
+(heterogeneity $p=0.047$), and \texttt{A-STRESS} repaired 12, 23, 32 and 19
 responses in four runs ($p=0.012$), with 32 against 19 on the same date
 ($p=0.07$), so the date does not account for all of the variation. The harness and adapter also
 changed between runs, and the provenance of every record pins both, so a
@@ -1498,17 +1528,23 @@ comparative claim rests on a single provider, and every rate is conditioned on
 \texttt{deepseek-chat}, the temperature (the floor reads 49.0\,\% at $T=1.0$
 and 2.0\,\% at $T=0$) and the date. Two leakage instances are synthetic and
 two are real datasets, one with a documented leak and one without, and twelve
-plant registered leaks in four public tables, where only the floor arm
-completed. The profile frame is synthetic data under two naming schemes. We
+plant registered leaks in four public tables, where the floor arm ran with
+512 of its 2{,}400 calls lost and the strong pair stopped early. The profile frame is synthetic data under two naming schemes. We
 registered a measurement of the shipped default narrator,
 \texttt{claude-opus-4-7}, and did not run it for lack of budget. We did measure schema
 cost: from 10 to 1{,}000 columns the enum costs 38 bytes per column, against
 344 for the evidence that produced it. Provider limits on enum size are
 unmeasured, and the retry, which inlines the list, grows with the domain.
 
-\paragraph{Conclusion validity} At $N=200$ a comparison against a zero arm
-reaches $p<0.05$ at six events and detects a true rate of 4\,\% with power 0.8
-(Fisher). The resolution is coarser elsewhere: near the 42\,\% floor, two arms
+\paragraph{Conclusion validity} Two hundred responses to one evidence
+dictionary measure one configuration's conditional rate; they are not 200
+tasks, and the total of 19{,}132 is not the sample size of any comparison. The
+sixteen leakage instances come from eight sources: two synthetic frames, two
+real datasets and four public tables carrying twelve injected leaks. At
+$N=200$ a comparison against a zero arm reaches $p<0.05$ at six events and
+detects a true rate of 4\,\% with power 0.8 (Fisher), but a true 2\,\% with
+power 0.21, so the profile difference of 4 in 200 was out of reach of the run
+that found it. The resolution is coarser elsewhere: near the 42\,\% floor, two arms
 must differ by about 13 points for the same power, so mechanisms closer than
 that cannot be separated there. Only the registered family is corrected for multiplicity
 (Table~\ref{tab:registered}); every other interval is descriptive.

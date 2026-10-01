@@ -1,0 +1,80 @@
+{
+ "responses": 19132,
+ "by_task": {
+  "leakage": 16698,
+  "profile": 2434
+ },
+ "tau": {
+  "universe": "every response of an arm without a verifier, both tasks, all providers",
+  "responses": 10941,
+  "claims_on_carried_pairs": 100642,
+  "exact": 99008,
+  "rounded_le_5e-4": 1608,
+  "responses_with_wrong_number": 22
+ },
+ "artifacts": {
+  "responses_with_artifact": 2,
+  "would_flip_if_counted": 1,
+  "universe": 19132
+ },
+ "retry_reasons": {
+  "2026-09-18_choices|synthetic||A-GR-CHOICES": {
+   "content": 88
+  },
+  "2026-09-18_choices|synthetic||A-GR-OURS": {
+   "content": 83
+  },
+  "2026-09-18_choices|synthetic||A-STRESS": {
+   "content": 23
+  },
+  "2026-09-19_freetext|synthetic||A-GR-CHOICES": {
+   "content": 84
+  },
+  "2026-09-19_freetext|synthetic||A-GR-OURS": {
+   "content": 91
+  },
+  "2026-09-19_freetext|synthetic||A-STRESS": {
+   "content": 32
+  },
+  "2026-09-24_revision|synthetic_crowded||A-GR-CHOICES": {
+   "content": 101
+  },
+  "2026-09-24_revision|synthetic_crowded||A-GR-OURS": {
+   "content": 118
+  },
+  "2026-09-24_revision|synthetic_crowded||A-STRESS": {
+   "content": 25
+  },
+  "2026-09-24_revision|synthetic||A-L3-SHIPPED": {
+   "malformed only": 1
+  },
+  "2026-09-24_revision|synthetic||A-STRESS-GENERIC": {
+   "content": 29
+  },
+  "2026-09-24_revision|synthetic||A-STRESS": {
+   "content": 19
+  },
+  ".|synthetic||A-GR-OURS": {
+   "content": 85
+  },
+  ".|synthetic||A-STRESS": {
+   "content": 12
+  },
+  "profile/2026-09-24_attempts|profile||P-CONTRACT": {
+   "content": 8
+  },
+  "profile/2026-09-30_confirm_natural|profile|natural|P-STRONG-CONTRACT": {
+   "content": 1
+  },
+  "profile/2026-09-30_strong_natural|profile|natural|P-STRONG-CONTRACT": {
+   "content": 3,
+   "malformed only": 1
+  },
+  "profile|profile||P-CONTRACT": {
+   "content": 6
+  },
+  "profile|profile||P-STRESS": {
+   "content": 13
+  }
+ }
+}
