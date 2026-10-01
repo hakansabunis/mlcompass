@@ -1,0 +1,221 @@
+{
+ "second_scorer": {
+  "records": 16698,
+  "agree": {
+   "entity": 16698,
+   "misfiled": 16698,
+   "outside_E": 16698,
+   "wrong_number": 16688,
+   "omission": 9155
+  },
+  "disagree": {
+   "omission": 7,
+   "wrong_number": 10
+  },
+  "examples": {
+   "omission": [
+    {
+     "file": "2026-09-24_revision/deepseek_deepseek-chat_synthetic_crowded_static_schema_n200_seed0_ee469b75a.jsonl",
+     "i": 8,
+     "first": false,
+     "second": true,
+     "outside": [],
+     "verdict": "leakage_uncertain"
+    },
+    {
+     "file": "2026-09-24_revision/deepseek_deepseek-chat_synthetic_crowded_static_schema_n200_seed0_ee469b75a.jsonl",
+     "i": 14,
+     "first": false,
+     "second": true,
+     "outside": [],
+     "verdict": "leakage_uncertain"
+    },
+    {
+     "file": "2026-09-24_revision/deepseek_deepseek-chat_synthetic_crowded_static_schema_n200_seed0_ee469b75a.jsonl",
+     "i": 29,
+     "first": false,
+     "second": true,
+     "outside": [],
+     "verdict": "leakage_likely"
+    },
+    {
+     "file": "2026-09-24_revision/deepseek_deepseek-chat_synthetic_crowded_static_schema_n200_seed0_ee469b75a.jsonl",
+     "i": 47,
+     "first": false,
+     "second": true,
+     "outside": [],
+     "verdict": "leakage_uncertain"
+    },
+    {
+     "file": "2026-09-24_revision/deepseek_deepseek-chat_synthetic_crowded_static_schema_n200_seed0_ee469b75a.jsonl",
+     "i": 63,
+     "first": false,
+     "second": true,
+     "outside": [],
+     "verdict": "leakage_uncertain"
+    }
+   ],
+   "wrong_number": [
+    {
+     "file": "runs/deepseek_deepseek-chat_synthetic_sweep-expert_n100_seed0_e618bd74a.jsonl",
+     "i": 21,
+     "first": false,
+     "second": true,
+     "outside": [],
+     "verdict": "Data leakage confirmed: near-perfect tar"
+    },
+    {
+     "file": "runs/deepseek_deepseek-chat_synthetic_sweep-expert_n100_seed0_e618bd74a.jsonl",
+     "i": 22,
+     "first": false,
+     "second": true,
+     "outside": [],
+     "verdict": "Leakage confirmed: target-derived featur"
+    },
+    {
+     "file": "runs/deepseek_deepseek-chat_synthetic_sweep-expert_n100_seed0_e618bd74a.jsonl",
+     "i": 41,
+     "first": false,
+     "second": true,
+     "outside": [],
+     "verdict": "Leakage confirmed: the perfect R\u00b2=1.0 is"
+    },
+    {
+     "file": "runs/deepseek_deepseek-chat_synthetic_sweep-expert_n100_seed0_e618bd74a.jsonl",
+     "i": 63,
+     "first": false,
+     "second": true,
+     "outside": [
+      "r2"
+     ],
+     "verdict": "Leakage \u2014 target-derived features includ"
+    },
+    {
+     "file": "runs/deepseek_deepseek-chat_synthetic_sweep-expert_n100_seed0_e618bd74a.jsonl",
+     "i": 78,
+     "first": false,
+     "second": true,
+     "outside": [],
+     "verdict": "leakage_confirmed"
+    }
+   ]
+  }
+ },
+ "strip": {
+  "leakage": {
+   "responses": 9598,
+   "violating": 2089,
+   "cited": 18944,
+   "cited_kept": 16577,
+   "claims": 16868,
+   "claims_kept": 12980,
+   "left_with_no_claim": 554,
+   "left_with_no_column": 140,
+   "anchor_before": 1786,
+   "anchor_lost": 0,
+   "dropped_correct_numbers": 3865
+  },
+  "profile": {
+   "responses": 1343,
+   "violating": 68,
+   "cited": 1292,
+   "cited_kept": 1286,
+   "claims": 1318,
+   "claims_kept": 1230,
+   "dropped_correct_numbers": 87,
+   "left_with_no_claim": 0,
+   "left_with_no_column": 0,
+   "anchor_before": 68,
+   "anchor_lost": 0
+  }
+ },
+ "task_level_slot": {
+  "2026-09-24_natural/deepseek_deepseek-chat_profile_bare_n200_seed0_e7e0d8c22.jsonl": {
+   "arm": "P-L1",
+   "names": "natural",
+   "model": "deepseek-chat",
+   "n": 200,
+   "violating_before": 26,
+   "violating_with_slot": 10,
+   "kinds_with_slot": {
+    "real, misplaced": 10,
+    "entity": 1
+   }
+  },
+  "2026-09-24_natural/deepseek_deepseek-chat_profile_tier_a_n200_seed0_e7e0d8c22.jsonl": {
+   "arm": "P-TIER-A-ONLY",
+   "names": "natural",
+   "model": "deepseek-chat",
+   "n": 200,
+   "violating_before": 6,
+   "violating_with_slot": 6,
+   "kinds_with_slot": {
+    "real, misplaced": 4,
+    "entity": 2
+   }
+  },
+  "2026-09-30_confirm_natural/deepseek_deepseek-chat_profile_strong_noverify_n600_seed0_e7e0d8c22.jsonl": {
+   "arm": "P-STRONG-NOVERIFY",
+   "names": "natural",
+   "model": "deepseek-chat",
+   "n": 93,
+   "violating_before": 0,
+   "violating_with_slot": 0,
+   "kinds_with_slot": {}
+  },
+  "2026-09-30_openai_probe/openai_gpt-5.4-mini_profile_bare_n50_seed0_ebcaea394.jsonl": {
+   "arm": "P-L1",
+   "names": "suffixed",
+   "model": "gpt-5.4-mini",
+   "n": 50,
+   "violating_before": 3,
+   "violating_with_slot": 0,
+   "kinds_with_slot": {}
+  },
+  "2026-09-30_strong/deepseek_deepseek-chat_profile_strong_noverify_n200_seed0_ebcaea394.jsonl": {
+   "arm": "P-STRONG-NOVERIFY",
+   "names": "suffixed",
+   "model": "deepseek-chat",
+   "n": 200,
+   "violating_before": 0,
+   "violating_with_slot": 0,
+   "kinds_with_slot": {}
+  },
+  "2026-09-30_strong_natural/deepseek_deepseek-chat_profile_strong_noverify_n200_seed0_e7e0d8c22.jsonl": {
+   "arm": "P-STRONG-NOVERIFY",
+   "names": "natural",
+   "model": "deepseek-chat",
+   "n": 200,
+   "violating_before": 4,
+   "violating_with_slot": 4,
+   "kinds_with_slot": {
+    "entity": 1,
+    "real, misplaced": 3
+   }
+  },
+  "profile/deepseek_deepseek-chat_profile_bare_n200_seed0_ebcaea394.jsonl": {
+   "arm": "P-L1",
+   "names": null,
+   "model": "deepseek-chat",
+   "n": 200,
+   "violating_before": 17,
+   "violating_with_slot": 10,
+   "kinds_with_slot": {
+    "wrong number": 9,
+    "real, misplaced": 1
+   }
+  },
+  "profile/deepseek_deepseek-chat_profile_tier_a_n200_seed0_ebcaea394.jsonl": {
+   "arm": "P-TIER-A-ONLY",
+   "names": null,
+   "model": "deepseek-chat",
+   "n": 200,
+   "violating_before": 12,
+   "violating_with_slot": 12,
+   "kinds_with_slot": {
+    "wrong number": 11,
+    "real, misplaced": 1
+   }
+  }
+ }
+}

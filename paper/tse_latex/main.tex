@@ -58,28 +58,26 @@ E-mail: hakan.sabunis@std.medipol.edu.tr}}
 \IEEEtitleabstractindextext{%
 \begin{abstract}
 When a language model explains a deterministic analysis to an engineer, a
-column or number the analysis never produced gets acted on. We study how such
-a narrator fails, and what a runtime contract adds, in
-\textbf{mlcompass}, an open-source ML-pipeline assistant. For narration whose
-citable entities and checkable quantities are finite and enumerable at call
-time, the contract binds each field's admissible set to the evidence and checks
-the returned payload in host code with a named retry: ordinary
-validate-and-reask. Over 19{,}132 live responses,
-\texttt{gpt-5.4-mini} and a local \texttt{qwen2.5:7b} never fail at leakage
-under the bare instruction; \texttt{deepseek-chat} does. On sixteen instances of a
-data-leakage task, fourteen on public data, 1{,}807 of its 1{,}829 flagged
-responses \emph{misfile} a real evidence name into a field that excludes it;
-12 cite a name the data lacks. One sentence of field
-description takes the rate from 49\,\% to 0.5\,\%, and temperature 0 to
-2\,\%. The shipped prompt gives 0\,\% with or without its claim that
-violations are rejected; its first three rules alone leave 7\,\%. An enum
-written for other data turns misfiling into invention; one built at call time
-does not. Added to a well-specified
-configuration, the verifier changed no rate on leakage and caught 4 of 200
-responses on a profiling task, an exploratory difference whose registered
-confirmatory test the budget cut short. It repaired every violation with one
-retry; the check itself takes microseconds. Verdict and prose are outside it;
-a prose scan found no clear increase.
+column or number the analysis never produced can be acted on. We study this in
+\textbf{mlcompass}, an open-source assistant for machine-learning pipelines,
+whose language model narrates structured evidence, such as a leakage
+detector's findings. For each field of the narrator's answer the evidence
+fixes what may appear there; we bind those admissible sets at call time and
+check every answer in host code, sending back what fails with the problem
+named. The mechanism is ordinary validate-and-reask; our contribution is what
+it is up against. Across three models, sixteen leakage tasks on synthetic and
+public data, and a dataset-profiling task, the model that fails almost never
+invents a column. It misfiles: it places something the evidence really
+contains, above all the name of the metric under investigation, in a field
+that does not admit it. A one-sentence field description, the shipped prompt,
+a lower temperature or another provider each remove most of this, and it
+returns wherever the fix is missing. A list of allowed columns written in
+advance turns misfiling into invention once the data changes; one built from
+the evidence at each call does not. In a well-specified configuration the
+verifier rarely had anything to catch, and whether it then adds a measurable
+benefit is a question our registered confirmatory test left open. What it adds
+is a check that holds whatever the configuration, at negligible cost. Verdict
+and free-text prose lie outside it.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -199,7 +197,7 @@ enum, and the toolkit's own choice semantics bound to the evidence match our
 validator on the field they check and miss what they do not check. (iv) It
 provides a replication package~\cite{replication} with every model reply, one
 record per live response, the frozen analysis plan with its amendments and
-deviations, the registered falsifier, and fourteen instrument faults with what
+deviations, the registered falsifier, and fifteen instrument faults with what
 each moved.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1043,8 +1041,9 @@ diverge on the crowded instance. There the list written against the reference
 task covers none of the ten evidence columns, and the model obeys it. It cites
 reference-task columns that do not exist in this frame in 145 of 200
 responses (72.5\,\% [65.9, 78.2]). Every one of these is an invention, a
-failure the undescribed field never produced. In addition, 132 responses omit
-the anchor, which the list does not allow them to name, and 41 abstain. The
+failure the undescribed field never produced. In addition, 139 responses omit
+the anchor, which the list does not allow them to name (132 of the 145, and 7
+that commit while citing nothing), and 41 abstain. The
 same instance reads 27.5\,\% (55/200) with no column enum and 0\,\% (0/200)
 with the enum built at call time. On evidence the list predates, the
 author-time list produces the failure it was supposed to prevent.
@@ -1280,7 +1279,12 @@ such a
 claim is misfiled, a real item placed where it is not admissible, and the
 verifier rejects it. A reader loses nothing from it, whereas a program that
 consumes the claim slot receives a wrongly keyed value. Excluding it is a
-design choice of ours, and a richer binding would admit it.
+design choice of ours. Re-scored with the class shares admitted on the target
+column, the unconstrained arm falls from 26 to 10 violating responses under
+natural names and from 17 to 10 under suffixed ones, and the three
+\texttt{gpt-5.4-mini} violations disappear. What remains is the wrong numbers
+of suffixed names, other real quantities such as the frame's shape attached
+to a column, and one invented name.
 
 \paragraph{How the tiers separate}
 Binding the enum removes misplaced claims almost entirely (26 to 4 under
@@ -1317,12 +1321,20 @@ numbers themselves came from our column naming.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Every number in this paper comes from an instrument we wrote.
-Table~\ref{tab:corrections} lists the fourteen faults we found in those
+Table~\ref{tab:corrections} lists the fifteen faults we found in those
 instruments, how we found each and what it moved; the replication package
 keeps the superseded measurements beside their corrections. Faults 1, 3, 6
 and 7 concern the downstream benchmark (Section~\ref{sec:discussion}). Fault
 14 was caught before its numbers were reported and changed what the free-text
-measurement counts.
+measurement counts. Fault 15 was found by a second scorer, written from the
+definitions and sharing no code with the first, which scored all 16{,}698
+leakage records. The two agree on every entity, misfiled and out-of-evidence
+flag. They disagree on 10 wrong-number flags, each a derived quantity such as
+a correlation gap, which the first scorer rightly files as a pair $E$ does not
+carry, and on 7 responses on the stale-enum arm that commit to a verdict and
+cite nothing: the definition counts them as omitting the anchor, and the first
+scorer did not. Both scorers come from the same definitions, so their
+agreement speaks to the implementation, not to the definitions.
 
 \begin{table}[t]
 \caption{Instrument faults, numbered in the order found.}
@@ -1348,6 +1360,7 @@ measurement counts.
 12 & magnitude aliases scored as signed & review & sweep value flags 2$\rightarrow$1 \\
 13 & correct class-balance claims called invented & re-run & \texttt{P-L1} wrong-number 17$\rightarrow$9 \\
 14 & free-text scorer: prompt names, wrong $E$ for crowded, thousands separators & re-run & prompt arms 91--98$\rightarrow$6--22\,\% \\
+15 & a verdict citing nothing not counted as committing & second scorer & stale-arm omissions 132$\rightarrow$139 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1409,7 +1422,12 @@ would be trivial and the model would be left with the one channel no check
 reaches. Stripping without retry is cheaper, but it would have deleted content
 from 6--16\,\% of \texttt{A-STRESS} responses and 41.5--59\,\% of the
 Guardrails arms' responses, all of which a single named retry repaired
-(Table~\ref{tab:retry}).
+(Table~\ref{tab:retry}). Applied offline to the 2{,}089 violating responses of
+every unverified leakage arm, deletion would keep 87.5\,\% of their cited
+columns and 77.0\,\% of their claims, never lose the anchor, and leave 554
+with no claim. Nearly every claim it removes (3{,}865 of 3{,}888) quotes a
+number $E$ carries, mostly under a statistic name the domain does not admit,
+so deletion costs correct information, and the retry is what avoids that.
 
 \paragraph{A downstream benchmark}
 A pre-registered benchmark of whether the tool's findings improve the training
@@ -1511,7 +1529,7 @@ configuration in which it ran and repaired every violation with one named
 retry; the check itself takes microseconds. Added to a well-specified configuration it changed no
 rate on leakage and caught 4 of 200 responses on profiling, an exploratory
 difference whose registered confirmatory test the budget cut short. We report
-fourteen faults in our own instruments and two in the verifier, with what each
+fifteen faults in our own instruments and two in the verifier, with what each
 moved. The check does not yet reach a client model that narrates the same
 evidence across the tool-server boundary.
 
