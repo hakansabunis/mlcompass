@@ -1,5 +1,12 @@
 # Building the PDF
 
+This is the submission (EMSE, Springer `sn-jnl`), since 2026-10-01. `main.tex` is
+generated: edit `../tse_latex/main.tex` and run `python paper/port_to_emse.py`,
+which ports the body and adds what only this version carries (the
+per-instance table from `scripts/table_fabbench12.py`). The figure and table
+files left over from the long form of 2026-09-19 (`fig2_arms.pdf`,
+`fig3_sweep.png`, `fig4_defects.pdf`) are not used.
+
 No LaTeX installation required. [Tectonic](https://tectonic-typesetting.github.io)
 is a single binary that downloads the packages it needs on first run.
 
