@@ -31,9 +31,14 @@ from matplotlib.patches import FancyArrowPatch, FancyBboxPatch, Rectangle
 
 ROOT = Path(__file__).parent
 OUT = [
-    ROOT / "emse_latex" / "fig1_contract.png",
+
     ROOT / "tse_latex" / "fig1_contract.png",
+    # EMSE asks for vector line art named Fig<n>, lettered in Helvetica or Arial.
+    ROOT / "emse_latex" / "Fig1.pdf",
 ]
+plt.rcParams["font.family"] = "sans-serif"
+plt.rcParams["font.sans-serif"] = ["Arial", "Helvetica", "DejaVu Sans"]
+plt.rcParams["pdf.fonttype"] = 42  # embed TrueType fonts in the PDF
 
 fig, ax = plt.subplots(figsize=(6.6, 6.2))
 ax.set_xlim(0, 1)

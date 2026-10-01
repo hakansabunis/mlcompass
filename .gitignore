@@ -143,3 +143,9 @@ paper/tse_latex/*.blg
 paper/tse_latex/*.aux
 paper/tse_latex/*.bbl
 paper/tse_latex/*.out
+
+# EMSE upload set: build outputs are not part of it
+paper/emse_submission/*.log
+paper/emse_submission/*.blg
+paper/emse_submission/*.bbl
+paper/emse_submission/*.aux
