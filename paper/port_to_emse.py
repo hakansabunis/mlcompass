@@ -300,7 +300,23 @@ out = (
     + backmatter
 )
 (EMSE / "main.tex").write_text(out, encoding="utf-8")
-shutil.copyfile(TSE / "references.bib", EMSE / "references.bib")
+
+
+def drop_duplicate_eprints(bib: str) -> str:
+    """spbasic prints an eprint field as a bare identifier after the entry's own
+    "arXiv:NNNN" text, so the number appeared twice. Drop eprint fields from
+    entries that already name their arXiv identifier."""
+    out = []
+    for entry in re.split(r"(?=\n@)", bib):
+        if "arXiv:" in entry:
+            entry = re.sub(r"\n\s*(eprint|archivePrefix|primaryClass)\s*=\s*\{[^}]*\},?", "", entry)
+        out.append(entry)
+    return "".join(out)
+
+
+(EMSE / "references.bib").write_text(
+    drop_duplicate_eprints((TSE / "references.bib").read_text(encoding="utf-8")), encoding="utf-8"
+)
 
 # The upload set: one flat folder, as Editorial Manager wants it.
 SUB = PAPER / "emse_submission"

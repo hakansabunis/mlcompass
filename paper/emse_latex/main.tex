@@ -65,8 +65,8 @@ findings. For each field of the narrator's answer the evidence
 fixes what may appear there; we bind those admissible sets at call time and
 check every answer in host code, returning failures with the problem named. The mechanism is ordinary validate-and-reask; our contribution is what
 it is up against. Across three models, sixteen leakage tasks on synthetic and
-public data, and a dataset-profiling task, the one model that misfiles under
-the bare instruction almost never invents a column. It misfiles: it places something the evidence really
+public data, and a dataset-profiling task, the one model that errs under the
+bare instruction almost never invents a column. It misfiles: it places something the evidence really
 contains, above all the name of the metric under investigation, in a field
 that does not admit it. A one-sentence field description, the shipped prompt,
 a lower temperature or another provider each remove most of this, and it
@@ -116,7 +116,7 @@ it can put something the evidence really contains where it is not admissible,
 such as the metric's name \texttt{r2} in the list of cited columns, or one
 column's measurement on another (an \emph{intrinsic} error, which we call
 \emph{misfiling}). On the model that
-fails in this study, 1{,}807 of the 1{,}829 flagged responses under the bare
+misfiles in this study, 1{,}807 of the 1{,}829 flagged responses under the bare
 instruction, on sixteen task instances, are misfilings, in a field whose
 admissible set nobody stated. One sentence of field description or the prompt
 mlcompass ships largely removes them, temperature 0 nearly does, and two
@@ -393,9 +393,10 @@ if the problem persists, aborted instead of completed on the narrator's
 behalf. Hence \emph{no structured claim that Tier~B returns violates (C1) or
 (C2)}; this follows from the deletion step (Observation~\ref{prop:asym}).
 Whether our Python implementation realises the algorithm is a separate,
-empirical question. Thirty-six mutation tests and a property-based search over
-$10^6$ generated (evidence, response) pairs, registered in the analysis plan
-before the study, support it without proving it, and the search found two
+empirical question. A property-based search over $10^6$ generated (evidence,
+response) pairs, registered in the analysis plan before the study but built
+after it, and thirty-six hand-written mutation tests support it without
+proving it, and the search found two
 defects in an earlier version (Section~\ref{sec:instruments}). The search draws
 evidence of 1 to 12 columns and 1 to 5 statistics, and responses whose names
 are admissible, from another field or random, and whose values sit inside or
@@ -638,7 +639,7 @@ H9 & Strict call-time enum ties the contract on entity & Held (2026-09-24); the 
 H10 & Strict enum fails on an activated non-entity channel & Void with X2 & not tested \\
 H11 & Our checks inside Guardrails match the contract on every channel & Held & as planned \\
 H12 & Wording effects differ between providers & Not run: the sweep ran on one provider & not tested \\
-H13 & Every contract arm reads 0 on every provider & Held & deviated \\
+H13 & Every contract arm reads 0 on every provider & Held, on the panel that ran & deviated \\
 H14 & The value channel activates under designed pressure & Not on leakage; the profile task activated it outside the registered design & not tested \\
 H15 & The omission channel activates under low anchor salience & Not run & not tested \\
 H16 & The post-strip anchor-coverage re-check fires on live data & Not exercised: nothing was stripped & not tested \\
@@ -925,8 +926,9 @@ fabricated column.
 
 \paragraph{Composition of the failures}
 We looked at every arm that runs the bare instruction with no column domain,
-in every run: sixteen cells of 200 on four task instances, with 1{,}012
-flagged responses. Each of those
+in every run: sixteen cells of 200 on four task instances (\texttt{A-L1} in
+seven, \texttt{A-GR-STOCK} and \texttt{A-STRICT-STATIC} in four each,
+\texttt{A-L1-T0} in one), with 1{,}012 flagged responses. Each of those
 responses places a real evidence name where it is not admissible. The name is
 \texttt{r2}, which $E$ carries as the name of the suspicious metric, written
 into the list of cited columns; three times it is \texttt{perfect\_match\_rate},
@@ -1158,8 +1160,11 @@ differ only in whether the payload is verified. On 2026-09-30 both read 0/200
 on the reference, the crowded instance and the two real datasets; on the
 twelve frozen instances the budget left 50 unverified responses, none with a
 violation, and no verified ones (A4). The verifier never had to send a response back, and median
-latencies were within 0.1\,s of each other (2.4--2.7\,s). In a configuration
-this well specified we observed no gain in rate on leakage. The profile task
+latencies were within 0.1\,s of each other (2.4--2.7\,s). In a configuration this well specified we observed
+no gain in rate on leakage; pooled over the four instances (800 responses per
+arm, an exploratory pooling), the difference is 0 with a Newcombe interval of
+$-0.5$ to 0.5 points, so a benefit larger than half a point on these instances
+is unlikely, though no margin was registered. The profile task
 of RQ5 gave the one difference we observed. Under natural column names the
 unverified strong arm delivered a violation in 4 of 200 responses
 (2.0\,\% [0.8, 5.0]): one cites \texttt{reference\_count} beside the real
@@ -1238,7 +1243,7 @@ from 7\,$\mu$s for responses with fewer than five cited names and
 claims to 18\,$\mu$s for twenty or more, over the 19{,}132 recorded
 responses on one AMD Zen~3 machine under Python~3.13, timed with
 \texttt{perf\_counter\_ns} and the median of five repetitions per response
-(\texttt{scripts/time\_verifier.py}); binding $E$ takes 15\,$\mu$s per call; and \texttt{A-TIER-A-ONLY}, which sends the same enum schema
+(\texttt{scripts/time\_verifier.py}); binding $E$ takes 15\,$\mu$s per call. \texttt{A-TIER-A-ONLY}, which sends the same enum schema
 without verifying, took 3.5\,s on another date. The difference is therefore
 not the check; the larger schema is the likely cause, although runs on
 different dates cannot separate it from provider variation. Arms whose responses need retries cost more on
@@ -1367,8 +1372,8 @@ mechanical & the field, not its content     & 72.0\,\% & [62.5, 79.9] & 1 & 71 &
 Table~\ref{tab:sweep} gives the six variants. Six rule-free variants of the bare instruction, over identical evidence and
 schema, move the blended entity rate from 9.0\,\% to 72.0\,\%. It is already
 established that wording moves behaviour this much \citep{sclar2024formatspread}.
-The variants also differ in how much of the answer they specify, and that
-ordering predicts the unverifiable channel exactly. It reads 0 and 1 per
+The variants also differ in how much of the answer they specify, and the unverifiable channel follows that ordering
+across the six. It reads 0 and 1 per
 hundred where the instruction names the statistic, 8 and 10 where it mentions
 correlations, 26 where it names the field without saying what goes in it, and
 45 where it says nothing. On the entity channel, the baseline instruction's
@@ -1394,8 +1399,8 @@ enum alone, with no verification, left no violation in 200
 most often without enforcement produced no violation on any first attempt.
 
 \paragraph{Answer to RQ4}
-The wording, and how much it specifies, moves the rate from 9 to 72\,\%, and how much of the answer an
-instruction specifies predicts the unverifiable channel. The effect of a
+The wording, and how much it specifies, moves the rate from 9 to 72\,\%, and the unverifiable channel follows how much of the answer an
+instruction specifies. The effect of a
 wording is known only for the configuration it was measured in.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1467,9 +1472,8 @@ reports it at task level, the narrator attaches it to the target column as
 the correct figure has no admissible slot. Counting these as an invented
 quantity kind, on the belief that the profiler computes no class balance, was
 fault 13 in Table~\ref{tab:corrections}. Under Definition~\ref{def:contract}
-such a
-claim is misfiled, a real item placed where it is not admissible, and the
-verifier rejects it. A reader loses nothing from it, whereas a program that
+such a claim is a pair $E$ does not carry, a correct quantity under a key the
+contract does not admit, and the verifier rejects it. A reader loses nothing from it, whereas a program that
 consumes the claim slot receives a wrongly keyed value. Excluding it is a
 design choice of ours. Re-scored with the class shares admitted on the target
 column, the unconstrained arm falls from 26 to 10 violating responses under
