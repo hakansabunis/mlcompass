@@ -31,7 +31,6 @@ from matplotlib.patches import FancyArrowPatch, FancyBboxPatch, Rectangle
 
 ROOT = Path(__file__).parent
 OUT = [
-
     ROOT / "tse_latex" / "fig1_contract.png",
     # EMSE asks for vector line art named Fig<n>, lettered in Helvetica or Arial.
     ROOT / "emse_latex" / "Fig1.pdf",
