@@ -73,13 +73,13 @@ responses \emph{misfile} a real evidence name into a field that excludes it;
 description takes the rate from 49\,\% to 0.5\,\%, and temperature 0 to
 2\,\%. The shipped prompt gives 0\,\% with or without its claim that
 violations are rejected; its first three rules alone leave 7\,\%. An enum
-fixed at authoring time turns misfiling into invention (72.5\,\%) on data it
-predates; one built at call time reads zero. Added to a well-specified
+written for other data turns misfiling into invention; one built at call time
+does not. Added to a well-specified
 configuration, the verifier changed no rate on leakage and caught 4 of 200
 responses on a profiling task, an exploratory difference whose registered
 confirmatory test the budget cut short. It repaired every violation with one
-retry, in microseconds. Verdict and prose are outside it; a scan of
-the prose found no increase.
+retry; the check itself takes microseconds. Verdict and prose are outside it;
+a prose scan found no clear increase.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -403,7 +403,9 @@ before the study, support it without proving it, and the search found two
 defects in an earlier version (Section~\ref{sec:instruments}). Because the
 guarantee does not come from sampling, we report an enforced arm's clean result
 as what the verifier did and attach no interval to it. (C3) cannot be enforced
-in the same way; when $E$ has no candidate there is no anchor, and (C3) holds
+in the same way, so it is reported and not guaranteed: a committed response
+that still omits the anchor after the retries reaches the user with the
+omission flagged. When $E$ has no candidate there is no anchor, and (C3) holds
 vacuously.
 
 \begin{observation}[Repair asymmetry]\label{prop:asym}
@@ -426,11 +428,9 @@ Tier~B therefore strips unsound content and only \emph{flags} a persistent
 omission, which in edit-automaton terms is suppression without
 insertion~\cite{ligatti2005edit}. In the security setting insertion is simply
 a stronger primitive; over a narrator, an inserted reference would fabricate
-attribution. The check runs in linear time. Hashing each $A_{E,f}$ and $V_E$
-once turns every entity, claim and anchor test into one lookup, so a response
-costs $O(|r|)$ after $O(\sum_f|A_{E,f}|+|V_E|)$ preprocessing. This matters for
-feasibility only. The step that needed care was keying $V_E$ on the pair,
-which our own scorer once failed to do (Section~\ref{sec:instruments}).
+attribution. With each $A_{E,f}$ and $V_E$ hashed once, a response costs
+$O(|r|)$. The step that needed care was keying $V_E$ on the pair, which our
+own scorer once failed to do (Section~\ref{sec:instruments}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{The Artifact}\label{sec:contract}
@@ -544,9 +544,8 @@ and marked unverified; Section~\ref{sec:threats} measures what they carry.
 The second is the correctness of $E$. If the leakage detector mis-ranks a
 candidate, the contract faithfully narrates a wrong finding. The producer is
 trusted and not verified, and (C3) names one anchor rather than every finding.
-Where two candidates are nearly tied, a response that addresses the second
-would be flagged; a variant of (C3) that accepts any of several candidates is
-untested, since no instance we ran has a tie at the top.
+A response that addresses the second of two nearly tied candidates would be
+flagged; no instance we ran has such a tie.
 
 The third is the other narration surfaces. The product prints two other
 narrations of the same evidence that no contract governs: an optional LLM
@@ -722,9 +721,8 @@ fixed in the analysis plan; the local \texttt{qwen2.5:7b} arms have $N=20$ and
 the RQ4 variants $N=100$. One arm's responses on one task instance and date
 form a \emph{cell}, and the arms run together on one date a \emph{battery}.
 A count of 0 in 200 bounds
-the rate below 1.9\,\% (Wilson, 95\,\%). Against an arm at zero, a true rate of
-4\,\% is detected with power 0.8; near the 42\,\% floor only differences of
-about 13 points are (Section~\ref{sec:threats}). The
+the rate below 1.9\,\% (Wilson, 95\,\%); power is in
+Section~\ref{sec:threats}. The
 provider serves a rolling model name, so the same arm can read differently on
 different days. Every rate therefore carries its run date, and arms are
 compared within a date.
@@ -765,7 +763,7 @@ $0.05$ (\texttt{scripts/tau\_sensitivity.py}). The narrators copy numbers,
 so the choice matters little here. An absolute $\tau$ suits bounded quantities
 such as correlations; unbounded ones call for a relative tolerance and counts
 for an exact match, and each specification can set its own. Both of ours use
-0.005, which on an integer count already demands an exact match.
+0.005, which on an integer count rejects every other integer.
 
 \texttt{deepseek-chat} is the model on which the failure occurs;
 \texttt{gpt-5.4-mini} and a local \texttt{qwen2.5:7b} are the null providers
@@ -799,7 +797,7 @@ X3b & Contract against the author-time list (exploratory) & Equal on the referen
 X4 & Our checks inside the Guardrails loop tie the contract & 0.0\,pp [$-1.9$, 1.9], $p=1$ \\
 X5 & Contract against NeMo Guardrails & Not run: the adapter was not built \\
 H7 & Stock Guardrails loop within 2\,pp of the floor & Not met: 35.0 against 42.0\,\%, but not the 10\,pp drop that rejects it \\
-H8 & Typed schema without column list within 2\,pp of the floor & Neither held nor rejected: 4.0\,\% is far below 42.0\,\%, rejection needs 0/200 \\
+H8 & Typed schema without column list within 2\,pp of the floor & Neither held nor rejected: the registered rule rejects only at 0/200, so it cannot register the large drop observed (4.0 against 42.0\,\%) \\
 H9 & Strict call-time enum ties the contract on entity & Held (2026-09-24); the run without the flag is \texttt{A-TIER-A-ONLY} \\
 H10 & Strict enum fails on an activated non-entity channel & Void with X2 \\
 H11 & Our checks inside Guardrails match the contract on every channel & Held \\
@@ -812,7 +810,7 @@ H16 & The post-strip anchor-coverage re-check fires on live data & Not exercised
 Falsifier & Property-based falsifier with automated mutants & Built after the runs ($10^6$ cases); 36 hand-written mutation tests instead of generated mutants \\
 Strict prompt & Replicate of the arms under the shipped prompt & Run for \texttt{A-L2} and \texttt{A-L3-SHIPPED} only, plus the unregistered \texttt{A-L2-RULES} and \texttt{A-L2-NOCLAIMS} \\
 Panel & \texttt{deepseek-v4-flash}, \texttt{gpt-5.4-mini}, \texttt{Qwen2.5-3B} (vLLM) & \texttt{deepseek-chat}, \texttt{gpt-5.4-mini}, \texttt{qwen2.5:7b} (Ollama), without an amendment \\
-Pooling & No pooled rates for floor, baseline or sweep arms & None reported \\
+Pooling & No pooled rates for floor, baseline or sweep arms & None, except the share of invented names over the twelve A3 instances, which A3 registered pooled \\
 Pilot & Report the June floor rates & 15.0 and 11.5\,\% (rolling alias, records not kept; fault 5) \\
 \midrule
 A3 R2a & On 12 instances frozen in July, misfiling dominates and invented names stay under 5\,\% of flagged responses & Held: 12 of 817 (1.5\,\%), on 1{,}888 valid floor responses \\
@@ -853,16 +851,19 @@ responses, every one \texttt{r2}, and the shipped prompt and the contract read
 
 \paragraph{Twelve further instances}
 On the twelve instances frozen in July the floor arm misfiles in 26.5 to
-55.5\,\% of responses per instance, 817 of 1{,}888 pooled (43.3\,\% [41.1,
-45.5]); 512 calls lost when the provider balance ran out are excluded
-(amendment A4). Of the 817, 795 misfile \texttt{r2} or
+55.5\,\% of responses per instance, 817 of 1{,}888 responses in all; 512
+calls lost when the provider balance ran out (23 to 64 per instance, all
+errors 402 or 429) are excluded (amendment A4). Of the 817, 795 misfile \texttt{r2} or
 \texttt{perfect\_match\_rate}. Forty-five cite the frame's own target column,
 which $E$ does not list, 18 of them with no other violation. Twelve cite a
 name in neither $E$ nor the frame: ten write \texttt{target} for the target
 column, and two respell a real one (\texttt{charged\_est},
 \texttt{total\_charges}). The registered prediction that such names stay
-under 5\,\% of flagged responses holds (1.5\,\%). The composition found on
-four instances thus holds on twelve that played no part in the design.
+under 5\,\% of flagged responses holds (1.5\,\%). The 817 are thus 795 that
+misfile, 18 that cite only the target column and 4 that cite only an invented
+name; with the 1{,}012 of the first four instances, all of which misfile,
+1{,}807 of 1{,}829 flagged responses misfile. The composition found on four
+instances holds on twelve that played no part in the design.
 
 \paragraph{Cause: an undescribed field}
 The bare instruction says ``list every column from the evidence you cite'',
@@ -1023,8 +1024,10 @@ of RQ5 gave the one difference we observed. Under natural column names the
 unverified strong arm delivered a violation in 4 of 200 responses
 (2.0\,\% [0.8, 5.0]): one cites \texttt{reference\_count} beside the real
 \texttt{referral\_count}, two attach real numbers to invented
-\texttt{*\_placeholder} columns, and one to a statistic $E$ lacks. The verified arm delivered
-none and sent those four back. Against 0/200 this is not significant (Fisher
+\texttt{*\_placeholder} columns, and one to a statistic $E$ lacks. The verified arm, an independent
+sample, delivered none; it sent back four of its own responses, three citing
+columns the frame lacks and one without an admissible verdict, and one retry
+repaired each. Against 0/200 this is not significant (Fisher
 $p=0.12$) and was found in an exploratory run. The confirmatory test we then
 registered, 600 responses per arm (amendment A3), stopped when the provider
 balance ran out after 93 and 91, none with a violation, and we run no test on
@@ -1200,7 +1203,7 @@ enum alone, with no verification, left no violation in 200
 most often without enforcement produced no violation on any first attempt.
 
 \paragraph{Answer to RQ4}
-Wording alone moves the rate from 9 to 72\,\%, and how much of the answer an
+The wording, and how much it specifies, moves the rate from 9 to 72\,\%, and how much of the answer an
 instruction specifies predicts the unverifiable channel. The effect of a
 wording is known only for the configuration it was measured in.
 
@@ -1304,7 +1307,8 @@ survived distinct names reflects our binding choices as much as model error.
 
 \paragraph{Answer to RQ5}
 The contract binds to a second evidence shape without task-specific code.
-There Tier~B catches wrong numbers that no enum can express, and the wrong
+There Tier~B catches wrong numbers that the per-field enums we use cannot
+express, and the wrong
 numbers themselves came from our column naming.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1392,16 +1396,13 @@ measuring each combination. A fix's effect is known only where it was
 measured; the verifier's follows from code that runs in our process.
 
 \paragraph{Binding at call time}
-The crowded instance shows what binding at call time buys. An enum declared
-while authoring against one dataset turned a 61\,\% misfiling rate into a
-72.5\,\% invention rate on the next dataset and blocked the anchor in two
-responses out of three. An enum built from $E$ at call time read zero on the
-same instance. A stale
-schema actively introduces errors, and nothing in a static schema tells its
-author that the data has changed.
+An enum written for the reference task turned 61\,\% misfiling into
+72.5\,\% invention on the crowded instance, none of whose columns it lists;
+the call-time enum read zero. That control is extreme, and partly stale
+lists, the realistic case, are untested.
 
 \paragraph{Simpler designs}
-Two alternatives are worth naming. If every structured fact were rendered
+If every structured fact were rendered
 deterministically and the model wrote only prose, the structured guarantee
 would be trivial and the model would be left with the one channel no check
 reaches. Stripping without retry is cheaper, but it would have deleted content
@@ -1460,7 +1461,8 @@ shortened names; mlcompass does not ship it. The value channel was stressed less
 entity channel: the registered value-pressure instance (H14) did not activate
 it, and (C2) caught real errors only on the profile task.
 
-\paragraph{Internal} We compare arms within one date. The provider serves a
+\paragraph{Internal} We compare arms within one date. Arms ran in
+blocks, not interleaved, so drift within a day is not controlled. The provider serves a
 rolling model name, and the unconstrained rates move between runs:
 \texttt{A-GR-STOCK} read 35.0, 43.5 and 47.5\,\% over nine days
 (heterogeneity $p=0.035$), and \texttt{A-STRESS} repaired 12, 23, 32 and 19
@@ -1480,9 +1482,8 @@ completed. The profile frame is synthetic data under two naming schemes. We
 registered a measurement of the shipped default narrator,
 \texttt{claude-opus-4-7}, and did not run it for lack of budget. We did measure schema
 cost: from 10 to 1{,}000 columns the enum costs 38 bytes per column, against
-344 for the evidence that produced it. We did not measure provider limits on
-enum size, and because the corrective retry inlines the whole list, its cost
-grows with the width of the domain.
+344 for the evidence that produced it. Provider limits on enum size are
+unmeasured, and the retry, which inlines the list, grows with the domain.
 
 \paragraph{Conclusion validity} At $N=200$ a comparison against a zero arm
 reaches $p<0.05$ at six events and detects a true rate of 4\,\% with power 0.8
@@ -1506,7 +1507,7 @@ field's admissible set to the evidence and checking the returned payload in
 host code, which is ordinary validate-and-reask, enforces referential and
 value soundness behind an API that exposes no logits. The check held in every
 configuration in which it ran and repaired every violation with one named
-retry, in microseconds. Added to a well-specified configuration it changed no
+retry; the check itself takes microseconds. Added to a well-specified configuration it changed no
 rate on leakage and caught 4 of 200 responses on profiling, an exploratory
 difference whose registered confirmatory test the budget cut short. We report
 fourteen faults in our own instruments and two in the verifier, with what each
@@ -1526,11 +1527,9 @@ live response with the verbatim model reply, the scripts that recompute every
 table from those records, the registered property-based falsifier, the
 superseded measurements beside their corrections, an inventory of every run
 file from which each count in this paper is recomputed, and the downstream
-benchmark
-this paper does not report. Code is MIT; data is CC-BY 4.0. Most of the
-harness and analysis code was drafted with an AI assistant and then
-inspected and tested by the authors (see Acknowledgments); every table can be
-regenerated from the run records with the scripts in the package.
+benchmark. Code is MIT; data is CC-BY 4.0. Most of the harness and analysis
+code was drafted with an AI assistant and then inspected and tested by the
+authors.
 
 
 \balance

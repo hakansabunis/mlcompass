@@ -8,8 +8,10 @@ is that generator, and it adds the three annotations a reviewer asked for:
     starts below it, not above it;
   * unverified prose still reaches the user, so the guarantee covers the
     channels and not the screen;
-  * the scope band under the flow: response <-> E is guaranteed,
-    E <-> the world is not.
+  * the scope band under the flow: the cited columns and claims are
+    guaranteed against E (C1, C2); the verdict, the prose, the anchor (C3,
+    flagged only) and E against the world are not. An earlier label said
+    "response <-> E", which a reviewer rightly found too broad.
 
 Those three are the fastest way for a reader to see where the claim stops,
 and every one of them was already in the prose.
@@ -141,10 +143,10 @@ ax.add_patch(
               linewidth=1.15, edgecolor="black", facecolor="#ececec", zorder=3)
 )
 ax.text(CX + 0.14, BY - 0.021,
-        "GUARANTEED:   response  $\\leftrightarrow$  $E$",
+        "GUARANTEED:   cited columns and claims  $\\leftrightarrow$  $E$   (C1, C2)",
         ha="center", va="center", fontsize=9.4, fontweight="bold", zorder=4)
 ax.text(CX + 0.14, BY - 0.051,
-        "NOT GUARANTEED:   $E$  $\\leftrightarrow$  ground truth",
+        "NOT GUARANTEED:   verdict, prose, anchor (C3, flagged);   $E$  $\\leftrightarrow$  world",
         ha="center", va="center", fontsize=9.4, fontweight="bold", zorder=4)
 
 fig.subplots_adjust(left=0.004, right=0.996, top=0.996, bottom=0.004)
