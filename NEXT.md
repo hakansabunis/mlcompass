@@ -7,10 +7,14 @@ undefined references, abstract 247 words.
 
 ## Next
 
-1. **Title** — changed 2026-09-25 to "An Evidence-Bound Runtime Contract
-   for LLM Narration of Machine-Learning Pipeline Evidence" (TSE and
-   CITATION.cff). The old slogan read as contradicted by A-L2 = 0/200.
-   The EMSE manuscript and README still carry the old title.
+1. **Title** — changed 2026-10-01 to "Misfiling, Not Invention: How an LLM
+   Narrator of Machine-Learning Pipeline Evidence Fails, and What an
+   Evidence-Bound Contract Checks" in the TSE and EMSE manuscripts, README
+   and CITATION.cff, after the V2.1 review read the paper as an empirical
+   diagnosis rather than a mechanism. Earlier titles: "An Evidence-Bound
+   Runtime Contract for LLM Narration of Machine-Learning Pipeline Evidence"
+   (2026-09-25) and "Prompts Are Advisory, Verification Is Enforcement",
+   dropped because A-L2 = 0/200 contradicted it.
 2. **Re-review** — run the ARS reviewer in `re-review` mode against
    `editorial_decision.md` to check every P0/P1 item and the 47 factual items.
 3. **Response letter** — `templates/revision_response_template.md`; answer DA
