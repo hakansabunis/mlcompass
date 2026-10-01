@@ -1,7 +1,7 @@
 """Three offline analyses the 2026-10-01 review asked for. No API calls.
 
   1. Second scorer. Every leakage record is scored by the paper's scorer
-     (`score_one`) and by `independent_scorer.py`, which shares no code with
+     (`score_one`) and by `definitions_scorer.py`, which shares no code with
      it, and the two are compared channel by channel.
   2. What deletion would cost. Tier B strips what is still unsound after its
      retries, and no live response was ever stripped. Here every response from
@@ -28,7 +28,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 sys.path.insert(0, str(ROOT / "src"))
 
-import independent_scorer as ind  # noqa: E402
+import definitions_scorer as ind  # noqa: E402
 import reproduce_hallucination_ablation as h  # noqa: E402
 from analyze_revision_runs import _evidence, _names, _numbers, _records  # noqa: E402
 

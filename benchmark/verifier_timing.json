@@ -1,0 +1,10 @@
+{
+ "responses": 19132,
+ "repeats": 5,
+ "median_us": 16.2,
+ "p95_us": 40.0,
+ "max_us": 119.4,
+ "bind_median_us": 14.0,
+ "python": "3.13.3",
+ "machine": "Windows 11, AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD"
+}

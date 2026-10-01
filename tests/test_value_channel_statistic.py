@@ -114,7 +114,7 @@ def test_a_statistic_the_evidence_does_not_carry_is_unverifiable_not_wrong() -> 
 
 @pytest.mark.parametrize(
     "alias",
-    ["correlation", "abs_corr", "Pearson Correlation With Target", "spearman-correlation"],
+    ["correlation", "abs_corr", "Spearman Correlation With Target", "spearman-correlation"],
 )
 def test_correlation_aliases_resolve_to_the_measured_correlation(alias: str) -> None:
     """The narrator picks the wording; the evidence stores one number.
@@ -127,6 +127,20 @@ def test_correlation_aliases_resolve_to_the_measured_correlation(alias: str) -> 
         _score([{"column": "log_target_v2", "statistic": alias, "value": 0.999}])["value"] is False
     )
     assert _score([{"column": "log_target_v2", "statistic": alias, "value": 0.10}])["value"] is True
+
+
+def test_the_other_methods_name_is_a_pair_the_evidence_does_not_carry() -> None:
+    """E keeps whichever of Pearson and Spearman is larger in magnitude.
+
+    For log_target_v2 that is Spearman (0.999); its Pearson is about 0.93 and E
+    does not carry it. A claim "pearson = 0.999" copies E's number under the
+    wrong method's name, and must not pass as correct (EMSE review 2026-10-01).
+    """
+    flags = _score([{"column": "log_target_v2", "statistic": "pearson", "value": 0.999}])
+    assert flags["value"] is False
+    assert flags["value_unverifiable"] is True
+    same = _score([{"column": "feature_12", "statistic": "pearson_correlation", "value": -0.0405}])
+    assert same["value"] is False and same["value_unverifiable"] is False
 
 
 def test_the_sign_of_a_correlation_is_part_of_the_value() -> None:

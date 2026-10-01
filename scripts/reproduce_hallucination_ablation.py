@@ -2092,7 +2092,16 @@ def evidence_value_table(evidence: dict[str, Any]) -> dict[tuple[str, str], floa
         value = entry.get("correlation")
         if feature is None or not isinstance(value, (int, float)):
             continue
+        # A name that commits to a method resolves only when it is the method
+        # the evidence used. E keeps whichever of Pearson and Spearman has the
+        # larger magnitude; a claim calling that number by the other method's
+        # name mislabels it, and the pair is one E does not carry (EMSE review
+        # 2026-10-01). No recorded claim did this, so no count moved.
+        method = str(entry.get("method") or "").lower()
         for alias in _CORRELATION_ALIASES:
+            named = "pearson" if "pearson" in alias else "spearman" if "spearman" in alias else None
+            if named is not None and method and named != method:
+                continue
             v = abs(float(value)) if alias in _ABSOLUTE_ALIASES else float(value)
             table[(str(feature), alias)] = v
 

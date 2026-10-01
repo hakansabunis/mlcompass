@@ -62,7 +62,9 @@ def once(text: str, old: str, new: str) -> str:
     return text.replace(old, new)
 
 
-body = once(body, r"\begin{tabular}{@{}lp{6.1cm}p{9.5cm}@{}}", r"\begin{tabular}{@{}lp{4.3cm}p{6.8cm}@{}}")
+body = once(body, r"\begin{tabular}{@{}lp{5.4cm}p{8.9cm}l@{}}",
+            r"\begin{tabular}{@{}l>{\raggedright\arraybackslash}p{3.2cm}"
+            r">{\raggedright\arraybackslash}p{5.0cm}l@{}}")
 a = body.index(r"\label{tab:sweep}")
 t0 = body.index(r"\begin{tabular}", a)
 t1 = body.index(r"\end{tabular}", t0) + len(r"\end{tabular}")
@@ -175,6 +177,7 @@ preamble = r"""%% Empirical Software Engineering (Springer) submission, SVJour3.
 \usepackage{graphicx}
 \usepackage{amsmath,amssymb}
 \usepackage{booktabs}
+\usepackage{array}
 \usepackage{xcolor}
 \usepackage{textcomp}
 \usepackage{algorithm}
