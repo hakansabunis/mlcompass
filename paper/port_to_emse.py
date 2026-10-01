@@ -86,6 +86,34 @@ body = body.replace(r"\begin{table*}[t]", r"\begin{table*}[!tbp]")
 body = body.replace(r"\begin{table}[t]", r"\begin{table}[!htbp]")
 body = body.replace(r"\begin{figure}[t]", r"\begin{figure}[!htbp]")
 
+# The registered-items table is taller than a page in the one-column format and
+# ran off its page (EMSE review 2026-10-01): it becomes a longtable that breaks
+# across pages, with its header repeated.
+lab = body.index(r"\label{tab:registered}")
+t0 = body.rindex(r"\begin{table*}", 0, lab)
+t1 = body.index(r"\end{table*}", lab) + len(r"\end{table*}")
+block = body[t0:t1]
+cap0 = block.index(r"\caption{")
+k, depth = cap0 + len(r"\caption{"), 1
+while depth:
+    depth += {"{": 1, "}": -1}.get(block[k], 0)
+    k += 1
+caption = block[cap0:k]
+spec_at = block.index(r"\begin{tabular}")
+spec = block[spec_at + len(r"\begin{tabular}"):block.index("\n", spec_at)]
+rows_at = block.index(r"\midrule", spec_at) + len(r"\midrule")
+header = block[block.index(r"\toprule", spec_at) + len(r"\toprule"):block.index(r"\midrule", spec_at)].strip()
+rows = block[rows_at:block.index(r"\bottomrule", rows_at)].strip()
+long_table = (
+    "{\\footnotesize\\setlength{\\tabcolsep}{2.4pt}\n"
+    f"\\begin{{longtable}}{spec}\n{caption}\\label{{tab:registered}}\\\\\n"
+    f"\\toprule\n{header}\n\\midrule\n\\endfirsthead\n"
+    f"\\multicolumn{{4}}{{@{{}}l}}{{\\emph{{Table~\\ref{{tab:registered}}, continued}}}}\\\\\n"
+    f"\\toprule\n{header}\n\\midrule\n\\endhead\n\\bottomrule\n\\endlastfoot\n"
+    f"{rows}\n\\end{{longtable}}}}"
+)
+body = body[:t0] + long_table + body[t1:]
+
 # --------------------------------------------------------------------------- #
 # EMSE submission guidelines (read 2026-10-01).                               #
 # --------------------------------------------------------------------------- #
@@ -178,6 +206,7 @@ preamble = r"""%% Empirical Software Engineering (Springer) submission, SVJour3.
 \usepackage{amsmath,amssymb}
 \usepackage{booktabs}
 \usepackage{array}
+\usepackage{longtable}
 \usepackage{xcolor}
 \usepackage{textcomp}
 \usepackage{algorithm}

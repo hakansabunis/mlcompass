@@ -41,6 +41,7 @@ def main() -> int:
     args = ap.parse_args()
     per_response: list[float] = []
     bind_times: list[float] = []
+    by_size: dict[int, list[float]] = {}
     for f, rel, ev in u.run_files():
         spec = PROFILE if rel[0] == "profile" else LEAKAGE
         t0 = time.perf_counter_ns()
@@ -57,7 +58,13 @@ def main() -> int:
                 strip_unsound(payload, bound, spec)
                 samples.append((time.perf_counter_ns() - t) / 1e3)
             per_response.append(statistics.median(samples))
+            size = len(payload["columns_referenced"]) + len(payload["claims"])
+            by_size.setdefault(min(size // 5, 4), []).append(per_response[-1])
     per_response.sort()
+    # The five repetitions only steady each response's timing; they are not
+    # five uses. The distribution is over the 19,132 responses.
+    sizes = {f"{5 * k}-{5 * k + 4}" if k < 4 else "20+": round(statistics.median(v), 1)
+             for k, v in sorted(by_size.items())}
     out = {
         "responses": len(per_response),
         "repeats": REPEATS,
@@ -65,6 +72,7 @@ def main() -> int:
         "p95_us": round(per_response[int(0.95 * len(per_response))], 1),
         "max_us": round(per_response[-1], 1),
         "bind_median_us": round(statistics.median(bind_times), 1),
+        "median_us_by_cited_plus_claims": sizes,
         "python": platform.python_version(),
         "machine": f"{platform.system()} {platform.release()}, {platform.processor() or platform.machine()}",
     }

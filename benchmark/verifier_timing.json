@@ -1,10 +1,17 @@
 {
  "responses": 19132,
  "repeats": 5,
- "median_us": 16.2,
- "p95_us": 40.0,
- "max_us": 119.4,
- "bind_median_us": 14.0,
+ "median_us": 16.8,
+ "p95_us": 41.0,
+ "max_us": 100.1,
+ "bind_median_us": 14.9,
+ "median_us_by_cited_plus_claims": {
+  "0-4": 7.3,
+  "5-9": 9.0,
+  "10-14": 11.5,
+  "15-19": 12.9,
+  "20+": 18.1
+ },
  "python": "3.13.3",
  "machine": "Windows 11, AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD"
 }
