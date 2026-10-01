@@ -149,3 +149,4 @@ paper/emse_submission/*.log
 paper/emse_submission/*.blg
 paper/emse_submission/*.bbl
 paper/emse_submission/*.aux
+paper/emse_submission/main.pdf
