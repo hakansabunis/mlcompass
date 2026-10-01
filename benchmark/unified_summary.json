@@ -76,5 +76,111 @@
   "profile|profile||P-STRESS": {
    "content": 13
   }
+ },
+ "layers": {
+  "Leakage, bare instruction, four instances": {
+   "n": 3200,
+   "contract": 1014,
+   "unsupported": 2,
+   "name_E_lacks": 1,
+   "wrong_number": 1,
+   "number_E_lacks": 0
+  },
+  "Leakage, bare instruction, twelve instances": {
+   "n": 1888,
+   "contract": 817,
+   "unsupported": 56,
+   "name_E_lacks": 56,
+   "wrong_number": 0,
+   "number_E_lacks": 0
+  },
+  "Leakage, six instruction wordings": {
+   "n": 600,
+   "contract": 370,
+   "unsupported": 35,
+   "name_E_lacks": 20,
+   "wrong_number": 1,
+   "number_E_lacks": 15
+  },
+  "Leakage, field described or shipped prompt": {
+   "n": 2650,
+   "contract": 16,
+   "unsupported": 0,
+   "name_E_lacks": 0,
+   "wrong_number": 0,
+   "number_E_lacks": 0
+  },
+  "Leakage, enum bound to $E$, no verifier": {
+   "n": 600,
+   "contract": 0,
+   "unsupported": 0,
+   "name_E_lacks": 0,
+   "wrong_number": 0,
+   "number_E_lacks": 0
+  },
+  "Leakage, enum written in advance": {
+   "n": 800,
+   "contract": 152,
+   "unsupported": 145,
+   "name_E_lacks": 145,
+   "wrong_number": 0,
+   "number_E_lacks": 0
+  },
+  "Leakage, Guardrails with choices or our checks": {
+   "n": 1400,
+   "contract": 3,
+   "unsupported": 2,
+   "name_E_lacks": 0,
+   "wrong_number": 2,
+   "number_E_lacks": 0
+  },
+  "Leakage, contract arms": {
+   "n": 4000,
+   "contract": 0,
+   "unsupported": 0,
+   "name_E_lacks": 0,
+   "wrong_number": 0,
+   "number_E_lacks": 0
+  },
+  "Profile, suffixed names, no verifier": {
+   "n": 600,
+   "contract": 29,
+   "unsupported": 21,
+   "name_E_lacks": 1,
+   "wrong_number": 20,
+   "number_E_lacks": 0
+  },
+  "Profile, natural names, no verifier": {
+   "n": 693,
+   "contract": 36,
+   "unsupported": 14,
+   "name_E_lacks": 14,
+   "wrong_number": 0,
+   "number_E_lacks": 0
+  },
+  "Profile, contract arms": {
+   "n": 1091,
+   "contract": 0,
+   "unsupported": 0,
+   "name_E_lacks": 0,
+   "wrong_number": 0,
+   "number_E_lacks": 0
+  },
+  "\\texttt{gpt-5.4-mini}, every arm": {
+   "n": 1450,
+   "contract": 3,
+   "unsupported": 0,
+   "name_E_lacks": 0,
+   "wrong_number": 0,
+   "number_E_lacks": 0
+  },
+  "\\texttt{qwen2.5:7b}, every arm": {
+   "n": 160,
+   "contract": 2,
+   "unsupported": 2,
+   "name_E_lacks": 2,
+   "wrong_number": 0,
+   "number_E_lacks": 0
+  }
  }
 }

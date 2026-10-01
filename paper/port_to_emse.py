@@ -45,8 +45,8 @@ body = body.replace(r"\end{IEEEproof}", r"\end{proofsketch}")
 body = body.replace(r"\begin{definitionx}", r"\begin{definition}").replace(r"\end{definitionx}", r"\end{definition}")
 
 # A table scaled to a two-column \columnwidth would be blown up on a one-column
-# page, so the scaling goes; adjustbox's max width is not an option, because
-# inside sn-jnl's table it raises "Missing \endgroup inserted". The two tables
+# page, so the scaling goes here; every plain tabular is given a maximum width
+# further down, which shrinks only the ones wider than the text. The two tables
 # set for the IEEE full text width are narrowed or scaled by hand.
 body = re.sub(
     r"\\resizebox\{\\columnwidth\}\{!\}\{%\s*\n(\\begin\{tabular\}.*?\\end\{tabular\})\}",
@@ -62,9 +62,15 @@ def once(text: str, old: str, new: str) -> str:
     return text.replace(old, new)
 
 
+# The enforcement taxonomy ran 254pt past the margin in V2.1: its last two
+# columns now wrap.
+body = once(body, r"\begin{tabular}{@{}lllll@{}}" + "\n\\toprule\nLocus",
+            r"\setlength{\tabcolsep}{4pt}"
+            r"\begin{tabular}{@{}lll>{\raggedright\arraybackslash}p{0.22\textwidth}"
+            r">{\raggedright\arraybackslash}p{0.33\textwidth}@{}}" + "\n\\toprule\nLocus")
 body = once(body, r"\begin{tabular}{@{}lp{5.4cm}p{8.9cm}l@{}}",
             r"\begin{tabular}{@{}l>{\raggedright\arraybackslash}p{3.2cm}"
-            r">{\raggedright\arraybackslash}p{5.0cm}l@{}}")
+            r">{\raggedright\arraybackslash}p{4.85cm}l@{}}")
 a = body.index(r"\label{tab:sweep}")
 t0 = body.index(r"\begin{tabular}", a)
 t1 = body.index(r"\end{tabular}", t0) + len(r"\end{tabular}")
@@ -190,6 +196,15 @@ body = body[:rq1] + "\\subsection{Use of AI tools}\\label{sec:ai}\n" + ai.strip(
 body = body.replace(r"\input{table_fabbench12}",
                     (EMSE / "table_fabbench12.tex").read_text(encoding="utf-8").strip())
 assert "\\input{" not in body
+
+# Any tabular still wider than the text is scaled down to it; narrower ones are
+# left alone (adjustbox's max width, which SVJour3's table accepts).
+body = re.sub(
+    r"(?<!\{%\n)(\\begin\{tabular\}.*?\\end\{tabular\})",
+    lambda m: "\\adjustbox{max width=\\textwidth}{%\n" + m.group(1) + "}",
+    body,
+    flags=re.S,
+)
 assert "IEEE" not in body.replace("IEEE policy", ""), "an IEEE command is left in the body"
 
 preamble = r"""%% Empirical Software Engineering (Springer) submission, SVJour3.
@@ -207,6 +222,7 @@ preamble = r"""%% Empirical Software Engineering (Springer) submission, SVJour3.
 \usepackage{booktabs}
 \usepackage{array}
 \usepackage{longtable}
+\usepackage{adjustbox}
 \usepackage{xcolor}
 \usepackage{textcomp}
 \usepackage{algorithm}

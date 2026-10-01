@@ -210,3 +210,22 @@ def test_a_fault_repaired_on_retry_is_delivered_clean_and_unflagged() -> None:
     assert out["had_unrecoverable_violation"] is False and out["schema_rejections"] == 1
     _delivered_is_sound(out)
     assert "Content stripped" not in panel and "Incomplete" not in panel
+
+
+def test_every_attempt_is_recorded_with_its_verdict():
+    """A repaired violation leaves the rejected payload in the result."""
+    bad = _payload(columns_referenced=["log_target_v2", "r2"])
+    client = MockClient(
+        responses=[
+            tool_use_response(SUBMIT_TOOL_NAME, bad),
+            tool_use_response(SUBMIT_TOOL_NAME, _payload()),
+        ]
+    )
+    out = investigate_leakage_bound(EVIDENCE, client=client, max_retries=2)
+    assert out["columns_referenced"] == ["log_target_v2"]
+    first, second = out["attempts"]
+    assert first["columns_referenced"] == ["log_target_v2", "r2"]
+    assert first["entity"] and first["malformed"] is False
+    assert second["columns_referenced"] == ["log_target_v2"]
+    assert not second["entity"] and not second["value"]
+    assert out["attempts_made"] == 2 and out["schema_rejections"] == 1

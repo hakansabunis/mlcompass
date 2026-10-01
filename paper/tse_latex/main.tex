@@ -66,7 +66,7 @@ fixes what may appear there; we bind those admissible sets at call time and
 check every answer in host code, returning failures with the problem named. The mechanism is ordinary validate-and-reask; our contribution is what
 it is up against. Across three models, sixteen leakage tasks on synthetic and
 public data, and a dataset-profiling task, the one model that errs under the
-bare instruction almost never invents a column. It misfiles: it places something the evidence really
+bare instruction rarely states what the evidence lacks. It misfiles: it places something the evidence really
 contains, above all the name of the metric under investigation, in a field
 that does not admit it. A one-sentence field description, the shipped prompt,
 a lower temperature or another provider each remove most of this, and it
@@ -75,7 +75,7 @@ advance turns misfiling into invention when data changes; one built from
 the evidence at each call does not. In a well-specified configuration the
 verifier rarely had anything to catch; our registered test of whether it then
 adds a measurable benefit was cut short. What it adds is a check that holds
-whatever the configuration; the check takes microseconds, and retries add
+whatever the configuration; it takes microseconds; retries add
 calls. Verdict and free-text prose lie outside it.
 \end{abstract}
 
@@ -128,7 +128,9 @@ misfiles in this study, 1{,}807 of the 1{,}829 flagged responses under the bare
 instruction, on sixteen task instances, are misfilings, in a field whose
 admissible set nobody stated. One sentence of field description or the prompt
 mlcompass ships largely removes them, temperature 0 nearly does, and two
-other providers never produce it; where no fix is present, it returns.
+other providers never produce it; where no fix is present, it returns. Most
+responses that break the contract state nothing the evidence lacks, so we
+report the contract and the content apart.
 
 Each fix works where it was measured, but a tool author cannot measure every
 combination of prompt, schema, user data, provider and date the tool will
@@ -184,26 +186,27 @@ unconstrained narrator of structured evidence fails. On the one model of three
 that misfiles under the bare instruction, across sixteen leakage instances, the failure is misfiling into
 an under-specified field, not invention; describing the field or using the
 shipped prompt largely removes it where applied, and it returns where they are
-absent. (ii) It formulates
+absent. Counted as content rather than as contract, the same responses rarely
+state anything the evidence lacks, and we report both layers. (ii) It formulates
 field-indexed admissibility for evidence-closed narration
 (Definitions~\ref{def:closed} and~\ref{def:contract}), which separates
 misfiling from invention, serves as the instrument that makes these
 distinctions measurable, and lets a generic membership check enforce
 soundness. (iii) It compares the alternatives a practitioner
-would reach for inside one guardrail toolkit and one provider, and measures
-what a verifier adds to a well-specified configuration: nothing observable on
-leakage and a small exploratory catch on profiling, for microseconds per
-response. An author-time enum applied to data it predates does worse than no
+would reach for inside one guardrail toolkit and one provider by what each
+one checks. An author-time enum applied to data it predates does worse than no
 enum, and the toolkit's own choice semantics bound to the evidence match our
 validator on the field they check and miss what they do not check. (iv) It
-provides a replication package~\cite{replication} with every model reply, one
-record per live response, the frozen analysis plan with its amendments and
+provides a replication package~\cite{replication} with one record per live
+response holding the reply delivered to the user (on the profile task, every
+attempt), the frozen analysis plan with its amendments and
 deviations, the registered falsifier, and fifteen instrument faults with what
-each moved. The diagnosis (i) rests on sixteen instances and three models; the
-added value of a verifier over a well-specified configuration (iii) is measured
-on leakage, where no difference was observed (0 against 0 in 200 on each of
-four instances, which is not evidence of equivalence), and remains open on
-profiling.
+each moved. The diagnosis (i) rests on sixteen instances and three models. One
+question stays open and is not among the contributions: whether a verifier
+adds a measurable benefit to a configuration that is already well specified.
+Exploratory runs observed no difference on leakage (0 against 0 in 200 on each
+of four instances) and a small, uncertain one on profiling, and the registered
+test of it stopped when the budget ran out (Section~\ref{sec:rq3}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Background and Related Work}\label{sec:related}
@@ -955,7 +958,9 @@ under 5\,\% of flagged responses holds (1.5\,\%). The 817 are thus 795 that
 misfile, 18 that cite only the target column and 4 that cite only an invented
 name; with the 1{,}012 of the first four instances, all of which misfile,
 1{,}807 of 1{,}829 flagged responses misfile. The composition found on four
-instances holds on twelve that played no part in the design.
+instances holds on twelve that played no part in the design. The 1{,}829 are
+pooled from cells that differ in arm, instance and date, so their composition
+describes the flagged responses, not an error rate over independent tasks.
 
 \paragraph{An undescribed field}
 The bare instruction says ``list every column from the evidence you cite'',
@@ -979,7 +984,10 @@ the misfiling: on the crowded instance, whose columns all have different
 names, the undescribed field gives 61.0\,\% [54.1, 67.5] (122/200), every one
 \texttt{r2}. Nor does it occur on every model. \texttt{gpt-5.4-mini} never
 writes \texttt{r2} into a column field in 200 responses, and a local
-\texttt{qwen2.5:7b} never does so in 20.
+\texttt{qwen2.5:7b} never does so in 20. The description is therefore an
+effective intervention on this model; that its absence is the only cause is
+more than these runs show, since temperature alone also lowers the rate and
+another model needs no description.
 
 \paragraph{Temperature}
 Rerun at $T=0$ on 2026-09-27, the bare arm misfiles in 2.0\,\% [0.8, 5.0] of
@@ -996,6 +1004,61 @@ the cited list under the heading ``Evidence cited (verified against the
 evidence)'', so an unverified \texttt{r2} would reach the engineer labelled as a
 verified evidence column. Every arm faced the same instruction, so the arm
 comparisons stand.
+
+\paragraph{Contract and content}
+A response violates the contract when it puts anything in a field that does
+not admit it, true or not. A second layer, defined after the review rather
+than registered, asks only whether a response states something $E$ does not
+support: a name $E$ does not contain anywhere, a wrong number on a pair $E$
+carries, or, on a pair it does not carry, a number $E$ carries nowhere. A
+misfiled name, a correct number under an inadmissible key and a missing anchor
+fail the first layer only. Table~\ref{tab:layers} gives both for every
+response. On the bare leakage arms 1{,}831 responses break the contract and 58
+state something $E$ does not support; 45 of the 58 cite the frame's own
+target column, which is true of the data but absent from $E$. The second
+layer is large in one place, an enum written in advance for other data, where
+145 of 152 violating responses name a column the frame does not have. On the
+profile task it holds the wrong numbers of suffixed names and, under natural
+names, claims keyed to a column the frame lacks (Section~\ref{sec:rq6}). A
+contract rate on this model therefore overstates false content many times
+over, and the two layers measure different harms: a misfiled \texttt{r2}
+misleads a program that consumes the field, a wrong number misleads a reader.
+Neither layer is a human judgement. The registered blind audit that would
+supply one was not carried out (amendment A5).
+
+\begin{table}[t]
+\caption{Two layers per response, every response in exactly one row
+(\texttt{deepseek-chat} unless named). \emph{Contract}: violates (C1),
+(C2) or (C3). \emph{Unsupported}: states a name $E$ lacks, a wrong number, or
+a number $E$ carries nowhere; the last three columns count each. The first
+layer counts every channel, so the bare four-instance row exceeds the 1{,}012
+entity flags of Section~\ref{sec:rq1} by one omission and one wrong number.
+Generated by \texttt{scripts/unified\_scoring.py}.}
+\label{tab:layers}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+Responses & $N$ & Contract & Unsupported & name & wrong no. & no.\ $\notin E$ \\
+\midrule
+Leakage, bare instruction, four instances & 3{,}200 & 1{,}014 & 2 & 1 & 1 & 0 \\
+Leakage, bare instruction, twelve instances & 1{,}888 & 817 & 56 & 56 & 0 & 0 \\
+Leakage, six instruction wordings & 600 & 370 & 35 & 20 & 1 & 15 \\
+Leakage, field described or shipped prompt & 2{,}650 & 16 & 0 & 0 & 0 & 0 \\
+Leakage, enum bound to $E$, no verifier & 600 & 0 & 0 & 0 & 0 & 0 \\
+Leakage, enum written in advance & 800 & 152 & 145 & 145 & 0 & 0 \\
+Leakage, Guardrails with choices or our checks & 1{,}400 & 3 & 2 & 0 & 2 & 0 \\
+Leakage, contract arms & 4{,}000 & 0 & 0 & 0 & 0 & 0 \\
+Profile, suffixed names, no verifier & 600 & 29 & 21 & 1 & 20 & 0 \\
+Profile, natural names, no verifier & 693 & 36 & 14 & 14 & 0 & 0 \\
+Profile, contract arms & 1{,}091 & 0 & 0 & 0 & 0 & 0 \\
+\texttt{gpt-5.4-mini}, every arm & 1{,}450 & 3 & 0 & 0 & 0 & 0 \\
+\texttt{qwen2.5:7b}, every arm & 160 & 2 & 2 & 2 & 0 & 0 \\
+\bottomrule
+\end{tabular}}
+\end{table}
 
 \paragraph{Abstention}
 A narrator that retreated into ``cannot determine'' would escape the (C3)
@@ -1219,10 +1282,10 @@ instance \texttt{A-STRESS}, \texttt{A-GR-CHOICES} and \texttt{A-GR-OURS}
 retried 25, 101 and 118 of 200 responses. The contract path does not surface
 token counts.
 
-Table~\ref{tab:delivery} shows what reached the user. Every response on the
-reference task delivered at least one claim, none abstained, and none lacked
-an admissible verdict, so no zero is the vacuous one an empty answer would
-give. The prompt-bearing arms deliver about a quarter of the claims the bare
+Table~\ref{tab:delivery} shows what reached the user. All responses on the
+reference task but one, on \texttt{A-GR-STOCK}, delivered at least one claim;
+none abstained, and none lacked an admissible verdict, so no zero is the
+vacuous one an empty answer would give. The prompt-bearing arms deliver about a quarter of the claims the bare
 ones do (2.2--3.2 against 9.6--9.8 per response): part of what the shipped
 prompt buys is a narrower answer.
 
@@ -1286,10 +1349,10 @@ claims of this section rest on one model, and its rates describe
 \paragraph{Answer to RQ2 and RQ3}
 In every configuration we ran, no (C1) or (C2) violation reached the user
 under the contract, and one named retry repaired each; the local check costs
-microseconds and retries add calls. Added to a well-specified configuration it
-changed no observed rate on leakage; on profiling the unverified arm
-delivered 4 violating responses in 200 and the verified arm none, in an
-exploratory run. In these configurations a stock guardrail loop stays near
+microseconds and retries add calls. Whether it adds a measurable benefit to a
+well-specified configuration is open: exploratory runs observed no difference
+on leakage and 4 against 0 violating responses in 200 on profiling, and the
+registered test stopped early. In these configurations a stock guardrail loop stays near
 the floor, an enum written for other data causes invention, an enum or choice
 list bound to $E$ matches the contract only on the column field, and the
 toolkit running our checks matches the contract: the comparisons measure what
@@ -1420,8 +1483,13 @@ measurement of the column that shares the suffix, such as
 \texttt{cat\_feature\_07}'s missing rate reported for
 \texttt{num\_feature\_07}, and one appears nowhere in $E$. Under distinct names
 the same model, on the same data, puts a wrong number in none of 400
-unverified responses. The failure the original frame measured came from names
-our generator chose.
+unverified responses. Which column each wrong number belongs to is the
+evidence for confusion between the names our generator chose. The drop to
+zero is consistent with that explanation but does not isolate it: the two
+naming schemes ran five days apart, in separate blocks, with harness and
+adapter changes between them and a model name that may point to another
+version (Section~\ref{sec:threats}). Running both schemes interleaved on one
+harness would separate them; we have not done so.
 
 \paragraph{Correct quantities in inadmissible slots}
 Every claim on a pair $E$ does not carry, on both frames, quotes a number $E$
@@ -1439,8 +1507,14 @@ design choice of ours. Re-scored with the class shares admitted on the target
 column, the unconstrained arm falls from 26 to 10 violating responses under
 natural names and from 17 to 10 under suffixed ones, and the three
 \texttt{gpt-5.4-mini} violations disappear. What remains is the wrong numbers
-of suffixed names, other real quantities such as the frame's shape attached
-to a column, and one invented name.
+of suffixed names and, under natural names, real quantities such as the
+frame's shape keyed to a column or to a pseudo-column such as
+\texttt{shape}, and five responses that name a column the frame does not
+have, two of them respellings of real ones (\texttt{logging\_count},
+\texttt{acquired\_channel}). Distinct names removed the wrong numbers and
+brought a few invented columns: across the 693 unverified natural-name
+responses, 11 name a column the frame does not have, pseudo-columns for its
+shape aside, against 1 of 600 under suffixed names.
 
 \paragraph{How the tiers separate}
 Binding the enum removes pairs $E$ does not carry almost entirely (20 to 1
@@ -1463,14 +1537,17 @@ express that relation, and (C2)'s domain check does.
 The contract binds to a second evidence shape without task-specific
 verification, and the two tiers separate once the failing channel is one the
 per-field enums we use cannot express. The result does not show that misfiling numbers is a
-general property of narrators. On this model it followed our naming, and what
-survived distinct names reflects our binding choices as much as model error.
+general property of narrators. On this model the wrong numbers are consistent
+with confusion between our names, and what survived distinct names reflects
+our binding choices as much as model error.
 
 \paragraph{Answer to RQ5}
 The contract binds to a second evidence shape without task-specific code.
 There Tier~B catches wrong numbers that the per-field enums we use cannot
 express, and the wrong
-numbers themselves came from our column naming.
+numbers are consistent with confusion between the column names our generator
+chose; the comparison across naming schemes shares the date and harness
+confound of Section~\ref{sec:threats}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Corrections to Our Own Instruments}\label{sec:instruments}
@@ -1490,7 +1567,9 @@ a correlation gap, which the first scorer rightly files as a pair $E$ does not
 carry, and on 7 responses on the stale-enum arm that commit to a verdict and
 cite nothing: the definition counts them as omitting the anchor, and the first
 scorer did not. Both scorers come from the same definitions, so their
-agreement speaks to the implementation, not to the definitions.
+agreement speaks to the implementation, not to the definitions. Neither can
+re-judge a rejected leakage attempt, because those records keep only the kind
+of each rejection (Data Availability).
 
 \begin{table}[t]
 \caption{Instrument faults, numbered in the order found.}
@@ -1659,7 +1738,10 @@ rolling model name, and the unconstrained rates move between runs:
 responses in four runs ($p=0.012$), with 32 against 19 on the same date
 ($p=0.07$), so the date does not account for all of the variation. The harness and adapter also
 changed between runs, and the provenance of every record pins both, so a
-difference across dates cannot be attributed to the provider alone.
+difference across dates cannot be attributed to the provider alone. The two
+naming schemes of the profile frame are such a difference, so we rest the
+naming explanation on which column each wrong number belongs to, not on the
+comparison.
 \texttt{A-L1} did not move ($p=0.34$).
 
 \paragraph{External} The misfiling occurs on one of three providers, so every
@@ -1706,10 +1788,10 @@ field's admissible set to the evidence and checking the returned payload in
 host code, which is ordinary validate-and-reask, enforces referential and
 value soundness behind an API that exposes no logits. The check held in every
 configuration in which it ran and repaired every violation with one named
-retry; the check itself takes microseconds. Added to a well-specified configuration it changed no
-rate on leakage; on profiling the unverified arm delivered 4 violating
-responses in 200 and the verified arm none, an exploratory difference whose
-registered confirmatory test the budget cut short. We report
+retry; the check itself takes microseconds. Whether it adds a measurable benefit to a
+configuration that is already well specified remains open: exploratory runs
+found no difference on leakage and 4 against 0 violating responses in 200 on
+profiling, and the registered test of it stopped when the budget ran out. We report
 fifteen faults in our own instruments and two in the verifier, with what each
 moved. The check does not yet reach a client model that narrates the same
 evidence across the tool-server boundary.
@@ -1723,13 +1805,15 @@ scorer's defect.
 \section*{Data Availability}
 The replication package~\cite{replication} contains the artifact source,
 every harness, the frozen analysis plan and its amendments, one record per
-live response with the verbatim model reply, the scripts that recompute every
+live response with the verbatim reply delivered to the user, the scripts that recompute every
 table from those records, the registered property-based falsifier, the
 superseded measurements beside their corrections, an inventory of every run
 file from which each count in this paper is recomputed, and the downstream
 benchmark. Profile records keep every attempt; leakage records keep the
 delivered payload with the verifier's verdict on each attempt (the count and
-kind of each rejection), not the rejected payloads. Code is MIT; data is CC-BY 4.0. Most of the harness and analysis
+kind of each rejection), not the rejected payloads, so a leakage rejection
+cannot be re-judged independently. The harness has kept every leakage attempt
+since 2026-10-01; no reported run used it. Code is MIT; data is CC-BY 4.0. Most of the harness and analysis
 code was drafted with an AI assistant and then inspected and tested by the
 authors.
 

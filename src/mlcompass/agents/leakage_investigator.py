@@ -637,6 +637,7 @@ def investigate_leakage_bound(
 
     schema_rejections = 0
     rejection_kinds: list[str] = []
+    attempts: list[dict[str, Any]] = []
     attempts_made = 0
     correction = ""
     tool_input: dict[str, Any] = {}
@@ -653,6 +654,18 @@ def investigate_leakage_bound(
             tool_input = _emit_anthropic(api, model, system, user, tool, temperature=temperature)
         cited = [str(c) for c in (tool_input.get("columns_referenced") or [])]
         claims = [c for c in (tool_input.get("claims") or []) if isinstance(c, dict)]
+        # Every attempt, as the profile path keeps them. Until 2026-10-01 only
+        # the delivered payload and the count and kind of each rejection
+        # survived, so a rejection could not be re-judged by anyone but the
+        # verifier that made it.
+        record: dict[str, Any] = {
+            "attempt": attempt + 1,
+            "columns_referenced": list(cited),
+            "claims": [dict(c) for c in claims],
+            "verdict": str(tool_input.get("verdict", "")),
+            "narration": str(tool_input.get("narration", "")),
+        }
+        attempts.append(record)
         if not verify_response:
             break
 
@@ -662,6 +675,14 @@ def investigate_leakage_bound(
         # committed verdict with respect to the anchor.
         violations = verify(tool_input, bound, LEAKAGE_CONTRACT)
         omitted = violations.omitted
+        record.update(
+            {
+                "violations": violations.kinds,
+                "entity": list(violations.entity),
+                "value": list(violations.value),
+                "omitted": violations.omitted,
+            }
+        )
 
         # A payload with no admissible verdict is not an answer: no tool call,
         # unparsable arguments, or a verdict outside the enum. It used to pass
@@ -669,6 +690,7 @@ def investigate_leakage_bound(
         # for display, which attributes an abstention the narrator never made.
         # It is retried like any violation and, if it persists, aborted.
         malformed = is_malformed(tool_input, LEAKAGE_CONTRACT)
+        record["malformed"] = malformed
         if malformed:
             schema_rejections += 1
             rejection_kinds.append("malformed")
@@ -741,6 +763,7 @@ def investigate_leakage_bound(
         "claims": claims_clean,
         "schema_rejections": schema_rejections,
         "rejection_kinds": rejection_kinds,
+        "attempts": attempts,
         "attempts_made": attempts_made,
         "had_unrecoverable_violation": had_unrecoverable,
         "omitted_critical_evidence": omitted,

@@ -917,6 +917,10 @@ def _from_contract_result(result: dict[str, Any]) -> dict[str, Any]:
             "rejections": int(result["schema_rejections"]),
             "rejection_kinds": list(result.get("rejection_kinds") or []),
             "provider_calls": int(result.get("attempts_made") or 1),
+            # Every attempt with the verifier's verdict on it, rejected ones
+            # included (from 2026-10-01; earlier records keep only the
+            # delivered payload and the rejection telemetry above).
+            "attempts": list(result.get("attempts") or []),
             # The contract path renames the narration to `primary_hypothesis`
             # for the renderer, and this converter starts from _normalize({}),
             # so the field arrives empty unless it is copied across here. It

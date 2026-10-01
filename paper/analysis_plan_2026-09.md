@@ -939,3 +939,24 @@ and the script that draws it and scores returned labels
 (`scripts/make_scorer_audit.py`) stay in the package; the key is regenerated
 deterministically from the committed records and the registered seed, so the
 audit can still be run by anyone. The manuscript reports R4 as not run.
+
+### A6 — After the V2.1 review (2026-10-01, no new model call)
+
+Three changes, none of which alters a registered item or its outcome.
+
+- **Second layer, post hoc.** The manuscript adds a count that the plan did
+  not register: whether a response states something E does not support (a
+  name E contains nowhere, a wrong number on a pair E carries, or a number E
+  carries nowhere on a pair it does not carry). It is computed by
+  `scripts/unified_scoring.py --layers-table` from the committed records and
+  is reported as exploratory beside the registered contract counts.
+- **Every leakage attempt is now kept.** From this date the leakage contract
+  path and its harness record every attempt with the verifier's verdict on it,
+  as the profile path already did. No reported run used this; any run made
+  after this date does.
+- **Naming comparison.** The suffixed and natural profile frames ran on
+  different dates, in blocks, with harness changes between them. The paper
+  now rests the naming explanation on which column each wrong number belongs
+  to and reports the cross-date difference as consistent with it, not as its
+  cause. An interleaved run of the two schemes on one harness would be
+  registered here before it is made.

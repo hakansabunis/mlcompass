@@ -19,6 +19,13 @@ Definitions (paper, Section 3 and Measures):
       number" otherwise). The statistic field's admissibility is part of C2.
   C3  anchor coverage: a response that commits (a verdict that is not empty
       and not the abstention) references the anchor.
+
+Second layer (2026-10-01 review, M2): a response "states something E does not
+support" when it names something E does not contain anywhere, quotes a wrong
+number on a pair E carries, or quotes on an uncarried pair a number E carries
+nowhere. A misfiled name, a correct number under an inadmissible key and a
+missing anchor break the contract without stating anything E contradicts or
+lacks, so they count in the first layer only.
   The measurement's value table for leakage accepts the correlation aliases
   the first scorer accepts (_CORRELATION_ALIASES) and the dataset-level
   quantities entered against every column; the profile's is the binder's.
@@ -52,7 +59,7 @@ VERIFIED = {"layer3", "layer3_bare", "layer3_stress", "layer3_stress_generic", "
 FIELDS = ["run_dir", "file", "task", "names", "provider", "model", "arm", "arm_id", "date",
           "i", "verified", "verdict_admissible", "committed", "c1_cited", "c1_claim",
           "c1_misfiled", "c1_outside_E", "artifact", "c2_wrong", "c2_not_carried",
-          "c2_not_carried_real", "c3", "any", "claims", "claims_checked", "claims_exact",
+          "c2_not_carried_real", "c2_unsupported", "c3", "any", "unsupported", "claims", "claims_checked", "claims_exact",
           "claims_round", "retried", "retry_reasons"]
 
 
@@ -89,7 +96,7 @@ def score(r: dict, kind: str, ctx: dict) -> dict:
     bad_claim = [c for c in claim_cols if c not in cols and not h.is_scorer_artifact(c, cols)]
     artifact = any(h.is_scorer_artifact(c, cols) for c in cited + claim_cols
                    if c not in cols)
-    wrong = not_carried = not_carried_real = checked = exact = rounded = 0
+    wrong = not_carried = not_carried_real = unsupported = checked = exact = rounded = 0
     for c, col in zip(claims, claim_cols):
         if col not in cols:
             continue
@@ -100,6 +107,8 @@ def score(r: dict, kind: str, ctx: dict) -> dict:
             not_carried += 1
             if num and any(abs(float(val) - x) <= TAU for x in ctx["numbers"]):
                 not_carried_real += 1
+            elif num:
+                unsupported += 1
             continue
         if not num:
             wrong += 1
@@ -120,11 +129,12 @@ def score(r: dict, kind: str, ctx: dict) -> dict:
         "c1_misfiled": any(c in names for c in out_names),
         "c1_outside_E": any(c not in names for c in out_names),
         "artifact": artifact, "c2_wrong": wrong, "c2_not_carried": not_carried,
-        "c2_not_carried_real": not_carried_real, "c3": c3,
+        "c2_not_carried_real": not_carried_real, "c2_unsupported": unsupported, "c3": c3,
         "claims": len(claims), "claims_checked": checked, "claims_exact": exact,
         "claims_round": rounded,
     }
     row["any"] = bool(bad_cited or bad_claim or wrong or not_carried or c3)
+    row["unsupported"] = bool(row["c1_outside_E"] or wrong or unsupported)
     return row
 
 
@@ -133,6 +143,7 @@ def main() -> int:
     ap.add_argument("--csv", default=None)
     ap.add_argument("--summary", default=None, help="JSON of the counts the paper quotes")
     ap.add_argument("--profile-table", default=None, help="LaTeX rows of the profile table")
+    ap.add_argument("--layers-table", default=None, help="LaTeX rows of the two-layer table")
     args = ap.parse_args()
     rows = []
     for f, rel, ev in run_files():
@@ -179,6 +190,9 @@ def main() -> int:
     if args.profile_table:
         pathlib.Path(args.profile_table).write_text(profile_table(rows), encoding="utf-8")
         print(f"wrote {args.profile_table}")
+    if args.layers_table:
+        pathlib.Path(args.layers_table).write_text(layers_table(rows), encoding="utf-8")
+        print(f"wrote {args.layers_table}")
     return 0
 
 
@@ -209,7 +223,86 @@ def summarise(rows: list[dict]) -> dict:
         "artifacts": {"responses_with_artifact": sum(bool(r["artifact"]) for r in rows),
                       "would_flip_if_counted": flips, "universe": len(rows)},
         "retry_reasons": {k: dict(v) for k, v in retries.items()},
+        "layers": {label: counts for label, counts in layer_counts(rows)},
     }
+
+
+_LEAK_BARE = {"A-L1", "A-L1-T0", "A-GR-STOCK", "A-STRICT-STATIC"}
+_LEAK_SPECIFIED = {"A-L1-DESCRIBED", "A-L1-DESCRIBED-NEUTRAL", "A-L2", "A-L2-DESCRIBED",
+                   "A-L2-DESCRIBED-NEUTRAL", "A-L2-NOCLAIMS", "A-L2-RULES", "A-STRONG-NOVERIFY"}
+_LEAK_CONTRACT = {"A-CONTRACT", "A-L3-SHIPPED", "A-L3-WORST-PARAPHRASE", "A-STRESS",
+                  "A-STRESS-GENERIC", "A-STRONG-CONTRACT"}
+_PROFILE_CONTRACT = {"P-CONTRACT", "P-STRESS", "P-STRONG-CONTRACT"}
+
+
+def _leak(r: dict) -> bool:
+    return r["task"] != "profile" and r["provider"] == "deepseek"
+
+
+def _prof(r: dict) -> bool:
+    return r["task"] == "profile" and r["provider"] == "deepseek"
+
+
+LAYER_ROWS = [  # (label, predicate); every response falls in exactly one
+    ("Leakage, bare instruction, four instances",
+     lambda r: _leak(r) and r["arm_id"] in _LEAK_BARE and "fabbench12" not in r["run_dir"]),
+    ("Leakage, bare instruction, twelve instances",
+     lambda r: _leak(r) and r["arm_id"] == "A-L1" and "fabbench12" in r["run_dir"]),
+    ("Leakage, six instruction wordings",
+     lambda r: _leak(r) and str(r["arm_id"]).startswith("A-SWEEP-")),
+    ("Leakage, field described or shipped prompt",
+     lambda r: _leak(r) and r["arm_id"] in _LEAK_SPECIFIED),
+    ("Leakage, enum bound to $E$, no verifier",
+     lambda r: _leak(r) and str(r["arm_id"]).startswith("A-STRICT-ENUM")),
+    ("Leakage, enum written in advance",
+     lambda r: _leak(r) and r["arm_id"] == "A-STATIC-ENUM-STALE"),
+    ("Leakage, Guardrails with choices or our checks",
+     lambda r: _leak(r) and r["arm_id"] in {"A-GR-CHOICES", "A-GR-OURS"}),
+    ("Leakage, contract arms", lambda r: _leak(r) and r["arm_id"] in _LEAK_CONTRACT),
+    ("Profile, suffixed names, no verifier",
+     lambda r: _prof(r) and r["arm_id"] not in _PROFILE_CONTRACT and r["names"] != "natural"),
+    ("Profile, natural names, no verifier",
+     lambda r: _prof(r) and r["arm_id"] not in _PROFILE_CONTRACT and r["names"] == "natural"),
+    ("Profile, contract arms", lambda r: _prof(r) and r["arm_id"] in _PROFILE_CONTRACT),
+    (r"\texttt{gpt-5.4-mini}, every arm", lambda r: r["provider"] == "openai"),
+    (r"\texttt{qwen2.5:7b}, every arm", lambda r: r["provider"] == "ollama"),
+]
+
+
+def layer_counts(rows: list[dict]) -> list[tuple[str, dict[str, int]]]:
+    """Per group: responses that break the contract (first layer) and responses
+    that state something E does not support (second layer), with the second
+    layer's composition."""
+    seen = [0] * len(rows)
+    out = []
+    for label, pred in LAYER_ROWS:
+        cell = []
+        for i, r in enumerate(rows):
+            if pred(r):
+                seen[i] += 1
+                cell.append(r)
+        out.append((label, {
+            "n": len(cell),
+            "contract": sum(bool(r["any"]) for r in cell),
+            "unsupported": sum(bool(r["unsupported"]) for r in cell),
+            "name_E_lacks": sum(bool(r["c1_outside_E"]) for r in cell),
+            "wrong_number": sum(bool(r["c2_wrong"]) for r in cell),
+            "number_E_lacks": sum(bool(r["c2_unsupported"]) for r in cell),
+        }))
+    assert all(k == 1 for k in seen), f"{sum(k != 1 for k in seen)} responses not in exactly one group"
+    return out
+
+
+def layers_table(rows: list[dict]) -> str:
+    def num(k: int) -> str:
+        return f"{k:,}".replace(",", "{,}")
+
+    body = []
+    for label, c in layer_counts(rows):
+        cells = [num(c[k]) for k in ("n", "contract", "unsupported", "name_E_lacks",
+                                     "wrong_number", "number_E_lacks")]
+        body.append(f"{label} & " + " & ".join(cells) + r" \\")
+    return "\n".join(body) + "\n"
 
 
 PROFILE_ROWS = [  # (run_dir, names, arm_id, label)
