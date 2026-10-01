@@ -46,8 +46,8 @@ authors:
 preferred-citation:
   type: unpublished
   title: >-
-    An Evidence-Bound Runtime Contract for LLM Narration of
-    Machine-Learning Pipeline Evidence
+    Misfiling, Not Invention: How an LLM Narrator of Machine-Learning
+    Pipeline Evidence Fails, and What an Evidence-Bound Contract Checks
   authors:
     - family-names: "Sabuniş"
       given-names: "Hakan"
