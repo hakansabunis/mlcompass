@@ -1518,7 +1518,7 @@ offending item, and every final attempt is clean. Since 2026-10-01, the
 leakage harness also keeps every attempt; none of the reported leakage runs
 used that version.
 
-\begin{table}[!htbp]
+\begin{table*}[!tp]
 \caption{Every rejected attempt that the records keep (profile task,
 \texttt{deepseek-chat}), re-judged without the verifier. \emph{Finding}: what
 an independent reading of $E$ finds; for a wrong number, the column whose
@@ -1552,7 +1552,7 @@ Arm & $i$ & Item & Finding & Retry \\
 \texttt{P-STRONG-CONTRACT} & 140 & \texttt{access\_channel} & column not in $E$ & dropped \\
 \bottomrule
 \end{tabular}}
-\end{table}
+\end{table*}
 
 \paragraph{Why Tier~B is still needed}
 Our schemas bind each field to an independent \texttt{enum}. That form
@@ -1603,7 +1603,7 @@ contract. The comparisons measure what each configuration checks.
 \section{RQ4: Wording and Specification Move Compliance}\label{sec:rq4}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\begin{table*}[!tbp]
+\begin{table*}[!tp]
 \caption{Rule-free instruction variants, $N=100$ each, \texttt{deepseek-chat},
 run on 2026-09-15,
 ordered by the blended entity rate, the share of responses with any entity
