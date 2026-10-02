@@ -46,7 +46,7 @@ authors:
 preferred-citation:
   type: unpublished
   title: >-
-    Misfiling, Not Just Invention: Failures in LLM Narration of Structured Evidence
+    Misfiling Over Invention: Enforcing Evidence-Bound Runtime Contracts for LLM Tool Narrators
   authors:
     - family-names: "Sabuniş"
       given-names: "Hakan"

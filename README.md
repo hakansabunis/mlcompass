@@ -11,7 +11,7 @@
 
 📄 **Paper (manuscript, not yet published):** the contract that guards
 mlcompass's leakage narrator is written up in
-[`paper/emse_latex/`](paper/emse_latex/) — *"Misfiling, Not Just Invention: Failures in LLM Narration of Structured Evidence"*. A two-column condensation for an IEEE
+[`paper/emse_latex/`](paper/emse_latex/) — *"Misfiling Over Invention: Enforcing Evidence-Bound Runtime Contracts for LLM Tool Narrators"*. A two-column condensation for an IEEE
 venue is in [`paper/tse_latex/`](paper/tse_latex/); the two carry identical
 numbers and [`paper/tse_latex/CUTS.md`](paper/tse_latex/CUTS.md) records what
 differs. Every measurement is reproducible end-to-end via the scripts in
