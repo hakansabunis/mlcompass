@@ -277,6 +277,10 @@ def main() -> int:
     ap.add_argument("--natural-names", action="store_true",
                     help="Same frame, distinct column names with no shared suffix "
                          "(review item P0-4). Use a separate --log-dir.")
+    ap.add_argument("--interleave-arms", action="store_true",
+                    help="Analysis plan A11: run exactly two --arm values in one run, one "
+                         "call of each per index, in a random order per index; one log file "
+                         "per arm. Use a fresh --log-dir.")
     ap.add_argument("--interleave-names", action="store_true",
                     help="Analysis plan A9: run the suffixed and the natural-name "
                          "frame in one run, one call of each per index, in a random "
@@ -310,6 +314,8 @@ def main() -> int:
 
     if args.interleave_names:
         return run_interleaved(args)
+    if args.interleave_arms:
+        return run_interleaved_arms(args)
 
     arms = args.arm or ["bare"]
     evidence = build_profile_evidence(
@@ -488,6 +494,87 @@ def _record(args, arm, arm_id, model, ehash, i, scheme, res, scored, schema_byte
         "schema_bytes": schema_bytes, "sampling": {"temperature": args.temperature},
         "provenance": prov, **extra,
     }
+
+
+def interleave_arm_orders(seed: int, n: int, arms: list[str]) -> list[tuple[str, str]]:
+    """For each index, the order in which the two arms are called (A11)."""
+    import random  # noqa: PLC0415
+
+    rng = random.Random(f"interleave-arms-{seed}")
+    orders = []
+    for _ in range(n):
+        pair = list(arms)
+        rng.shuffle(pair)
+        orders.append((pair[0], pair[1]))
+    return orders
+
+
+def run_interleaved_arms(args) -> int:
+    """Analysis plan A11: two arms on one frame, interleaved, one harness commit."""
+    import mlcompass.agents.profile_narrator as _pn  # noqa: PLC0415
+
+    arms = args.arm or []
+    if len(arms) != 2:
+        raise SystemExit("--interleave-arms needs exactly two --arm values.")
+    ev = build_profile_evidence(seed=args.seed, frame_columns=args.frame_columns,
+                                natural_names=args.natural_names)
+    trimmed = compact(ev, max_columns=args.max_columns)
+    bound = PROFILE.bind(trimmed)
+    ehash = evidence_hash(trimmed)
+    scheme = "natural" if args.natural_names else "suffixed"
+    orders = interleave_arm_orders(args.seed, args.n, arms)
+    print(f"{scheme}: evidence {ehash}; first orders {orders[:5]}")
+    if args.dry_run:
+        return 0
+    client, model = make_client(args.provider)
+    args.log_dir.mkdir(parents=True, exist_ok=True)
+    (args.log_dir / f"evidence_{ehash}.json").write_text(
+        json.dumps({"task_label": "profile", "evidence": trimmed}, indent=1, default=str),
+        encoding="utf-8")
+    prov = {**provenance(), "interleaved_arms": list(arms)}
+    plain_schema = _pn.build_payload_schema
+    outs = {a: args.log_dir / (f"{args.provider}_{model.replace(':', '-')}_profile_{a}_interleaved"
+                               f"_n{args.n}_seed{args.seed}_e{ehash}.jsonl") for a in arms}
+    done: dict[str, set[int]] = {a: set() for a in arms}
+    if any(o.exists() for o in outs.values()):
+        if not args.resume:
+            print("interleaved logs exist, refusing to overwrite paid responses (pass --resume)")
+            return 0
+        for a, o in outs.items():
+            if o.exists():
+                done[a] = {int(json.loads(line)["i"]) for line in
+                           o.read_text(encoding="utf-8").splitlines() if line.strip()}
+        print(f"resuming, {min(len(d) for d in done.values())} complete pairs logged")
+    for i, order in enumerate(orders):
+        for pos, arm in enumerate(order):
+            if i in done[arm]:
+                continue
+            enforce, do_verify, prompt, arm_id = ARMS[arm]
+            _pn.build_payload_schema = (
+                _described_schema(plain_schema) if arm in STRONG_ARMS else plain_schema)
+            schema_bytes = len(json.dumps(_pn.build_submit_tool_openai(bound)))
+            started = time.time()
+            try:
+                res = narrate_profile_bound(
+                    ev, client=client, model=model,
+                    provider="anthropic" if args.provider == "anthropic" else "openai",
+                    max_retries=2 if do_verify else 0, system_prompt=prompt,
+                    enforce_schema_enum=enforce, verify_response=do_verify,
+                    temperature=args.temperature, max_columns=args.max_columns)
+            except Exception as e:  # noqa: BLE001
+                print(f"  {arm} {i}: transport error {type(e).__name__}: {str(e)[:90]}")
+                continue
+            v = verify({"verdict": res["verdict"], "columns_referenced": res["columns_referenced"],
+                        "claims": res["claims"]}, bound, PROFILE)
+            scored = {"entity": bool(v.entity), "value": bool(v.value),
+                      "omission": bool(res["omitted_critical_evidence"])}
+            rec = _record(args, arm, arm_id, model, ehash, i, scheme, res, scored, schema_bytes,
+                          started, prov, {"interleave": {"pair": i, "position": pos}})
+            with outs[arm].open("a", encoding="utf-8") as fh:
+                fh.write(json.dumps(rec, default=str) + "\n")
+        if (i + 1) % 20 == 0:
+            print(f"  {i + 1}/{args.n} pairs", flush=True)
+    return 0
 
 
 def run_interleaved(args) -> int:

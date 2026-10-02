@@ -111,7 +111,7 @@ def frame_columns(task: str, ctx: dict) -> set[str]:
 # The registered follow-up runs of analysis plan A9 (2026-10-02) are reported
 # on their own (scripts/analyze_a9.py) and kept out of the corpus counts, which
 # describe the runs made up to 2026-09-30.
-A9_DIRS = ("2026-10-02_interleaved", "2026-10-02_retry_audit")
+A9_DIRS = ("2026-10-02_interleaved", "2026-10-02_retry_audit", "2026-10-02_a11")  # + A11
 
 
 def run_files(include_a9: bool = False):

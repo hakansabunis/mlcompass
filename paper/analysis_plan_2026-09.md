@@ -1175,3 +1175,30 @@ No hypothesis test.
 **Prediction.** Both judges pass the validity check. If one fails, its labels
 are not interpreted; if both fail, A10 is reported as uninformative on these
 data.
+
+### A11 — The verifier added to a well-specified configuration, interleaved (2026-10-02, registered before any call)
+
+**Why.** Two reviews of 2026-10-02 asked for the comparison that R1 was meant
+to settle. R1 (A3) stopped at 93 and 91 responses when the balance ran out
+(A4) and was registered not to be repeated or extended; its partial cells stay
+descriptive and are **not pooled** with A11. A11 is a new test, on the model
+served on 2026-10-02, with the two arms interleaved.
+
+**Design.** Profile frame under natural names (evidence `7e0d8c22`), arms
+`strong_noverify` and `strong_verify`, N = 600 each, one call of each arm per
+index in an order drawn at random per index (`interleave_arm_orders`, seed 0),
+one harness commit, temperature 1.0, every attempt kept:
+
+    python scripts/reproduce_profile_battery.py --provider deepseek \
+        --interleave-arms --arm strong_noverify --arm strong_verify \
+        --natural-names --n 600 --log-dir scripts/runs/profile/2026-10-02_a11
+
+- Outcome: a delivered violation, that is, any of (C1)-(C3) in the payload
+  as it reaches the user, scored by `scripts/unified_scoring.py`.
+- Primary test: two-sided Fisher exact test, alpha 0.05, reported with the
+  Newcombe 95 % interval of the difference.
+- Prediction: more delivered violations without the verifier.
+- Consequence: if p >= 0.05, the paper reports no measured benefit and gives
+  the interval as the precision of that null; if p < 0.05, a measured benefit
+  of the observed size. Either way the run is not repeated or extended.
+- Estimated cost: about 1,230 calls, about 1 USD.
