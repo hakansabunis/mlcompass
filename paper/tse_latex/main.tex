@@ -950,8 +950,8 @@ the anchor and breaks nothing else.
 \end{itemize}
 The kinds partition the violating responses, so the kinds sum to the contract
 count. A kind records where an item came from, not what a reader would
-understand. A misplaced item can be harmless to a reader, as when a metric's
-name sits in the cited-column list. An item of the same kind can also state a
+understand. A misplaced item may be harmless to a reader, as a metric's name in
+the cited-column list may be. An item of the same kind can also state a
 false relation, as when a number that $E$ records elsewhere is attached to a
 pair that $E$ does not carry. That semantic judgment needs people, and a registered
 blind audit makes the judgment (amendment A7, Table~\ref{tab:registered}).
@@ -1041,8 +1041,7 @@ as the name of the suspicious metric, written into the list of cited columns;
 three times, the name is \texttt{perfect\_match\_rate}, the name of another
 quantity in $E$. One response, on 2026-09-24, also writes \texttt{target}, a
 word that neither $E$ nor the frame contains, because the frame calls its
-target column \texttt{y\_true}. By our rule, that name is invented, although a
-reader would know what the word means. In the terms of
+target column \texttt{y\_true}. By our rule, that name is invented, although the word plausibly refers to the target column. In the terms of
 Section~\ref{sec:related}, the failure is intrinsic. The verifier's test is
 \emph{outside the evidence}, which is weaker than \emph{non-existent}: the
 verifier rejects a real but unlisted column just as the verifier rejects an
@@ -1600,8 +1599,8 @@ Section~\ref{sec:rq1} shows that describing the field removes the misfiling.
 Of the 20 names in 600 responses that $E$ does not carry, 18 are the word
 \texttt{target}. The other two, both from \emph{expert}, name a derived
 quantity and a group of columns. By our rule, all 20 names are invented,
-because neither $E$ nor the frame contains them, although a reader would take
-\texttt{target} to mean the target column. A carried number is misquoted once.
+because neither $E$ nor the frame contains them, although the word plausibly refers
+to the target column. A carried number is misquoted once.
 Across variants, the out-of-evidence and misfiled counts show no detectable
 association (Spearman $\rho=-0.25$, $p=0.63$), although with six variants the
 test has almost no power. \emph{Terse} has the lowest blended rate and the
@@ -1713,9 +1712,9 @@ no admissible slot. Counting these claims as an invented quantity kind, on the
 belief that the profiler computes no class balance, was fault~13 in
 Table~\ref{tab:corrections}. Under Definition~\ref{def:contract}, such a claim
 is a pair that $E$ does not carry: a correct quantity under a key that the
-contract does not admit, which the verifier rejects. A reader is unlikely to
-be misled by the claim, whereas a program that consumes the claim slot
-receives a wrongly keyed value. Excluding the class balance is a design choice
+contract does not admit, which the verifier rejects. A program that consumes the
+claim slot receives a wrongly keyed value; whether a reader is misled is a
+question for the blind audit (A7). Excluding the class balance is a design choice
 of ours. Re-scored with the class shares admitted on the target column, the
 unconstrained arm falls from 26 to 10 violating responses under natural names
 and from 17 to 10 under suffixed names, and the three \texttt{gpt-5.4-mini}
