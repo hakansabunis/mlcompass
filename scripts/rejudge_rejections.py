@@ -191,7 +191,8 @@ def main() -> int:
 
         lines = []
         for row in rows:
-            lines.append(f"{tt(row['arm'])} & {row['i']} & {tt(row['item'])} & "
+            run = row["run"][5:10]  # 2026-09-24_attempts -> 09-24
+            lines.append(f"{run} & {tt(row['arm'])} & {row['i']} & {tt(row['item'])} & "
                          f"{short(row['item'], row['finding'])} & {row['fate']} \\\\")
         pathlib.Path(args.tex).write_text("\n".join(lines) + "\n", encoding="utf-8")
         print(f"wrote {args.tex}")
