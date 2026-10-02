@@ -1,11 +1,25 @@
-# Where this stopped — 2026-10-02
+# Where this stopped — 2026-10-02 (evening)
 
-**V2.3: DONE.** A full readability pass (the abstract restructured as problem /
-prior approaches / proposal / results / contributions; no ambiguous "it";
-shorter sentences; American spelling) and the V2.2 EMSE review addressed:
-kinds of violation replace the "unsupported" layer, every stored rejection is
-re-judged, a same-day naming comparison, fault 16. EMSE build: 43 pages, no
-warnings, abstract 246 words. Analysis plan amendments A6-A8.
+**V2.5: DONE.** Venue-neutral two-column build (`paper/port_to_neutral.py` ->
+`paper/neutral_latex/main.pdf`, 25 pages, copied to Desktop/MLCompass/V2.5.pdf)
+for the next simulated review; the IEEE (`paper/tse_latex`) and EMSE
+(`paper/emse_submission`) builds come from the same source. No overfull boxes,
+no undefined references, tables numbered in citation order, abstract 250 words,
+no "it". New since V2.4:
+
+- **A11 (registered, interleaved, N = 600 per arm):** the verifier lowers
+  delivered violations in the best configuration found, 10/600 -> 0/600
+  (Fisher p = 0.002, difference 1.7 points, Newcombe [0.7, 3.0]), same content
+  (29.4 correct claims per response). All 11 rejected attempts confirmed.
+- **A12:** two LLM judges (gpt-5.4-mini, deepseek-chat) fail the validity check.
+- **A13 (last automatic substitute for A7):** gpt-5.5 passes (55/55, 73/79;
+  64/65 after fault 17) and reads every misfiled `r2` as a false relation
+  (40/40). New Table "semantic audit" (`scripts/audit_table.py`).
+- **Fault 17:** "a number E carries" was read from the dump without the derived
+  absolute correlations; fixed in the kinds and the audit strata (13 sweep
+  responses extrinsic -> misplaced; 15 of 17 S7 items re-assigned). Verdicts of
+  all five judges unchanged; the sheet still rebuilds byte-identically.
+- Spend: DeepSeek balance 3.20 USD (A11 about 1 USD); OpenAI about 3.7 USD (A13).
 
 ## Next
 
@@ -18,7 +32,8 @@ warnings, abstract 246 words. Analysis plan amendments A6-A8.
    Runtime Contract for LLM Narration of Machine-Learning Pipeline Evidence"
    (2026-09-25) and "Prompts Are Advisory, Verification Is Enforcement",
    dropped because A-L2 = 0/200 contradicted it.
-2. **Blind semantic audit (A7)** — two authors label
+2. **Blind semantic audit (A7), optional now** — A13 gave a validated model
+   reading; a human reading would still strengthen the paper. Two authors label
    `benchmark/semantic_audit_A7/audit_sheet.html` independently (204 items,
    one question each, about 1.5 hours), export the CSVs, then run
    `python -X utf8 scripts/make_semantic_audit.py --score a.csv b.csv` and

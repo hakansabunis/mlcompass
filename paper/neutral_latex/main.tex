@@ -668,7 +668,7 @@ counting X5 as $p=1$ would move X3's adjusted $p$ from 0.015 to 0.022). X- and H
 first call started at 15:51~UTC. Every record pins the harness commit under
 which the record ran. ``Tie'' and ``held'' report observed equality: no
 equivalence margin was registered. \emph{Status}: as planned, deviated (run
-with the change that the row describes), exploratory, not tested, or pending.
+with the change that the row describes), exploratory, not tested, or not run.
 The five rows after the first rule record where the study departed from the
 plan; the rows after the second rule are amendments A3, A7, and A9 to A13,
 registered for this revision.}
@@ -1326,8 +1326,11 @@ enforced arms therefore come from narrators that committed to a verdict.
 The failing model writes the evidence's own vocabulary, above all
 \texttt{r2}, into an undescribed column field. Of the 1{,}829 flagged
 responses, 1{,}807 misfile and 13 use an invented name, and most contract
-violations introduce nothing that $E$ lacks. A field description, the shipped
-prompt, or temperature 0 lowers the rate from 42--49\,\% to 0--2\,\%.
+violations introduce nothing that $E$ lacks. The misfiling is not benign: the
+one model judge that passed its validity check reads every audited
+\texttt{r2} in a column field as a false relation. A field description, the
+shipped prompt, or temperature 0 lowers the rate from 42--49\,\% to
+0--2\,\%.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{RQ2 and RQ3: Enforcement, Its Cost, and the Alternatives}\label{sec:rq3}
@@ -1473,12 +1476,13 @@ responses (1.7\,\% [0.9, 3.0]) and the verified arm in none (0\,\% [0, 0.6]).
 The registered two-sided Fisher test rejects ($p=0.002$), and the difference
 of 1.7 points has a Newcombe 95\,\% interval of 0.7 to 3.0. The ten violations
 are slips rather than the misfiling of the bare instruction. Two cite a
-statistic name (\texttt{cardinality}, \texttt{zero\_ratio}) as a column; four
+statistic name (\texttt{cardinality}, \texttt{zero\_ratio}) as a column. Four
 claim a pair that $E$ does not carry, three of them under a statistic name that
-the profiler does not use, such as the misspelled \texttt{missding\_count}; and
-four name a column that the frame lacks: two misspell a real column
+the profiler does not use, such as the misspelled \texttt{missding\_count}.
+Four name a column that the frame lacks: two misspell a real column
 (\texttt{season\_minutes}, \texttt{tenanture\_months}), one cites two
-placeholder columns, and one invents a \texttt{product} column. The verified arm sent back
+placeholder columns, and one invents a \texttt{product} column. The verified
+arm sent back
 ten responses, and the independent reading of the rejection audit below
 confirms all eleven rejected attempts. One of those attempts narrated the
 columns of a different, well-known dataset (\texttt{crim}, \texttt{zn},
@@ -2136,7 +2140,7 @@ effect of any fix of this kind holds only for the configuration in which the fix
 should report contract violations apart from what the violations introduce;
 counted as one hallucination rate, the failing model's errors would overstate
 invention many times over (Table~\ref{tab:kinds}). A model judge does not
-replace that check: two inference models and two of the three LLM judges failed
+replace that check. Two inference models and two of the three LLM judges failed
 a 90\,\% bar on audit items whose truth is fixed, and the judge that passed
 cost about two cents per item (Section~\ref{sec:rq1}), against microseconds for
 the check. The
