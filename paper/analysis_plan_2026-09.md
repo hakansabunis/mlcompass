@@ -1212,3 +1212,35 @@ A10 is reported as uninformative on these data. Exploratory, not registered:
 DeBERTa labels all 22 S3 items contradicted, and 16 of its 19 misses on
 known-unsupported items are near names (the word `target` 12 times, four
 respellings).
+
+### A12 — Blind semantic audit by two LLM judges (2026-10-02, registered before any judge has seen an item)
+
+**Why.** A10's NLI judges failed their validity check. A12 asks the A7
+question itself, with the A7 instructions, of two LLMs from different model
+families, as two independent annotators.
+
+**Judges.** `gpt-5.4-mini` (OpenAI; also one of the three narrators studied,
+on a minority of the items) and `mistral-medium-latest` (Mistral). One call
+per item per judge, the provider's default sampling for `gpt-5.4-mini` and
+temperature 0 for Mistral, JSON output `{"label", "reason"}`.
+
+**Input.** For each of the 204 A7 items, exactly what the human sheet shows,
+in English: the instructions with the labels A-E and the decision rules (the
+rules translated from the sheet, the neutral weather example included), E's
+table of columns, statistics and values, E's other names, the frame's column
+list, the whole response, and the marked element. Neither judge sees the arm,
+model, provider, date or stratum.
+
+**Validity on known truth.** By construction S4, S8 and S9 are not false, so
+a valid judge labels at least 90 % of them A or B; S3, S5, S6 and S7 are false
+or absent, so a valid judge labels at least 90 % of them C or D. Only a valid
+judge's labels on the contested strata (S1, S2) are interpreted.
+
+**Analysis.** Per judge and stratum, the label shares with Wilson 95 %
+intervals; Cohen's kappa between the judges over all items; where both judges
+are valid, their consensus (the items on which they agree) per contested
+stratum. No hypothesis test.
+
+**Predictions** (those of A7): P1, a majority of S1 items is labelled B; P2, a
+majority of S3 items is labelled C; P3, at least 90 % of S8 and S9 items are
+labelled A. The consequences are those of A7.
