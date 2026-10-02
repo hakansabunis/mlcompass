@@ -9,11 +9,12 @@ warnings, abstract 246 words. Analysis plan amendments A6-A8.
 
 ## Next
 
-1. **Title** — changed 2026-10-01 to "Misfiling, Not Invention: How an LLM
-   Narrator of Machine-Learning Pipeline Evidence Fails, and What an
-   Evidence-Bound Contract Checks" in the TSE and EMSE manuscripts, README
-   and CITATION.cff, after the V2.1 review read the paper as an empirical
-   diagnosis rather than a mechanism. Earlier titles: "An Evidence-Bound
+1. **Title** — shortened 2026-10-02 to "Misfiling, Not Invention: How LLM Narrators of Structured Evidence Fail"
+   (TSE and EMSE manuscripts, README, CITATION.cff). On 2026-10-01 it had
+   become "Misfiling, Not Invention: How an LLM Narrator of Machine-Learning
+   Pipeline Evidence Fails, and What an Evidence-Bound Contract Checks",
+   after the V2.1 review read the paper as an empirical diagnosis rather
+   than a mechanism; that title read like a sentence. Earlier titles: "An Evidence-Bound
    Runtime Contract for LLM Narration of Machine-Learning Pipeline Evidence"
    (2026-09-25) and "Prompts Are Advisory, Verification Is Enforcement",
    dropped because A-L2 = 0/200 contradicted it.
