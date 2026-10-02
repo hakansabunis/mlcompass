@@ -1122,3 +1122,56 @@ only). Spend: 0.62 USD (balance 4.96 -> 4.34).
   scorer confirms all 17 rejected attempts (17 of 17, above the registered
   95 %) and finds all 17 final attempts clean; correct claims 170 before and
   170 after the retries.
+
+### A10 — Automatic semantic audit with two NLI judges (2026-10-02, registered before any judge has seen an item)
+
+**Why.** The authors decided not to label the A7 sheet by hand. A10 puts the
+third question of the paper's question table to two natural-language-
+inference (NLI) models trained by others on human-annotated data: read as a
+statement, is the item supported, contradicted, or not addressed by E? An NLI
+model does not judge whether a reader would be misled (A7's label B); A10 does
+not replace that part, and the paper says so. A7 is reported as not run.
+
+**Items.** The 204 items of A7 (same draw, seed 20261002, same sealed key).
+
+**Judges.** `MoritzLaurer/DeBERTa-v3-large-mnli-fever-anli-ling-wanli`
+(revision b3546ea; MultiNLI, Fever-NLI, ANLI, LingNLI and WANLI, 885,242
+human-annotated pairs) and `FacebookAI/roberta-large-mnli` (revision 2a8f12d;
+MultiNLI). Labels: entailment / neutral / contradiction, read as supported /
+not addressed / contradicted; the label is the arg-max. Each judge sees a
+premise and a hypothesis only, never the arm, model, provider, date or stratum.
+
+**Hypothesis.** A claim (c, s, v) becomes "The {s} of column {c} is {v}.",
+with the statistic written out by a fixed table in `scripts/nli_audit.py`; a
+cited name n becomes "{n} is a column of the data."
+
+**Premise.** Sentences generated from E by fixed templates, limited to the
+dataset-level facts (row count or shape, class balance, suspicious metric,
+perfect-match rate, candidate leak columns, the frame's column list), every
+sentence about the item's column, and every sentence whose number equals the
+item's number within 0.005. Truncated to the judge's input limit, premise
+side only.
+
+**Validity on known truth.** By construction S8 (admissible name), S9 (claim
+matching E) and S4 (a real column of the frame, which the premise lists) are
+supported; S3 (wrong number carrying another item's value), S5 and S6
+(invented names) and S7 (number E records nowhere) are not supported. A judge
+is valid on these data if it labels at least 90 % of S4 ∪ S8 ∪ S9 supported
+and at least 90 % of S3 ∪ S5 ∪ S6 ∪ S7 not supported. Only a valid judge's
+labels on the contested strata are interpreted.
+
+**Contested strata.** S2 (a number E records, under a pair E does not record)
+is where the judges add information: supported means the claim states
+correctly something E records (for example the class balance keyed to the
+target column); contradicted or not addressed means the relation it states is
+not in E. S1 (misfiled name) has a literal reading fixed by construction (a
+metric's name is not a column) and is reported as a check, not as a finding
+about readers.
+
+**Analysis.** Per judge and stratum, the share of each label with Wilson 95 %
+intervals; Cohen's kappa between the judges over all items; the validity check.
+No hypothesis test.
+
+**Prediction.** Both judges pass the validity check. If one fails, its labels
+are not interpreted; if both fail, A10 is reported as uninformative on these
+data.
