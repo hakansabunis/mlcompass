@@ -31,6 +31,7 @@ body = src[src.index(r"\IEEEpeerreviewmaketitle") + len(r"\IEEEpeerreviewmaketit
            src.index(r"\end{document}")]
 
 body = body.replace(r"\IEEEPARstart{M}{achine-learning}", "Machine-learning")
+body = body.replace(r"\appendices", r"\appendix")  # IEEEtran -> standard LaTeX
 body = body.replace(r"\begin{IEEEproof}[Proof sketch]", r"\begin{proof}[Proof sketch]")
 body = body.replace(r"\end{IEEEproof}", r"\end{proof}")
 body = body.replace(r"\bibliographystyle{IEEEtran}", r"\bibliographystyle{unsrtnat}")

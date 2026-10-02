@@ -1,6 +1,27 @@
-# Where this stopped — 2026-10-02 (evening)
+# Where this stopped — 2026-10-02 (night)
 
-**V2.5: DONE.** Venue-neutral two-column build (`paper/port_to_neutral.py` ->
+**V2.6: DONE** (the V2.5 review: EMSE minor revision, TSE major revision risk;
+no new experiment asked for). Editorial pass only, no number changed:
+
+- Claim narrowed (abstract, introduction, contributions, conclusion): misfiling
+  can dominate when an evidence-closed narrator fails, and an aggregate
+  hallucination rate hides it; no general claim about LLMs.
+- The A13 reading is worded as a classification by the one judge that passed,
+  not as "misleads".
+- RQ2/3 opens by separating the (C1)-(C2) guarantee (a design property) from
+  the empirical questions (implementation, cost, added benefit = A11).
+- Corrections open with the immutable records and the two independent
+  scorers' full agreement on entity, misfiled and out-of-evidence flags.
+- Main text about 10 % shorter (prose 16,379 -> 14,942 words; with tables
+  21,819 -> 19,673). Nothing deleted: Appendix A "Audit Trail" (tables A1 and
+  A2) holds the other registered items (A3 R3/R4, A7, A9.2, A10, A12), the
+  failed judges, the rejected attempts, fault details and patterns, the
+  free-text scan, verdict counts, drift, the offline deletion analysis and the
+  downstream benchmark. Ports map `ppendices` to `ppendix`.
+- Neutral build 26 pages (main text ends on page 20); IEEE and EMSE build; no
+  overfull boxes or undefined references; both table series in citation order.
+
+**V2.5** Venue-neutral two-column build (`paper/port_to_neutral.py` ->
 `paper/neutral_latex/main.pdf`, 25 pages, copied to Desktop/MLCompass/V2.5.pdf)
 for the next simulated review; the IEEE (`paper/tse_latex`) and EMSE
 (`paper/emse_submission`) builds come from the same source. No overfull boxes,

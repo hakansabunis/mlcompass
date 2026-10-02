@@ -38,6 +38,7 @@ data_avail = between(src, r"\section*{Data Availability}", r"\balance").strip()
 
 # IEEE-only commands
 body = body.replace(r"\IEEEPARstart{M}{achine-learning}", "Machine-learning")
+body = body.replace(r"\appendices", r"\appendix")  # IEEEtran -> standard LaTeX
 # SVJour3 predefines `definition` and its own `proof`; amsthm cannot be loaded
 # beside it, so the sketch gets an environment of its own.
 body = body.replace(r"\begin{IEEEproof}[Proof sketch]", r"\begin{proofsketch}")
@@ -68,9 +69,11 @@ body = once(body, r"\begin{tabular}{@{}lllll@{}}" + "\n\\toprule\nLocus",
             r"\setlength{\tabcolsep}{4pt}"
             r"\begin{tabular}{@{}lll>{\raggedright\arraybackslash}p{0.22\textwidth}"
             r">{\raggedright\arraybackslash}p{0.33\textwidth}@{}}" + "\n\\toprule\nLocus")
-body = once(body, r"\begin{tabular}{@{}lp{5.4cm}p{8.9cm}l@{}}",
-            r"\begin{tabular}{@{}l>{\raggedright\arraybackslash}p{3.2cm}"
-            r">{\raggedright\arraybackslash}p{4.85cm}l@{}}")
+# The registered-items table and its continuation in the appendix.
+assert body.count(r"\begin{tabular}{@{}lp{5.4cm}p{8.9cm}l@{}}") == 2
+body = body.replace(r"\begin{tabular}{@{}lp{5.4cm}p{8.9cm}l@{}}",
+                    r"\begin{tabular}{@{}l>{\raggedright\arraybackslash}p{3.2cm}"
+                    r">{\raggedright\arraybackslash}p{4.85cm}l@{}}")
 a = body.index(r"\label{tab:sweep}")
 t0 = body.index(r"\begin{tabular}", a)
 t1 = body.index(r"\end{tabular}", t0) + len(r"\end{tabular}")
