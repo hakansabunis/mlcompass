@@ -201,6 +201,25 @@ def score(tex: str | None, judges: tuple[str, ...] = A12_JUDGES, out: str = "llm
                               "false_or_absent_CD": [fa_ok, fa_n, wilson(fa_ok, fa_n)],
                               "valid": nf_ok >= 0.9 * nf_n and fa_ok >= 0.9 * fa_n}
         res["missing"][j] = sum(1 for i in key if j not in labels[i])
+    # Fault 17: the same check with the drawn items re-assigned by every number E carries.
+    import make_semantic_audit as msa  # noqa: PLC0415
+
+    fixed = msa.corrected_strata(key)
+    res["moved_by_fault_17"] = dict(Counter(f"{key[i]['stratum']} -> {fixed[i]}"
+                                            for i in key if fixed[i] != key[i]["stratum"]))
+    res["by_stratum_corrected"], res["validity_corrected"] = {}, {}
+    for j in judges:
+        by = defaultdict(Counter)
+        for i in key:
+            by[fixed[i]][labels[i].get(j, "missing")] += 1
+        res["by_stratum_corrected"][j] = {s: dict(by[s]) for s in sorted(by)}
+        nf_n = sum(sum(by[s].values()) for s in NOT_FALSE)
+        nf_ok = sum(by[s]["A"] + by[s]["B"] for s in NOT_FALSE)
+        fa_n = sum(sum(by[s].values()) for s in FALSE_OR_ABSENT)
+        fa_ok = sum(by[s]["C"] + by[s]["D"] for s in FALSE_OR_ABSENT)
+        res["validity_corrected"][j] = {"not_false_AB": [nf_ok, nf_n, wilson(nf_ok, nf_n)],
+                                        "false_or_absent_CD": [fa_ok, fa_n, wilson(fa_ok, fa_n)],
+                                        "valid": nf_ok >= 0.9 * nf_n and fa_ok >= 0.9 * fa_n}
     if len(judges) == 2:
         both = [i for i in key if all(j in labels[i] for j in judges)]
         j1, j2 = judges

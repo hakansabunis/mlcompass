@@ -116,6 +116,122 @@
   "gpt": 0,
   "deepseek": 0
  },
+ "moved_by_fault_17": {
+  "S7 number E records nowhere -> S2 number E records under another pair": 14,
+  "S7 number E records nowhere -> S3 wrong number, another item's value": 1
+ },
+ "by_stratum_corrected": {
+  "gpt": {
+   "S1 misfiled name": {
+    "D": 40
+   },
+   "S2 number E records under another pair": {
+    "C": 29,
+    "D": 8,
+    "A": 5,
+    "B": 2
+   },
+   "S3 wrong number, another item's value": {
+    "C": 12,
+    "A": 11
+   },
+   "S4 real column E does not list": {
+    "D": 14,
+    "A": 1
+   },
+   "S5 invented name, list written in advance": {
+    "D": 10
+   },
+   "S6 invented name": {
+    "D": 30
+   },
+   "S7 number E records nowhere": {
+    "C": 2
+   },
+   "S8 control: admissible name": {
+    "A": 20
+   },
+   "S9 control: claim that matches E": {
+    "A": 20
+   }
+  },
+  "deepseek": {
+   "S1 misfiled name": {
+    "D": 36,
+    "B": 4
+   },
+   "S2 number E records under another pair": {
+    "C": 22,
+    "B": 4,
+    "A": 11,
+    "D": 7
+   },
+   "S3 wrong number, another item's value": {
+    "C": 23
+   },
+   "S4 real column E does not list": {
+    "A": 8,
+    "D": 7
+   },
+   "S5 invented name, list written in advance": {
+    "D": 10
+   },
+   "S6 invented name": {
+    "D": 28,
+    "B": 2
+   },
+   "S7 number E records nowhere": {
+    "C": 1,
+    "D": 1
+   },
+   "S8 control: admissible name": {
+    "A": 20
+   },
+   "S9 control: claim that matches E": {
+    "A": 20
+   }
+  }
+ },
+ "validity_corrected": {
+  "gpt": {
+   "not_false_AB": [
+    41,
+    55,
+    [
+     0.6169812861001356,
+     0.8418788528788885
+    ]
+   ],
+   "false_or_absent_CD": [
+    54,
+    65,
+    [
+     0.7218357826609499,
+     0.9027878191448359
+    ]
+   ],
+   "valid": false
+  },
+  "deepseek": {
+   "not_false_AB": [
+    48,
+    55,
+    [
+     0.7598297223798235,
+     0.9369578960698056
+    ]
+   ],
+   "false_or_absent_CD": [
+    63,
+    65,
+    [
+     0.8945729439078441,
+     0.9915210028398983
+    ]
+   ],
+   "valid": false
+  }
+ },
  "kappa": 0.6321889833314935,
  "agreement": 0.7598039215686274,
  "consensus": {

@@ -127,15 +127,23 @@ def run_files(include_a9: bool = False):
 
 
 def context(kind: str, ev: dict) -> dict:
+    # "numbers" is every number E carries: the raw numbers of the dump and the
+    # values of the table the contract binds, which derives entries such as the
+    # absolute correlation (fault 17: the raw numbers alone missed those).
     if kind == "profile":
         b = bind_profile(ev)
+        values = dict(b.values)
         return {"cols": set(b.admissible("columns_referenced")) | set(b.admissible("claims[].column")),
-                "values": dict(b.values), "anchor": b.anchor, "names": _names(ev),
-                "numbers": _numbers(ev), "norm": lambda s: str(s or ""),
+                "values": values, "anchor": b.anchor, "names": _names(ev),
+                "numbers": _numbers(ev) + [float(v) for v in values.values()],
+                "raw_numbers": _numbers(ev), "norm": lambda s: str(s or ""),
                 "verdicts": PROFILE_VERDICTS}
-    return {"cols": set(h.evidence_allowed_columns(ev)), "values": h.evidence_value_table(ev),
-            "anchor": h.top_candidate(ev), "names": _names(ev), "numbers": _numbers(ev),
-            "norm": h._normalise_statistic, "verdicts": LEAKAGE_VERDICTS}
+    values = h.evidence_value_table(ev)
+    return {"cols": set(h.evidence_allowed_columns(ev)), "values": values,
+            "anchor": h.top_candidate(ev), "names": _names(ev),
+            "numbers": _numbers(ev) + [float(v) for v in values.values()],
+            "raw_numbers": _numbers(ev), "norm": h._normalise_statistic,
+            "verdicts": LEAKAGE_VERDICTS}
 
 
 def score(r: dict, kind: str, ctx: dict, frame: set[str] | None = None) -> dict:

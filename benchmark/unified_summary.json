@@ -81,13 +81,13 @@
   "Leakage, bare instruction, four instances": {
    "n": 3200,
    "contract": 1014,
-   "extrinsic": 2,
-   "contradicts": 0,
+   "extrinsic": 1,
+   "contradicts": 1,
    "misplaced": 1011,
    "omission": 1,
    "invented": 1,
    "unlisted": 0,
-   "number_absent": 1
+   "number_absent": 0
   },
   "Leakage, bare instruction, twelve instances": {
    "n": 1888,
@@ -103,13 +103,13 @@
   "Leakage, six instruction wordings": {
    "n": 600,
    "contract": 370,
-   "extrinsic": 34,
+   "extrinsic": 21,
    "contradicts": 1,
-   "misplaced": 335,
+   "misplaced": 348,
    "omission": 0,
    "invented": 20,
    "unlisted": 0,
-   "number_absent": 15
+   "number_absent": 1
   },
   "Leakage, field described or shipped prompt": {
    "n": 2650,

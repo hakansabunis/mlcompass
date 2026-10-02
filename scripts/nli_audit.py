@@ -270,6 +270,22 @@ def score(tex: str | None) -> int:
             "known_unsupported": [uns_ok, uns_n, wilson(uns_ok, uns_n)],
             "valid": sup_ok >= 0.9 * sup_n and uns_ok >= 0.9 * uns_n}
         res["truncated"][j] = sum(lab[i][j]["truncated"] for i in key)
+    # Fault 17: the same check with the drawn items re-assigned by every number E carries.
+    import make_semantic_audit as msa  # noqa: PLC0415
+
+    fixed = msa.corrected_strata(key)
+    res["moved_by_fault_17"] = dict(Counter(f"{key[i]['stratum']} -> {fixed[i]}"
+                                            for i in key if fixed[i] != key[i]["stratum"]))
+    res["validity_corrected"] = {}
+    for j in JUDGES:
+        sup = [i for i in key if fixed[i] in KNOWN_SUPPORTED]
+        uns = [i for i in key if fixed[i] in KNOWN_UNSUPPORTED]
+        sup_ok = sum(READ[lab[i][j]["label"]] == "supported" for i in sup)
+        uns_ok = sum(READ[lab[i][j]["label"]] != "supported" for i in uns)
+        res["validity_corrected"][j] = {
+            "known_supported": [sup_ok, len(sup), wilson(sup_ok, len(sup))],
+            "known_unsupported": [uns_ok, len(uns), wilson(uns_ok, len(uns))],
+            "valid": sup_ok >= 0.9 * len(sup) and uns_ok >= 0.9 * len(uns)}
     ids = sorted(key)
     res["kappa"] = kappa([lab[i]["deberta"]["label"] for i in ids], [lab[i]["roberta"]["label"] for i in ids])
     res["agreement"] = sum(lab[i]["deberta"]["label"] == lab[i]["roberta"]["label"] for i in ids) / len(ids)

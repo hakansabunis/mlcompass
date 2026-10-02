@@ -63,8 +63,16 @@ def _num(v) -> bool:
     return isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(float(v))
 
 
-def items_of(r: dict, kind: str, ctx: dict, frame: set[str]) -> list[dict]:
-    """Every element of one response with its automatic stratum."""
+def items_of(r: dict, kind: str, ctx: dict, frame: set[str],
+             numbers_key: str = "raw_numbers") -> list[dict]:
+    """Every element of one response with its automatic stratum.
+
+    The sheet was drawn with "a number E carries" read as the raw numbers of
+    the dump (numbers_key="raw_numbers"), which misses the derived entries of
+    the value table that the sheet shows, such as absolute correlations
+    (fault 17). The draw keeps that reading so that the sheet rebuilds as
+    drawn; corrected_strata() re-assigns the drawn items with every number E
+    carries (numbers_key="numbers")."""
     profile_raw = kind == "profile" and r.get("arm") not in u.VERIFIED
     claims = [c for c in (r.get("raw_claims") if profile_raw else r.get("claims")) or []
               if isinstance(c, dict)]
@@ -95,7 +103,7 @@ def items_of(r: dict, kind: str, ctx: dict, frame: set[str]) -> list[dict]:
         key, v = (col, ctx["norm"](c.get("statistic"))), c.get("value")
         if not _num(v):
             continue
-        elsewhere = any(abs(float(v) - x) <= TAU for x in ctx["numbers"])
+        elsewhere = any(abs(float(v) - x) <= TAU for x in ctx[numbers_key])
         if key not in values:
             stratum = "S2 number E records under another pair" if elsewhere else "S7 number E records nowhere"
         elif abs(float(v) - values[key]) <= TAU:
@@ -152,7 +160,30 @@ def draw(pool: list[dict]) -> list[dict]:
     return picks
 
 
-def build() -> int:
+def corrected_strata(key: dict) -> dict[str, str]:
+    """The stratum of every drawn item when E's numbers include the value
+    table (fault 17). Items are found by file, position, type and target."""
+    from analyze_revision_runs import _evidence  # noqa: PLC0415
+
+    runs = ROOT / "scripts" / "runs"
+    cache: dict = {}
+    out = {}
+    for item_id, k in key.items():
+        f = runs / k["file"].lstrip("/")
+        if f not in cache:
+            ev = _evidence(f.parent / f"evidence_{f.stem.rsplit('_e', 1)[1]}.json")
+            kind = "profile" if f.relative_to(runs).parts[0] == "profile" else "leakage"
+            cache[f] = (kind, u.context(kind, ev), _records(f))
+        kind, ctx, recs = cache[f]
+        r = recs[k["pos"]]
+        frame = u.frame_columns(str(r.get("task")), ctx)
+        its = [it for it in items_of(r, kind, ctx, frame, numbers_key="numbers")
+               if it["type"] == k["type"] and str(it["target"]) == str(k["target"])]
+        out[item_id] = its[0]["stratum"]
+    return out
+
+
+def build(out_dir: pathlib.Path = OUT) -> int:
     pool = collect()
     picks = draw(pool)
     rng = random.Random(SEED + 1)
@@ -173,17 +204,17 @@ def build() -> int:
         key[str(item_id)] = {"stratum": p["item"]["stratum"], "file": p["file"], "i": p["i"],
                              "pos": p["pos"], "arm_id": p["arm_id"], "provider": p["provider"],
                              "type": p["item"]["type"], "target": p["item"]["target"]}
-    OUT.mkdir(parents=True, exist_ok=True)
+    out_dir.mkdir(parents=True, exist_ok=True)
     template = (ROOT / "scripts" / "semantic_audit_template.html").read_text(encoding="utf-8")
     page = template.replace("__ITEMS__", json.dumps(items, default=str))
-    (OUT / "audit_sheet.html").write_text(page, encoding="utf-8")
-    (OUT / "KEY_sealed.json").write_text(json.dumps(key, indent=1), encoding="utf-8")
+    (out_dir / "audit_sheet.html").write_text(page, encoding="utf-8")
+    (out_dir / "KEY_sealed.json").write_text(json.dumps(key, indent=1), encoding="utf-8")
     counts = Counter(k["stratum"] for k in key.values())
     eligible = Counter(it["stratum"] for p in pool for it in {i["stratum"]: i for i in p["items"]}.values())
     print(f"pool: {len(pool)} responses with at least one element")
     for s in QUOTA:
         print(f"  {s:48s} eligible responses {eligible[s]:6d}  drawn {counts[s]:4d}")
-    print(f"drew {len(picks)} items; wrote {OUT / 'audit_sheet.html'} and the sealed key")
+    print(f"drew {len(picks)} items; wrote {out_dir / 'audit_sheet.html'} and the sealed key")
     return 0
 
 
@@ -233,8 +264,9 @@ def score(paths: list[str]) -> int:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--score", nargs="+", default=None, help="CSV(s) exported from the sheet.")
+    ap.add_argument("--out", default=str(OUT), help="Where build() writes the sheet and key.")
     args = ap.parse_args()
-    return score(args.score) if args.score else build()
+    return score(args.score) if args.score else build(pathlib.Path(args.out))
 
 
 if __name__ == "__main__":

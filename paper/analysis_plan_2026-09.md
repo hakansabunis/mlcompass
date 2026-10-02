@@ -1318,3 +1318,36 @@ tokens (about 2.3 USD) and 0.1 to 0.3 million output tokens (3 to 9 USD).
 
     python -X utf8 scripts/llm_audit.py judge --only gpt55
     python -X utf8 scripts/llm_audit.py score --judges gpt55 --out llm_results_a13.json
+
+**A13 outcome (2026-10-02).** `gpt-5.5-2026-04-23` labelled all 204 items
+(no errors; 3.67 USD at the listed price, under the 15 USD cap). The judge
+passed the registered validity check: 55/55 not-false items as A or B (Wilson
+0.93-1.00) and 73/79 false or absent items as C or D (0.84-0.96). As
+registered, its labels on the contested strata are reported. S1 (misfiled
+names, all `r2` in a column field): 40/40 C, a false or unsupported relation
+that could mislead a reader (Wilson 0.91-1.00). S2 (numbers that E records
+under another pair, 30 items): 8 A, 1 C, 21 D. Predictions: P1 fails (S1 is
+not majority B), P2 holds (S3: 20 C of 22), P3 holds (S8 and S9: 40/40 A).
+
+**Fault 17, found in A13's reasons (2026-10-02, after the outcome above).**
+Several reasons for A labels on S7 ("number E records nowhere") said that E
+shows the number. The stratum, like the kinds of `scripts/unified_scoring.py`,
+read "a number E carries" as a number of the evidence dump, whereas the value
+table that the contract binds and the sheet shows also derives each
+correlation's absolute value. With the table included, 15 of the 17 S7 items
+carry a number that the sheet shows: 14 move to S2 and 1 to S3. The sheet keeps
+its registered draw (`make_semantic_audit.py` draws with the raw numbers and
+rebuilds byte-identically); `corrected_strata()` re-assigns the drawn items,
+and every score now reports both. Re-assigned, the verdicts do not change:
+DeBERTa 55/55 and 48/65, RoBERTa 53/55 and 21/65, `gpt-5.4-mini` 41/55 and
+54/65, `deepseek-chat` 48/55 and 63/65 (all invalid), `gpt-5.5` 55/55 and
+64/65 (valid). Corrected S2 under `gpt-5.5` (44 items): 13 A, all a correct
+value under the right column with a statistic name that the domain does not
+list (such as `pearson_corr_with_target`); 8 C; 23 D, of which 20 attach a
+dataset-level quantity (the metric's value 1.0 under an `r2`-named statistic,
+or a class share), which the sheet names but does not show as a number. Those
+20 D labels follow from the sheet, not from the response, and are not
+interpreted. In the corpus kinds, the fix moves 13 responses of the wording
+sweep from extrinsic to misplaced (34 -> 21 extrinsic) and one bare leakage
+response from extrinsic to contradicting E; the policy table and the deletion
+analysis do not change.

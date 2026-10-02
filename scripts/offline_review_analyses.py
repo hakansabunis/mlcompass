@@ -31,6 +31,7 @@ sys.path.insert(0, str(ROOT / "src"))
 import definitions_scorer as ind  # noqa: E402
 import reproduce_hallucination_ablation as h  # noqa: E402
 from analyze_revision_runs import _evidence, _names, _numbers, _records  # noqa: E402
+from unified_scoring import A9_DIRS  # noqa: E402
 
 from mlcompass.agents.evidence_contract import (  # noqa: E402
     LEAKAGE,
@@ -56,6 +57,8 @@ def run_files(kind: str):
         if any("superseded" in p or p == "transport_errors" for p in rel):
             continue
         if (rel[0] == "profile") != (kind == "profile"):
+            continue
+        if any(p in A9_DIRS for p in rel):  # the 2026-10-02 registered runs are reported apart
             continue
         ev_path = f.parent / f"evidence_{f.stem.rsplit('_e', 1)[1]}.json"
         if ev_path.exists():
@@ -115,7 +118,7 @@ def _strip_stats(kind: str) -> dict:
     s: Counter = Counter()
     for f, ev in run_files(kind):
         bound = binder(ev)
-        numbers = _numbers(ev)
+        numbers = _numbers(ev) + [float(x) for x in bound.values.values()]  # fault 17
         for r in _records(f):
             if r.get("arm") not in arms:
                 continue
@@ -164,7 +167,7 @@ def task_level_slot() -> dict:
         if not recs:
             continue
         bound = bind_profile(ev)
-        numbers = _numbers(ev)
+        numbers = _numbers(ev) + [float(x) for x in bound.values.values()]  # fault 17
         shares = [float(x) for x in ((ev.get("task_hint") or {}).get("class_balance") or {}).values()]
         target = str((ev.get("target_hint") or {}).get("column") or "target")
         before = after = 0

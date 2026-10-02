@@ -120,5 +120,49 @@
   "deberta": 0,
   "roberta": 0
  },
+ "moved_by_fault_17": {
+  "S7 number E records nowhere -> S2 number E records under another pair": 14,
+  "S7 number E records nowhere -> S3 wrong number, another item's value": 1
+ },
+ "validity_corrected": {
+  "deberta": {
+   "known_supported": [
+    55,
+    55,
+    [
+     0.9347150979202339,
+     1.0
+    ]
+   ],
+   "known_unsupported": [
+    48,
+    65,
+    [
+     0.6204919720494677,
+     0.8298180664616801
+    ]
+   ],
+   "valid": false
+  },
+  "roberta": {
+   "known_supported": [
+    53,
+    55,
+    [
+     0.8767653592704914,
+     0.9899704588009981
+    ]
+   ],
+   "known_unsupported": [
+    21,
+    65,
+    [
+     0.2220388899175364,
+     0.44386011376774104
+    ]
+   ],
+   "valid": false
+  }
+ },
  "agreement": 0.6323529411764706
 }
