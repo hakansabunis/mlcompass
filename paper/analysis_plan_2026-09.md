@@ -1053,3 +1053,50 @@ reports the observed rate at which the scorer's "clean" is wrong.
   rule it is invented, not unlisted: invented names on the bare leakage arms
   are 13 of 1,829, not 12, and on the wording sweep 20, not 2. The registered
   R2a count (12 of 817, on the twelve frozen instances) is unchanged.
+
+### A9 — Interleaved naming and a leakage retry audit (2026-10-02, registered before any call)
+
+Both runs answer the V2.3 review. Neither has started: the provider balance
+read -0.03 USD on 2026-10-02 (checked through the free balance endpoint).
+
+**A9.1 Naming, interleaved.** `P-TIER-A-ONLY` (call-time enum, no verifier,
+bare prompt, temperature 1.0) on the profile frame under both naming schemes
+in one run, on one harness commit:
+
+    python scripts/reproduce_profile_battery.py --provider deepseek \
+        --interleave-names --arm tier_a --n 200 \
+        --log-dir scripts/runs/profile/<date>_interleaved
+
+For each index the two calls are made in an order drawn at random per index
+(`interleave_orders`, seed 0). The evidence is the reported pair
+(`bcaea394` suffixed, `7e0d8c22` natural). Every attempt is kept.
+
+- Outcome: responses with at least one wrong number, per scheme.
+- Primary test: two-sided Fisher exact test, suffixed against natural,
+  alpha 0.05. No other test is run on these cells.
+- Prediction: more wrong-number responses under suffixed names.
+- Secondary, descriptive: the share of suffixed wrong numbers that equal the
+  same-suffix sibling's value.
+- Consequence: if the test does not reject, the paper says that naming did
+  not change the rate under interleaving, and the naming explanation loses
+  the support of the same-day comparison.
+
+**A9.2 Leakage retry audit.** The floor, `A-CONTRACT` and `A-STRESS` on the
+crowded instance (where `A-STRESS` retried 25 of 200), with every attempt
+kept:
+
+    python scripts/reproduce_hallucination_ablation.py --mode live \
+        --provider deepseek --task synthetic-crowded --retry-audit --n 200 \
+        --log-dir scripts/runs/<date>_retry_audit
+
+- Analysis: every rejected attempt is re-judged by the second scorer
+  (`scripts/definitions_scorer.py`, via `scripts/rejudge_rejections.py`),
+  which shares no code with the verifier. Reported: the share of rejections
+  it confirms, what each retry did with the offending item, and the correct
+  claims before and after the retry (`scripts/retry_content.py`).
+- Prediction: the second scorer confirms at least 95 % of the rejections and
+  finds every final attempt clean.
+- Consequence: a confirmation rate below 95 % is reported as the verifier's
+  observed false-rejection rate.
+
+Estimated cost of both runs together: about 3 USD.

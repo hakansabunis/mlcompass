@@ -73,7 +73,8 @@ FIELDS = ["run_dir", "file", "task", "names", "provider", "model", "arm", "arm_i
           "c1_misfiled", "c1_outside_E", "artifact", "c2_wrong", "c2_not_carried",
           "c2_not_carried_real", "c2_unsupported", "c2_wrong_foreign", "c2_wrong_absent",
           "c2_wrong_nonnumeric", "names_unlisted", "names_invented", "c3", "any", "kind",
-          "claims", "claims_checked", "claims_exact", "claims_round", "retried", "retry_reasons"]
+          "claims", "claims_checked", "claims_exact", "claims_round", "claims_correct",
+          "anchor_value", "retried", "retry_reasons"]
 _FRAMES: dict[str, set[str]] = {}
 
 
@@ -142,6 +143,7 @@ def score(r: dict, kind: str, ctx: dict, frame: set[str] | None = None) -> dict:
                    if c not in cols)
     wrong = not_carried = not_carried_real = unsupported = checked = exact = rounded = 0
     wrong_foreign = wrong_absent = wrong_nonnumeric = 0
+    correct_cols: list[str] = []
     for c, col in zip(claims, claim_cols):
         if col not in cols:
             continue
@@ -163,6 +165,8 @@ def score(r: dict, kind: str, ctx: dict, frame: set[str] | None = None) -> dict:
         checked += 1
         exact += d == 0.0
         rounded += 0.0 < d <= 5e-4
+        if d <= TAU:
+            correct_cols.append(col)
         if d > TAU:
             wrong += 1
             if any(abs(float(val) - x) <= TAU for x in ctx["numbers"]):
@@ -184,7 +188,8 @@ def score(r: dict, kind: str, ctx: dict, frame: set[str] | None = None) -> dict:
         "c2_wrong_foreign": wrong_foreign, "c2_wrong_absent": wrong_absent,
         "c2_wrong_nonnumeric": wrong_nonnumeric, "c3": c3,
         "claims": len(claims), "claims_checked": checked, "claims_exact": exact,
-        "claims_round": rounded,
+        "claims_round": rounded, "claims_correct": len(correct_cols),
+        "anchor_value": ctx["anchor"] is not None and ctx["anchor"] in correct_cols,
     }
     row["any"] = bool(bad_cited or bad_claim or wrong or not_carried or c3)
     frame = ctx["cols"] if frame is None else frame

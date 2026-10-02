@@ -24,6 +24,7 @@ import pathlib
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 RUNS = ROOT / "scripts" / "runs" / "profile"
+LEAK_RUNS = ROOT / "scripts" / "runs"
 TAU = 0.005
 VERDICTS = {"clean", "needs_cleaning", "unusable", "cannot_determine"}
 
@@ -111,10 +112,63 @@ def rejudge() -> tuple[list[dict], int, int]:
     return rows, total, agree
 
 
+def judge_leakage_attempt(attempt: dict, ev: dict) -> list[str]:
+    """What the second scorer (scripts/definitions_scorer.py, which shares no
+    code with the verifier) finds wrong in one leakage attempt."""
+    import sys  # noqa: PLC0415
+
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import definitions_scorer as ds  # noqa: PLC0415
+
+    verdict = str(attempt.get("verdict") or "")
+    if verdict not in ds.COMMITTING | {"cannot_determine"}:
+        return ["no admissible verdict"]
+    s = ds.score({"columns": attempt.get("columns_referenced") or [],
+                  "claims": attempt.get("claims") or [], "verdict": verdict}, ev)
+    found = [f"name outside E: {n}" for n in s["outside_names"]]
+    if s["wrong_number"]:
+        found.append("wrong number")
+    if s["omission"]:
+        found.append("omission")
+    return found
+
+
+def rejudge_leakage() -> tuple[list[dict], int]:
+    """Every rejected leakage attempt that the records keep (harness of
+    2026-10-01 or later), re-judged by the second scorer."""
+    import sys  # noqa: PLC0415
+
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import definitions_scorer as ds  # noqa: PLC0415
+
+    rows, total = [], 0
+    for f in sorted(LEAK_RUNS.rglob("*.jsonl")):
+        if "profile" in f.parts or any("superseded" in p or p == "transport_errors"
+                                       for p in f.parts):
+            continue
+        dump = f.parent / f"evidence_{f.stem.rsplit('_e', 1)[-1]}.json"
+        if not dump.exists():
+            continue
+        ev = ds.load_evidence(dump)
+        for line in f.read_text(encoding="utf-8").splitlines():
+            r = json.loads(line)
+            at = r.get("attempts") or []
+            for a in at[:-1]:
+                total += 1
+                found = judge_leakage_attempt(a, ev)
+                rows.append({"run": f.parent.name, "arm": r.get("arm_id"), "i": r.get("i"),
+                             "found": found, "final_clean": not judge_leakage_attempt(at[-1], ev)})
+    return rows, total
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--tex", default=None)
     args = ap.parse_args()
+    leak_rows, leak_total = rejudge_leakage()
+    print(f"leakage: {leak_total} rejected attempts kept; the second scorer finds a problem in "
+          f"{sum(bool(r['found']) for r in leak_rows)}; final attempts clean: "
+          f"{sum(r['final_clean'] for r in leak_rows)}")
     rows, total, agree = rejudge()
     for row in rows:
         print(row)

@@ -5,7 +5,10 @@ violation rates: a response with no claims satisfies C1-C2 vacuously, and an
 abstention escapes C3. From benchmark/unified_scoring.csv this writes, per
 arm, the share of responses with any violation, the mean number of claims
 delivered, the share delivering at least one claim, abstentions, responses
-with no admissible verdict (aborted or empty), and responses retried.
+with no admissible verdict (aborted or empty), and responses retried. The
+2026-10-02 review asked how much correct content survives: the mean number of
+claims that match E within tau, and the share of responses that report the
+anchor's measured value, are added.
 
     python -X utf8 scripts/delivery_table.py [--tex paper/tse_latex/table_delivery_rows.tex]
 """
@@ -48,12 +51,17 @@ def main() -> int:
         abstain = sum(r["verdict_admissible"] == "True" and r["committed"] == "False" for r in cell)
         no_verdict = sum(r["verdict_admissible"] == "False" and r["committed"] == "False" for r in cell)
         retried = sum(r["retried"] == "True" for r in cell)
-        out.append((arm, n, anyv, claims / n, with_claim, abstain, no_verdict, retried))
-        print(f"{arm:20s} N={n} any={anyv:3d} claims/resp={claims / n:5.2f} with>=1 claim={with_claim:3d} "
+        correct = sum(int(r["claims_correct"]) for r in cell)
+        anchor = sum(r["anchor_value"] == "True" for r in cell)
+        out.append((arm, n, anyv, claims / n, correct / n, 100 * anchor / n, with_claim,
+                    abstain, no_verdict, retried))
+        print(f"{arm:20s} N={n} any={anyv:3d} claims/resp={claims / n:5.2f} correct/resp={correct / n:5.2f} "
+              f"anchor={100 * anchor / n:5.1f}% with>=1 claim={with_claim:3d} "
               f"abstain={abstain:2d} no-verdict={no_verdict:2d} retried={retried:3d}")
     if args.tex:
-        lines = [f"\\texttt{{{a}}} & {100 * v / n:.1f} & {c:.1f} & {w} & {ab} & {nv} & {rt} \\\\"
-                 for a, n, v, c, w, ab, nv, rt in out]
+        lines = [f"\\texttt{{{a}}} & {100 * v / n:.1f} & {c:.1f} & {ok:.1f} & {an:.1f} & {w} & {ab} "
+                 f"& {nv} & {rt} \\\\"
+                 for a, n, v, c, ok, an, w, ab, nv, rt in out]
         pathlib.Path(args.tex).write_text("\n".join(lines) + "\n", encoding="utf-8")
         print(f"wrote {args.tex}")
     return 0

@@ -24,11 +24,13 @@ warnings, abstract 246 words. Analysis plan amendments A6-A8.
    `python -X utf8 scripts/make_semantic_audit.py --score a.csv b.csv` and
    update Table 2 (A7 row), RQ1 "What the violations introduce", Threats
    (Construct) and the Conclusion. The sealed key stays local until then.
-3. **Budget runs (about $5 of DeepSeek)** — register each in the analysis
-   plan first: (a) the two naming schemes interleaved on one harness
-   (`P-L1`, `P-TIER-A-ONLY`); (b) a leakage retry battery that keeps every
-   attempt (`A-STRESS` on the crowded instance, `A-CONTRACT`); (c) complete
-   A3 R1.
+3. **Budget runs (about 3 USD of DeepSeek; balance was -0.03 USD on 2026-10-02)**
+   — both registered as amendment A9 before any call, code ready:
+   `reproduce_profile_battery.py --interleave-names --arm tier_a --n 200`
+   (naming, interleaved) and `reproduce_hallucination_ablation.py --mode live
+   --task synthetic-crowded --retry-audit --n 200` (leakage retry audit, every
+   attempt kept); then `scripts/rejudge_rejections.py` and
+   `scripts/retry_content.py`, and update RQ5, the rejection audit and Table 2.
 4. **Response letter** for the EMSE submission, point by point.
 5. **User side** — arXiv; GitHub release -> Zenodo DOI (replace the note in
    `references.bib` entry `replication` and Data Availability).

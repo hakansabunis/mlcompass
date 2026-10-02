@@ -202,6 +202,24 @@ def build_profile_evidence(
         return analyze_dataset(path, target_column="target")
 
 
+def interleave_orders(seed: int, n: int) -> list[tuple[str, str]]:
+    """For each index, the order in which the two naming schemes are called.
+
+    Analysis plan A9: the naming comparison runs both schemes in one run, one
+    call of each per index, in an order drawn at random per index, so that
+    drift within the run and the harness commit are shared by both schemes.
+    """
+    import random  # noqa: PLC0415
+
+    rng = random.Random(f"interleave-{seed}")
+    orders = []
+    for _ in range(n):
+        pair = ["suffixed", "natural"]
+        rng.shuffle(pair)
+        orders.append((pair[0], pair[1]))
+    return orders
+
+
 def evidence_hash(evidence: dict[str, Any]) -> str:
     import hashlib
 
@@ -259,6 +277,10 @@ def main() -> int:
     ap.add_argument("--natural-names", action="store_true",
                     help="Same frame, distinct column names with no shared suffix "
                          "(review item P0-4). Use a separate --log-dir.")
+    ap.add_argument("--interleave-names", action="store_true",
+                    help="Analysis plan A9: run the suffixed and the natural-name "
+                         "frame in one run, one call of each per index, in a random "
+                         "order per index; one log file per scheme. Use a fresh --log-dir.")
     ap.add_argument("--temperature", type=float, default=1.0)
     ap.add_argument("--log-dir", type=pathlib.Path, default=RUNS)
     ap.add_argument("--dry-run", action="store_true",
@@ -285,6 +307,9 @@ def main() -> int:
                 rf"& {100 * sch / (sch + evb):.0f}\,\% \\"
             )
         return 0
+
+    if args.interleave_names:
+        return run_interleaved(args)
 
     arms = args.arm or ["bare"]
     evidence = build_profile_evidence(
@@ -441,6 +466,90 @@ def main() -> int:
                   f"[{lo:.1f}, {hi:.1f}]")
         catches = sum(r["rejections"] for r in rows)
         print(f"  Tier B catches: {catches}")
+    return 0
+
+
+def _record(args, arm, arm_id, model, ehash, i, scheme, res, scored, schema_bytes, started,
+            prov, extra) -> dict[str, Any]:
+    return {
+        "provider": args.provider, "task": "profile", "arm": arm, "arm_id": arm_id,
+        "model": model, "evidence_hash": ehash, "i": i, "seed": args.seed,
+        "n_planned": args.n, "max_columns": args.max_columns,
+        "frame_columns": args.frame_columns, "frame_names": scheme,
+        "columns": res["columns_referenced"], "claims": res["claims"],
+        "raw_columns": res["raw_columns_referenced"], "raw_claims": res["raw_claims"],
+        "attempts": res["attempts"], "narration": res["narration"],
+        "verdict": res["verdict"], "confidence": res["confidence"],
+        "omitted": res["omitted_critical_evidence"], "rejections": res["schema_rejections"],
+        "rejection_kinds": res["rejection_kinds"], "provider_calls": res["attempts_made"],
+        "latency_ms": round((time.time() - started) * 1000, 1), "scored": scored,
+        "admissible_columns": res["admissible_columns"],
+        "admissible_statistics": res["admissible_statistics"],
+        "schema_bytes": schema_bytes, "sampling": {"temperature": args.temperature},
+        "provenance": prov, **extra,
+    }
+
+
+def run_interleaved(args) -> int:
+    """Analysis plan A9: both naming schemes, interleaved, one harness commit."""
+    import mlcompass.agents.profile_narrator as _pn  # noqa: PLC0415
+
+    schemes = {}
+    for scheme in ("suffixed", "natural"):
+        ev = build_profile_evidence(seed=args.seed, frame_columns=args.frame_columns,
+                                    natural_names=scheme == "natural")
+        trimmed = compact(ev, max_columns=args.max_columns)
+        bound = PROFILE.bind(trimmed)
+        schemes[scheme] = (ev, trimmed, bound, evidence_hash(trimmed))
+        print(f"{scheme}: evidence {schemes[scheme][3]}, {len(bound.values)} measured quantities, "
+              f"anchor={bound.anchor!r}")
+    orders = interleave_orders(args.seed, args.n)
+    print(f"first orders: {orders[:5]}")
+    if args.dry_run:
+        return 0
+    client, model = make_client(args.provider)
+    args.log_dir.mkdir(parents=True, exist_ok=True)
+    for _, trimmed, _, ehash in schemes.values():
+        (args.log_dir / f"evidence_{ehash}.json").write_text(
+            json.dumps({"task_label": "profile", "evidence": trimmed}, indent=1, default=str),
+            encoding="utf-8")
+    prov = {**provenance(), "interleaved_names": True}
+    plain_schema = _pn.build_payload_schema
+    for arm in args.arm or ["tier_a"]:
+        enforce, do_verify, prompt, arm_id = ARMS[arm]
+        _pn.build_payload_schema = (
+            _described_schema(plain_schema) if arm in STRONG_ARMS else plain_schema)
+        outs = {s: args.log_dir / (f"{args.provider}_{model.replace(':', '-')}_profile_{arm}_{s}"
+                                   f"_interleaved_n{args.n}_seed{args.seed}_e{schemes[s][3]}.jsonl")
+                for s in schemes}
+        if any(o.exists() for o in outs.values()):
+            print(f"{arm}: interleaved logs exist, refusing to overwrite paid responses")
+            continue
+        for i, order in enumerate(orders):
+            for pos, scheme in enumerate(order):
+                ev, _, bound, ehash = schemes[scheme]
+                schema_bytes = len(json.dumps(_pn.build_submit_tool_openai(bound)))
+                started = time.time()
+                try:
+                    res = narrate_profile_bound(
+                        ev, client=client, model=model,
+                        provider="anthropic" if args.provider == "anthropic" else "openai",
+                        max_retries=2 if do_verify else 0, system_prompt=prompt,
+                        enforce_schema_enum=enforce, verify_response=do_verify,
+                        temperature=args.temperature, max_columns=args.max_columns)
+                except Exception as e:  # noqa: BLE001
+                    print(f"  {arm} {i} {scheme}: transport error {type(e).__name__}: {str(e)[:90]}")
+                    continue
+                v = verify({"verdict": res["verdict"], "columns_referenced": res["columns_referenced"],
+                            "claims": res["claims"]}, bound, PROFILE)
+                scored = {"entity": bool(v.entity), "value": bool(v.value),
+                          "omission": bool(res["omitted_critical_evidence"])}
+                rec = _record(args, arm, arm_id, model, ehash, i, scheme, res, scored, schema_bytes,
+                              started, prov, {"interleave": {"pair": i, "position": pos}})
+                with outs[scheme].open("a", encoding="utf-8") as fh:
+                    fh.write(json.dumps(rec, default=str) + "\n")
+            if (i + 1) % 10 == 0:
+                print(f"  {arm}: {i + 1}/{args.n} pairs")
     return 0
 
 

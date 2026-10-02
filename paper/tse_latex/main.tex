@@ -62,7 +62,7 @@ Software tools increasingly let a large language model (LLM) explain the
 output of a deterministic analysis to an engineer. An explanation naming a
 column or number the analysis never produced can mislead the engineer.
 Existing defenses constrain decoding, which needs token probabilities that
-commercial APIs withhold, or check answers against rules fixed in advance; evaluations usually treat every unsupported item as one kind of error.
+commercial APIs withhold, or validate answers against rules that tool authors must write; evaluations usually treat every unsupported item as one kind of error.
 We bind, for each field of the narrator's structured answer, the evidence items the field may contain, check every answer in host code, and return
 violations with the problem named. The mechanism is ordinary
 validate-and-reask, used here mainly to measure how narrators fail. We study
@@ -72,8 +72,8 @@ The one model that fails often under a bare instruction rarely invents. Instead,
 model misfiles, placing an item the evidence contains, most often the
 investigated metric's name, in a field that does not admit the item. A
 one-sentence field description, the shipped prompt, a lower temperature, or
-another model removes most misfiling; an allowed-column list written in
-advance turns misfiling into invention when the data change. The check held in
+another model removes most misfiling; an allowed-column list written for
+other data turns misfiling into invention. The check held in
 every configuration and costs microseconds; its benefit in an already well-specified configuration remains open. Our contributions are an
 empirical account of misfiling as distinct from invention, a field-indexed
 definition of admissibility that makes the distinction measurable and
@@ -712,7 +712,7 @@ A3 R2a & On 12 instances frozen in July, misfiling dominates and invented names 
 A3 R1, R2b & The verifier lowers delivered violations in a well-specified configuration (profile, $N=600$; 12 instances) & Started, not completed: 93 and 91 of 600 profile responses, and 50 and 0 of 2{,}400 on the instances, when the provider balance ran out (A4); no test run, partial cells descriptive & not tested \\
 A3 R3 & Measure the shipped default narrator & Not run: no budget & not tested \\
 A3 R4 & Blind human audit of the scorer on 200 responses & Not run (A5); superseded by A7 & not tested \\
-A7 & Blind semantic audit of 204 items in nine strata: most misfiled names read as right information in the wrong place (P1), most wrong numbers that carry another item's value read as false (P2), and at least 90\,\% of controls read as supported (P3) & Registered on 2026-10-02 and the sheet drawn; labels not yet returned & pending \\
+A7 & Blind semantic audit of 204 items in nine strata: most misfiled names read as right information in the wrong place (P1), most wrong numbers that carry another item's value read as false (P2), and at least 90\,\% of controls read as supported (P3) & Registered on 2026-10-02 and the sheet drawn; labels, by two of the authors, not yet returned & pending \\
 \bottomrule
 \end{tabular}
 \end{table*}
@@ -954,6 +954,29 @@ the cited-column list may be. An item of the same kind can also state a
 false relation, as when a number that $E$ records elsewhere is attached to a
 pair that $E$ does not carry. That semantic judgment needs people, and a registered
 blind audit makes the judgment (amendment A7, Table~\ref{tab:registered}).
+Table~\ref{tab:questions} sets out which question each measure answers. The
+labelers of the audit are two of the authors, blind to arm, model, and
+stratum, so the audit is not an independent external validation.
+
+\begin{table}[!htbp]
+\caption{Four questions about a response, and what answers each. The first
+two are decided by program for every response; the third needs people; the
+fourth is outside the study.}
+\label{tab:questions}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}p{3.5cm}p{2.7cm}p{2.0cm}@{}}
+\toprule
+Question & Answered by & Status \\
+\midrule
+Does the response break the contract? & (C1)--(C3), by program & every response \\
+Does each name or number appear in $E$ or in the frame? & the kinds, by program & every response \\
+Does the response state a false or unsupported relation? & blind audit (A7), by two authors & labels pending \\
+Would the response mislead an engineer? & --- & not studied \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 A \emph{response} is one narration as the narration reaches the user,
 however many provider calls its retries took; the replication package lists every run file
@@ -1415,36 +1438,41 @@ responses. The contract path does not surface token counts.
 Table~\ref{tab:delivery} shows what reached the user. All responses on the
 reference task but one, on \texttt{A-GR-STOCK}, delivered at least one claim;
 none abstained, and none lacked an admissible verdict. No zero is therefore
-the vacuous zero that an empty answer would give. The arms that carry the
-shipped prompt deliver about a quarter of the claims that the bare arms
-deliver (2.2--3.2 against 9.6--9.8 per response): part of what the shipped
-prompt buys is a narrower answer.
+the vacuous zero that an empty answer would give. Nearly every delivered
+claim matches $E$, and every arm reports the anchor's measured correlation in
+at least 99.5\,\% of its responses. The arms that carry the shipped prompt
+report little beyond the anchor: they deliver about a quarter of the correct
+claims that the bare and contract arms deliver (2.2--3.2 against 9.6--9.8 per
+response). Part of what the shipped prompt buys is therefore a narrower
+answer, whereas the contract keeps the content of the bare answer.
 
 \begin{table}[!htbp]
 \caption{What reached the user on the reference task, \texttt{deepseek-chat},
-$N=200$ per arm: responses with any violation, claims delivered per
-response, responses delivering at least one claim, abstentions, responses with
-no admissible verdict, and responses the arm's loop sent back. Generated by
+$N=200$ per arm: responses with any violation, claims delivered per response,
+claims per response that match $E$ within $\tau$, the share of responses that
+report the anchor's measured correlation, responses delivering at least one
+claim, abstentions, responses with no admissible verdict, and responses the
+arm's loop sent back. Generated by
 \texttt{scripts/delivery\_table.py}.}
 \label{tab:delivery}
 \centering
 \footnotesize
 \setlength{\tabcolsep}{3pt}
 \resizebox{\columnwidth}{!}{%
-\begin{tabular}{@{}lrrrrrr@{}}
+\begin{tabular}{@{}lrrrrrrrr@{}}
 \toprule
-Arm & any, \% & claims & $\ge$1 claim & abstain & no verdict & retried \\
+Arm & any, \% & claims & correct & anchor, \% & $\ge$1 claim & abstain & no verdict & retried \\
 \midrule
-\texttt{A-L1} & 42.0 & 9.6 & 200 & 0 & 0 & 0 \\
-\texttt{A-L2} & 0.0 & 2.2 & 200 & 0 & 0 & 0 \\
-\texttt{A-GR-STOCK} & 35.5 & 9.8 & 199 & 0 & 0 & 0 \\
-\texttt{A-STRICT-STATIC} & 4.0 & 7.1 & 200 & 0 & 0 & 0 \\
-\texttt{A-GR-OURS} & 0.0 & 9.8 & 200 & 0 & 0 & 84 \\
-\texttt{A-CONTRACT} & 0.0 & 9.7 & 200 & 0 & 0 & 0 \\
-\texttt{A-STRESS} & 0.0 & 9.7 & 200 & 0 & 0 & 12 \\
-\texttt{A-L3-SHIPPED} & 0.0 & 2.5 & 200 & 0 & 0 & 1 \\
-\texttt{A-STRONG-NOVERIFY} & 0.0 & 3.1 & 200 & 0 & 0 & 0 \\
-\texttt{A-STRONG-CONTRACT} & 0.0 & 2.9 & 200 & 0 & 0 & 0 \\
+\texttt{A-L1} & 42.0 & 9.6 & 9.6 & 100.0 & 200 & 0 & 0 & 0 \\
+\texttt{A-L2} & 0.0 & 2.2 & 2.2 & 100.0 & 200 & 0 & 0 & 0 \\
+\texttt{A-GR-STOCK} & 35.5 & 9.8 & 9.8 & 99.5 & 199 & 0 & 0 & 0 \\
+\texttt{A-STRICT-STATIC} & 4.0 & 7.1 & 7.1 & 100.0 & 200 & 0 & 0 & 0 \\
+\texttt{A-GR-OURS} & 0.0 & 9.8 & 9.8 & 100.0 & 200 & 0 & 0 & 84 \\
+\texttt{A-CONTRACT} & 0.0 & 9.7 & 9.7 & 100.0 & 200 & 0 & 0 & 0 \\
+\texttt{A-STRESS} & 0.0 & 9.7 & 9.7 & 100.0 & 200 & 0 & 0 & 12 \\
+\texttt{A-L3-SHIPPED} & 0.0 & 2.5 & 2.5 & 100.0 & 200 & 0 & 0 & 1 \\
+\texttt{A-STRONG-NOVERIFY} & 0.0 & 3.1 & 3.1 & 100.0 & 200 & 0 & 0 & 0 \\
+\texttt{A-STRONG-CONTRACT} & 0.0 & 2.9 & 2.9 & 100.0 & 200 & 0 & 0 & 0 \\
 \bottomrule
 \end{tabular}}
 \end{table}
@@ -1464,7 +1492,14 @@ numeric column's suffix, such as \texttt{cat\_feature\_07}'s missing rate
 quoted for \texttt{num\_feature\_07}. Four rejections name a column that $E$
 does not list, and one claims a pair that $E$ does not record. The thirteenth
 attempt had no admissible verdict. Every retry dropped or corrected the
-offending item, and every final attempt is clean. Since 2026-10-01, the
+offending item, and every final attempt is clean. On balance, the retry does
+not shed acceptable content. Across the twelve content rejections, the
+rejected attempts carried 260 claims that match $E$ and the final attempts
+258, although the narrator writes a new answer rather than editing the old one: 96
+correct claims were dropped and 94 added (\texttt{scripts/retry\_content.py}).
+On leakage, responses that went through a retry deliver about as many correct
+claims as responses accepted at once, for example 9.54 against 10.00 on
+\texttt{A-GR-OURS} and 9.58 against 9.65 on \texttt{A-STRESS}. Since 2026-10-01, the
 leakage harness also keeps every attempt; none of the reported leakage runs
 used that version.
 
@@ -1679,8 +1714,10 @@ the arm's 12 wrong numbers are a real measurement of the column that shares
 the suffix, such as \texttt{cat\_feature\_07}'s missing rate reported for
 \texttt{num\_feature\_07}, and one appears nowhere in $E$. Under distinct
 names, the same model on the same data puts a wrong number in none of 400
-unverified responses. Which column each wrong number belongs to is the main
-evidence for confusion between the names that our generator chose. The
+unverified responses. Each wrong number matches the measurement of the column
+that shares its suffix, which is consistent with confusion between the names
+that our generator chose. A match, however, does not show where the model took
+the number from. The
 comparison across naming schemes is weaker evidence: the main suffixed runs
 (2026-09-19) and the natural-name runs (2026-09-24) are five days apart, in
 separate blocks, with harness and adapter changes between them and a model
@@ -1696,8 +1733,8 @@ arm, run about eight and a half hours later on the same day, put a wrong
 number in none of 200 responses (Fisher $p=0.015$). Between the two runs, the
 generation code did not change: the only changes were the naming option and a
 verifier fix that acts after generation. That comparison was not registered,
-and the two runs were not interleaved, so the comparison supports the naming
-explanation without proving the explanation. Running both schemes interleaved on one
+and the two runs were not interleaved, so the comparison is exploratory: the
+comparison supports the naming explanation without isolating the naming. Running both schemes interleaved on one
 harness would settle the question; we have not done so.
 
 \paragraph{Correct quantities in inadmissible slots}
@@ -1758,9 +1795,10 @@ distinct names reflects our binding choices as much as model error.
 \paragraph{Answer to RQ5}
 The contract binds to a second evidence shape without task-specific code.
 There, Tier~B catches wrong numbers that the per-field enums we use cannot
-express. Each wrong number is the measurement of a column that shares the
-suffix, and a same-day comparison supports confusion between our generated
-names as the source, although no interleaved run isolates the naming.
+express. Each wrong number matches the measurement of a column that shares the
+suffix. That pattern, and an exploratory same-day comparison, are consistent
+with confusion between our generated names; no interleaved run has isolated
+the naming, so the explanation remains exploratory.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Corrections to Our Own Instruments}\label{sec:instruments}
@@ -1919,7 +1957,8 @@ task-level slot halves the unconstrained rates (Section~\ref{sec:rq6}). The
 kinds of Table~\ref{tab:kinds} separate what a response introduces from where
 the response puts an item, but a program assigns the kinds, and the kinds do
 not measure what a reader understands. The registered blind audit (A7)
-measures that, and its labels are not yet in. The leakage conclusions hold
+measures that, its labels are not yet in, and its labelers are authors, so the
+audit will not be an independent external validation. The leakage conclusions hold
 under either reading, whereas the profile rates depend on the binding. The
 guarantee covers specified structured fields of one narration path, relative
 to trusted evidence; the guarantee does not show that the assistant explains
@@ -1945,8 +1984,11 @@ The retried responses lean the way that displacement would predict, by 2.5 and
 claim only that the scan found no clear increase, within what the scan can see.
 The instrument has one blind spot: a misfiled name is in $E$ and so counts as
 grounded in prose, so misfiling displaced into the narration would not
-register. No enforced arm stripped anything, which means that the pressure we
-tested is correction rather than deletion, and unsupported causal prose would
+register. The rejected attempts of the reported leakage runs were not kept, so
+those rejections cannot be re-judged; the harness now keeps every attempt, and
+a registered re-run (amendment A9) makes them auditable. No enforced arm
+stripped anything, which means that the pressure we tested is correction
+rather than deletion, and unsupported causal prose would
 need human raters. Run at call time as a warning, the same matcher would fire
 on 5--13\,\% of narrations, mostly on true bounds such as ``below 0.05'' and on
 shortened names; mlcompass does not ship the matcher. The value channel was
@@ -2035,8 +2077,10 @@ remain open: whether the check adds a measurable benefit to a configuration
 that is already well specified, and how often the misplaced items that
 dominate the failures would mislead a reader, which the registered blind audit
 addresses. We report sixteen faults in our own instruments and two in the
-verifier, with what each fault changed. The check does not yet reach a client
-model that narrates the same evidence across the tool-server boundary.
+verifier, with what each fault changed. The study evaluates the narration component:
+the shipped default narrator and the product's trigger path were not exercised
+end to end. The check does not yet reach a client model that narrates the same
+evidence across the tool-server boundary.
 
 \section*{Acknowledgments}
 We thank the readers of earlier drafts whose disagreement located the value

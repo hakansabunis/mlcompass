@@ -2462,6 +2462,12 @@ def main() -> int:
         ),
     )
     ap.add_argument(
+        "--retry-audit",
+        action="store_true",
+        help="Analysis plan A9: run only A-L1, A-CONTRACT and A-STRESS, keeping every "
+        "attempt (live only). Use a fresh --log-dir.",
+    )
+    ap.add_argument(
         "--only-floor",
         action="store_true",
         help="Run only layer1 (A-L1), e.g. with --temperature 0. Use a separate --log-dir.",
@@ -2827,6 +2833,12 @@ def main() -> int:
         if args.mode != "live":
             raise SystemExit("--only-extra is a live measurement; add --mode live.")
         arms = ("tier_a", "stress_mech")
+    if getattr(args, "retry_audit", False):
+        if args.mode != "live":
+            raise SystemExit("--retry-audit is a live measurement; add --mode live.")
+        # Analysis plan A9: the floor, A-CONTRACT and A-STRESS, with every
+        # attempt kept, so each rejection can be re-judged without the verifier.
+        arms = ("layer1", "layer3_bare", "layer3_stress")
     if args.only_baselines:
         if args.mode != "live":
             raise SystemExit("--only-baselines is a live measurement; add --mode live.")
