@@ -168,7 +168,7 @@ data_avail = author_year(data_avail, {})
 
 # Abbreviations are defined at first mention in the source itself (LLM, AUC,
 # SMT, CI); the checks below keep it that way.
-for defined in ("large language model (LLM)", "characteristic curve (AUC)",
+for defined in ("language models (LLMs)", "characteristic curve (AUC)",
                 "satisfiability-modulo-theories (SMT)", "confidence intervals (CIs)"):
     assert defined in " ".join(body.split()), f"abbreviation no longer defined: {defined}"
 

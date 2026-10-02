@@ -58,26 +58,28 @@ E-mail: hakan.sabunis@std.medipol.edu.tr}}
 
 \IEEEtitleabstractindextext{%
 \begin{abstract}
-Software tools increasingly let a large language model (LLM) explain the
-output of a deterministic analysis to an engineer. An explanation naming a
-column or number the analysis never produced can mislead the engineer.
-Existing defenses constrain decoding, which needs token probabilities that
-commercial APIs withhold, or validate answers against rules that tool authors must write; evaluations usually treat every unsupported item as one kind of error.
-We bind, for each field of the narrator's structured answer, the evidence items the field may contain, check every answer in host code, and return
-violations with the problem named. The mechanism is ordinary
-validate-and-reask, used here mainly to measure how narrators fail. We study
-the narrator of \textbf{mlcompass}, an open-source machine-learning assistant,
-on three models, sixteen leakage-analysis tasks, and a dataset-profiling task.
-The one model that fails often under a bare instruction rarely invents. Instead, the
-model misfiles, placing an item the evidence contains, most often the
-investigated metric's name, in a field that does not admit the item. A
-one-sentence field description, the shipped prompt, a lower temperature, or
-another model removes most misfiling; an allowed-column list written for
-other data turns misfiling into invention. The check held in
-every configuration and costs microseconds; its benefit in an already well-specified configuration remains open. Our contributions are an
-empirical account of misfiling as distinct from invention, a field-indexed
-definition of admissibility that makes the distinction measurable and
-enforceable, a comparison of common alternatives, and a replication package.
+Large language models (LLMs) increasingly assist machine-learning
+development: agents run profilers, leakage detectors, and other analysis
+tools, then explain what the tools found. A column or number that the tool
+never produced can mislead whoever acts on the explanation. Existing
+guardrails constrain decoding, which needs token probabilities that commercial
+APIs withhold, or validate outputs against rules written per application;
+evaluations usually treat every unsupported item alike. Our core
+idea is that, when an LLM narrates a deterministic tool's output, every entity
+and number the narrator may cite is known at call time. We therefore propose
+an evidence-bound runtime contract that derives, from the tool's output, what
+each field of the narrator's structured answer may contain, and checks every answer in host code through ordinary validate-and-reask. We implement the
+contract in \textbf{mlcompass}, an open-source assistant for machine-learning
+pipelines, and evaluate the contract on three LLMs, sixteen leakage-analysis
+tasks, and a dataset-profiling task. Under the contract, no inadmissible
+column or number reached the user, at microseconds per answer. Unconstrained, the one model that fails often rarely invents but misfiles, placing
+items the evidence contains, such as the investigated metric's name, in fields
+that do not admit them. A field description or the shipped prompt removes
+most misfiling, whereas an allowed-value list written for other data turns
+misfiling into invention. Our contributions are field-indexed admissibility
+for narrating tool output, an empirical account of misfiling versus
+invention, a comparison of guardrail configurations, and an open replication
+package.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -96,10 +98,11 @@ output, constrained generation, data leakage.
 \IEEEPARstart{M}{achine-learning} practice relies on single-purpose tools:
 profilers~\cite{ydata}, experiment trackers such as MLflow and
 TensorBoard~\cite{mlflow,tensorflow}, and automated model
-search~\cite{autosklearn}. These tools report numbers, but none of them tells
-the engineer what the numbers \emph{mean}. A common remedy is agentic: a large
-language model (LLM) calls the tools, reads their structured output, and
-explains the results~\cite{react,toolformer,mcp}. LLMs, however, produce
+search~\cite{autosklearn}. These tools report numbers, but none of them says what
+the numbers \emph{mean}. Large language models (LLMs) now fill
+that gap in many machine-learning workflows: an agent calls the tools, reads
+their structured output, and explains the results to whoever builds, trains,
+or ships the model~\cite{react,toolformer,mcp}. LLMs, however, produce
 content that their input does not support~\cite{ji,huang}, and assistants
 built on LLMs still fail real software tasks~\cite{codex,swebench}.
 
