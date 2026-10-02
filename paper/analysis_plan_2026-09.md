@@ -1244,3 +1244,11 @@ stratum. No hypothesis test.
 **Predictions** (those of A7): P1, a majority of S1 items is labelled B; P2, a
 majority of S3 items is labelled C; P3, at least 90 % of S8 and S9 items are
 labelled A. The consequences are those of A7.
+
+**A12a (2026-10-02, before any judge has seen an item).** Mistral returned
+HTTP 429 ("rate limit exceeded") on every call, including one-token calls 20 s
+apart on two models, so `mistral-medium-latest` cannot serve. The second judge
+is `deepseek-chat` (temperature 0), from the provider of the narrator that
+fails most often; the paper reports its labels with that caveat. The local
+models available (4B parameters) were not considered strong enough to serve.
+Everything else in A12 is unchanged.
