@@ -17,7 +17,7 @@ no new experiment asked for). Editorial pass only, no number changed:
   A2) holds the other registered items (A3 R3/R4, A7, A9.2, A10, A12), the
   failed judges, the rejected attempts, fault details and patterns, the
   free-text scan, verdict counts, drift, the offline deletion analysis and the
-  downstream benchmark. Ports map `ppendices` to `ppendix`.
+  downstream benchmark. Ports map `\appendices` to `\appendix`.
 - Neutral build 26 pages (main text ends on page 20); IEEE and EMSE build; no
   overfull boxes or undefined references; both table series in citation order.
 
