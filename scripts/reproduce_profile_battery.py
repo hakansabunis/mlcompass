@@ -522,11 +522,21 @@ def run_interleaved(args) -> int:
         outs = {s: args.log_dir / (f"{args.provider}_{model.replace(':', '-')}_profile_{arm}_{s}"
                                    f"_interleaved_n{args.n}_seed{args.seed}_e{schemes[s][3]}.jsonl")
                 for s in schemes}
+        done: dict[str, set[int]] = {s: set() for s in schemes}
         if any(o.exists() for o in outs.values()):
-            print(f"{arm}: interleaved logs exist, refusing to overwrite paid responses")
-            continue
+            if not args.resume:
+                print(f"{arm}: interleaved logs exist, refusing to overwrite paid responses "
+                      "(pass --resume to continue them)")
+                continue
+            for s_, o in outs.items():
+                if o.exists():
+                    done[s_] = {int(json.loads(line)["i"]) for line in
+                                o.read_text(encoding="utf-8").splitlines() if line.strip()}
+            print(f"{arm}: resuming, {min(len(d) for d in done.values())} complete pairs logged")
         for i, order in enumerate(orders):
             for pos, scheme in enumerate(order):
+                if i in done[scheme]:
+                    continue
                 ev, _, bound, ehash = schemes[scheme]
                 schema_bytes = len(json.dumps(_pn.build_submit_tool_openai(bound)))
                 started = time.time()

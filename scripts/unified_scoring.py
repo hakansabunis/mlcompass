@@ -108,10 +108,18 @@ def frame_columns(task: str, ctx: dict) -> set[str]:
     return cols
 
 
-def run_files():
+# The registered follow-up runs of analysis plan A9 (2026-10-02) are reported
+# on their own (scripts/analyze_a9.py) and kept out of the corpus counts, which
+# describe the runs made up to 2026-09-30.
+A9_DIRS = ("2026-10-02_interleaved", "2026-10-02_retry_audit")
+
+
+def run_files(include_a9: bool = False):
     for f in sorted(RUNS.rglob("*.jsonl")):
         rel = f.relative_to(RUNS).parts
         if any("superseded" in p or p == "transport_errors" for p in rel):
+            continue
+        if not include_a9 and any(p in A9_DIRS for p in rel):
             continue
         dump = f.parent / f"evidence_{f.stem.rsplit('_e', 1)[1]}.json"
         if dump.exists():

@@ -1100,3 +1100,25 @@ kept:
   observed false-rejection rate.
 
 Estimated cost of both runs together: about 3 USD.
+
+**A9 run log (2026-10-02).** Both runs used harness commit 61c4f3c (tree
+dirty: the analysis scripts, not the harnesses). Two smoke calls per script
+went to a scratch directory outside `scripts/runs` and are not data. The
+background tool stopped both runs part-way (after 162 of 200 naming pairs and
+144 of 200 `A-STRESS` responses); each was resumed from its log with the same
+seed and order (`--resume`, added to the interleaved runner for this, logic
+only). Spend: 0.62 USD (balance 4.96 -> 4.34).
+
+**A9 outcomes, as registered (`scripts/analyze_a9.py`).**
+
+- A9.1: wrong-number responses 7 of 200 (suffixed) against 1 of 200
+  (natural); two-sided Fisher p = 0.068, which does **not** reject at 0.05.
+  As registered, the paper reports no difference at the registered threshold
+  and no longer counts the same-day comparison as support for the naming
+  explanation. Descriptive: all 7 suffixed wrong numbers equal the same-suffix
+  sibling's value for the same statistic; the 1 natural wrong number does not.
+- A9.2: `A-L1` 114 of 200 responses violate (57.0 %); `A-CONTRACT` and
+  `A-STRESS` deliver none. `A-STRESS` sent back 17 responses; the second
+  scorer confirms all 17 rejected attempts (17 of 17, above the registered
+  95 %) and finds all 17 final attempts clean; correct claims 170 before and
+  170 after the retries.

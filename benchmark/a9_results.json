@@ -1,0 +1,93 @@
+{
+ "A9.1": {
+  "cells": {
+   "natural": {
+    "file": "deepseek_deepseek-chat_profile_tier_a_natural_interleaved_n200_seed0_e7e0d8c22.jsonl",
+    "n": 200,
+    "wrong_number_responses": 1,
+    "any_violation": 4,
+    "c1": 3,
+    "not_carried": 1,
+    "kinds": {
+     "misplaced": 2,
+     "extrinsic": 2
+    },
+    "wrong_claims": 1,
+    "wrong_claims_from_sibling": 0,
+    "claims_per_response": 27.12
+   },
+   "suffixed": {
+    "file": "deepseek_deepseek-chat_profile_tier_a_suffixed_interleaved_n200_seed0_ebcaea394.jsonl",
+    "n": 200,
+    "wrong_number_responses": 7,
+    "any_violation": 9,
+    "c1": 0,
+    "not_carried": 2,
+    "kinds": {
+     "contradicts": 7,
+     "misplaced": 2
+    },
+    "wrong_claims": 7,
+    "wrong_claims_from_sibling": 7,
+    "claims_per_response": 22.245
+   }
+  },
+  "fisher_two_sided_p": 0.0675817863070509,
+  "rejects_at_0.05": false
+ },
+ "A9.2": {
+  "arms": {
+   "A-L1": {
+    "file": "deepseek_deepseek-chat_synthetic_crowded_layer1_n200_seed0_ee469b75a.jsonl",
+    "n": 200,
+    "delivered_violations": 114,
+    "retried_responses": 0,
+    "rejected_attempts": 0,
+    "confirmed_by_second_scorer": 0,
+    "findings": {},
+    "retried_final_clean": 0,
+    "correct_claims_first_attempt": 0,
+    "correct_claims_final_attempt": 0,
+    "correct_lost": 0,
+    "correct_gained": 0,
+    "claims_per_response": 9.73
+   },
+   "A-CONTRACT": {
+    "file": "deepseek_deepseek-chat_synthetic_crowded_layer3_bare_n200_seed0_ee469b75a.jsonl",
+    "n": 200,
+    "delivered_violations": 0,
+    "retried_responses": 0,
+    "rejected_attempts": 0,
+    "confirmed_by_second_scorer": 0,
+    "findings": {},
+    "retried_final_clean": 0,
+    "correct_claims_first_attempt": 0,
+    "correct_claims_final_attempt": 0,
+    "correct_lost": 0,
+    "correct_gained": 0,
+    "claims_per_response": 10.0
+   },
+   "A-STRESS": {
+    "file": "deepseek_deepseek-chat_synthetic_crowded_layer3_stress_n200_seed0_ee469b75a.jsonl",
+    "n": 200,
+    "delivered_violations": 0,
+    "retried_responses": 17,
+    "rejected_attempts": 17,
+    "confirmed_by_second_scorer": 17,
+    "findings": {
+     "name outside E": 17
+    },
+    "retried_final_clean": 17,
+    "correct_claims_first_attempt": 170,
+    "correct_claims_final_attempt": 170,
+    "correct_lost": 0,
+    "correct_gained": 0,
+    "claims_per_response": 9.965
+   }
+  },
+  "rejected_attempts": 17,
+  "confirmed": 17,
+  "confirmation_rate": 1.0,
+  "meets_registered_95": true
+ }
+}
