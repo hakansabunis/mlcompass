@@ -924,7 +924,7 @@ $\tau=0.005$ throughout; the verifier admits only \texttt{correlation}.}
 Statistic name & Resolves to \\
 \midrule
 \texttt{correlation}, \texttt{corr}, \texttt{correlation\_with\_target} & the column's recorded correlation, signed \\
-\texttt{pearson}, \texttt{spearman}, with \texttt{\_correlation} or \texttt{\_correlation\_with\_target} & the same, only if it names the method $E$ recorded; otherwise a pair not carried \\
+\texttt{pearson}, \texttt{spearman}, with \texttt{\_correlation} or \texttt{\_correlation\_with\_target} & the same, only if the name matches the method $E$ recorded; otherwise a pair not carried \\
 \texttt{abs\_corr}, \texttt{max\_abs\_correlation} & its magnitude \\
 \texttt{perfect\_match\_rate}, \texttt{row\_count} & the dataset-level value, on any listed column \\
 any other name & a pair not carried \\
@@ -978,13 +978,13 @@ Table~\ref{tab:terms} collects the terms that the rest of the paper uses.
 Term & Meaning \\
 \midrule
 evidence $E$ & the deterministic tool's output that the narrator explains \\
-response & one narration as it reaches the user, after any retries \\
+response & one narration as delivered to the user, after any retries \\
 arm & a fixed prompt, schema, and check (Table~\ref{tab:armsdef}) \\
 cell, battery & one arm on one instance and date; the arms run together on one date \\
 floor & the bare arm \texttt{A-L1}, with no enforcement \\
 commits & has a verdict that is neither empty nor ``cannot determine'' \\
 anchor & the top-ranked candidate, which a committed response must reference \\
-misfiled & a name in $E$, placed in a column field that does not admit it \\
+misfiled & a name in $E$, placed in a column field that does not admit the name \\
 unlisted & a real column of the frame that $E$ does not list \\
 invented & a name in neither $E$ nor the frame \\
 pair not carried & a claim whose (column, statistic) pair $E$ does not record \\
@@ -1805,7 +1805,7 @@ arms from 12 to 13 of 1{,}829 and on the wording sweep from 2 to 20.
 5  & June pilot (11.5\,\%, sweep 1--100\,\%) did not reproduce; rolling alias, records not kept & authors & pilot not reported as a result \\
 6  & target harvest missed parameter defaults & second scorer & control 33$\rightarrow$31 \\
 7  & runner executed cells off the frozen plan & authors & 48 runs relabeled \\
-8  & narration never recorded & authors & free text re-run with it \\
+8  & narration never recorded & authors & free text re-run, narration kept \\
 9  & profile floor stripped before scoring & its telemetry & \texttt{P-L1} 0$\rightarrow$17 \\
 10 & statistic names ours, not the profiler's & authors & ${\approx}\frac13$ of first rate \\
 11 & cost table transcribed by hand & authors & table regenerated \\
