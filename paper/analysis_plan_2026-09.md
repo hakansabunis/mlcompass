@@ -1202,3 +1202,13 @@ one harness commit, temperature 1.0, every attempt kept:
   the interval as the precision of that null; if p < 0.05, a measured benefit
   of the observed size. Either way the run is not repeated or extended.
 - Estimated cost: about 1,230 calls, about 1 USD.
+
+**A10 outcome (2026-10-02).** Judged on the GPU after 70 judgments on the CPU
+(same weights, fp32; each record names its device). Neither judge passes the
+validity check: DeBERTa 55 of 55 known-supported and 60 of 79 known-unsupported
+items; RoBERTa 53 of 55 and 31 of 79; Cohen's kappa between the judges 0.25.
+As registered, their labels on the contested strata are not interpreted and
+A10 is reported as uninformative on these data. Exploratory, not registered:
+DeBERTa labels all 22 S3 items contradicted, and 16 of its 19 misses on
+known-unsupported items are near names (the word `target` 12 times, four
+respellings).

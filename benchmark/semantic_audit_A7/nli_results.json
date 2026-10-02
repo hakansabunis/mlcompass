@@ -1,0 +1,124 @@
+{
+ "by_stratum": {
+  "deberta": {
+   "S1 misfiled name": {
+    "contradicted": 21,
+    "supported": 19
+   },
+   "S2 number E records under another pair": {
+    "supported": 25,
+    "not addressed": 2,
+    "contradicted": 3
+   },
+   "S3 wrong number, another item's value": {
+    "contradicted": 22
+   },
+   "S4 real column E does not list": {
+    "supported": 15
+   },
+   "S5 invented name, list written in advance": {
+    "contradicted": 10
+   },
+   "S6 invented name": {
+    "contradicted": 13,
+    "supported": 16,
+    "not addressed": 1
+   },
+   "S7 number E records nowhere": {
+    "contradicted": 8,
+    "not addressed": 6,
+    "supported": 3
+   },
+   "S8 control: admissible name": {
+    "supported": 20
+   },
+   "S9 control: claim that matches E": {
+    "supported": 20
+   }
+  },
+  "roberta": {
+   "S1 misfiled name": {
+    "contradicted": 5,
+    "supported": 35
+   },
+   "S2 number E records under another pair": {
+    "contradicted": 14,
+    "not addressed": 3,
+    "supported": 13
+   },
+   "S3 wrong number, another item's value": {
+    "supported": 20,
+    "contradicted": 2
+   },
+   "S4 real column E does not list": {
+    "supported": 15
+   },
+   "S5 invented name, list written in advance": {
+    "contradicted": 9,
+    "supported": 1
+   },
+   "S6 invented name": {
+    "contradicted": 8,
+    "supported": 22
+   },
+   "S7 number E records nowhere": {
+    "supported": 5,
+    "contradicted": 5,
+    "not addressed": 7
+   },
+   "S8 control: admissible name": {
+    "supported": 20
+   },
+   "S9 control: claim that matches E": {
+    "supported": 18,
+    "contradicted": 2
+   }
+  }
+ },
+ "validity": {
+  "deberta": {
+   "known_supported": [
+    55,
+    55,
+    [
+     0.9347150979202339,
+     1.0
+    ]
+   ],
+   "known_unsupported": [
+    60,
+    79,
+    [
+     0.654643069986347,
+     0.8402781995527269
+    ]
+   ],
+   "valid": false
+  },
+  "roberta": {
+   "known_supported": [
+    53,
+    55,
+    [
+     0.8767653592704914,
+     0.9899704588009981
+    ]
+   ],
+   "known_unsupported": [
+    31,
+    79,
+    [
+     0.2921286498568291,
+     0.5026600920416037
+    ]
+   ],
+   "valid": false
+  }
+ },
+ "kappa": 0.2528932076761561,
+ "truncated": {
+  "deberta": 0,
+  "roberta": 0
+ },
+ "agreement": 0.6323529411764706
+}

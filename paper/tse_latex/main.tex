@@ -678,8 +678,8 @@ which the record ran. ``Tie'' and ``held'' report observed equality: no
 equivalence margin was registered. \emph{Status}: as planned, deviated (run
 with the change that the row describes), exploratory, not tested, or pending.
 The five rows after the first rule record where the study departed from the
-plan; the rows after the second rule are amendments A3, A7, and A9, registered
-for this revision.}
+plan; the rows after the second rule are amendments A3, A7, A9, and A10,
+registered for this revision.}
 \label{tab:registered}
 \centering
 \footnotesize
@@ -715,7 +715,8 @@ A3 R2a & On 12 instances frozen in July, misfiling dominates and invented names 
 A3 R1, R2b & The verifier lowers delivered violations in a well-specified configuration (profile, $N=600$; 12 instances) & Started, not completed: 93 and 91 of 600 profile responses, and 50 and 0 of 2{,}400 on the instances, when the provider balance ran out (A4); no test run, partial cells descriptive & not tested \\
 A3 R3 & Measure the shipped default narrator & Not run: no budget & not tested \\
 A3 R4 & Blind human audit of the scorer on 200 responses & Not run (A5); superseded by A7 & not tested \\
-A7 & Blind semantic audit of 204 items in nine strata: most misfiled names read as right information in the wrong place (P1), most wrong numbers that carry another item's value read as false (P2), and at least 90\,\% of controls read as supported (P3) & Registered on 2026-10-02 and the sheet drawn; labels, by two of the authors, not yet returned & pending \\
+A7 & Blind semantic audit of 204 items in nine strata: most misfiled names read as right information in the wrong place (P1), most wrong numbers that carry another item's value read as false (P2), and at least 90\,\% of controls read as supported (P3) & Registered on 2026-10-02 and the sheet drawn; the authors did not label the sheet & not run \\
+A10 & Two NLI judges pass a validity check on the audit items whose truth is fixed (at least 90\,\% each way) & Neither passed: DeBERTa 55/55 supported and 60/79 not supported, RoBERTa 53/55 and 31/79, $\kappa=0.25$; reported as uninformative & as planned \\
 A9.1 & Naming interleaved on one harness: more wrong-number responses under suffixed names & 7 against 1 of 200, Fisher $p=0.068$: not rejected; all 7 suffixed wrong numbers carry the sibling's value & as planned \\
 A9.2 & Leakage retry audit, every attempt kept: the second scorer confirms at least 95\,\% of rejections & 17 of 17 confirmed and 17 of 17 final attempts clean; 170 correct claims before and after the retries & as planned \\
 \bottomrule
@@ -957,11 +958,11 @@ count. A kind records where an item came from, not what a reader would
 understand. A misplaced item may be harmless to a reader, as a metric's name in
 the cited-column list may be. An item of the same kind can also state a
 false relation, as when a number that $E$ records elsewhere is attached to a
-pair that $E$ does not carry. That semantic judgment needs people, and a registered
-blind audit makes the judgment (amendment A7, Table~\ref{tab:registered}).
-Table~\ref{tab:questions} sets out which question each measure answers. The
-labelers of the audit are two of the authors, blind to arm, model, and
-stratum, so the audit is not an independent external validation.
+pair that $E$ does not carry. That semantic judgment needs people. The registered blind
+audit by two of the authors (amendment A7) was not carried out, and the
+automatic substitute registered in its place (A10) failed its validity check
+(Section~\ref{sec:rq1}), so the judgment remains open.
+Table~\ref{tab:questions} sets out which question each measure answers.
 
 \begin{table}[!htbp]
 \caption{Four questions about a response, and what answers each. The first
@@ -977,7 +978,7 @@ Question & Answered by & Status \\
 \midrule
 Does the response break the contract? & (C1)--(C3), by program & every response \\
 Does each name or number appear in $E$ or in the frame? & the kinds, by program & every response \\
-Does the response state a false or unsupported relation? & blind audit (A7), by two authors & labels pending \\
+Does the response state a false or unsupported relation? & human audit (A7) or NLI judges (A10) & open: A7 not run, A10 invalid \\
 Would the response mislead an engineer? & --- & not studied \\
 \bottomrule
 \end{tabular}
@@ -1158,8 +1159,32 @@ violations introduce nothing that $E$ lacks, and a contract rate would
 overstate invention many times over. The kinds do not settle whether a
 misplaced item misleads a reader. A misfiled \texttt{r2} misleads a program
 that consumes the field. Whether the same item misleads a person, and whether
-a number attached to the wrong pair states a false relation, are the questions
-that the registered blind audit asks (amendment A7).
+a number attached to the wrong pair states a false relation, are semantic
+questions.
+
+\paragraph{An automatic semantic reading}
+The authors did not label the registered blind audit by hand (A7), so we
+registered an automatic substitute before running the substitute (amendment
+A10). Two natural-language-inference models, trained by others on
+human-annotated data (DeBERTa-v3-large on five inference datasets and
+RoBERTa-large on MultiNLI), judged whether $E$ supports, contradicts, or does
+not address each of the 204 audit items, read as a statement. The registration
+required each judge to match the truth that is fixed by construction on at
+least 90\,\% of the items where the truth is fixed: admissible names, matching
+claims, and real columns are supported, whereas wrong numbers, invented names,
+and numbers that $E$ records nowhere are not. Neither judge met that bar.
+DeBERTa labeled all 55 known-supported items supported but only 60 of the 79
+known-unsupported items as not supported; RoBERTa reached 53 of 55 and 31 of
+79; and the two judges agreed on 63\,\% of the items (Cohen's
+$\kappa=0.25$). As registered, we do not interpret their labels on the
+contested strata, and the automatic audit is uninformative on these data. One
+pattern is worth recording as an exploratory observation. DeBERTa labeled all
+22 wrong numbers contradicted, and 16 of its 19 misses on known-unsupported
+items are names close to a real one: twelve are the word \texttt{target}, and
+four are respellings such as \texttt{acquired\_channel}. These are exactly the
+items on which the literal rule and a reader's reading part ways. The semantic
+question therefore remains open, and answering the question needs human
+judgment.
 
 \begin{table}[!htbp]
 \caption{Kinds of violation, with every response in exactly one row
@@ -2072,9 +2097,10 @@ Profile, natural names, no verifier & 693 & 36 & 36 & 19 \\
 \end{table} The
 kinds of Table~\ref{tab:kinds} separate what a response introduces from where
 the response puts an item, but a program assigns the kinds, and the kinds do
-not measure what a reader understands. The registered blind audit (A7)
-measures that, its labels are not yet in, and its labelers are authors, so the
-audit will not be an independent external validation. The leakage conclusions hold
+not measure what a reader understands. Neither the registered human audit
+(A7, not carried out) nor its automatic substitute (A10, which failed its
+validity check) measures that, so the semantic reading of a misplaced item
+remains open. The leakage conclusions hold
 under either reading, whereas the profile rates depend on the binding. The
 guarantee covers specified structured fields of one narration path, relative
 to trusted evidence; the guarantee does not show that the assistant explains
@@ -2192,8 +2218,8 @@ a reading that shares no code with the verifier confirmed every rejection that
 the records keep. Two questions
 remain open: whether the check adds a measurable benefit to a configuration
 that is already well specified, and how often the misplaced items that
-dominate the failures would mislead a reader, which the registered blind audit
-addresses. We report sixteen faults in our own instruments and two in the
+dominate the failures would mislead a reader, which neither our registered
+human audit nor its automatic substitute could yet answer. We report sixteen faults in our own instruments and two in the
 verifier, with what each fault changed. The study evaluates the narration component:
 the shipped default narrator and the product's trigger path were not exercised
 end to end. The check does not yet reach a client model that narrates the same

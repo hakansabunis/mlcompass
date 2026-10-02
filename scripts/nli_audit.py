@@ -195,22 +195,24 @@ def judge() -> int:
             if line.strip():
                 rec = json.loads(line)
                 done.add((rec["judge"], str(rec["id"])))
-    torch.set_num_threads(max(1, (torch.get_num_threads() or 1)))
+    device = "cuda" if torch.cuda.is_available() else "cpu"  # same fp32 weights either way
+    print(f"device: {device}", flush=True)
     for short, (repo, rev) in JUDGES.items():
         todo = [r for r in rows if (short, str(r["id"])) not in done]
         if not todo:
             continue
         tok = AutoTokenizer.from_pretrained(repo, revision=rev)
-        model = AutoModelForSequenceClassification.from_pretrained(repo, revision=rev).eval()
+        model = AutoModelForSequenceClassification.from_pretrained(repo, revision=rev).eval().to(device)
         id2label = {i: lab.lower() for i, lab in model.config.id2label.items()}
         for k, r in enumerate(todo, 1):
             enc = tok(r["premise"], r["hypothesis"], truncation="only_first", max_length=512,
-                      return_tensors="pt")
+                      return_tensors="pt").to(device)
             with torch.no_grad():
                 p = torch.softmax(model(**enc).logits[0], dim=-1).tolist()
             probs = {id2label[i]: round(x, 4) for i, x in enumerate(p)}
             rec = {"judge": short, "id": r["id"], "label": max(probs, key=probs.get), "probs": probs,
-                   "truncated": len(tok(r["premise"], r["hypothesis"])["input_ids"]) > 512}
+                   "truncated": len(tok(r["premise"], r["hypothesis"])["input_ids"]) > 512,
+                   "device": device}
             with log.open("a", encoding="utf-8") as fh:
                 fh.write(json.dumps(rec) + "\n")
             if k % 20 == 0:
