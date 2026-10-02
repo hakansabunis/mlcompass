@@ -1,30 +1,23 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Misfiling, Not Invention: How LLM Narrators of Structured Evidence Fail
-% IEEE Transactions on Software Engineering source; the EMSE version is
-% generated from this file by ../port_to_emse.py.
-%
-% V2.3 (2026-10-02): full readability pass (punctuation, pronouns, sentence
-% length, American spelling), the abstract restructured as problem /
-% prior approaches / proposal / results / contributions, and the V2.2 review
-% addressed (kinds of violation, rejection audit, same-day naming comparison).
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\documentclass[journal]{IEEEtran}
-
-\usepackage{amsmath,amssymb,amsthm}
+%% Venue-neutral two-column version, generated from ../tse_latex/main.tex by
+%% ../port_to_neutral.py; edit the source and re-run rather than editing this file.
+\documentclass[10pt,twocolumn]{article}
+\usepackage[margin=0.75in,columnsep=0.25in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amsthm}
+\usepackage{newtxtext,newtxmath}
 \usepackage{booktabs}
 \usepackage{graphicx}
+\usepackage[numbers,sort&compress]{natbib}
 \usepackage[hidelinks]{hyperref}
 \usepackage{url}
 \usepackage{balance}
 \usepackage{algorithm}
 \usepackage{algpseudocode}
 \usepackage{microtype}
-\usepackage[htt]{hyphenat}   % let long \texttt rule names break
+\usepackage[htt]{hyphenat}
+\usepackage[font=small,labelfont=bf]{caption}
 \tolerance=1200
 \emergencystretch=1.5em
-
-% Several floats in few pages. The stock parameters queue them until a page
-% top can take them all, which put four on one page with the text in fragments.
 \renewcommand{\topfraction}{0.9}
 \renewcommand{\bottomfraction}{0.6}
 \renewcommand{\textfraction}{0.08}
@@ -35,28 +28,20 @@
 \setcounter{bottomnumber}{2}
 \setcounter{totalnumber}{5}
 \setcounter{dbltopnumber}{2}
-
 \newtheorem{definitionx}{Definition}
 \newtheorem{observation}{Observation}
-
 \hyphenation{mlcompass evi-dence-closed}
 
+\title{Misfiling, Not Invention: How LLM Narrators of Structured Evidence Fail}
+\author{Hakan Sabuni\c{s}, Yusuf \"Unl\"u, Mehmet Kemal \"Ozdemir\\[2pt]
+\small School of Engineering and Natural Sciences, Istanbul Medipol University, Istanbul, T\"urkiye\\
+\small \texttt{hakan.sabunis@std.medipol.edu.tr}}
+\date{}
+
 \begin{document}
-
-\title{Misfiling, Not Invention:\\
-How LLM Narrators of Structured Evidence Fail}
-
-\author{Hakan~Sabuni\c{s},
-        Yusuf~\"Unl\"u,
-        and~Mehmet~Kemal~\"Ozdemir% <-this % stops a space
-\thanks{The authors are with the School of Engineering and Natural Sciences,
-Istanbul Medipol University, Istanbul, T\"urkiye.
-E-mail: hakan.sabunis@std.medipol.edu.tr}}
-
-\markboth{IEEE Transactions on Software Engineering}%
-{Sabuni\c{s} \MakeLowercase{\textit{et al.}}: Misfiling, Not Invention}
-
-\IEEEtitleabstractindextext{%
+\twocolumn[
+\begin{@twocolumnfalse}
+\maketitle
 \begin{abstract}
 Large language models (LLMs) increasingly assist machine-learning
 development: agents run profilers, leakage detectors, and other analysis
@@ -81,21 +66,17 @@ for narrating tool output, an empirical account of misfiling versus
 invention, a comparison of guardrail configurations, and an open replication
 package.
 \end{abstract}
+\noindent\textbf{Keywords:} Large language models, faithfulness, runtime verification, structured output, constrained generation, data leakage.
+\vspace{1.5em}
+\end{@twocolumnfalse}
+]
 
-\begin{IEEEkeywords}
-Large language models, faithfulness, runtime verification, structured
-output, constrained generation, data leakage.
-\end{IEEEkeywords}}
-
-\maketitle
-\IEEEdisplaynontitleabstractindextext
-\IEEEpeerreviewmaketitle
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Introduction}\label{sec:intro}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\IEEEPARstart{M}{achine-learning} practice relies on single-purpose tools:
+Machine-learning practice relies on single-purpose tools:
 profilers~\cite{ydata}, experiment trackers such as MLflow and
 TensorBoard~\cite{mlflow,tensorflow}, and automated model
 search~\cite{autosklearn}. These tools report numbers, but none of them says what
@@ -488,7 +469,7 @@ responses. Anchor coverage is not: any repair must add a reference the model
 did not produce.
 \end{observation}
 
-\begin{IEEEproof}[Proof sketch]
+\begin{proof}[Proof sketch]
 Deletion preserves membership and tolerance and can remove every violating
 element. For anchor coverage, deleting the verdict would discharge the
 obligation, but the schema requires a verdict, and substituting ``cannot
@@ -496,7 +477,7 @@ determine'' would attribute to the narrator a stance that the narrator did not
 take. Both premises are stipulations of this contract, and the artifact honors
 them by aborting rather than substituting. Given these premises, every
 remaining repair inserts an anchor reference that is absent from $r$.
-\end{IEEEproof}
+\end{proof}
 
 Tier~B therefore strips unsound content and only \emph{flags} a persistent
 omission, which in edit-automaton terms is suppression without
@@ -1586,7 +1567,8 @@ particular dates, not LLMs in general.
 \paragraph{Answer to RQ2 and RQ3}
 In every configuration that we ran, no (C1) or (C2) violation reached the user
 under the contract, and one named retry repaired each violation. The local
-check costs microseconds, and retries add calls. Every rejection that the records keep, 13 on the profile task and 17 in a registered leakage re-run, was confirmed by a reading that shares no code with the verifier. Whether the verifier adds a measurable
+check costs microseconds, and retries add calls. Every rejection that the
+records keep was a real violation. Whether the verifier adds a measurable
 benefit to a well-specified configuration is open: exploratory runs observed
 no difference on leakage and 4 against 0 violating responses in 200 on
 profiling, and the registered test stopped early. In these configurations, a
@@ -2187,9 +2169,8 @@ at call time, binding each field's admissible set to the evidence and checking
 the returned payload in host code enforces referential and value soundness
 behind an API that exposes no logits. The mechanism is ordinary
 validate-and-reask. The check held in every configuration in which the check
-ran, repaired every violation with one named retry, and costs microseconds;
-a reading that shares no code with the verifier confirmed every rejection that
-the records keep. Two questions
+ran, repaired every violation with one named retry, and costs microseconds,
+and every rejection that the records keep was a real violation. Two questions
 remain open: whether the check adds a measurable benefit to a configuration
 that is already well specified, and how often the misplaced items that
 dominate the failures would mislead a reader, which the registered blind audit
@@ -2226,7 +2207,7 @@ drafted with an AI assistant and then inspected and tested by the authors.
 
 
 \balance
-\bibliographystyle{IEEEtran}
+\bibliographystyle{unsrtnat}
 \bibliography{references}
 
 \end{document}

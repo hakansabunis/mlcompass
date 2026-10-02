@@ -1,0 +1,83 @@
+{
+ "Leakage, bare instruction, four instances": {
+  "n": 3200,
+  "reported": 1014,
+  "strict": 1014,
+  "lenient": 1014
+ },
+ "Leakage, bare instruction, twelve instances": {
+  "n": 1888,
+  "reported": 817,
+  "strict": 817,
+  "lenient": 817
+ },
+ "Leakage, six instruction wordings": {
+  "n": 600,
+  "reported": 370,
+  "strict": 374,
+  "lenient": 370
+ },
+ "Leakage, field described or shipped prompt": {
+  "n": 2650,
+  "reported": 16,
+  "strict": 18,
+  "lenient": 16
+ },
+ "Leakage, enum bound to $E$, no verifier": {
+  "n": 600,
+  "reported": 0,
+  "strict": 0,
+  "lenient": 0
+ },
+ "Leakage, enum written in advance": {
+  "n": 800,
+  "reported": 152,
+  "strict": 152,
+  "lenient": 152
+ },
+ "Leakage, Guardrails with choices or our checks": {
+  "n": 1400,
+  "reported": 3,
+  "strict": 3,
+  "lenient": 3
+ },
+ "Leakage, contract arms": {
+  "n": 4000,
+  "reported": 0,
+  "strict": 0,
+  "lenient": 0
+ },
+ "Profile, suffixed names, no verifier": {
+  "n": 600,
+  "reported": 29,
+  "strict": 29,
+  "lenient": 22
+ },
+ "Profile, natural names, no verifier": {
+  "n": 693,
+  "reported": 36,
+  "strict": 36,
+  "lenient": 19
+ },
+ "Profile, contract arms": {
+  "n": 1091,
+  "reported": 0,
+  "strict": 0,
+  "lenient": 0
+ },
+ "\\texttt{gpt-5.4-mini}, every arm": {
+  "n": 1450,
+  "reported": 3,
+  "strict": 3,
+  "lenient": 0
+ },
+ "\\texttt{qwen2.5:7b}, every arm": {
+  "n": 160,
+  "reported": 2,
+  "strict": 2,
+  "lenient": 2
+ },
+ "bare_leakage_misfile_share_reported": 0.9868924085199344,
+ "bare_leakage_misfile_share_strict": 0.9868924085199344,
+ "bare_leakage_misfile_share_lenient": 0.9868924085199344
+}

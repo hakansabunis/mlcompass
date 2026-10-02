@@ -1,0 +1,1022 @@
+[
+ {
+  "id": 1461,
+  "premise": "The data has 1200 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are sensor_ref. The data has the columns sensor_00, sensor_01, sensor_02, sensor_03, sensor_04, sensor_05, sensor_06, sensor_07, sensor_08, sensor_ref, y_pred, y_true.",
+  "hypothesis": "r2 is a column of the data."
+ },
+ {
+  "id": 1080,
+  "premise": "Column num_feature_07 is numeric. The number of missing values of column num_feature_07 is 47. The missing rate of column num_feature_07 is 0.039. The share of zeros of column num_feature_07 is 0. The number of interquartile-range outliers of column num_feature_07 is 9. The number of z-score outliers of column num_feature_07 is 4. The mean of column num_feature_07 is 57.072. The standard deviation of column num_feature_07 is 12.053. The minimum of column num_feature_07 is 8.722. The maximum of column num_feature_07 is 97.303. The 25th percentile of column num_feature_07 is 49.063. The median of column num_feature_07 is 56.959. The 75th percentile of column num_feature_07 is 65.125. The missing rate of column cat_feature_07 is 0.221. The data has 1200 rows. The data has 24 columns. The target column is target. The task is binary classification. The data has the columns cat_feature_01, cat_feature_02, cat_feature_03, cat_feature_04, cat_feature_05, cat_feature_06, cat_feature_07, is_active, num_feature_01, num_feature_02, num_feature_03, num_feature_04, num_feature_05, num_feature_06, num_feature_07, num_feature_08, num_feature_09, num_feature_10, num_feature_11, num_feature_12, num_feature_13, num_feature_14, signup_date, target.",
+  "hypothesis": "The missing rate of column num_feature_07 is 0.221."
+ },
+ {
+  "id": 6551,
+  "premise": "The data has 1200 rows. The data has 24 columns. The target column is target. The task is binary classification. The data has the columns acquisition_channel, age, balance, basket_size, credit_score, days_since_purchase, device_type, discount_rate, income, industry, is_active, language, login_count, monthly_spend, page_views, payment_method, plan_tier, referral_count, region, session_minutes, signup_date, support_tickets, target, tenure_months.",
+  "hypothesis": "total_cols is a column of the data."
+ },
+ {
+  "id": 3349,
+  "premise": "The column log_target_v2 has a spearman correlation of 0.999 with the target. The absolute correlation of column log_target_v2 with the target is 0.999. The column near_target_proxy has a pearson correlation of 0.999 with the target. The absolute correlation of column near_target_proxy with the target is 0.999. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The r2 of column log_target_v2 is 1."
+ },
+ {
+  "id": 9155,
+  "premise": "The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "all_other_features is a column of the data."
+ },
+ {
+  "id": 5725,
+  "premise": "The data has 1200 rows. The data has 24 columns. The target column is target. The task is binary classification. The data has the columns acquisition_channel, age, balance, basket_size, credit_score, days_since_purchase, device_type, discount_rate, income, industry, is_active, language, login_count, monthly_spend, page_views, payment_method, plan_tier, referral_count, region, session_minutes, signup_date, support_tickets, target, tenure_months.",
+  "hypothesis": "row_count is a column of the data."
+ },
+ {
+  "id": 9594,
+  "premise": "The column near_target_proxy has a pearson correlation of 0.999 with the target. The absolute correlation of column near_target_proxy with the target is 0.999. The column feature_10 has a pearson correlation of -0.035 with the target. The column feature_5 has a pearson correlation of -0.035 with the target. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The pearson correlation with target of column near_target_proxy is -0.035."
+ },
+ {
+  "id": 2750,
+  "premise": "Column num_feature_07 is numeric. The number of missing values of column num_feature_07 is 47. The missing rate of column num_feature_07 is 0.039. The share of zeros of column num_feature_07 is 0. The number of interquartile-range outliers of column num_feature_07 is 9. The number of z-score outliers of column num_feature_07 is 4. The mean of column num_feature_07 is 57.072. The standard deviation of column num_feature_07 is 12.053. The minimum of column num_feature_07 is 8.722. The maximum of column num_feature_07 is 97.303. The 25th percentile of column num_feature_07 is 49.063. The median of column num_feature_07 is 56.959. The 75th percentile of column num_feature_07 is 65.125. The missing rate of column cat_feature_07 is 0.221. The data has 1200 rows. The data has 24 columns. The target column is target. The task is binary classification. The data has the columns cat_feature_01, cat_feature_02, cat_feature_03, cat_feature_04, cat_feature_05, cat_feature_06, cat_feature_07, is_active, num_feature_01, num_feature_02, num_feature_03, num_feature_04, num_feature_05, num_feature_06, num_feature_07, num_feature_08, num_feature_09, num_feature_10, num_feature_11, num_feature_12, num_feature_13, num_feature_14, signup_date, target.",
+  "hypothesis": "The missing rate of column num_feature_07 is 0.221."
+ },
+ {
+  "id": 7344,
+  "premise": "The column feature_12 has a spearman correlation of -0.04 with the target. The absolute correlation of column feature_12 with the target is 0.04. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The correlation with the target of column feature_12 is -0.04."
+ },
+ {
+  "id": 9455,
+  "premise": "The column sensor_02 has a pearson correlation of 0.906 with the target. The absolute correlation of column sensor_02 with the target is 0.906. The column sensor_03 has a pearson correlation of 0.909 with the target. The absolute correlation of column sensor_03 with the target is 0.909. The column sensor_01 has a pearson correlation of 0.903 with the target. The absolute correlation of column sensor_01 with the target is 0.903. The data has 1200 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are sensor_ref. The data has the columns sensor_00, sensor_01, sensor_02, sensor_03, sensor_04, sensor_05, sensor_06, sensor_07, sensor_08, sensor_ref, y_pred, y_true.",
+  "hypothesis": "The correlation with the target of column sensor_02 is 0.906."
+ },
+ {
+  "id": 5885,
+  "premise": "The column log_target_v2 has a spearman correlation of 0.999 with the target. The absolute correlation of column log_target_v2 with the target is 0.999. The column near_target_proxy has a pearson correlation of 0.999 with the target. The absolute correlation of column near_target_proxy with the target is 0.999. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The r2 model score of column log_target_v2 is 1."
+ },
+ {
+  "id": 1833,
+  "premise": "The data has 1200 rows. The data has 24 columns. The target column is target. The task is binary classification. The data has the columns acquisition_channel, age, balance, basket_size, credit_score, days_since_purchase, device_type, discount_rate, income, industry, is_active, language, login_count, monthly_spend, page_views, payment_method, plan_tier, referral_count, region, session_minutes, signup_date, support_tickets, target, tenure_months.",
+  "hypothesis": "agent is a column of the data."
+ },
+ {
+  "id": 1299,
+  "premise": "Column num_feature_07 is numeric. The number of missing values of column num_feature_07 is 47. The missing rate of column num_feature_07 is 0.039. The share of zeros of column num_feature_07 is 0. The number of interquartile-range outliers of column num_feature_07 is 9. The number of z-score outliers of column num_feature_07 is 4. The mean of column num_feature_07 is 57.072. The standard deviation of column num_feature_07 is 12.053. The minimum of column num_feature_07 is 8.722. The maximum of column num_feature_07 is 97.303. The 25th percentile of column num_feature_07 is 49.063. The median of column num_feature_07 is 56.959. The 75th percentile of column num_feature_07 is 65.125. The missing rate of column cat_feature_07 is 0.221. The data has 1200 rows. The data has 24 columns. The target column is target. The task is binary classification. The data has the columns cat_feature_01, cat_feature_02, cat_feature_03, cat_feature_04, cat_feature_05, cat_feature_06, cat_feature_07, is_active, num_feature_01, num_feature_02, num_feature_03, num_feature_04, num_feature_05, num_feature_06, num_feature_07, num_feature_08, num_feature_09, num_feature_10, num_feature_11, num_feature_12, num_feature_13, num_feature_14, signup_date, target.",
+  "hypothesis": "The missing rate of column num_feature_07 is 0.221."
+ },
+ {
+  "id": 8800,
+  "premise": "The column sensor_ref has a pearson correlation of 0.995 with the target. The absolute correlation of column sensor_ref with the target is 0.995. The data has 1200 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are sensor_ref. The data has the columns sensor_00, sensor_01, sensor_02, sensor_03, sensor_04, sensor_05, sensor_06, sensor_07, sensor_08, sensor_ref, y_pred, y_true.",
+  "hypothesis": "The correlation with the target of column sensor_ref is 1."
+ },
+ {
+  "id": 7172,
+  "premise": "The column feature_5 has a pearson correlation of -0.035 with the target. The absolute correlation of column feature_5 with the target is 0.035. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "feature_5 is a column of the data."
+ },
+ {
+  "id": 3034,
+  "premise": "The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "target is a column of the data."
+ },
+ {
+  "id": 3082,
+  "premise": "The data has 7043 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are MonthlyCharges_grp. The data has the columns Churn, Contract, Dependents, DeviceProtection, InternetService, MonthlyCharges, MultipleLines, OnlineBackup, OnlineSecurity, PaperlessBilling, Partner, PaymentMethod, PhoneService, SeniorCitizen, StreamingMovies, StreamingTV, TechSupport, TotalCharges, customerID, gender, tenure, y_pred.",
+  "hypothesis": "MonthlyCharges is a column of the data."
+ },
+ {
+  "id": 9382,
+  "premise": "The data has 1338 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are charges_est. The data has the columns age, bmi, charges, children, region, sex, smoker, y_pred.",
+  "hypothesis": "r2 is a column of the data."
+ },
+ {
+  "id": 1929,
+  "premise": "The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "suspicious_metric.name is a column of the data."
+ },
+ {
+  "id": 4689,
+  "premise": "Column num_feature_01 is numeric. The number of missing values of column num_feature_01 is 30. The missing rate of column num_feature_01 is 0.025. The share of zeros of column num_feature_01 is 0. The number of interquartile-range outliers of column num_feature_01 is 12. The number of z-score outliers of column num_feature_01 is 6. The mean of column num_feature_01 is 50.617. The standard deviation of column num_feature_01 is 11.736. The minimum of column num_feature_01 is 4.207. The maximum of column num_feature_01 is 87.792. The 25th percentile of column num_feature_01 is 42.845. The median of column num_feature_01 is 50.521. The 75th percentile of column num_feature_01 is 58.594. The data has 1200 rows. The data has 24 columns. The target column is target. The task is binary classification. The data has the columns cat_feature_01, cat_feature_02, cat_feature_03, cat_feature_04, cat_feature_05, cat_feature_06, cat_feature_07, is_active, num_feature_01, num_feature_02, num_feature_03, num_feature_04, num_feature_05, num_feature_06, num_feature_07, num_feature_08, num_feature_09, num_feature_10, num_feature_11, num_feature_12, num_feature_13, num_feature_14, signup_date, target.",
+  "hypothesis": "num_feature_01 is a column of the data."
+ },
+ {
+  "id": 9044,
+  "premise": "The column feature_12 has a spearman correlation of -0.04 with the target. The absolute correlation of column feature_12 with the target is 0.04. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The max legitimate abs correlation leak free of column feature_12 is 0.04."
+ },
+ {
+  "id": 3356,
+  "premise": "The column near_target_proxy has a pearson correlation of 0.999 with the target. The absolute correlation of column near_target_proxy with the target is 0.999. The absolute correlation of column feature_12 with the target is 0.04. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The max legitimate feature correlation magnitude of column near_target_proxy is 0.04."
+ },
+ {
+  "id": 4786,
+  "premise": "The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "r2 is a column of the data."
+ },
+ {
+  "id": 5979,
+  "premise": "The data has 2930 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are SalePrice_idx. The data has the columns 1st Flr SF, 2nd Flr SF, 3Ssn Porch, Alley, Bedroom AbvGr, Bldg Type, Bsmt Cond, Bsmt Exposure, Bsmt Full Bath, Bsmt Half Bath, Bsmt Qual, Bsmt Unf SF, BsmtFin SF 1, BsmtFin SF 2, BsmtFin Type 1, BsmtFin Type 2, Central Air, Condition 1, Condition 2, Electrical, Enclosed Porch, Exter Cond, Exter Qual, Exterior 1st, Exterior 2nd, Fence, Fireplace Qu, Fireplaces, Foundation, Full Bath, Functional, Garage Area, Garage Cars, Garage Cond, Garage Finish, Garage Qual, Garage Type, Garage Yr Blt, Gr Liv Area, Half Bath, Heating, Heating QC, House Style, Kitchen AbvGr, Kitchen Qual, Land Contour, Land Slope, Lot Area, Lot Config, Lot Frontage, Lot Shape, Low Qual Fin SF, MS SubClass, MS Zoning, Mas Vnr Area, Mas Vnr Type, Misc Feature, Misc Val, Mo Sold, Neighborhood, Open Porch SF, Order, Overall Cond, Overall Qual, PID, Paved Drive, Pool Area, Pool QC, Roof Matl, Roof Style, Sale Condition, Sale Type, SalePrice, Screen Porch, Street, TotRms AbvGrd, Total Bsmt SF, Utilities, Wood Deck SF, Year Built, Year Remod/Add, Yr Sold, y_pred.",
+  "hypothesis": "SalePrice is a column of the data."
+ },
+ {
+  "id": 6581,
+  "premise": "The column feature_8 has a pearson correlation of -0.028 with the target. The absolute correlation of column feature_8 with the target is 0.028. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "feature_8 is a column of the data."
+ },
+ {
+  "id": 6453,
+  "premise": "The column feature_7 has a pearson correlation of -0.02 with the target. The absolute correlation of column feature_7 with the target is 0.02. The column feature_4 has a pearson correlation of -0.022 with the target. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The pearson corr with target of column feature_7 is -0.02."
+ },
+ {
+  "id": 1586,
+  "premise": "The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "r2 is a column of the data."
+ },
+ {
+  "id": 5129,
+  "premise": "Column cat_feature_04 is categorical. The number of missing values of column cat_feature_04 is 152. The missing rate of column cat_feature_04 is 0.127. The number of distinct values of column cat_feature_04 is 19. The data has 1200 rows. The data has 24 columns. The target column is target. The task is binary classification. The data has the columns cat_feature_01, cat_feature_02, cat_feature_03, cat_feature_04, cat_feature_05, cat_feature_06, cat_feature_07, is_active, num_feature_01, num_feature_02, num_feature_03, num_feature_04, num_feature_05, num_feature_06, num_feature_07, num_feature_08, num_feature_09, num_feature_10, num_feature_11, num_feature_12, num_feature_13, num_feature_14, signup_date, target.",
+  "hypothesis": "cat_feature_04 is a column of the data."
+ },
+ {
+  "id": 4011,
+  "premise": "The column feature_5 has a pearson correlation of -0.035 with the target. The absolute correlation of column feature_5 with the target is 0.035. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "feature_5 is a column of the data."
+ },
+ {
+  "id": 9338,
+  "premise": "The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "target is a column of the data."
+ },
+ {
+  "id": 1635,
+  "premise": "The column Density has a spearman correlation of -0.993 with the target. The absolute correlation of column Density with the target is 0.993. The data has 252 rows. The suspicious metric is r2, with value 0.978. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are Density. The data has the columns Abdomen, Age, Ankle, Biceps, Chest, Density, Forearm, Height, Hip, Knee, Neck, Thigh, Weight, Wrist, class, y_pred.",
+  "hypothesis": "The correlation with the target of column Density is -0.993."
+ },
+ {
+  "id": 6243,
+  "premise": "The data has 1200 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are sensor_ref. The data has the columns sensor_00, sensor_01, sensor_02, sensor_03, sensor_04, sensor_05, sensor_06, sensor_07, sensor_08, sensor_ref, y_pred, y_true.",
+  "hypothesis": "near_target_proxy is a column of the data."
+ },
+ {
+  "id": 8403,
+  "premise": "The data has 1200 rows. The data has 24 columns. The target column is target. The task is binary classification. The data has the columns acquisition_channel, age, balance, basket_size, credit_score, days_since_purchase, device_type, discount_rate, income, industry, is_active, language, login_count, monthly_spend, page_views, payment_method, plan_tier, referral_count, region, session_minutes, signup_date, support_tickets, target, tenure_months.",
+  "hypothesis": "pickup_placeholder is a column of the data."
+ },
+ {
+  "id": 6897,
+  "premise": "Column industry is categorical. The number of missing values of column industry is 265. The missing rate of column industry is 0.221. The number of distinct values of column industry is 31. The data has 1200 rows. The data has 24 columns. The target column is target. The task is binary classification. The data has the columns acquisition_channel, age, balance, basket_size, credit_score, days_since_purchase, device_type, discount_rate, income, industry, is_active, language, login_count, monthly_spend, page_views, payment_method, plan_tier, referral_count, region, session_minutes, signup_date, support_tickets, target, tenure_months.",
+  "hypothesis": "The missing rate of column industry is 0.221."
+ },
+ {
+  "id": 1518,
+  "premise": "The data has 7043 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are MonthlyCharges_grp. The data has the columns Churn, Contract, Dependents, DeviceProtection, InternetService, MonthlyCharges, MultipleLines, OnlineBackup, OnlineSecurity, PaperlessBilling, Partner, PaymentMethod, PhoneService, SeniorCitizen, StreamingMovies, StreamingTV, TechSupport, TotalCharges, customerID, gender, tenure, y_pred.",
+  "hypothesis": "MonthlyCharges is a column of the data."
+ },
+ {
+  "id": 4114,
+  "premise": "The column log_target_v2 has a spearman correlation of 0.999 with the target. The absolute correlation of column log_target_v2 with the target is 0.999. The absolute correlation of column feature_12 with the target is 0.04. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The max legit feature correlation of column log_target_v2 is 0.04."
+ },
+ {
+  "id": 2399,
+  "premise": "The column sensor_07 has a pearson correlation of 0.921 with the target. The absolute correlation of column sensor_07 with the target is 0.921. The column sensor_08 has a pearson correlation of 0.924 with the target. The absolute correlation of column sensor_08 with the target is 0.924. The column sensor_06 has a pearson correlation of 0.918 with the target. The absolute correlation of column sensor_06 with the target is 0.918. The data has 1200 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are sensor_ref. The data has the columns sensor_00, sensor_01, sensor_02, sensor_03, sensor_04, sensor_05, sensor_06, sensor_07, sensor_08, sensor_ref, y_pred, y_true.",
+  "hypothesis": "The correlation with the target of column sensor_07 is 0.921."
+ },
+ {
+  "id": 6301,
+  "premise": "The column feature_7 has a pearson correlation of -0.02 with the target. The absolute correlation of column feature_7 with the target is 0.02. The column feature_4 has a pearson correlation of -0.022 with the target. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The correlation with the target of column feature_7 is -0.02."
+ },
+ {
+  "id": 5747,
+  "premise": "The column log_target_v2 has a spearman correlation of 0.999 with the target. The absolute correlation of column log_target_v2 with the target is 0.999. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "log_target_v2 is a column of the data."
+ },
+ {
+  "id": 5932,
+  "premise": "The data has 2930 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are SalePrice_idx. The data has the columns 1st Flr SF, 2nd Flr SF, 3Ssn Porch, Alley, Bedroom AbvGr, Bldg Type, Bsmt Cond, Bsmt Exposure, Bsmt Full Bath, Bsmt Half Bath, Bsmt Qual, Bsmt Unf SF, BsmtFin SF 1, BsmtFin SF 2, BsmtFin Type 1, BsmtFin Type 2, Central Air, Condition 1, Condition 2, Electrical, Enclosed Porch, Exter Cond, Exter Qual, Exterior 1st, Exterior 2nd, Fence, Fireplace Qu, Fireplaces, Foundation, Full Bath, Functional, Garage Area, Garage Cars, Garage Cond, Garage Finish, Garage Qual, Garage Type, Garage Yr Blt, Gr Liv Area, Half Bath, Heating, Heating QC, House Style, Kitchen AbvGr, Kitchen Qual, Land Contour, Land Slope, Lot Area, Lot Config, Lot Frontage, Lot Shape, Low Qual Fin SF, MS SubClass, MS Zoning, Mas Vnr Area, Mas Vnr Type, Misc Feature, Misc Val, Mo Sold, Neighborhood, Open Porch SF, Order, Overall Cond, Overall Qual, PID, Paved Drive, Pool Area, Pool QC, Roof Matl, Roof Style, Sale Condition, Sale Type, SalePrice, Screen Porch, Street, TotRms AbvGrd, Total Bsmt SF, Utilities, Wood Deck SF, Year Built, Year Remod/Add, Yr Sold, y_pred.",
+  "hypothesis": "SalePrice is a column of the data."
+ },
+ {
+  "id": 8517,
+  "premise": "The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "target is a column of the data."
+ },
+ {
+  "id": 4520,
+  "premise": "The data has 1338 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are charges_est. The data has the columns age, bmi, charges, children, region, sex, smoker, y_pred.",
+  "hypothesis": "r2 is a column of the data."
+ },
+ {
+  "id": 3055,
+  "premise": "The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "target is a column of the data."
+ },
+ {
+  "id": 9490,
+  "premise": "The column log_target_v2 has a spearman correlation of 0.999 with the target. The absolute correlation of column log_target_v2 with the target is 0.999. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The correlation gap vs strongest genuine feature of column log_target_v2 is 0.959."
+ },
+ {
+  "id": 6135,
+  "premise": "The data has 303 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are chol_grp. The data has the columns age, ca, chol, cp, exang, fbs, num, oldpeak, restecg, sex, slope, thal, thalach, trestbps, y_pred.",
+  "hypothesis": "r2 is a column of the data."
+ },
+ {
+  "id": 7650,
+  "premise": "The column feature_12 has a spearman correlation of -0.04 with the target. The absolute correlation of column feature_12 with the target is 0.04. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The spearman corr with target of column feature_12 is -0.04."
+ },
+ {
+  "id": 3403,
+  "premise": "The column log_target_v2 has a spearman correlation of 0.999 with the target. The absolute correlation of column log_target_v2 with the target is 0.999. The column near_target_proxy has a pearson correlation of 0.999 with the target. The absolute correlation of column near_target_proxy with the target is 0.999. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The r2 of model of column log_target_v2 is 1."
+ },
+ {
+  "id": 6050,
+  "premise": "The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "target is a column of the data."
+ },
+ {
+  "id": 9471,
+  "premise": "The data has 7043 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are MonthlyCharges_est. The data has the columns Churn, Contract, Dependents, DeviceProtection, InternetService, MonthlyCharges, MultipleLines, OnlineBackup, OnlineSecurity, PaperlessBilling, Partner, PaymentMethod, PhoneService, SeniorCitizen, StreamingMovies, StreamingTV, TechSupport, TotalCharges, customerID, gender, tenure, y_pred.",
+  "hypothesis": "r2 is a column of the data."
+ },
+ {
+  "id": 4244,
+  "premise": "Column num_feature_07 is numeric. The number of missing values of column num_feature_07 is 47. The missing rate of column num_feature_07 is 0.039. The share of zeros of column num_feature_07 is 0. The number of interquartile-range outliers of column num_feature_07 is 9. The number of z-score outliers of column num_feature_07 is 4. The mean of column num_feature_07 is 57.072. The standard deviation of column num_feature_07 is 12.053. The minimum of column num_feature_07 is 8.722. The maximum of column num_feature_07 is 97.303. The 25th percentile of column num_feature_07 is 49.063. The median of column num_feature_07 is 56.959. The 75th percentile of column num_feature_07 is 65.125. The missing rate of column cat_feature_07 is 0.221. The data has 1200 rows. The data has 24 columns. The target column is target. The task is binary classification. The data has the columns cat_feature_01, cat_feature_02, cat_feature_03, cat_feature_04, cat_feature_05, cat_feature_06, cat_feature_07, is_active, num_feature_01, num_feature_02, num_feature_03, num_feature_04, num_feature_05, num_feature_06, num_feature_07, num_feature_08, num_feature_09, num_feature_10, num_feature_11, num_feature_12, num_feature_13, num_feature_14, signup_date, target.",
+  "hypothesis": "The missing rate of column num_feature_07 is 0.221."
+ },
+ {
+  "id": 6117,
+  "premise": "Column num_feature_07 is numeric. The number of missing values of column num_feature_07 is 47. The missing rate of column num_feature_07 is 0.039. The share of zeros of column num_feature_07 is 0. The number of interquartile-range outliers of column num_feature_07 is 9. The number of z-score outliers of column num_feature_07 is 4. The mean of column num_feature_07 is 57.072. The standard deviation of column num_feature_07 is 12.053. The minimum of column num_feature_07 is 8.722. The maximum of column num_feature_07 is 97.303. The 25th percentile of column num_feature_07 is 49.063. The median of column num_feature_07 is 56.959. The 75th percentile of column num_feature_07 is 65.125. The missing rate of column cat_feature_07 is 0.221. The data has 1200 rows. The data has 24 columns. The target column is target. The task is binary classification. The data has the columns cat_feature_01, cat_feature_02, cat_feature_03, cat_feature_04, cat_feature_05, cat_feature_06, cat_feature_07, is_active, num_feature_01, num_feature_02, num_feature_03, num_feature_04, num_feature_05, num_feature_06, num_feature_07, num_feature_08, num_feature_09, num_feature_10, num_feature_11, num_feature_12, num_feature_13, num_feature_14, signup_date, target.",
+  "hypothesis": "The missing rate of column num_feature_07 is 0.221."
+ },
+ {
+  "id": 5073,
+  "premise": "The data has 1200 rows. The data has 24 columns. The target column is target. The task is binary classification. The data has the columns acquisition_channel, age, balance, basket_size, credit_score, days_since_purchase, device_type, discount_rate, income, industry, is_active, language, login_count, monthly_spend, page_views, payment_method, plan_tier, referral_count, region, session_minutes, signup_date, support_tickets, target, tenure_months.",
+  "hypothesis": "reference_count is a column of the data."
+ },
+ {
+  "id": 3997,
+  "premise": "The column feature_4 has a pearson correlation of -0.022 with the target. The absolute correlation of column feature_4 with the target is 0.022. The column feature_7 has a pearson correlation of -0.02 with the target. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The correlation with the target of column feature_4 is -0.022."
+ },
+ {
+  "id": 2968,
+  "premise": "The data has 1200 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are sensor_ref. The data has the columns sensor_00, sensor_01, sensor_02, sensor_03, sensor_04, sensor_05, sensor_06, sensor_07, sensor_08, sensor_ref, y_pred, y_true.",
+  "hypothesis": "r2 is a column of the data."
+ },
+ {
+  "id": 9495,
+  "premise": "The column feature_12 has a spearman correlation of -0.04 with the target. The absolute correlation of column feature_12 with the target is 0.04. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The max abs corr among remaining features of column feature_12 is 0.04."
+ },
+ {
+  "id": 9927,
+  "premise": "The column feature_6 has a spearman correlation of 0.013 with the target. The absolute correlation of column feature_6 with the target is 0.013. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The correlation with the target of column feature_6 is 0.013."
+ },
+ {
+  "id": 1629,
+  "premise": "The column near_target_proxy has a pearson correlation of 0.999 with the target. The absolute correlation of column near_target_proxy with the target is 0.999. The absolute correlation of column feature_12 with the target is 0.04. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The max correlation among non leak features of column near_target_proxy is 0.04."
+ },
+ {
+  "id": 9965,
+  "premise": "The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "r2 is a column of the data."
+ },
+ {
+  "id": 2290,
+  "premise": "The data has 1200 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are sensor_ref. The data has the columns sensor_00, sensor_01, sensor_02, sensor_03, sensor_04, sensor_05, sensor_06, sensor_07, sensor_08, sensor_ref, y_pred, y_true.",
+  "hypothesis": "near_target_proxy is a column of the data."
+ },
+ {
+  "id": 9403,
+  "premise": "The column feature_12 has a spearman correlation of -0.04 with the target. The absolute correlation of column feature_12 with the target is 0.04. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The max abs correlation among legitimate features of column feature_12 is 0.04."
+ },
+ {
+  "id": 3901,
+  "premise": "The data has 1338 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are charges_est. The data has the columns age, bmi, charges, children, region, sex, smoker, y_pred.",
+  "hypothesis": "r2 is a column of the data."
+ },
+ {
+  "id": 7949,
+  "premise": "The column log_target_v2 has a spearman correlation of 0.999 with the target. The absolute correlation of column log_target_v2 with the target is 0.999. The perfect-match rate between the predictions and the target is 0. The data has 1000 rows. The suspicious metric is r2, with value 1. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The distance from target of column log_target_v2 is 0.001."
+ },
+ {
+  "id": 1138,
+  "premise": "The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "residual_r2_after_leak_columns_excluded is a column of the data."
+ },
+ {
+  "id": 6042,
+  "premise": "The data has 1200 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are sensor_ref. The data has the columns sensor_00, sensor_01, sensor_02, sensor_03, sensor_04, sensor_05, sensor_06, sensor_07, sensor_08, sensor_ref, y_pred, y_true.",
+  "hypothesis": "near_target_proxy is a column of the data."
+ },
+ {
+  "id": 1509,
+  "premise": "Column num_feature_07 is numeric. The number of missing values of column num_feature_07 is 47. The missing rate of column num_feature_07 is 0.039. The share of zeros of column num_feature_07 is 0. The number of interquartile-range outliers of column num_feature_07 is 9. The number of z-score outliers of column num_feature_07 is 4. The mean of column num_feature_07 is 57.072. The standard deviation of column num_feature_07 is 12.053. The minimum of column num_feature_07 is 8.722. The maximum of column num_feature_07 is 97.303. The 25th percentile of column num_feature_07 is 49.063. The median of column num_feature_07 is 56.959. The 75th percentile of column num_feature_07 is 65.125. The missing rate of column cat_feature_07 is 0.221. The data has 1200 rows. The data has 24 columns. The target column is target. The task is binary classification. The data has the columns cat_feature_01, cat_feature_02, cat_feature_03, cat_feature_04, cat_feature_05, cat_feature_06, cat_feature_07, is_active, num_feature_01, num_feature_02, num_feature_03, num_feature_04, num_feature_05, num_feature_06, num_feature_07, num_feature_08, num_feature_09, num_feature_10, num_feature_11, num_feature_12, num_feature_13, num_feature_14, signup_date, target.",
+  "hypothesis": "The missing rate of column num_feature_07 is 0.221."
+ },
+ {
+  "id": 4698,
+  "premise": "The column log_target_v2 has a spearman correlation of 0.999 with the target. The absolute correlation of column log_target_v2 with the target is 0.999. The column near_target_proxy has a pearson correlation of 0.999 with the target. The absolute correlation of column near_target_proxy with the target is 0.999. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The r2 perfect score of column log_target_v2 is 1."
+ },
+ {
+  "id": 4926,
+  "premise": "The data has 1338 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are charges_idx. The data has the columns age, bmi, charges, children, region, sex, smoker, y_pred.",
+  "hypothesis": "charges is a column of the data."
+ },
+ {
+  "id": 2501,
+  "premise": "The data has 2930 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are SalePrice_adj. The data has the columns 1st Flr SF, 2nd Flr SF, 3Ssn Porch, Alley, Bedroom AbvGr, Bldg Type, Bsmt Cond, Bsmt Exposure, Bsmt Full Bath, Bsmt Half Bath, Bsmt Qual, Bsmt Unf SF, BsmtFin SF 1, BsmtFin SF 2, BsmtFin Type 1, BsmtFin Type 2, Central Air, Condition 1, Condition 2, Electrical, Enclosed Porch, Exter Cond, Exter Qual, Exterior 1st, Exterior 2nd, Fence, Fireplace Qu, Fireplaces, Foundation, Full Bath, Functional, Garage Area, Garage Cars, Garage Cond, Garage Finish, Garage Qual, Garage Type, Garage Yr Blt, Gr Liv Area, Half Bath, Heating, Heating QC, House Style, Kitchen AbvGr, Kitchen Qual, Land Contour, Land Slope, Lot Area, Lot Config, Lot Frontage, Lot Shape, Low Qual Fin SF, MS SubClass, MS Zoning, Mas Vnr Area, Mas Vnr Type, Misc Feature, Misc Val, Mo Sold, Neighborhood, Open Porch SF, Order, Overall Cond, Overall Qual, PID, Paved Drive, Pool Area, Pool QC, Roof Matl, Roof Style, Sale Condition, Sale Type, SalePrice, Screen Porch, Street, TotRms AbvGrd, Total Bsmt SF, Utilities, Wood Deck SF, Year Built, Year Remod/Add, Yr Sold, y_pred.",
+  "hypothesis": "r2 is a column of the data."
+ },
+ {
+  "id": 9190,
+  "premise": "The column feature_12 has a spearman correlation of -0.04 with the target. The absolute correlation of column feature_12 with the target is 0.04. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The spearman corr with target of column feature_12 is -0.04."
+ },
+ {
+  "id": 1675,
+  "premise": "The column children has a spearman correlation of 0.133 with the target. The absolute correlation of column children with the target is 0.133. The data has 1338 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are charges_idx. The data has the columns age, bmi, charges, children, region, sex, smoker, y_pred.",
+  "hypothesis": "The correlation with the target of column children is 0.133."
+ },
+ {
+  "id": 7749,
+  "premise": "The column log_target_v2 has a spearman correlation of 0.999 with the target. The absolute correlation of column log_target_v2 with the target is 0.999. The column near_target_proxy has a pearson correlation of 0.999 with the target. The absolute correlation of column near_target_proxy with the target is 0.999. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The r2 metric of column log_target_v2 is 1."
+ },
+ {
+  "id": 9088,
+  "premise": "The column log_target_v2 has a spearman correlation of 0.999 with the target. The absolute correlation of column log_target_v2 with the target is 0.999. The column near_target_proxy has a pearson correlation of 0.999 with the target. The absolute correlation of column near_target_proxy with the target is 0.999. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The r2 suspicious metric of column log_target_v2 is 1."
+ },
+ {
+  "id": 9207,
+  "premise": "Column num_feature_07 is numeric. The number of missing values of column num_feature_07 is 47. The missing rate of column num_feature_07 is 0.039. The share of zeros of column num_feature_07 is 0. The number of interquartile-range outliers of column num_feature_07 is 9. The number of z-score outliers of column num_feature_07 is 4. The mean of column num_feature_07 is 57.072. The standard deviation of column num_feature_07 is 12.053. The minimum of column num_feature_07 is 8.722. The maximum of column num_feature_07 is 97.303. The 25th percentile of column num_feature_07 is 49.063. The median of column num_feature_07 is 56.959. The 75th percentile of column num_feature_07 is 65.125. The missing rate of column cat_feature_07 is 0.221. The data has 1200 rows. The data has 24 columns. The target column is target. The task is binary classification. The data has the columns cat_feature_01, cat_feature_02, cat_feature_03, cat_feature_04, cat_feature_05, cat_feature_06, cat_feature_07, is_active, num_feature_01, num_feature_02, num_feature_03, num_feature_04, num_feature_05, num_feature_06, num_feature_07, num_feature_08, num_feature_09, num_feature_10, num_feature_11, num_feature_12, num_feature_13, num_feature_14, signup_date, target.",
+  "hypothesis": "The missing rate of column num_feature_07 is 0.221."
+ },
+ {
+  "id": 9525,
+  "premise": "The data has 7043 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are MonthlyCharges_est. The data has the columns Churn, Contract, Dependents, DeviceProtection, InternetService, MonthlyCharges, MultipleLines, OnlineBackup, OnlineSecurity, PaperlessBilling, Partner, PaymentMethod, PhoneService, SeniorCitizen, StreamingMovies, StreamingTV, TechSupport, TotalCharges, customerID, gender, tenure, y_pred.",
+  "hypothesis": "MonthlyCharges is a column of the data."
+ },
+ {
+  "id": 5023,
+  "premise": "Column num_feature_07 is numeric. The number of missing values of column num_feature_07 is 47. The missing rate of column num_feature_07 is 0.039. The share of zeros of column num_feature_07 is 0. The number of interquartile-range outliers of column num_feature_07 is 9. The number of z-score outliers of column num_feature_07 is 4. The mean of column num_feature_07 is 57.072. The standard deviation of column num_feature_07 is 12.053. The minimum of column num_feature_07 is 8.722. The maximum of column num_feature_07 is 97.303. The 25th percentile of column num_feature_07 is 49.063. The median of column num_feature_07 is 56.959. The 75th percentile of column num_feature_07 is 65.125. The missing rate of column cat_feature_07 is 0.221. The data has 1200 rows. The data has 24 columns. The target column is target. The task is binary classification. The data has the columns cat_feature_01, cat_feature_02, cat_feature_03, cat_feature_04, cat_feature_05, cat_feature_06, cat_feature_07, is_active, num_feature_01, num_feature_02, num_feature_03, num_feature_04, num_feature_05, num_feature_06, num_feature_07, num_feature_08, num_feature_09, num_feature_10, num_feature_11, num_feature_12, num_feature_13, num_feature_14, signup_date, target.",
+  "hypothesis": "The missing rate of column num_feature_07 is 0.221."
+ },
+ {
+  "id": 9671,
+  "premise": "Column cat_feature_07 is categorical. The number of missing values of column cat_feature_07 is 265. The missing rate of column cat_feature_07 is 0.221. The number of distinct values of column cat_feature_07 is 31. The data has 1200 rows. The data has 24 columns. The target column is target. The task is binary classification. The data has the columns cat_feature_01, cat_feature_02, cat_feature_03, cat_feature_04, cat_feature_05, cat_feature_06, cat_feature_07, is_active, num_feature_01, num_feature_02, num_feature_03, num_feature_04, num_feature_05, num_feature_06, num_feature_07, num_feature_08, num_feature_09, num_feature_10, num_feature_11, num_feature_12, num_feature_13, num_feature_14, signup_date, target.",
+  "hypothesis": "The number of missing values of column cat_feature_07 is 265."
+ },
+ {
+  "id": 6424,
+  "premise": "Column num_feature_07 is numeric. The number of missing values of column num_feature_07 is 47. The missing rate of column num_feature_07 is 0.039. The share of zeros of column num_feature_07 is 0. The number of interquartile-range outliers of column num_feature_07 is 9. The number of z-score outliers of column num_feature_07 is 4. The mean of column num_feature_07 is 57.072. The standard deviation of column num_feature_07 is 12.053. The minimum of column num_feature_07 is 8.722. The maximum of column num_feature_07 is 97.303. The 25th percentile of column num_feature_07 is 49.063. The median of column num_feature_07 is 56.959. The 75th percentile of column num_feature_07 is 65.125. The missing rate of column cat_feature_07 is 0.221. The data has 1200 rows. The data has 24 columns. The target column is target. The task is binary classification. The data has the columns cat_feature_01, cat_feature_02, cat_feature_03, cat_feature_04, cat_feature_05, cat_feature_06, cat_feature_07, is_active, num_feature_01, num_feature_02, num_feature_03, num_feature_04, num_feature_05, num_feature_06, num_feature_07, num_feature_08, num_feature_09, num_feature_10, num_feature_11, num_feature_12, num_feature_13, num_feature_14, signup_date, target.",
+  "hypothesis": "The missing rate of column num_feature_07 is 0.221."
+ },
+ {
+  "id": 7899,
+  "premise": "Column num_feature_07 is numeric. The number of missing values of column num_feature_07 is 47. The missing rate of column num_feature_07 is 0.039. The share of zeros of column num_feature_07 is 0. The number of interquartile-range outliers of column num_feature_07 is 9. The number of z-score outliers of column num_feature_07 is 4. The mean of column num_feature_07 is 57.072. The standard deviation of column num_feature_07 is 12.053. The minimum of column num_feature_07 is 8.722. The maximum of column num_feature_07 is 97.303. The 25th percentile of column num_feature_07 is 49.063. The median of column num_feature_07 is 56.959. The 75th percentile of column num_feature_07 is 65.125. The number of missing values of column cat_feature_07 is 265. The data has 1200 rows. The data has 24 columns. The target column is target. The task is binary classification. The data has the columns cat_feature_01, cat_feature_02, cat_feature_03, cat_feature_04, cat_feature_05, cat_feature_06, cat_feature_07, is_active, num_feature_01, num_feature_02, num_feature_03, num_feature_04, num_feature_05, num_feature_06, num_feature_07, num_feature_08, num_feature_09, num_feature_10, num_feature_11, num_feature_12, num_feature_13, num_feature_14, signup_date, target.",
+  "hypothesis": "The number of missing values of column num_feature_07 is 265."
+ },
+ {
+  "id": 5251,
+  "premise": "The data has 1200 rows. The data has 24 columns. The target column is target. The task is binary classification. The data has the columns cat_feature_01, cat_feature_02, cat_feature_03, cat_feature_04, cat_feature_05, cat_feature_06, cat_feature_07, is_active, num_feature_01, num_feature_02, num_feature_03, num_feature_04, num_feature_05, num_feature_06, num_feature_07, num_feature_08, num_feature_09, num_feature_10, num_feature_11, num_feature_12, num_feature_13, num_feature_14, signup_date, target.",
+  "hypothesis": "cat_feature_14 is a column of the data."
+ },
+ {
+  "id": 2535,
+  "premise": "Column num_feature_07 is numeric. The number of missing values of column num_feature_07 is 47. The missing rate of column num_feature_07 is 0.039. The share of zeros of column num_feature_07 is 0. The number of interquartile-range outliers of column num_feature_07 is 9. The number of z-score outliers of column num_feature_07 is 4. The mean of column num_feature_07 is 57.072. The standard deviation of column num_feature_07 is 12.053. The minimum of column num_feature_07 is 8.722. The maximum of column num_feature_07 is 97.303. The 25th percentile of column num_feature_07 is 49.063. The median of column num_feature_07 is 56.959. The 75th percentile of column num_feature_07 is 65.125. The missing rate of column cat_feature_07 is 0.221. The data has 1200 rows. The data has 24 columns. The target column is target. The task is binary classification. The data has the columns cat_feature_01, cat_feature_02, cat_feature_03, cat_feature_04, cat_feature_05, cat_feature_06, cat_feature_07, is_active, num_feature_01, num_feature_02, num_feature_03, num_feature_04, num_feature_05, num_feature_06, num_feature_07, num_feature_08, num_feature_09, num_feature_10, num_feature_11, num_feature_12, num_feature_13, num_feature_14, signup_date, target.",
+  "hypothesis": "The missing rate of column num_feature_07 is 0.221."
+ },
+ {
+  "id": 3815,
+  "premise": "The data has 1338 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are charges_idx. The data has the columns age, bmi, charges, children, region, sex, smoker, y_pred.",
+  "hypothesis": "r2 is a column of the data."
+ },
+ {
+  "id": 1275,
+  "premise": "The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "r2 is a column of the data."
+ },
+ {
+  "id": 6332,
+  "premise": "The column sensor_08 has a pearson correlation of 0.924 with the target. The absolute correlation of column sensor_08 with the target is 0.924. The column sensor_ref has a pearson correlation of 0.995 with the target. The absolute correlation of column sensor_ref with the target is 0.995. The data has 1200 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are sensor_ref. The data has the columns sensor_00, sensor_01, sensor_02, sensor_03, sensor_04, sensor_05, sensor_06, sensor_07, sensor_08, sensor_ref, y_pred, y_true.",
+  "hypothesis": "The correlation with the target of column sensor_08 is 0.994."
+ },
+ {
+  "id": 1810,
+  "premise": "The data has 1338 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are charges_idx. The data has the columns age, bmi, charges, children, region, sex, smoker, y_pred.",
+  "hypothesis": "charges is a column of the data."
+ },
+ {
+  "id": 4687,
+  "premise": "The data has 1338 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are charges_est. The data has the columns age, bmi, charges, children, region, sex, smoker, y_pred.",
+  "hypothesis": "r2 is a column of the data."
+ },
+ {
+  "id": 9162,
+  "premise": "The class balance of the target column target is 0.689 for class 0 and 0.311 for class 1. One class of the target makes up a share of 0.689. One class of the target makes up a share of 0.311. Column target is categorical. The number of missing values of column target is 0. The missing rate of column target is 0. The number of distinct values of column target is 2. The data has 1200 rows. The data has 24 columns. The target column is target. The task is binary classification. The data has the columns acquisition_channel, age, balance, basket_size, credit_score, days_since_purchase, device_type, discount_rate, income, industry, is_active, language, login_count, monthly_spend, page_views, payment_method, plan_tier, referral_count, region, session_minutes, signup_date, support_tickets, target, tenure_months.",
+  "hypothesis": "The class balance 1 of column target is 0.311."
+ },
+ {
+  "id": 4303,
+  "premise": "The column feature_5 has a pearson correlation of -0.035 with the target. The absolute correlation of column feature_5 with the target is 0.035. The column feature_10 has a pearson correlation of -0.035 with the target. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The correlation with the target of column feature_5 is -0.035."
+ },
+ {
+  "id": 7826,
+  "premise": "The column sensor_ref has a pearson correlation of 0.995 with the target. The absolute correlation of column sensor_ref with the target is 0.995. The data has 1200 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are sensor_ref. The data has the columns sensor_00, sensor_01, sensor_02, sensor_03, sensor_04, sensor_05, sensor_06, sensor_07, sensor_08, sensor_ref, y_pred, y_true.",
+  "hypothesis": "The correlation with the target of column sensor_ref is 0.995."
+ },
+ {
+  "id": 5026,
+  "premise": "The data has 1200 rows. The data has 24 columns. The target column is target. The task is binary classification. The data has the columns acquisition_channel, age, balance, basket_size, credit_score, days_since_purchase, device_type, discount_rate, income, industry, is_active, language, login_count, monthly_spend, page_views, payment_method, plan_tier, referral_count, region, session_minutes, signup_date, support_tickets, target, tenure_months.",
+  "hypothesis": "insurance is a column of the data."
+ },
+ {
+  "id": 4017,
+  "premise": "The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "target is a column of the data."
+ },
+ {
+  "id": 8280,
+  "premise": "The column feature_9 has a pearson correlation of 0.03 with the target. The absolute correlation of column feature_9 with the target is 0.03. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "feature_9 is a column of the data."
+ },
+ {
+  "id": 9043,
+  "premise": "The column log_target_v2 has a spearman correlation of 0.999 with the target. The absolute correlation of column log_target_v2 with the target is 0.999. The absolute correlation of column feature_12 with the target is 0.04. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The max abs correlation among non leak features of column log_target_v2 is 0.04."
+ },
+ {
+  "id": 2702,
+  "premise": "Column num_feature_07 is numeric. The number of missing values of column num_feature_07 is 47. The missing rate of column num_feature_07 is 0.039. The share of zeros of column num_feature_07 is 0. The number of interquartile-range outliers of column num_feature_07 is 9. The number of z-score outliers of column num_feature_07 is 4. The mean of column num_feature_07 is 57.072. The standard deviation of column num_feature_07 is 12.053. The minimum of column num_feature_07 is 8.722. The maximum of column num_feature_07 is 97.303. The 25th percentile of column num_feature_07 is 49.063. The median of column num_feature_07 is 56.959. The 75th percentile of column num_feature_07 is 65.125. The missing rate of column cat_feature_07 is 0.221. The data has 1200 rows. The data has 24 columns. The target column is target. The task is binary classification. The data has the columns cat_feature_01, cat_feature_02, cat_feature_03, cat_feature_04, cat_feature_05, cat_feature_06, cat_feature_07, is_active, num_feature_01, num_feature_02, num_feature_03, num_feature_04, num_feature_05, num_feature_06, num_feature_07, num_feature_08, num_feature_09, num_feature_10, num_feature_11, num_feature_12, num_feature_13, num_feature_14, signup_date, target.",
+  "hypothesis": "The missing rate of column num_feature_07 is 0.221."
+ },
+ {
+  "id": 5276,
+  "premise": "The column feature_9 has a pearson correlation of 0.03 with the target. The absolute correlation of column feature_9 with the target is 0.03. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "feature_9 is a column of the data."
+ },
+ {
+  "id": 1269,
+  "premise": "The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "r2 is a column of the data."
+ },
+ {
+  "id": 7894,
+  "premise": "The column feature_10 has a pearson correlation of -0.035 with the target. The absolute correlation of column feature_10 with the target is 0.035. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "feature_10 is a column of the data."
+ },
+ {
+  "id": 9268,
+  "premise": "Column num_feature_07 is numeric. The number of missing values of column num_feature_07 is 47. The missing rate of column num_feature_07 is 0.039. The share of zeros of column num_feature_07 is 0. The number of interquartile-range outliers of column num_feature_07 is 9. The number of z-score outliers of column num_feature_07 is 4. The mean of column num_feature_07 is 57.072. The standard deviation of column num_feature_07 is 12.053. The minimum of column num_feature_07 is 8.722. The maximum of column num_feature_07 is 97.303. The 25th percentile of column num_feature_07 is 49.063. The median of column num_feature_07 is 56.959. The 75th percentile of column num_feature_07 is 65.125. The number of missing values of column cat_feature_07 is 265. The data has 1200 rows. The data has 24 columns. The target column is target. The task is binary classification. The data has the columns cat_feature_01, cat_feature_02, cat_feature_03, cat_feature_04, cat_feature_05, cat_feature_06, cat_feature_07, is_active, num_feature_01, num_feature_02, num_feature_03, num_feature_04, num_feature_05, num_feature_06, num_feature_07, num_feature_08, num_feature_09, num_feature_10, num_feature_11, num_feature_12, num_feature_13, num_feature_14, signup_date, target.",
+  "hypothesis": "The number of missing values of column num_feature_07 is 265."
+ },
+ {
+  "id": 9756,
+  "premise": "The data has 1200 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are sensor_ref. The data has the columns sensor_00, sensor_01, sensor_02, sensor_03, sensor_04, sensor_05, sensor_06, sensor_07, sensor_08, sensor_ref, y_pred, y_true.",
+  "hypothesis": "feature_12 is a column of the data."
+ },
+ {
+  "id": 2203,
+  "premise": "The column log_target_v2 has a spearman correlation of 0.999 with the target. The absolute correlation of column log_target_v2 with the target is 0.999. The column near_target_proxy has a pearson correlation of 0.999 with the target. The absolute correlation of column near_target_proxy with the target is 0.999. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The correlation with the target of column log_target_v2 is 0.999."
+ },
+ {
+  "id": 3113,
+  "premise": "The column log_target_v2 has a spearman correlation of 0.999 with the target. The absolute correlation of column log_target_v2 with the target is 0.999. The column near_target_proxy has a pearson correlation of 0.999 with the target. The absolute correlation of column near_target_proxy with the target is 0.999. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The r2 metric of column log_target_v2 is 1."
+ },
+ {
+  "id": 4064,
+  "premise": "The class balance of the target column target is 0.689 for class 0 and 0.311 for class 1. One class of the target makes up a share of 0.689. One class of the target makes up a share of 0.311. Column target is categorical. The number of missing values of column target is 0. The missing rate of column target is 0. The number of distinct values of column target is 2. The data has 1200 rows. The data has 24 columns. The target column is target. The task is binary classification. The data has the columns cat_feature_01, cat_feature_02, cat_feature_03, cat_feature_04, cat_feature_05, cat_feature_06, cat_feature_07, is_active, num_feature_01, num_feature_02, num_feature_03, num_feature_04, num_feature_05, num_feature_06, num_feature_07, num_feature_08, num_feature_09, num_feature_10, num_feature_11, num_feature_12, num_feature_13, num_feature_14, signup_date, target.",
+  "hypothesis": "The class balance of column target is 0.311."
+ },
+ {
+  "id": 2406,
+  "premise": "The data has 7043 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are MonthlyCharges_est. The data has the columns Churn, Contract, Dependents, DeviceProtection, InternetService, MonthlyCharges, MultipleLines, OnlineBackup, OnlineSecurity, PaperlessBilling, Partner, PaymentMethod, PhoneService, SeniorCitizen, StreamingMovies, StreamingTV, TechSupport, TotalCharges, customerID, gender, tenure, y_pred.",
+  "hypothesis": "MonthlyCharges is a column of the data."
+ },
+ {
+  "id": 9566,
+  "premise": "The data has 1200 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are sensor_ref. The data has the columns sensor_00, sensor_01, sensor_02, sensor_03, sensor_04, sensor_05, sensor_06, sensor_07, sensor_08, sensor_ref, y_pred, y_true.",
+  "hypothesis": "feature_8 is a column of the data."
+ },
+ {
+  "id": 7429,
+  "premise": "The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "r2 is a column of the data."
+ },
+ {
+  "id": 9042,
+  "premise": "The column SalePrice_norm has a spearman correlation of -1 with the target. The absolute correlation of column SalePrice_norm with the target is 1. The data has 2930 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are SalePrice_norm. The data has the columns 1st Flr SF, 2nd Flr SF, 3Ssn Porch, Alley, Bedroom AbvGr, Bldg Type, Bsmt Cond, Bsmt Exposure, Bsmt Full Bath, Bsmt Half Bath, Bsmt Qual, Bsmt Unf SF, BsmtFin SF 1, BsmtFin SF 2, BsmtFin Type 1, BsmtFin Type 2, Central Air, Condition 1, Condition 2, Electrical, Enclosed Porch, Exter Cond, Exter Qual, Exterior 1st, Exterior 2nd, Fence, Fireplace Qu, Fireplaces, Foundation, Full Bath, Functional, Garage Area, Garage Cars, Garage Cond, Garage Finish, Garage Qual, Garage Type, Garage Yr Blt, Gr Liv Area, Half Bath, Heating, Heating QC, House Style, Kitchen AbvGr, Kitchen Qual, Land Contour, Land Slope, Lot Area, Lot Config, Lot Frontage, Lot Shape, Low Qual Fin SF, MS SubClass, MS Zoning, Mas Vnr Area, Mas Vnr Type, Misc Feature, Misc Val, Mo Sold, Neighborhood, Open Porch SF, Order, Overall Cond, Overall Qual, PID, Paved Drive, Pool Area, Pool QC, Roof Matl, Roof Style, Sale Condition, Sale Type, SalePrice, Screen Porch, Street, TotRms AbvGrd, Total Bsmt SF, Utilities, Wood Deck SF, Year Built, Year Remod/Add, Yr Sold, y_pred.",
+  "hypothesis": "The correlation with the target of column SalePrice_norm is -1."
+ },
+ {
+  "id": 4269,
+  "premise": "The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "r2 is a column of the data."
+ },
+ {
+  "id": 1898,
+  "premise": "The column feature_12 has a spearman correlation of -0.04 with the target. The absolute correlation of column feature_12 with the target is 0.04. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The abs spearman correlation max among benign of column feature_12 is 0.04."
+ },
+ {
+  "id": 4991,
+  "premise": "The data has 303 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are chol_norm. The data has the columns age, ca, chol, cp, exang, fbs, num, oldpeak, restecg, sex, slope, thal, thalach, trestbps, y_pred.",
+  "hypothesis": "r2 is a column of the data."
+ },
+ {
+  "id": 6430,
+  "premise": "The data has 7043 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are MonthlyCharges_est. The data has the columns Churn, Contract, Dependents, DeviceProtection, InternetService, MonthlyCharges, MultipleLines, OnlineBackup, OnlineSecurity, PaperlessBilling, Partner, PaymentMethod, PhoneService, SeniorCitizen, StreamingMovies, StreamingTV, TechSupport, TotalCharges, customerID, gender, tenure, y_pred.",
+  "hypothesis": "total_charges is a column of the data."
+ },
+ {
+  "id": 6763,
+  "premise": "The data has 2930 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are SalePrice_adj. The data has the columns 1st Flr SF, 2nd Flr SF, 3Ssn Porch, Alley, Bedroom AbvGr, Bldg Type, Bsmt Cond, Bsmt Exposure, Bsmt Full Bath, Bsmt Half Bath, Bsmt Qual, Bsmt Unf SF, BsmtFin SF 1, BsmtFin SF 2, BsmtFin Type 1, BsmtFin Type 2, Central Air, Condition 1, Condition 2, Electrical, Enclosed Porch, Exter Cond, Exter Qual, Exterior 1st, Exterior 2nd, Fence, Fireplace Qu, Fireplaces, Foundation, Full Bath, Functional, Garage Area, Garage Cars, Garage Cond, Garage Finish, Garage Qual, Garage Type, Garage Yr Blt, Gr Liv Area, Half Bath, Heating, Heating QC, House Style, Kitchen AbvGr, Kitchen Qual, Land Contour, Land Slope, Lot Area, Lot Config, Lot Frontage, Lot Shape, Low Qual Fin SF, MS SubClass, MS Zoning, Mas Vnr Area, Mas Vnr Type, Misc Feature, Misc Val, Mo Sold, Neighborhood, Open Porch SF, Order, Overall Cond, Overall Qual, PID, Paved Drive, Pool Area, Pool QC, Roof Matl, Roof Style, Sale Condition, Sale Type, SalePrice, Screen Porch, Street, TotRms AbvGrd, Total Bsmt SF, Utilities, Wood Deck SF, Year Built, Year Remod/Add, Yr Sold, y_pred.",
+  "hypothesis": "SalePrice is a column of the data."
+ },
+ {
+  "id": 4899,
+  "premise": "The data has 303 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are chol_grp. The data has the columns age, ca, chol, cp, exang, fbs, num, oldpeak, restecg, sex, slope, thal, thalach, trestbps, y_pred.",
+  "hypothesis": "chol is a column of the data."
+ },
+ {
+  "id": 4319,
+  "premise": "The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "r2 is a column of the data."
+ },
+ {
+  "id": 4022,
+  "premise": "The column feature_12 has a spearman correlation of -0.04 with the target. The absolute correlation of column feature_12 with the target is 0.04. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The next highest abs correlation magnitude of column feature_12 is 0.04."
+ },
+ {
+  "id": 6295,
+  "premise": "The column log_target_v2 has a spearman correlation of 0.999 with the target. The absolute correlation of column log_target_v2 with the target is 0.999. The column near_target_proxy has a pearson correlation of 0.999 with the target. The absolute correlation of column near_target_proxy with the target is 0.999. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The model r2 of column log_target_v2 is 1."
+ },
+ {
+  "id": 5668,
+  "premise": "The column feature_4 has a pearson correlation of -0.022 with the target. The absolute correlation of column feature_4 with the target is 0.022. The column feature_7 has a pearson correlation of -0.02 with the target. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The correlation with the target of column feature_4 is -0.022."
+ },
+ {
+  "id": 3275,
+  "premise": "The column feature_5 has a pearson correlation of -0.035 with the target. The absolute correlation of column feature_5 with the target is 0.035. The column feature_10 has a pearson correlation of -0.035 with the target. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The correlation with the target of column feature_5 is -0.035."
+ },
+ {
+  "id": 6176,
+  "premise": "Column num_feature_04 is numeric. The number of missing values of column num_feature_04 is 102. The missing rate of column num_feature_04 is 0.085. The share of zeros of column num_feature_04 is 0. The number of interquartile-range outliers of column num_feature_04 is 11. The number of z-score outliers of column num_feature_04 is 8. The mean of column num_feature_04 is 126.685. The standard deviation of column num_feature_04 is 846.241. The minimum of column num_feature_04 is 13.784. The maximum of column num_feature_04 is 9999. The 25th percentile of column num_feature_04 is 45.831. The median of column num_feature_04 is 54.264. The 75th percentile of column num_feature_04 is 63.174. The data has 1200 rows. The data has 24 columns. The target column is target. The task is binary classification. The data has the columns cat_feature_01, cat_feature_02, cat_feature_03, cat_feature_04, cat_feature_05, cat_feature_06, cat_feature_07, is_active, num_feature_01, num_feature_02, num_feature_03, num_feature_04, num_feature_05, num_feature_06, num_feature_07, num_feature_08, num_feature_09, num_feature_10, num_feature_11, num_feature_12, num_feature_13, num_feature_14, signup_date, target.",
+  "hypothesis": "The standard deviation of column num_feature_04 is 826.241."
+ },
+ {
+  "id": 3369,
+  "premise": "The data has 2930 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are SalePrice_idx. The data has the columns 1st Flr SF, 2nd Flr SF, 3Ssn Porch, Alley, Bedroom AbvGr, Bldg Type, Bsmt Cond, Bsmt Exposure, Bsmt Full Bath, Bsmt Half Bath, Bsmt Qual, Bsmt Unf SF, BsmtFin SF 1, BsmtFin SF 2, BsmtFin Type 1, BsmtFin Type 2, Central Air, Condition 1, Condition 2, Electrical, Enclosed Porch, Exter Cond, Exter Qual, Exterior 1st, Exterior 2nd, Fence, Fireplace Qu, Fireplaces, Foundation, Full Bath, Functional, Garage Area, Garage Cars, Garage Cond, Garage Finish, Garage Qual, Garage Type, Garage Yr Blt, Gr Liv Area, Half Bath, Heating, Heating QC, House Style, Kitchen AbvGr, Kitchen Qual, Land Contour, Land Slope, Lot Area, Lot Config, Lot Frontage, Lot Shape, Low Qual Fin SF, MS SubClass, MS Zoning, Mas Vnr Area, Mas Vnr Type, Misc Feature, Misc Val, Mo Sold, Neighborhood, Open Porch SF, Order, Overall Cond, Overall Qual, PID, Paved Drive, Pool Area, Pool QC, Roof Matl, Roof Style, Sale Condition, Sale Type, SalePrice, Screen Porch, Street, TotRms AbvGrd, Total Bsmt SF, Utilities, Wood Deck SF, Year Built, Year Remod/Add, Yr Sold, y_pred.",
+  "hypothesis": "r2 is a column of the data."
+ },
+ {
+  "id": 2534,
+  "premise": "The column near_target_proxy has a pearson correlation of 0.999 with the target. The absolute correlation of column near_target_proxy with the target is 0.999. The absolute correlation of column feature_12 with the target is 0.04. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The max correlation among non leak features of column near_target_proxy is 0.04."
+ },
+ {
+  "id": 9100,
+  "premise": "The class balance of the target column target is 0.689 for class 0 and 0.311 for class 1. One class of the target makes up a share of 0.689. One class of the target makes up a share of 0.311. Column target is categorical. The number of missing values of column target is 0. The missing rate of column target is 0. The number of distinct values of column target is 2. The data has 1200 rows. The data has 24 columns. The target column is target. The task is binary classification. The data has the columns cat_feature_01, cat_feature_02, cat_feature_03, cat_feature_04, cat_feature_05, cat_feature_06, cat_feature_07, is_active, num_feature_01, num_feature_02, num_feature_03, num_feature_04, num_feature_05, num_feature_06, num_feature_07, num_feature_08, num_feature_09, num_feature_10, num_feature_11, num_feature_12, num_feature_13, num_feature_14, signup_date, target.",
+  "hypothesis": "The class balance 0 of column target is 0.689."
+ },
+ {
+  "id": 1387,
+  "premise": "The data has 1338 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are charges_est. The data has the columns age, bmi, charges, children, region, sex, smoker, y_pred.",
+  "hypothesis": "r2 is a column of the data."
+ },
+ {
+  "id": 6630,
+  "premise": "The data has 303 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are chol_norm. The data has the columns age, ca, chol, cp, exang, fbs, num, oldpeak, restecg, sex, slope, thal, thalach, trestbps, y_pred.",
+  "hypothesis": "target is a column of the data."
+ },
+ {
+  "id": 4396,
+  "premise": "The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "r2 is a column of the data."
+ },
+ {
+  "id": 1163,
+  "premise": "Column num_feature_07 is numeric. The number of missing values of column num_feature_07 is 47. The missing rate of column num_feature_07 is 0.039. The share of zeros of column num_feature_07 is 0. The number of interquartile-range outliers of column num_feature_07 is 9. The number of z-score outliers of column num_feature_07 is 4. The mean of column num_feature_07 is 57.072. The standard deviation of column num_feature_07 is 12.053. The minimum of column num_feature_07 is 8.722. The maximum of column num_feature_07 is 97.303. The 25th percentile of column num_feature_07 is 49.063. The median of column num_feature_07 is 56.959. The 75th percentile of column num_feature_07 is 65.125. The missing rate of column cat_feature_07 is 0.221. The data has 1200 rows. The data has 24 columns. The target column is target. The task is binary classification. The data has the columns cat_feature_01, cat_feature_02, cat_feature_03, cat_feature_04, cat_feature_05, cat_feature_06, cat_feature_07, is_active, num_feature_01, num_feature_02, num_feature_03, num_feature_04, num_feature_05, num_feature_06, num_feature_07, num_feature_08, num_feature_09, num_feature_10, num_feature_11, num_feature_12, num_feature_13, num_feature_14, signup_date, target.",
+  "hypothesis": "The missing rate of column num_feature_07 is 0.221."
+ },
+ {
+  "id": 6190,
+  "premise": "Column num_feature_07 is numeric. The number of missing values of column num_feature_07 is 47. The missing rate of column num_feature_07 is 0.039. The share of zeros of column num_feature_07 is 0. The number of interquartile-range outliers of column num_feature_07 is 9. The number of z-score outliers of column num_feature_07 is 4. The mean of column num_feature_07 is 57.072. The standard deviation of column num_feature_07 is 12.053. The minimum of column num_feature_07 is 8.722. The maximum of column num_feature_07 is 97.303. The 25th percentile of column num_feature_07 is 49.063. The median of column num_feature_07 is 56.959. The 75th percentile of column num_feature_07 is 65.125. The missing rate of column cat_feature_07 is 0.221. The data has 1200 rows. The data has 24 columns. The target column is target. The task is binary classification. The data has the columns cat_feature_01, cat_feature_02, cat_feature_03, cat_feature_04, cat_feature_05, cat_feature_06, cat_feature_07, is_active, num_feature_01, num_feature_02, num_feature_03, num_feature_04, num_feature_05, num_feature_06, num_feature_07, num_feature_08, num_feature_09, num_feature_10, num_feature_11, num_feature_12, num_feature_13, num_feature_14, signup_date, target.",
+  "hypothesis": "The missing rate of column num_feature_07 is 0.221."
+ },
+ {
+  "id": 1486,
+  "premise": "The column near_target_proxy has a pearson correlation of 0.999 with the target. The absolute correlation of column near_target_proxy with the target is 0.999. The column log_target_v2 has a spearman correlation of 0.999 with the target. The absolute correlation of column log_target_v2 with the target is 0.999. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The correlation with the target of column near_target_proxy is 0.999."
+ },
+ {
+  "id": 4464,
+  "premise": "The column PaperlessBilling has a pearson correlation of 0.352 with the target. The absolute correlation of column PaperlessBilling with the target is 0.352. The data has 7043 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are MonthlyCharges_grp. The data has the columns Churn, Contract, Dependents, DeviceProtection, InternetService, MonthlyCharges, MultipleLines, OnlineBackup, OnlineSecurity, PaperlessBilling, Partner, PaymentMethod, PhoneService, SeniorCitizen, StreamingMovies, StreamingTV, TechSupport, TotalCharges, customerID, gender, tenure, y_pred.",
+  "hypothesis": "PaperlessBilling is a column of the data."
+ },
+ {
+  "id": 8640,
+  "premise": "The data has 1200 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are sensor_ref. The data has the columns sensor_00, sensor_01, sensor_02, sensor_03, sensor_04, sensor_05, sensor_06, sensor_07, sensor_08, sensor_ref, y_pred, y_true.",
+  "hypothesis": "feature_5 is a column of the data."
+ },
+ {
+  "id": 4761,
+  "premise": "The column feature_12 has a spearman correlation of -0.04 with the target. The absolute correlation of column feature_12 with the target is 0.04. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The correlation with the target of column feature_12 is -0.04."
+ },
+ {
+  "id": 1790,
+  "premise": "The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "r2 is a column of the data."
+ },
+ {
+  "id": 2328,
+  "premise": "The column feature_12 has a spearman correlation of -0.04 with the target. The absolute correlation of column feature_12 with the target is 0.04. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The max abs correlation of legitimate features of column feature_12 is 0.04."
+ },
+ {
+  "id": 6023,
+  "premise": "The class balance of the target column target is 0.689 for class 0 and 0.311 for class 1. One class of the target makes up a share of 0.689. One class of the target makes up a share of 0.311. Column target is categorical. The number of missing values of column target is 0. The missing rate of column target is 0. The number of distinct values of column target is 2. The data has 1200 rows. The data has 24 columns. The target column is target. The task is binary classification. The data has the columns acquisition_channel, age, balance, basket_size, credit_score, days_since_purchase, device_type, discount_rate, income, industry, is_active, language, login_count, monthly_spend, page_views, payment_method, plan_tier, referral_count, region, session_minutes, signup_date, support_tickets, target, tenure_months.",
+  "hypothesis": "The class balance of column target is 0.311."
+ },
+ {
+  "id": 4733,
+  "premise": "The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "r2 is a column of the data."
+ },
+ {
+  "id": 9516,
+  "premise": "The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "r2 is a column of the data."
+ },
+ {
+  "id": 3290,
+  "premise": "The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "suspicious_metric.name is a column of the data."
+ },
+ {
+  "id": 2609,
+  "premise": "The column sensor_05 has a pearson correlation of 0.915 with the target. The absolute correlation of column sensor_05 with the target is 0.915. The column sensor_06 has a pearson correlation of 0.918 with the target. The absolute correlation of column sensor_06 with the target is 0.918. The column sensor_04 has a pearson correlation of 0.912 with the target. The absolute correlation of column sensor_04 with the target is 0.912. The data has 1200 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are sensor_ref. The data has the columns sensor_00, sensor_01, sensor_02, sensor_03, sensor_04, sensor_05, sensor_06, sensor_07, sensor_08, sensor_ref, y_pred, y_true.",
+  "hypothesis": "The correlation with the target of column sensor_05 is 0.915."
+ },
+ {
+  "id": 1109,
+  "premise": "The column sensor_05 has a pearson correlation of 0.915 with the target. The absolute correlation of column sensor_05 with the target is 0.915. The data has 1200 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are sensor_ref. The data has the columns sensor_00, sensor_01, sensor_02, sensor_03, sensor_04, sensor_05, sensor_06, sensor_07, sensor_08, sensor_ref, y_pred, y_true.",
+  "hypothesis": "sensor_05 is a column of the data."
+ },
+ {
+  "id": 9946,
+  "premise": "The column log_target_v2 has a spearman correlation of 0.999 with the target. The absolute correlation of column log_target_v2 with the target is 0.999. The column near_target_proxy has a pearson correlation of 0.999 with the target. The absolute correlation of column near_target_proxy with the target is 0.999. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The r2 model metric of column log_target_v2 is 1."
+ },
+ {
+  "id": 7254,
+  "premise": "The data has 1200 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are sensor_ref. The data has the columns sensor_00, sensor_01, sensor_02, sensor_03, sensor_04, sensor_05, sensor_06, sensor_07, sensor_08, sensor_ref, y_pred, y_true.",
+  "hypothesis": "feature_5 is a column of the data."
+ },
+ {
+  "id": 8354,
+  "premise": "The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "r2 is a column of the data."
+ },
+ {
+  "id": 4607,
+  "premise": "The column feature_10 has a pearson correlation of -0.035 with the target. The absolute correlation of column feature_10 with the target is 0.035. The column feature_5 has a pearson correlation of -0.035 with the target. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The pearson correlation with target (next-highest, non-suspect feature) of column feature_10 is -0.035."
+ },
+ {
+  "id": 7458,
+  "premise": "The column log_target_v2 has a spearman correlation of 0.999 with the target. The absolute correlation of column log_target_v2 with the target is 0.999. The column near_target_proxy has a pearson correlation of 0.999 with the target. The absolute correlation of column near_target_proxy with the target is 0.999. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The r2 of column log_target_v2 is 1."
+ },
+ {
+  "id": 9178,
+  "premise": "The data has 1338 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are charges_est. The data has the columns age, bmi, charges, children, region, sex, smoker, y_pred.",
+  "hypothesis": "r2 is a column of the data."
+ },
+ {
+  "id": 9113,
+  "premise": "The column feature_12 has a spearman correlation of -0.04 with the target. The absolute correlation of column feature_12 with the target is 0.04. The absolute correlation of column feature_10 with the target is 0.035. The absolute correlation of column feature_5 with the target is 0.035. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The abs pearson corr with target of column feature_12 is 0.035."
+ },
+ {
+  "id": 4597,
+  "premise": "The data has 1200 rows. The data has 24 columns. The target column is target. The task is binary classification. The data has the columns acquisition_channel, age, balance, basket_size, credit_score, days_since_purchase, device_type, discount_rate, income, industry, is_active, language, login_count, monthly_spend, page_views, payment_method, plan_tier, referral_count, region, session_minutes, signup_date, support_tickets, target, tenure_months.",
+  "hypothesis": "acquired_channel is a column of the data."
+ },
+ {
+  "id": 7141,
+  "premise": "The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "r2 is a column of the data."
+ },
+ {
+  "id": 1153,
+  "premise": "The data has 1338 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are charges_idx. The data has the columns age, bmi, charges, children, region, sex, smoker, y_pred.",
+  "hypothesis": "r2 is a column of the data."
+ },
+ {
+  "id": 2838,
+  "premise": "The data has 1200 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are sensor_ref. The data has the columns sensor_00, sensor_01, sensor_02, sensor_03, sensor_04, sensor_05, sensor_06, sensor_07, sensor_08, sensor_ref, y_pred, y_true.",
+  "hypothesis": "r2 is a column of the data."
+ },
+ {
+  "id": 7494,
+  "premise": "The class balance of the target column target is 0.689 for class 0 and 0.311 for class 1. One class of the target makes up a share of 0.689. One class of the target makes up a share of 0.311. Column target is categorical. The number of missing values of column target is 0. The missing rate of column target is 0. The number of distinct values of column target is 2. The data has 1200 rows. The data has 24 columns. The target column is target. The task is binary classification. The data has the columns cat_feature_01, cat_feature_02, cat_feature_03, cat_feature_04, cat_feature_05, cat_feature_06, cat_feature_07, is_active, num_feature_01, num_feature_02, num_feature_03, num_feature_04, num_feature_05, num_feature_06, num_feature_07, num_feature_08, num_feature_09, num_feature_10, num_feature_11, num_feature_12, num_feature_13, num_feature_14, signup_date, target.",
+  "hypothesis": "The class 1 share of column target is 0.311."
+ },
+ {
+  "id": 6983,
+  "premise": "The data has 7043 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are MonthlyCharges_est. The data has the columns Churn, Contract, Dependents, DeviceProtection, InternetService, MonthlyCharges, MultipleLines, OnlineBackup, OnlineSecurity, PaperlessBilling, Partner, PaymentMethod, PhoneService, SeniorCitizen, StreamingMovies, StreamingTV, TechSupport, TotalCharges, customerID, gender, tenure, y_pred.",
+  "hypothesis": "MonthlyCharges is a column of the data."
+ },
+ {
+  "id": 8957,
+  "premise": "The column feature_4 has a pearson correlation of -0.022 with the target. The absolute correlation of column feature_4 with the target is 0.022. The column feature_7 has a pearson correlation of -0.02 with the target. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The pearson corr with target of column feature_4 is -0.022."
+ },
+ {
+  "id": 8816,
+  "premise": "Column num_feature_07 is numeric. The number of missing values of column num_feature_07 is 47. The missing rate of column num_feature_07 is 0.039. The share of zeros of column num_feature_07 is 0. The number of interquartile-range outliers of column num_feature_07 is 9. The number of z-score outliers of column num_feature_07 is 4. The mean of column num_feature_07 is 57.072. The standard deviation of column num_feature_07 is 12.053. The minimum of column num_feature_07 is 8.722. The maximum of column num_feature_07 is 97.303. The 25th percentile of column num_feature_07 is 49.063. The median of column num_feature_07 is 56.959. The 75th percentile of column num_feature_07 is 65.125. The missing rate of column cat_feature_07 is 0.221. The data has 1200 rows. The data has 24 columns. The target column is target. The task is binary classification. The data has the columns cat_feature_01, cat_feature_02, cat_feature_03, cat_feature_04, cat_feature_05, cat_feature_06, cat_feature_07, is_active, num_feature_01, num_feature_02, num_feature_03, num_feature_04, num_feature_05, num_feature_06, num_feature_07, num_feature_08, num_feature_09, num_feature_10, num_feature_11, num_feature_12, num_feature_13, num_feature_14, signup_date, target.",
+  "hypothesis": "The missing rate of column num_feature_07 is 0.221."
+ },
+ {
+  "id": 6644,
+  "premise": "The data has 1338 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are charges_idx. The data has the columns age, bmi, charges, children, region, sex, smoker, y_pred.",
+  "hypothesis": "r2 is a column of the data."
+ },
+ {
+  "id": 3766,
+  "premise": "The data has 1200 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are sensor_ref. The data has the columns sensor_00, sensor_01, sensor_02, sensor_03, sensor_04, sensor_05, sensor_06, sensor_07, sensor_08, sensor_ref, y_pred, y_true.",
+  "hypothesis": "r2 is a column of the data."
+ },
+ {
+  "id": 7867,
+  "premise": "The class balance of the target column target is 0.689 for class 0 and 0.311 for class 1. One class of the target makes up a share of 0.689. One class of the target makes up a share of 0.311. Column target is categorical. The number of missing values of column target is 0. The missing rate of column target is 0. The number of distinct values of column target is 2. The data has 1200 rows. The data has 24 columns. The target column is target. The task is binary classification. The data has the columns acquisition_channel, age, balance, basket_size, credit_score, days_since_purchase, device_type, discount_rate, income, industry, is_active, language, login_count, monthly_spend, page_views, payment_method, plan_tier, referral_count, region, session_minutes, signup_date, support_tickets, target, tenure_months.",
+  "hypothesis": "The class balance of column target is 0.311."
+ },
+ {
+  "id": 7066,
+  "premise": "Column num_feature_06 is numeric. The number of missing values of column num_feature_06 is 17. The missing rate of column num_feature_06 is 0.014. The share of zeros of column num_feature_06 is 0. The number of interquartile-range outliers of column num_feature_06 is 7. The number of z-score outliers of column num_feature_06 is 2. The mean of column num_feature_06 is 56.117. The standard deviation of column num_feature_06 is 11.63. The minimum of column num_feature_06 is 18.245. The maximum of column num_feature_06 is 88.699. The 25th percentile of column num_feature_06 is 48.635. The median of column num_feature_06 is 55.904. The 75th percentile of column num_feature_06 is 64.517. The missing rate of column cat_feature_06 is 0.195. The data has 1200 rows. The data has 24 columns. The target column is target. The task is binary classification. The data has the columns cat_feature_01, cat_feature_02, cat_feature_03, cat_feature_04, cat_feature_05, cat_feature_06, cat_feature_07, is_active, num_feature_01, num_feature_02, num_feature_03, num_feature_04, num_feature_05, num_feature_06, num_feature_07, num_feature_08, num_feature_09, num_feature_10, num_feature_11, num_feature_12, num_feature_13, num_feature_14, signup_date, target.",
+  "hypothesis": "The missing rate of column num_feature_06 is 0.195."
+ },
+ {
+  "id": 5432,
+  "premise": "The column Density has a spearman correlation of -0.993 with the target. The absolute correlation of column Density with the target is 0.993. The data has 252 rows. The suspicious metric is r2, with value 0.978. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are Density. The data has the columns Abdomen, Age, Ankle, Biceps, Chest, Density, Forearm, Height, Hip, Knee, Neck, Thigh, Weight, Wrist, class, y_pred.",
+  "hypothesis": "Density is a column of the data."
+ },
+ {
+  "id": 1993,
+  "premise": "The column feature_7 has a pearson correlation of -0.02 with the target. The absolute correlation of column feature_7 with the target is 0.02. The absolute correlation of column feature_4 with the target is 0.022. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The correlation with the target of column feature_7 is 0.02."
+ },
+ {
+  "id": 9497,
+  "premise": "The data has 1200 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are sensor_ref. The data has the columns sensor_00, sensor_01, sensor_02, sensor_03, sensor_04, sensor_05, sensor_06, sensor_07, sensor_08, sensor_ref, y_pred, y_true.",
+  "hypothesis": "near_target_proxy is a column of the data."
+ },
+ {
+  "id": 7354,
+  "premise": "The column feature_8 has a pearson correlation of -0.028 with the target. The absolute correlation of column feature_8 with the target is 0.028. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "feature_8 is a column of the data."
+ },
+ {
+  "id": 8159,
+  "premise": "The column feature_10 has a pearson correlation of -0.035 with the target. The absolute correlation of column feature_10 with the target is 0.035. The absolute correlation of column feature_5 with the target is 0.035. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The third highest abs correlation of column feature_10 is 0.035."
+ },
+ {
+  "id": 3715,
+  "premise": "The data has 1200 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are sensor_ref. The data has the columns sensor_00, sensor_01, sensor_02, sensor_03, sensor_04, sensor_05, sensor_06, sensor_07, sensor_08, sensor_ref, y_pred, y_true.",
+  "hypothesis": "near_target_proxy is a column of the data."
+ },
+ {
+  "id": 7185,
+  "premise": "The class balance of the target column target is 0.689 for class 0 and 0.311 for class 1. One class of the target makes up a share of 0.689. One class of the target makes up a share of 0.311. Column target is categorical. The number of missing values of column target is 0. The missing rate of column target is 0. The number of distinct values of column target is 2. The data has 1200 rows. The data has 24 columns. The target column is target. The task is binary classification. The data has the columns acquisition_channel, age, balance, basket_size, credit_score, days_since_purchase, device_type, discount_rate, income, industry, is_active, language, login_count, monthly_spend, page_views, payment_method, plan_tier, referral_count, region, session_minutes, signup_date, support_tickets, target, tenure_months.",
+  "hypothesis": "The class balance 1 of column target is 0.311."
+ },
+ {
+  "id": 5589,
+  "premise": "The data has 7043 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are MonthlyCharges_est. The data has the columns Churn, Contract, Dependents, DeviceProtection, InternetService, MonthlyCharges, MultipleLines, OnlineBackup, OnlineSecurity, PaperlessBilling, Partner, PaymentMethod, PhoneService, SeniorCitizen, StreamingMovies, StreamingTV, TechSupport, TotalCharges, customerID, gender, tenure, y_pred.",
+  "hypothesis": "MonthlyCharges is a column of the data."
+ },
+ {
+  "id": 8216,
+  "premise": "The column feature_12 has a spearman correlation of -0.04 with the target. The absolute correlation of column feature_12 with the target is 0.04. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The spearman corr with target of column feature_12 is -0.04."
+ },
+ {
+  "id": 8157,
+  "premise": "The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "target is a column of the data."
+ },
+ {
+  "id": 2009,
+  "premise": "The column feature_12 has a spearman correlation of -0.04 with the target. The absolute correlation of column feature_12 with the target is 0.04. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The spearman corr with target of column feature_12 is -0.04."
+ },
+ {
+  "id": 3047,
+  "premise": "The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "target is a column of the data."
+ },
+ {
+  "id": 1853,
+  "premise": "The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "r2 is a column of the data."
+ },
+ {
+  "id": 7504,
+  "premise": "The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "target is a column of the data."
+ },
+ {
+  "id": 9933,
+  "premise": "The column log_target_v2 has a spearman correlation of 0.999 with the target. The absolute correlation of column log_target_v2 with the target is 0.999. The absolute correlation of column feature_12 with the target is 0.04. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The max other feature abs corr of column log_target_v2 is 0.04."
+ },
+ {
+  "id": 4515,
+  "premise": "The column Hip has a pearson correlation of 0.625 with the target. The absolute correlation of column Hip with the target is 0.625. The data has 252 rows. The suspicious metric is r2, with value 0.978. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are Density. The data has the columns Abdomen, Age, Ankle, Biceps, Chest, Density, Forearm, Height, Hip, Knee, Neck, Thigh, Weight, Wrist, class, y_pred.",
+  "hypothesis": "The correlation with the target of column Hip is 0.625."
+ },
+ {
+  "id": 6403,
+  "premise": "The column near_target_proxy has a pearson correlation of 0.999 with the target. The absolute correlation of column near_target_proxy with the target is 0.999. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "near_target_proxy is a column of the data."
+ },
+ {
+  "id": 2621,
+  "premise": "The column feature_6 has a spearman correlation of 0.013 with the target. The absolute correlation of column feature_6 with the target is 0.013. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "feature_6 is a column of the data."
+ },
+ {
+  "id": 3021,
+  "premise": "The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "r2 is a column of the data."
+ },
+ {
+  "id": 4603,
+  "premise": "The data has 303 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are chol_adj. The data has the columns age, ca, chol, cp, exang, fbs, num, oldpeak, restecg, sex, slope, thal, thalach, trestbps, y_pred.",
+  "hypothesis": "r2 is a column of the data."
+ },
+ {
+  "id": 9414,
+  "premise": "The column feature_7 has a pearson correlation of -0.02 with the target. The absolute correlation of column feature_7 with the target is 0.02. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "feature_7 is a column of the data."
+ },
+ {
+  "id": 4673,
+  "premise": "The column feature_12 has a spearman correlation of -0.04 with the target. The absolute correlation of column feature_12 with the target is 0.04. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The max abs correlation among ordinary features of column feature_12 is -0.04."
+ },
+ {
+  "id": 2104,
+  "premise": "The data has 1200 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are sensor_ref. The data has the columns sensor_00, sensor_01, sensor_02, sensor_03, sensor_04, sensor_05, sensor_06, sensor_07, sensor_08, sensor_ref, y_pred, y_true.",
+  "hypothesis": "feature_4 is a column of the data."
+ },
+ {
+  "id": 2837,
+  "premise": "The data has 303 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are chol_norm. The data has the columns age, ca, chol, cp, exang, fbs, num, oldpeak, restecg, sex, slope, thal, thalach, trestbps, y_pred.",
+  "hypothesis": "chol is a column of the data."
+ },
+ {
+  "id": 3088,
+  "premise": "The data has 1200 rows. The data has 24 columns. The target column is target. The task is binary classification. The data has the columns acquisition_channel, age, balance, basket_size, credit_score, days_since_purchase, device_type, discount_rate, income, industry, is_active, language, login_count, monthly_spend, page_views, payment_method, plan_tier, referral_count, region, session_minutes, signup_date, support_tickets, target, tenure_months.",
+  "hypothesis": "occupancy is a column of the data."
+ },
+ {
+  "id": 9957,
+  "premise": "The column near_target_proxy has a pearson correlation of 0.999 with the target. The absolute correlation of column near_target_proxy with the target is 0.999. The column log_target_v2 has a spearman correlation of 0.999 with the target. The absolute correlation of column log_target_v2 with the target is 0.999. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The r2 of column near_target_proxy is 1."
+ },
+ {
+  "id": 9047,
+  "premise": "The class balance of the target column target is 0.689 for class 0 and 0.311 for class 1. One class of the target makes up a share of 0.689. One class of the target makes up a share of 0.311. Column target is categorical. The number of missing values of column target is 0. The missing rate of column target is 0. The number of distinct values of column target is 2. The data has 1200 rows. The data has 24 columns. The target column is target. The task is binary classification. The data has the columns acquisition_channel, age, balance, basket_size, credit_score, days_since_purchase, device_type, discount_rate, income, industry, is_active, language, login_count, monthly_spend, page_views, payment_method, plan_tier, referral_count, region, session_minutes, signup_date, support_tickets, target, tenure_months.",
+  "hypothesis": "The class balance 0 of column target is 0.689."
+ },
+ {
+  "id": 2828,
+  "premise": "Column num_feature_07 is numeric. The number of missing values of column num_feature_07 is 47. The missing rate of column num_feature_07 is 0.039. The share of zeros of column num_feature_07 is 0. The number of interquartile-range outliers of column num_feature_07 is 9. The number of z-score outliers of column num_feature_07 is 4. The mean of column num_feature_07 is 57.072. The standard deviation of column num_feature_07 is 12.053. The minimum of column num_feature_07 is 8.722. The maximum of column num_feature_07 is 97.303. The 25th percentile of column num_feature_07 is 49.063. The median of column num_feature_07 is 56.959. The 75th percentile of column num_feature_07 is 65.125. The missing rate of column cat_feature_07 is 0.221. The data has 1200 rows. The data has 24 columns. The target column is target. The task is binary classification. The data has the columns cat_feature_01, cat_feature_02, cat_feature_03, cat_feature_04, cat_feature_05, cat_feature_06, cat_feature_07, is_active, num_feature_01, num_feature_02, num_feature_03, num_feature_04, num_feature_05, num_feature_06, num_feature_07, num_feature_08, num_feature_09, num_feature_10, num_feature_11, num_feature_12, num_feature_13, num_feature_14, signup_date, target.",
+  "hypothesis": "The missing rate of column num_feature_07 is 0.221."
+ },
+ {
+  "id": 9624,
+  "premise": "The column feature_5 has a pearson correlation of -0.035 with the target. The absolute correlation of column feature_5 with the target is 0.035. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "feature_5 is a column of the data."
+ },
+ {
+  "id": 6407,
+  "premise": "The data has 1338 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are charges_est. The data has the columns age, bmi, charges, children, region, sex, smoker, y_pred.",
+  "hypothesis": "charged_est is a column of the data."
+ },
+ {
+  "id": 6045,
+  "premise": "The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "r2 is a column of the data."
+ },
+ {
+  "id": 4477,
+  "premise": "The data has 2930 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are SalePrice_idx. The data has the columns 1st Flr SF, 2nd Flr SF, 3Ssn Porch, Alley, Bedroom AbvGr, Bldg Type, Bsmt Cond, Bsmt Exposure, Bsmt Full Bath, Bsmt Half Bath, Bsmt Qual, Bsmt Unf SF, BsmtFin SF 1, BsmtFin SF 2, BsmtFin Type 1, BsmtFin Type 2, Central Air, Condition 1, Condition 2, Electrical, Enclosed Porch, Exter Cond, Exter Qual, Exterior 1st, Exterior 2nd, Fence, Fireplace Qu, Fireplaces, Foundation, Full Bath, Functional, Garage Area, Garage Cars, Garage Cond, Garage Finish, Garage Qual, Garage Type, Garage Yr Blt, Gr Liv Area, Half Bath, Heating, Heating QC, House Style, Kitchen AbvGr, Kitchen Qual, Land Contour, Land Slope, Lot Area, Lot Config, Lot Frontage, Lot Shape, Low Qual Fin SF, MS SubClass, MS Zoning, Mas Vnr Area, Mas Vnr Type, Misc Feature, Misc Val, Mo Sold, Neighborhood, Open Porch SF, Order, Overall Cond, Overall Qual, PID, Paved Drive, Pool Area, Pool QC, Roof Matl, Roof Style, Sale Condition, Sale Type, SalePrice, Screen Porch, Street, TotRms AbvGrd, Total Bsmt SF, Utilities, Wood Deck SF, Year Built, Year Remod/Add, Yr Sold, y_pred.",
+  "hypothesis": "SalePrice is a column of the data."
+ },
+ {
+  "id": 2202,
+  "premise": "The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "target is a column of the data."
+ },
+ {
+  "id": 3235,
+  "premise": "The data has 303 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are chol_grp. The data has the columns age, ca, chol, cp, exang, fbs, num, oldpeak, restecg, sex, slope, thal, thalach, trestbps, y_pred.",
+  "hypothesis": "target is a column of the data."
+ },
+ {
+  "id": 5557,
+  "premise": "The column log_target_v2 has a spearman correlation of 0.999 with the target. The absolute correlation of column log_target_v2 with the target is 0.999. The perfect-match rate between the predictions and the target is 0. The data has 1000 rows. The suspicious metric is r2, with value 1. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The perfect match rate with target of column log_target_v2 is 0."
+ },
+ {
+  "id": 7287,
+  "premise": "The data has 7043 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are MonthlyCharges_grp. The data has the columns Churn, Contract, Dependents, DeviceProtection, InternetService, MonthlyCharges, MultipleLines, OnlineBackup, OnlineSecurity, PaperlessBilling, Partner, PaymentMethod, PhoneService, SeniorCitizen, StreamingMovies, StreamingTV, TechSupport, TotalCharges, customerID, gender, tenure, y_pred.",
+  "hypothesis": "r2 is a column of the data."
+ },
+ {
+  "id": 1826,
+  "premise": "Column cat_feature_05 is categorical. The number of missing values of column cat_feature_05 is 167. The missing rate of column cat_feature_05 is 0.139. The number of distinct values of column cat_feature_05 is 23. The data has 1200 rows. The data has 24 columns. The target column is target. The task is binary classification. The data has the columns cat_feature_01, cat_feature_02, cat_feature_03, cat_feature_04, cat_feature_05, cat_feature_06, cat_feature_07, is_active, num_feature_01, num_feature_02, num_feature_03, num_feature_04, num_feature_05, num_feature_06, num_feature_07, num_feature_08, num_feature_09, num_feature_10, num_feature_11, num_feature_12, num_feature_13, num_feature_14, signup_date, target.",
+  "hypothesis": "cat_feature_05 is a column of the data."
+ },
+ {
+  "id": 6321,
+  "premise": "The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "target is a column of the data."
+ },
+ {
+  "id": 1265,
+  "premise": "The column near_target_proxy has a pearson correlation of 0.999 with the target. The absolute correlation of column near_target_proxy with the target is 0.999. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "near_target_proxy is a column of the data."
+ },
+ {
+  "id": 5522,
+  "premise": "The class balance of the target column target is 0.689 for class 0 and 0.311 for class 1. One class of the target makes up a share of 0.689. One class of the target makes up a share of 0.311. Column target is categorical. The number of missing values of column target is 0. The missing rate of column target is 0. The number of distinct values of column target is 2. The data has 1200 rows. The data has 24 columns. The target column is target. The task is binary classification. The data has the columns cat_feature_01, cat_feature_02, cat_feature_03, cat_feature_04, cat_feature_05, cat_feature_06, cat_feature_07, is_active, num_feature_01, num_feature_02, num_feature_03, num_feature_04, num_feature_05, num_feature_06, num_feature_07, num_feature_08, num_feature_09, num_feature_10, num_feature_11, num_feature_12, num_feature_13, num_feature_14, signup_date, target.",
+  "hypothesis": "target is a column of the data."
+ },
+ {
+  "id": 4778,
+  "premise": "The data has 1200 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are sensor_ref. The data has the columns sensor_00, sensor_01, sensor_02, sensor_03, sensor_04, sensor_05, sensor_06, sensor_07, sensor_08, sensor_ref, y_pred, y_true.",
+  "hypothesis": "r2 is a column of the data."
+ },
+ {
+  "id": 5424,
+  "premise": "Column num_feature_07 is numeric. The number of missing values of column num_feature_07 is 47. The missing rate of column num_feature_07 is 0.039. The share of zeros of column num_feature_07 is 0. The number of interquartile-range outliers of column num_feature_07 is 9. The number of z-score outliers of column num_feature_07 is 4. The mean of column num_feature_07 is 57.072. The standard deviation of column num_feature_07 is 12.053. The minimum of column num_feature_07 is 8.722. The maximum of column num_feature_07 is 97.303. The 25th percentile of column num_feature_07 is 49.063. The median of column num_feature_07 is 56.959. The 75th percentile of column num_feature_07 is 65.125. The number of missing values of column cat_feature_07 is 265. The data has 1200 rows. The data has 24 columns. The target column is target. The task is binary classification. The data has the columns cat_feature_01, cat_feature_02, cat_feature_03, cat_feature_04, cat_feature_05, cat_feature_06, cat_feature_07, is_active, num_feature_01, num_feature_02, num_feature_03, num_feature_04, num_feature_05, num_feature_06, num_feature_07, num_feature_08, num_feature_09, num_feature_10, num_feature_11, num_feature_12, num_feature_13, num_feature_14, signup_date, target.",
+  "hypothesis": "The number of missing values of column num_feature_07 is 265."
+ },
+ {
+  "id": 3241,
+  "premise": "The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "target is a column of the data."
+ },
+ {
+  "id": 3353,
+  "premise": "The data has 1200 rows. The data has 24 columns. The target column is target. The task is binary classification. The data has the columns acquisition_channel, age, balance, basket_size, credit_score, days_since_purchase, device_type, discount_rate, income, industry, is_active, language, login_count, monthly_spend, page_views, payment_method, plan_tier, referral_count, region, session_minutes, signup_date, support_tickets, target, tenure_months.",
+  "hypothesis": "head is a column of the data."
+ },
+ {
+  "id": 8996,
+  "premise": "The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "r2 is a column of the data."
+ },
+ {
+  "id": 3214,
+  "premise": "The data has 7043 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are MonthlyCharges_est. The data has the columns Churn, Contract, Dependents, DeviceProtection, InternetService, MonthlyCharges, MultipleLines, OnlineBackup, OnlineSecurity, PaperlessBilling, Partner, PaymentMethod, PhoneService, SeniorCitizen, StreamingMovies, StreamingTV, TechSupport, TotalCharges, customerID, gender, tenure, y_pred.",
+  "hypothesis": "MonthlyCharges is a column of the data."
+ },
+ {
+  "id": 5439,
+  "premise": "The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "r2 is a column of the data."
+ },
+ {
+  "id": 8334,
+  "premise": "The column log_target_v2 has a spearman correlation of 0.999 with the target. The absolute correlation of column log_target_v2 with the target is 0.999. The column near_target_proxy has a pearson correlation of 0.999 with the target. The absolute correlation of column near_target_proxy with the target is 0.999. The data has 1000 rows. The suspicious metric is r2, with value 1. The perfect-match rate between the predictions and the target is 0. The candidate leak columns are log_target_v2, near_target_proxy. The data has the columns feature_10, feature_11, feature_12, feature_3, feature_4, feature_5, feature_6, feature_7, feature_8, feature_9, log_target_v2, near_target_proxy, y_pred, y_true.",
+  "hypothesis": "The r2 of column log_target_v2 is 1."
+ }
+]
