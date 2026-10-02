@@ -1,9 +1,11 @@
-# Where this stopped — 2026-09-25
+# Where this stopped — 2026-10-02
 
-**Revision after the ARS 5-reviewer panel: DONE (commit 67462f0, 2026-09-25).**
-Reviews and editorial decision: `paper/reviews/2026-09-24_ars_panel/` (local
-only, not committed). Build: 12 pages incl. references, no overfull boxes, no
-undefined references, abstract 247 words.
+**V2.3: DONE.** A full readability pass (the abstract restructured as problem /
+prior approaches / proposal / results / contributions; no ambiguous "it";
+shorter sentences; American spelling) and the V2.2 EMSE review addressed:
+kinds of violation replace the "unsupported" layer, every stored rejection is
+re-judged, a same-day naming comparison, fault 16. EMSE build: 43 pages, no
+warnings, abstract 246 words. Analysis plan amendments A6-A8.
 
 ## Next
 
@@ -15,15 +17,20 @@ undefined references, abstract 247 words.
    Runtime Contract for LLM Narration of Machine-Learning Pipeline Evidence"
    (2026-09-25) and "Prompts Are Advisory, Verification Is Enforcement",
    dropped because A-L2 = 0/200 contradicted it.
-2. **Re-review** — run the ARS reviewer in `re-review` mode against
-   `editorial_decision.md` to check every P0/P1 item and the 47 factual items.
-3. **Response letter** — `templates/revision_response_template.md`; answer DA
-   C1 (a)–(g) and C2 point by point. Everything needed is in the commits of
-   2026-09-24/25.
-4. **User side** — arXiv; GitHub release -> Zenodo DOI (replace the note in
+2. **Blind semantic audit (A7)** — two authors label
+   `benchmark/semantic_audit_A7/audit_sheet.html` independently (204 items,
+   one question each, about 1.5 hours), export the CSVs, then run
+   `python -X utf8 scripts/make_semantic_audit.py --score a.csv b.csv` and
+   update Table 2 (A7 row), RQ1 "What the violations introduce", Threats
+   (Construct) and the Conclusion. The sealed key stays local until then.
+3. **Budget runs (about $5 of DeepSeek)** — register each in the analysis
+   plan first: (a) the two naming schemes interleaved on one harness
+   (`P-L1`, `P-TIER-A-ONLY`); (b) a leakage retry battery that keeps every
+   attempt (`A-STRESS` on the crowded instance, `A-CONTRACT`); (c) complete
+   A3 R1.
+4. **Response letter** for the EMSE submission, point by point.
+5. **User side** — arXiv; GitHub release -> Zenodo DOI (replace the note in
    `references.bib` entry `replication` and Data Availability).
-5. Optional (P1): more hosted models on A-L1/A-GR-STOCK; an anchor-salience
-   configuration so C3 fires live.
 
 ## What the revision found (all in the manuscript)
 

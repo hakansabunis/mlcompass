@@ -78,11 +78,13 @@ body = body[:t0] + "\\resizebox{\\textwidth}{!}{%\n" + body[t0:t1] + "}" + body[
 
 # EMSE has no page limit, so it carries what the TSE version had no room for:
 # the per-instance counts of the twelve frozen instances (review 2026-10-01).
-body = once(
+_anchor = r"holds\s+on\s+twelve\s+instances\s+that\s+played\s+no\s+part\s+in\s+the\s+design\."
+assert len(re.findall(_anchor, body)) == 1, "the twelve-instance sentence moved"
+body = re.sub(
+    _anchor,
+    lambda m: "holds on twelve instances that played no part in the design\n"
+    "(Table~\\ref{tab:fabbench12}).\n\n\\input{table_fabbench12}\n\n",
     body,
-    "instances holds on twelve that played no part in the design.",
-    "instances holds on twelve that played no part in the design;\n"
-    "Table~\\ref{tab:fabbench12} gives each one.\n\n\\input{table_fabbench12}",
 )
 
 # A top-only placement sent six tables past the references. Starred tables
@@ -164,16 +166,11 @@ def author_year(text: str, textual: dict[str, str]) -> str:
 body = author_year(body, TEXTUAL)
 data_avail = author_year(data_avail, {})
 
-# Abbreviations are defined at first mention.
-body = phrase(body, "answer is agentic: an LLM calls",
-              "answer is agentic: a large language model (LLM) calls")
-body = phrase(body, "the open-source ML-pipeline assistant",
-              "the open-source machine-learning (ML) pipeline assistant")
-body = phrase(body, r"$\mathrm{AUC}>0.995$",
-              r"an area under the receiver operating characteristic curve (AUC) $>0.995$")
-body = phrase(body, "into SMT constraints", "into satisfiability-modulo-theories constraints")
-body = phrase(body, "CI failures", "continuous-integration failures")
-body = phrase(body, r"Wilson 95\,\% intervals", r"Wilson 95\,\% confidence intervals (CIs)")
+# Abbreviations are defined at first mention in the source itself (LLM, AUC,
+# SMT, CI); the checks below keep it that way.
+for defined in ("large language model (LLM)", "characteristic curve (AUC)",
+                "satisfiability-modulo-theories (SMT)", "confidence intervals (CIs)"):
+    assert defined in " ".join(body.split()), f"abbreviation no longer defined: {defined}"
 
 # Figures: vector line art named Fig<n>, and no full stop ending the caption.
 body = phrase(body, r"\includegraphics[width=\columnwidth]{fig1_contract.png}",
@@ -279,10 +276,11 @@ backmatter = r"""
 
 \paragraph{Competing interests.} The authors have no competing interests to
 declare that are relevant to the content of this article. mlcompass is released
-by the authors under the MIT licence and is not a commercial product.
+by the authors under the MIT license and is not a commercial product.
 
 \paragraph{Ethics approval.} Not applicable: the study involved no human
-participants and no animals.
+participants and no animals. The items of the blind audit are labeled by the
+authors themselves.
 
 \paragraph{Consent to participate and to publish.} Not applicable.
 
@@ -296,7 +294,7 @@ read and approved the final manuscript.
 
 \paragraph{Code availability.} The source of mlcompass, every harness and every
 analysis script are in the replication package \citep{replication} under the
-MIT licence; the development repository is
+MIT license; the development repository is
 \url{https://github.com/hakansabunis/mlcompass}.
 
 \paragraph{Use of AI tools.} Documented in Section~\ref{sec:ai}.

@@ -960,3 +960,96 @@ Three changes, none of which alters a registered item or its outcome.
   to and reports the cross-date difference as consistent with it, not as its
   cause. An interleaved run of the two schemes on one harness would be
   registered here before it is made.
+
+### A7 — Blind semantic audit (2026-10-02, registered before any label)
+
+**Why.** The automatic kinds (`scripts/unified_scoring.py`) decide whether an
+item is in E and where it sits. They cannot decide whether a misplaced item
+misleads a reader or states a false relation. The 2026-10-02 review asked for
+that judgement to be made by people, on a sample in which the rare kinds are
+represented.
+
+**Unit and question.** One item is one element of one delivered response: a
+cited name or a claim. The labeller sees the item, the evidence E, the frame's
+column list and the rest of the response, and answers one question:
+
+- **A** supported: E states this, in this place;
+- **B** right information, wrong place: true of E or of the data, in a field
+  or under a key that does not fit, and a reader would not be misled;
+- **C** false or unsupported relation: built from things E contains, but the
+  relation it states is not in E or contradicts it;
+- **D** a name that neither E nor the frame contains, or a number E contains
+  nowhere;
+- **E** cannot tell.
+
+Rules shown to the labeller: judge only the marked item; never choose D for a
+name that appears in E or in the frame's column list; choose B only if a
+reader would not be misled.
+
+**Sample.** The pool is every delivered response with at least one element.
+Each element gets an automatic stratum. Strata are drawn in this order, each
+response contributing at most one item, the item chosen at random among the
+response's elements of that stratum (seed 20261002):
+
+| Stratum | Size |
+|---|---|
+| S3 wrong number carrying another item's value | every eligible response |
+| S7 number E records nowhere | every eligible response |
+| S6 invented name (not on the stale-list arm) | 30 |
+| S5 invented name on the stale-list arm | 10 |
+| S4 real column of the frame that E does not list | 15 |
+| S2 number E records, under a pair E does not record | 30 |
+| S1 misfiled name | 40 |
+| S8 control: admissible name | 20 |
+| S9 control: claim that matches E | 20 |
+
+The rare strata are taken whole so that their composition is measured rather
+than estimated from one or two draws. The order of the sheet is shuffled; arm,
+model, provider, date and stratum are hidden; the key is sealed
+(`benchmark/semantic_audit_A7/KEY_sealed.json`, not committed until both label
+files are in).
+
+**Labellers.** Two authors label every item independently and do not compare
+labels until both files are exported.
+
+**Analysis.** Per stratum and per labeller: the share of each label with a
+Wilson 95 % interval. Cohen's kappa between the labellers over all items. The
+disagreements are listed, then resolved by discussion; the paper reports both
+labellers and the resolved labels.
+
+**Predictions.**
+
+- P1. In S1, a majority of items is labelled B.
+- P2. In S3, a majority of items is labelled C.
+- P3. In S8 and S9 together, at least 90 % of items are labelled A.
+
+If P1 fails, the paper withdraws its reading that misfiled names do not
+mislead a reader. If P2 fails, it withdraws its reading that wrong numbers
+carrying another item's value state a false relation. If P3 fails, the paper
+reports the observed rate at which the scorer's "clean" is wrong.
+
+### A8 — Kinds replace the second layer (2026-10-02, no new model call)
+
+- **Kinds.** The 2026-10-02 review pointed out that A6's second layer, called
+  "states something E does not support", implied a semantic judgement that a
+  program cannot make. The layer is replaced by four kinds that a program can
+  decide, each violating response receiving the first that applies:
+  *extrinsic* (a name or number E does not contain), *contradicts E* (a value
+  E records for another item, quoted for a pair E carries), *misplaced* (only
+  items of E, in a place the contract does not admit), *omission* (only the
+  anchor missing). Whether a misplaced item misleads a reader is left to the
+  blind audit of A7. Computed by `scripts/unified_scoring.py --layers-table`;
+  exploratory, not registered before the data.
+- **Same-day naming comparison.** The first attempts of the 2026-09-24
+  `P-CONTRACT` re-run (suffixed names, every attempt kept) are generated
+  exactly as `P-TIER-A-ONLY` responses are. Seven of 200 quote a categorical
+  sibling's value; the natural-name `P-TIER-A-ONLY` run of the same day has no
+  wrong number in 200 (Fisher p = 0.015). Post hoc and exploratory; the two
+  runs were blocks, not interleaved.
+- **Rejection audit.** `scripts/rejudge_rejections.py` re-judges the 13
+  rejected attempts that the profile records keep, without the contract code.
+- **Fault 16.** The word `target` is in neither E nor the frame of the
+  synthetic instances (whose target column is `y_true`), so by the paper's
+  rule it is invented, not unlisted: invented names on the bare leakage arms
+  are 13 of 1,829, not 12, and on the wording sweep 20, not 2. The registered
+  R2a count (12 of 817, on the twelve frozen instances) is unchanged.

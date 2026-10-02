@@ -20,12 +20,24 @@ Definitions (paper, Section 3 and Measures):
   C3  anchor coverage: a response that commits (a verdict that is not empty
       and not the abstention) references the anchor.
 
-Second layer (2026-10-01 review, M2): a response "states something E does not
-support" when it names something E does not contain anywhere, quotes a wrong
-number on a pair E carries, or quotes on an uncarried pair a number E carries
-nowhere. A misfiled name, a correct number under an inadmissible key and a
-missing anchor break the contract without stating anything E contradicts or
-lacks, so they count in the first layer only.
+Kinds of violation (2026-10-02 review): every response that breaks the
+contract is given one kind, the first that applies.
+
+  extrinsic    it introduces something E does not contain: a name absent from
+               E (``unlisted`` when it is a real column of the frame E was
+               computed from, ``invented`` otherwise) or a number that appears
+               nowhere in E.
+  contradicts  it quotes, for a pair E carries, a value E records for
+               something else (or a non-number).
+  misplaced    it uses only items E contains, in a place the contract does not
+               admit: a misfiled name, or a number E carries under a pair E
+               does not carry.
+  omission     it commits to a verdict without referencing the anchor, and
+               breaks nothing else.
+
+The kinds are what an automatic check can decide. Whether a misplaced item
+misleads a reader, or states a false relation, is a semantic judgement the
+check does not make; the blind audit (analysis plan A7) is there for that.
   The measurement's value table for leakage accepts the correlation aliases
   the first scorer accepts (_CORRELATION_ALIASES) and the dataset-level
   quantities entered against every column; the profile's is the binder's.
@@ -59,8 +71,40 @@ VERIFIED = {"layer3", "layer3_bare", "layer3_stress", "layer3_stress_generic", "
 FIELDS = ["run_dir", "file", "task", "names", "provider", "model", "arm", "arm_id", "date",
           "i", "verified", "verdict_admissible", "committed", "c1_cited", "c1_claim",
           "c1_misfiled", "c1_outside_E", "artifact", "c2_wrong", "c2_not_carried",
-          "c2_not_carried_real", "c2_unsupported", "c3", "any", "unsupported", "claims", "claims_checked", "claims_exact",
-          "claims_round", "retried", "retry_reasons"]
+          "c2_not_carried_real", "c2_unsupported", "c2_wrong_foreign", "c2_wrong_absent",
+          "c2_wrong_nonnumeric", "names_unlisted", "names_invented", "c3", "any", "kind",
+          "claims", "claims_checked", "claims_exact", "claims_round", "retried", "retry_reasons"]
+_FRAMES: dict[str, set[str]] = {}
+
+
+def frame_columns(task: str, ctx: dict) -> set[str]:
+    """Columns of the frame E was computed from, which separate an unlisted name
+    (a real column E does not list) from an invented one."""
+    if task == "profile":
+        return ctx["cols"]  # the profile admits every column of its frame
+    if task in _FRAMES:
+        return _FRAMES[task]
+    import pandas as pd  # noqa: PLC0415
+
+    if task == "synthetic":  # build_synthetic_evidence
+        cols = {"y_true", "log_target_v2", "near_target_proxy", "y_pred"}
+        cols |= {f"feature_{i}" for i in range(3, 13)}
+    elif task == "synthetic_crowded":
+        from fabbench_injectors import crowded_frame  # noqa: PLC0415
+
+        cols = set(map(str, crowded_frame(seed=0)[0].columns))
+    elif task.startswith("case:"):
+        from fetch_fabbench_datasets import CASE_STUDIES, DATA_DIR  # noqa: PLC0415
+
+        path = pathlib.Path(DATA_DIR) / CASE_STUDIES[task.split(":", 1)[1]]["out"]
+        cols = set(pd.read_csv(path, nrows=0, low_memory=False).columns.astype(str)) | {"y_pred"}
+    elif task.startswith("csv:"):
+        path = ROOT / "scripts" / "data" / task.split(":", 1)[1].split("/", 1)[0]
+        cols = set(pd.read_csv(path, nrows=0, low_memory=False).columns.astype(str)) | {"y_pred"}
+    else:
+        raise ValueError(f"no frame for task {task!r}")
+    _FRAMES[task] = cols
+    return cols
 
 
 def run_files():
@@ -85,7 +129,7 @@ def context(kind: str, ev: dict) -> dict:
             "norm": h._normalise_statistic, "verdicts": LEAKAGE_VERDICTS}
 
 
-def score(r: dict, kind: str, ctx: dict) -> dict:
+def score(r: dict, kind: str, ctx: dict, frame: set[str] | None = None) -> dict:
     claims = [c for c in (r.get("raw_claims") if kind == "profile" and not r.get("arm") in VERIFIED
                           else r.get("claims")) or [] if isinstance(c, dict)]
     cited = [str(c) for c in ((r.get("raw_columns") if kind == "profile" and r.get("arm") not in VERIFIED
@@ -97,6 +141,7 @@ def score(r: dict, kind: str, ctx: dict) -> dict:
     artifact = any(h.is_scorer_artifact(c, cols) for c in cited + claim_cols
                    if c not in cols)
     wrong = not_carried = not_carried_real = unsupported = checked = exact = rounded = 0
+    wrong_foreign = wrong_absent = wrong_nonnumeric = 0
     for c, col in zip(claims, claim_cols):
         if col not in cols:
             continue
@@ -112,12 +157,18 @@ def score(r: dict, kind: str, ctx: dict) -> dict:
             continue
         if not num:
             wrong += 1
+            wrong_nonnumeric += 1
             continue
         d = abs(float(val) - ctx["values"][key])
         checked += 1
         exact += d == 0.0
         rounded += 0.0 < d <= 5e-4
-        wrong += d > TAU
+        if d > TAU:
+            wrong += 1
+            if any(abs(float(val) - x) <= TAU for x in ctx["numbers"]):
+                wrong_foreign += 1
+            else:
+                wrong_absent += 1
     verdict = str(r.get("verdict") or "").strip()
     committed = bool(verdict) and verdict.lower() not in ("cannot_determine", "cannot determine")
     c3 = committed and ctx["anchor"] is not None and ctx["anchor"] not in set(cited) | set(claim_cols)
@@ -129,12 +180,27 @@ def score(r: dict, kind: str, ctx: dict) -> dict:
         "c1_misfiled": any(c in names for c in out_names),
         "c1_outside_E": any(c not in names for c in out_names),
         "artifact": artifact, "c2_wrong": wrong, "c2_not_carried": not_carried,
-        "c2_not_carried_real": not_carried_real, "c2_unsupported": unsupported, "c3": c3,
+        "c2_not_carried_real": not_carried_real, "c2_unsupported": unsupported,
+        "c2_wrong_foreign": wrong_foreign, "c2_wrong_absent": wrong_absent,
+        "c2_wrong_nonnumeric": wrong_nonnumeric, "c3": c3,
         "claims": len(claims), "claims_checked": checked, "claims_exact": exact,
         "claims_round": rounded,
     }
     row["any"] = bool(bad_cited or bad_claim or wrong or not_carried or c3)
-    row["unsupported"] = bool(row["c1_outside_E"] or wrong or unsupported)
+    frame = ctx["cols"] if frame is None else frame
+    absent = [c for c in out_names if c not in names]
+    row["names_unlisted"] = any(c in frame for c in absent)
+    row["names_invented"] = any(c not in frame for c in absent)
+    if absent or wrong_absent or unsupported:
+        row["kind"] = "extrinsic"
+    elif wrong_foreign or wrong_nonnumeric:
+        row["kind"] = "contradicts"
+    elif bad_cited or bad_claim or not_carried:
+        row["kind"] = "misplaced"
+    elif c3:
+        row["kind"] = "omission"
+    else:
+        row["kind"] = ""
     return row
 
 
@@ -158,7 +224,7 @@ def main() -> int:
                    "date": date, "i": r.get("i"), "verified": r.get("arm") in VERIFIED,
                    "retried": int(r.get("rejections") or 0) > 0,
                    "retry_reasons": "|".join(str(k) for k in (r.get("rejection_kinds") or [])),
-                   **score(r, kind, ctx)}
+                   **score(r, kind, ctx, frame_columns(str(r.get("task")), ctx))}
             rows.append(row)
     if args.csv:
         with open(args.csv, "w", newline="", encoding="utf-8") as fh:
@@ -270,9 +336,8 @@ LAYER_ROWS = [  # (label, predicate); every response falls in exactly one
 
 
 def layer_counts(rows: list[dict]) -> list[tuple[str, dict[str, int]]]:
-    """Per group: responses that break the contract (first layer) and responses
-    that state something E does not support (second layer), with the second
-    layer's composition."""
+    """Per group: responses that break the contract, split by kind (the kinds
+    partition them), with the extrinsic kind's composition."""
     seen = [0] * len(rows)
     out = []
     for label, pred in LAYER_ROWS:
@@ -281,14 +346,16 @@ def layer_counts(rows: list[dict]) -> list[tuple[str, dict[str, int]]]:
             if pred(r):
                 seen[i] += 1
                 cell.append(r)
-        out.append((label, {
-            "n": len(cell),
-            "contract": sum(bool(r["any"]) for r in cell),
-            "unsupported": sum(bool(r["unsupported"]) for r in cell),
-            "name_E_lacks": sum(bool(r["c1_outside_E"]) for r in cell),
-            "wrong_number": sum(bool(r["c2_wrong"]) for r in cell),
-            "number_E_lacks": sum(bool(r["c2_unsupported"]) for r in cell),
-        }))
+        counts = {"n": len(cell), "contract": sum(bool(r["any"]) for r in cell)}
+        for k in ("extrinsic", "contradicts", "misplaced", "omission"):
+            counts[k] = sum(r["kind"] == k for r in cell)
+        assert sum(counts[k] for k in ("extrinsic", "contradicts", "misplaced", "omission")) \
+            == counts["contract"], label
+        counts["invented"] = sum(bool(r["names_invented"]) for r in cell)
+        counts["unlisted"] = sum(bool(r["names_unlisted"]) for r in cell)
+        counts["number_absent"] = sum(bool(r["c2_wrong_absent"] or r["c2_unsupported"])
+                                      for r in cell)
+        out.append((label, counts))
     assert all(k == 1 for k in seen), f"{sum(k != 1 for k in seen)} responses not in exactly one group"
     return out
 
@@ -299,8 +366,8 @@ def layers_table(rows: list[dict]) -> str:
 
     body = []
     for label, c in layer_counts(rows):
-        cells = [num(c[k]) for k in ("n", "contract", "unsupported", "name_E_lacks",
-                                     "wrong_number", "number_E_lacks")]
+        cells = [num(c[k]) for k in ("n", "contract", "extrinsic", "contradicts",
+                                     "misplaced", "omission", "invented")]
         body.append(f"{label} & " + " & ".join(cells) + r" \\")
     return "\n".join(body) + "\n"
 
