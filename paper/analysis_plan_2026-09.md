@@ -1274,3 +1274,47 @@ frame's column list shown with the item; GPT labeled 14 of them D, DeepSeek 7.
 Files: `scripts/llm_audit.py`, `benchmark/semantic_audit_A7/llm_labels.jsonl`,
 `benchmark/semantic_audit_A7/llm_results.json`,
 `paper/tse_latex/table_llm_rows.tex`. Spend: a few cents on each provider.
+
+### A13 — The blind semantic audit by one stronger LLM judge (2026-10-02, registered before the judge has seen an item)
+
+**Why.** Neither A12 judge passed the validity check. Their errors were
+reading errors: `gpt-5.4-mini` gave 11 contradicted numbers the value of the
+same-suffix sibling, and both judges labelled `r2`, which the item lists among
+E's other names, as absent from E. A13 asks whether a stronger reasoning model,
+given exactly the same instrument, reads the evidence well enough to pass.
+
+**Judge.** `gpt-5.5` (OpenAI), pinned to the snapshot `gpt-5.5-2026-04-23`,
+reasoning effort `medium`, at most 6,000 completion tokens per call, the
+provider's default sampling (the model accepts no temperature), JSON output
+`{"label", "reason"}`. One call per item; a call that fails or returns no
+admissible label is retried up to three times, as in A12. The judge comes from
+the family of one narrator (`gpt-5.4-mini`), which the paper states.
+
+**Instrument.** Byte-identical to A12: the instructions and the rendering of
+each item in `scripts/llm_audit.py` are not changed, so A13 varies only the
+model. The authors know A12's per-stratum results; keeping the instrument
+fixed is what prevents tuning to them. Before this registration, one call on a
+dummy weather item (not an audit item) checked the parameters; no audit item
+has been sent to `gpt-5.5`.
+
+**Validity, analysis and predictions.** As in A12: at least 90 % of S4, S8 and
+S9 labelled A or B, and at least 90 % of S3, S5, S6 and S7 labelled C or D.
+Per stratum, the label shares with Wilson 95 % intervals. Agreement with the
+A12 judges is descriptive only. Predictions P1-P3 of A7.
+
+**Consequences.** If the judge is valid, the paper reports its labels on the
+contested strata S1 and S2 as the semantic reading of misfiled names and of
+numbers recorded under another pair, as one model's reading validated on the
+strata whose truth is fixed, not as human judgment. If the judge is not valid,
+A13 is reported as uninformative, like A10 and A12. Either way, A13 is the
+last automatic substitute for A7: no further judge is tried, and the question
+otherwise stays open for a human audit.
+
+**Spend cap.** 15 USD at the listed price (5 USD per million input tokens, 30
+USD per million output tokens, reasoning included). If the cap is reached
+before all 204 items are labelled, the run stops and A13 is reported as
+incomplete, with no labels interpreted. Expected: about 0.45 million input
+tokens (about 2.3 USD) and 0.1 to 0.3 million output tokens (3 to 9 USD).
+
+    python -X utf8 scripts/llm_audit.py judge --only gpt55
+    python -X utf8 scripts/llm_audit.py score --judges gpt55 --out llm_results_a13.json
