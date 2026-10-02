@@ -189,11 +189,19 @@ def main() -> int:
             return {"column E does not list": "column not in $E$",
                     "pair E does not record": "pair not in $E$"}.get(finding, finding)
 
-        lines = []
+        # One row per item; an attempt with more than three items of one finding
+        # and one fate is shown as one row, with the first two items named.
+        groups: dict[tuple, list[str]] = {}
         for row in rows:
             run = row["run"][5:10]  # 2026-09-24_attempts -> 09-24
-            lines.append(f"{run} & {tt(row['arm'])} & {row['i']} & {tt(row['item'])} & "
-                         f"{short(row['item'], row['finding'])} & {row['fate']} \\\\")
+            k = (run, row["arm"], row["i"], short(row["item"], row["finding"]), row["fate"])
+            groups.setdefault(k, []).append(row["item"])
+        lines = []
+        for (run, arm, i, finding, fate), items in groups.items():
+            shown = [tt(x) for x in items] if len(items) <= 3 else [
+                f"{tt(items[0])}, {tt(items[1])}, and {len(items) - 2} more"]
+            for item in shown:
+                lines.append(f"{run} & {tt(arm)} & {i} & {item} & {finding} & {fate} \\\\")
         pathlib.Path(args.tex).write_text("\n".join(lines) + "\n", encoding="utf-8")
         print(f"wrote {args.tex}")
     return 0

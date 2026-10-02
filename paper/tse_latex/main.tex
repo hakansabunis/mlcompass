@@ -59,27 +59,29 @@ E-mail: hakan.sabunis@std.medipol.edu.tr}}
 \IEEEtitleabstractindextext{%
 \begin{abstract}
 Large language models (LLMs) increasingly assist machine-learning
-development: agents run profilers, leakage detectors, and other analysis
-tools, then explain what the tools found. A column or number that the tool
-never produced can mislead whoever acts on the explanation. Existing
-guardrails constrain decoding, which needs token probabilities that commercial
-APIs withhold, or validate outputs against rules written per application;
-evaluations usually treat every unsupported item alike. Our core
-idea is that, when an LLM narrates a deterministic tool's output, every entity
-and number the narrator may cite is known at call time. We therefore propose
-an evidence-bound runtime contract that derives, from the tool's output, what
-each field of the narrator's structured answer may contain, and checks every answer in host code through ordinary validate-and-reask. We implement the
-contract in \textbf{mlcompass}, an open-source assistant for machine-learning
-pipelines, and evaluate the contract on three LLMs, sixteen leakage-analysis
-tasks, and a dataset-profiling task. Under the contract, no inadmissible
-column or number reached the user, at microseconds per answer. Unconstrained, the one model that fails often rarely invents but misfiles, placing
-items the evidence contains, such as the investigated metric's name, in fields
-that do not admit them. A field description or the shipped prompt removes
-most misfiling, whereas an allowed-value list written for other data turns
-misfiling into invention. Our contributions are field-indexed admissibility
-for narrating tool output, an empirical account of misfiling versus
-invention, a comparison of guardrail configurations, and an open replication
-package.
+development: agents run analysis tools such as profilers and leakage
+detectors, then explain the results. A column or number the tool never
+produced can mislead whoever acts on the explanation. Existing guardrails
+constrain decoding, which needs token probabilities that commercial APIs
+withhold, or validate outputs against rules written per application;
+evaluations treat every unsupported item alike. Our core idea: when an
+LLM narrates a deterministic tool's output, every entity and number the
+narrator may cite is known at call time. We therefore propose an evidence-bound
+runtime contract that derives each answer field's admissible values from the
+tool's output and checks every answer in host code. We implement the contract
+in the open-source assistant \textbf{mlcompass} and evaluate the contract on
+three LLMs, sixteen leakage-analysis tasks, and a dataset-profiling task.
+Unconstrained, the one model that fails often rarely invents but misfiles,
+placing items the evidence contains, such as the metric's name, in fields that
+do not admit them, which a validated model judge reads as false statements. A
+field description or the shipped prompt removes most misfiling, whereas an
+allowed-value list written for other data turns misfiling into invention.
+Under the contract, no inadmissible column or number reached the user, at
+microseconds per answer; even in the best configuration, the check removed
+residual violations (10 of 600 to none) in a registered test. Our
+contributions are field-indexed admissibility, an empirical account of
+misfiling versus invention, a comparison of guardrail configurations, and an
+open replication package.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -211,7 +213,7 @@ misfiling; temperature 0 removes most of the misfiling; and the failure
 returns wherever the fix is absent. An allowed-column list written in advance
 turns misfiling into invention on data that the list predates. Under the
 contract, no violation of the checked channels reached the user in any
-configuration, one named retry repaired every violation, and the check takes
+configuration, a named retry repaired every violation, and the check takes
 microseconds per response.
 
 The paper makes four contributions.
@@ -230,19 +232,24 @@ alternatives that a practitioner would reach for, by what each alternative
 checks. An allowed-column list written in advance does worse than no list on
 data that the list predates. The toolkit's choice semantics, bound to the
 evidence, match our validator on the field that they check and miss what they
-do not check.
+do not check. A registered, interleaved test measures what the verifier adds
+to the best configuration that we found.
 \item A replication package~\cite{replication} with one record per live
 response, the frozen analysis plan with its amendments and deviations, the
 registered falsifier, and seventeen faults in our own instruments, with what
 each fault changed.
 \end{enumerate}
 
-One question remains open and is not among the contributions: whether a
-verifier adds a measurable benefit to a configuration that is already well
-specified. Exploratory runs observed no difference on leakage (0 against 0
-violating responses in 200 on each of four instances) and a small,
-statistically uncertain difference on profiling. The registered test of the
-question stopped when the provider budget ran out (Section~\ref{sec:rq3}).
+Whether a verifier adds a measurable benefit to a configuration that is
+already well specified was the question that our exploratory runs left open.
+A registered test answers the question (amendment A11). With 600 interleaved
+responses per arm on the profiling task, the best configuration that we found
+delivered a violation in 10 of 600 responses without the verifier and in none
+of 600 with the verifier (Fisher $p=0.002$; difference 1.7 points, Newcombe
+95\,\% interval 0.7 to 3.0), at the same content per response
+(Section~\ref{sec:rq3}). The residual violations are slips rather than the
+misfiling of the bare instruction: misspelled or invented names, statistic
+names cited as columns, and placeholder columns.
 The diagnosis itself rests on one failing model, sixteen leakage instances, and
 one profiling frame.
 
@@ -682,7 +689,7 @@ which the record ran. ``Tie'' and ``held'' report observed equality: no
 equivalence margin was registered. \emph{Status}: as planned, deviated (run
 with the change that the row describes), exploratory, not tested, or pending.
 The five rows after the first rule record where the study departed from the
-plan; the rows after the second rule are amendments A3, A7, A9, A10, A12, and A13,
+plan; the rows after the second rule are amendments A3, A7, and A9 to A13,
 registered for this revision.}
 \label{tab:registered}
 \centering
@@ -721,6 +728,7 @@ A3 R3 & Measure the shipped default narrator & Not run: no budget & not tested \
 A3 R4 & Blind human audit of the scorer on 200 responses & Not run (A5); superseded by A7 & not tested \\
 A7 & Blind semantic audit of 204 items in nine strata: most misfiled names read as right information in the wrong place (P1), most wrong numbers that carry another item's value read as false (P2), and at least 90\,\% of controls read as supported (P3) & Registered on 2026-10-02 and the sheet drawn; the authors did not label the sheet & not run \\
 A10 & Two NLI judges pass a validity check on the audit items whose truth is fixed (at least 90\,\% each way) & Neither passed: DeBERTa 55/55 supported and 60/79 not supported, RoBERTa 53/55 and 31/79, $\kappa=0.25$; reported as uninformative & as planned \\
+A11 & The verifier lowers delivered violations in a well-specified configuration, arms interleaved (profile, natural names, $N=600$ each) & 10/600 against 0/600, Fisher $p=0.002$; difference 1.7 points [0.7, 3.0]: supported & as planned \\
 A12 & Two LLM judges (\texttt{gpt-5.4-mini}; \texttt{deepseek-chat} after A12a) pass the same validity check & Neither passed: GPT 41/55 not-false items as A or B and 66/79 false items as C or D, DeepSeek 48/55 and 70/79, $\kappa=0.63$; reported as uninformative & as planned \\
 A13 & One stronger LLM judge (\texttt{gpt-5.5}, pinned snapshot) passes the same validity check & Passed: 55/55 and 73/79 (64/65 after fault~17); misfiled \texttt{r2} read as a false relation in 40/40 (P1 fails; P2, P3 hold) & as planned \\
 A9.1 & Naming interleaved on one harness: more wrong-number responses under suffixed names & 7 against 1 of 200, Fisher $p=0.068$: not rejected; all 7 suffixed wrong numbers carry the sibling's value & as planned \\
@@ -1474,6 +1482,31 @@ ran out after 93 and 91 responses, none with a violation, and we run no test
 on the partial cells. What the verifier adds is a check whose result does not
 depend on the configuration.
 
+\paragraph{The registered test}
+Because R1 stopped early, we registered a new test before any call (amendment
+A11), which is not pooled with R1. On the profile task under natural names,
+the two strong arms ran 600 responses each, one call of each arm per index in
+an order drawn at random per index, on one harness commit at temperature 1.0,
+with every attempt kept. The unverified arm delivered a violation in 10 of 600
+responses (1.7\,\% [0.9, 3.0]) and the verified arm in none (0\,\% [0, 0.6]).
+The registered two-sided Fisher test rejects ($p=0.002$), and the difference
+of 1.7 points has a Newcombe 95\,\% interval of 0.7 to 3.0. The ten violations
+are slips rather than the misfiling of the bare instruction. Two cite a
+statistic name (\texttt{cardinality}, \texttt{zero\_ratio}) as a column; four
+claim a pair that $E$ does not carry, three of them under a statistic name that
+the profiler does not use, such as the misspelled \texttt{missding\_count}; and
+four name a column that the frame lacks: two misspell a real column
+(\texttt{season\_minutes}, \texttt{tenanture\_months}), one cites two
+placeholder columns, and one invents a \texttt{product} column. The verified arm sent back
+ten responses, and the independent reading of the rejection audit below
+confirms all eleven rejected attempts. One of those attempts narrated the
+columns of a different, well-known dataset (\texttt{crim}, \texttt{zn},
+\ldots, \texttt{medv}). The verifier cost 11 extra calls in 600 (1.8\,\%), and
+the two arms delivered the same content: 29.4 correct claims per response, the
+anchor's value in every response, and median latencies of 5.47 and 5.44\,s.
+In the best configuration that we found, the verifier therefore removes a
+small but measurable residue of violations at no measurable loss.
+
 \paragraph{An author-time enum on new data}
 On the reference task, the author-time list is the evidence's own column set,
 which makes the stale-enum arm the call-time arm under another name. The two
@@ -1522,9 +1555,10 @@ Arm & clean & retried & calls & latency \\
 \subsection{Cost of verification}
 
 Table~\ref{tab:retry} shows what an enforced arm's zero consists of. One named
-retry repaired every violation that the verifier met; only the content-free
-correction of \texttt{A-STRESS-GENERIC} ever needed a second retry, twice in
-200. Nothing was stripped anywhere in the study, so the deletion that
+retry repaired every violation that the verifier met on these arms; only the
+content-free correction of \texttt{A-STRESS-GENERIC} needed a second retry,
+twice in 200. In the registered test A11, one response needed a second retry,
+because the first retry cited another column that the frame lacks. Nothing was stripped anywhere in the study, so the deletion that
 guarantees (C1)--(C2) remained a worst case that never occurred.
 
 Three costs are distinct: the local check, the larger request schema, and the
@@ -1603,8 +1637,8 @@ A retry's success can be checked only if the rejected attempt is kept. The
 leakage records keep the delivered payload and the kind of each rejection, but
 not the rejected payloads, so a leakage rejection can be re-judged only
 through the verifier's own telemetry. Profile records written from 2026-09-24
-on keep every attempt. Table~\ref{tab:rejections} lists all 13 rejected
-attempts that these records hold, each re-judged by a script that reads only
+on keep every attempt. Table~\ref{tab:rejections} lists all 24 rejected
+attempts that these records hold, 11 of them from the registered test A11, each re-judged by a script that reads only
 the evidence dump and the stored attempt, and no contract code
 (\texttt{scripts/rejudge\_rejections.py}). The independent reading confirms
 every rejection. Seven of the twelve content rejections are wrong numbers, and
@@ -1612,12 +1646,16 @@ each of the seven is the measurement of the categorical column that shares the
 numeric column's suffix, such as \texttt{cat\_feature\_07}'s missing rate
 quoted for \texttt{num\_feature\_07}. Four rejections name a column that $E$
 does not list, and one claims a pair that $E$ does not record. The thirteenth
-attempt had no admissible verdict. Every retry dropped or corrected the
+attempt had no admissible verdict. Of the eleven rejections in A11, ten name a
+column that the frame lacks and one claims a pair that $E$ does not record. Every retry dropped or corrected the
 offending item, and every final attempt is clean. On balance, the retry does
-not shed acceptable content. Across the twelve content rejections, the
-rejected attempts carried 260 claims that match $E$ and the final attempts
-258, although the narrator writes a new answer rather than editing the old one: 96
-correct claims were dropped and 94 added (\texttt{scripts/retry\_content.py}).
+not shed acceptable content. Across the twelve content rejections of the
+earlier runs, the rejected attempts carried 260 claims that match $E$ and the
+final attempts 258, although the narrator writes a new answer rather than
+editing the old one: 96 correct claims were dropped and 94 added
+(\texttt{scripts/retry\_content.py}). In A11, the ten retried responses
+carried 236 correct claims on their first attempts and 278 on their final ones
+(89 dropped, 131 added).
 On leakage, responses that went through a retry deliver about as many correct
 claims as responses accepted at once, for example 9.54 against 10.00 on
 \texttt{A-GR-OURS} and 9.58 against 9.65 on \texttt{A-STRESS}. The leakage harness has kept every attempt since 2026-10-01, and a
@@ -1635,32 +1673,44 @@ before the retry and 170 after.
 \texttt{deepseek-chat}), re-judged without the verifier. \emph{Finding}: what
 an independent reading of $E$ finds; for a wrong number, the column whose
 value the number is. \emph{Retry}: what the next attempt did with the item.
-Every next attempt was clean. Generated by
-\texttt{scripts/rejudge\_rejections.py}.}
+\emph{Run}: the date of the run; 10-02 is the registered test A11. An attempt
+with more than three offending items of one finding takes one row. Every final
+attempt was clean. Generated by \texttt{scripts/rejudge\_rejections.py}.}
 \label{tab:rejections}
 \centering
 \footnotesize
 \setlength{\tabcolsep}{2.5pt}
-\begin{tabular}{@{}lrlll@{}}
+\begin{tabular}{@{}llrlll@{}}
 \toprule
-Arm & $i$ & Item & Finding & Retry \\
+Run & Arm & $i$ & Item & Finding & Retry \\
 \midrule
-\texttt{P-CONTRACT} & 2 & \texttt{cat\_feature\_03.iqr\_count} & pair not in $E$ & dropped \\
-\texttt{P-CONTRACT} & 5 & \texttt{num\_feature\_07.missing\_pct} & value of \texttt{cat\_feature\_07} & corrected \\
-\texttt{P-CONTRACT} & 5 & \texttt{num\_feature\_07.missing\_count} & value of \texttt{cat\_feature\_07} & corrected \\
-\texttt{P-CONTRACT} & 63 & \texttt{num\_feature\_06.missing\_pct} & value of \texttt{cat\_feature\_06} & corrected \\
-\texttt{P-CONTRACT} & 105 & \texttt{num\_feature\_07.missing\_pct} & value of \texttt{cat\_feature\_07} & dropped \\
-\texttt{P-CONTRACT} & 108 & \texttt{num\_feature\_07.missing\_pct} & value of \texttt{cat\_feature\_07} & dropped \\
-\texttt{P-CONTRACT} & 120 & \texttt{num\_feature\_07.missing\_pct} & value of \texttt{cat\_feature\_07} & corrected \\
-\texttt{P-CONTRACT} & 181 & \texttt{num\_feature\_07.missing\_pct} & value of \texttt{cat\_feature\_07} & dropped \\
-\texttt{P-CONTRACT} & 194 & \texttt{num\_feature\_07.missing\_pct} & value of \texttt{cat\_feature\_07} & dropped \\
-\texttt{P-STRONG-CONTRACT} & 6 & \texttt{deprecated:discount\_rate.z\_score\_count} & column not in $E$ & dropped \\
-\texttt{P-STRONG-CONTRACT} & 77 & \texttt{referral\_team} & column not in $E$ & dropped \\
-\texttt{P-STRONG-CONTRACT} & 77 & \texttt{referral\_team.missing\_pct} & column not in $E$ & dropped \\
-\texttt{P-STRONG-CONTRACT} & 77 & \texttt{referral\_team.missing\_count} & column not in $E$ & dropped \\
-\texttt{P-STRONG-CONTRACT} & 81 & \texttt{verdict} & no admissible verdict & verdict supplied \\
-\texttt{P-STRONG-CONTRACT} & 127 & \texttt{reference\_count} & column not in $E$ & dropped \\
-\texttt{P-STRONG-CONTRACT} & 140 & \texttt{access\_channel} & column not in $E$ & dropped \\
+09-24 & \texttt{P-CONTRACT} & 2 & \texttt{cat\_feature\_03.iqr\_count} & pair not in $E$ & dropped \\
+09-24 & \texttt{P-CONTRACT} & 5 & \texttt{num\_feature\_07.missing\_pct} & value of \texttt{cat\_feature\_07} & corrected \\
+09-24 & \texttt{P-CONTRACT} & 5 & \texttt{num\_feature\_07.missing\_count} & value of \texttt{cat\_feature\_07} & corrected \\
+09-24 & \texttt{P-CONTRACT} & 63 & \texttt{num\_feature\_06.missing\_pct} & value of \texttt{cat\_feature\_06} & corrected \\
+09-24 & \texttt{P-CONTRACT} & 105 & \texttt{num\_feature\_07.missing\_pct} & value of \texttt{cat\_feature\_07} & dropped \\
+09-24 & \texttt{P-CONTRACT} & 108 & \texttt{num\_feature\_07.missing\_pct} & value of \texttt{cat\_feature\_07} & dropped \\
+09-24 & \texttt{P-CONTRACT} & 120 & \texttt{num\_feature\_07.missing\_pct} & value of \texttt{cat\_feature\_07} & corrected \\
+09-24 & \texttt{P-CONTRACT} & 181 & \texttt{num\_feature\_07.missing\_pct} & value of \texttt{cat\_feature\_07} & dropped \\
+09-24 & \texttt{P-CONTRACT} & 194 & \texttt{num\_feature\_07.missing\_pct} & value of \texttt{cat\_feature\_07} & dropped \\
+09-30 & \texttt{P-STRONG-CONTRACT} & 6 & \texttt{deprecated:discount\_rate.z\_score\_count} & column not in $E$ & dropped \\
+09-30 & \texttt{P-STRONG-CONTRACT} & 77 & \texttt{referral\_team} & column not in $E$ & dropped \\
+09-30 & \texttt{P-STRONG-CONTRACT} & 77 & \texttt{referral\_team.missing\_pct} & column not in $E$ & dropped \\
+09-30 & \texttt{P-STRONG-CONTRACT} & 77 & \texttt{referral\_team.missing\_count} & column not in $E$ & dropped \\
+09-30 & \texttt{P-STRONG-CONTRACT} & 81 & \texttt{verdict} & no admissible verdict & verdict supplied \\
+09-30 & \texttt{P-STRONG-CONTRACT} & 127 & \texttt{reference\_count} & column not in $E$ & dropped \\
+09-30 & \texttt{P-STRONG-CONTRACT} & 140 & \texttt{access\_channel} & column not in $E$ & dropped \\
+10-02 & \texttt{P-STRONG-CONTRACT} & 4 & \texttt{risk\_score} & column not in $E$ & dropped \\
+10-02 & \texttt{P-STRONG-CONTRACT} & 77 & \texttt{daystreak} & column not in $E$ & dropped \\
+10-02 & \texttt{P-STRONG-CONTRACT} & 279 & \texttt{agency.missing\_pct} & column not in $E$ & dropped \\
+10-02 & \texttt{P-STRONG-CONTRACT} & 279 & \texttt{balance\_placeholder\_removed} & column not in $E$ & dropped \\
+10-02 & \texttt{P-STRONG-CONTRACT} & 293 & \texttt{device\_type.capitality} & pair not in $E$ & dropped \\
+10-02 & \texttt{P-STRONG-CONTRACT} & 475 & \texttt{label} & column not in $E$ & dropped \\
+10-02 & \texttt{P-STRONG-CONTRACT} & 480 & \texttt{tenant\_months} & column not in $E$ & dropped \\
+10-02 & \texttt{P-STRONG-CONTRACT} & 481 & \texttt{households} & column not in $E$ & dropped \\
+10-02 & \texttt{P-STRONG-CONTRACT} & 490 & \texttt{district}, \texttt{crim}, and 30 more & column not in $E$ & dropped \\
+10-02 & \texttt{P-STRONG-CONTRACT} & 502 & \texttt{months.missing\_count} & column not in $E$ & dropped \\
+10-02 & \texttt{P-STRONG-CONTRACT} & 568 & \texttt{setting\_minutes} & column not in $E$ & dropped \\
 \bottomrule
 \end{tabular}
 \end{table*}
@@ -1699,11 +1749,14 @@ particular dates, not LLMs in general.
 
 \paragraph{Answer to RQ2 and RQ3}
 In every configuration that we ran, no (C1) or (C2) violation reached the user
-under the contract, and one named retry repaired each violation. The local
-check costs microseconds, and retries add calls. Every rejection that the records keep, 13 on the profile task and 17 in a registered leakage re-run, was confirmed by a reading that shares no code with the verifier. Whether the verifier adds a measurable
-benefit to a well-specified configuration is open: exploratory runs observed
-no difference on leakage and 4 against 0 violating responses in 200 on
-profiling, and the registered test stopped early. In these configurations, a
+under the contract, and a named retry repaired each violation, at the first
+attempt in all but three responses. The local check costs microseconds, and
+retries add calls. Every rejection that the records keep, 24 on the profile
+task and 17 in a registered leakage re-run, was confirmed by a reading that
+shares no code with the verifier. In the best configuration that we found, the
+registered interleaved test measured a benefit of the verifier: 10 against 0
+violating responses in 600 per arm (Fisher $p=0.002$), with no loss of
+content. In these configurations, a
 stock guardrail loop stays near the floor, and an enum written for other data
 causes invention. An enum or choice list bound to $E$ matches the contract
 only on the column field, and the toolkit running our checks matches the
@@ -2292,7 +2345,9 @@ datasets, and four public tables carrying twelve injected leaks. At $N=200$, a
 comparison against a zero arm reaches $p<0.05$ at six events and detects a
 true rate of 4\,\% with power 0.8 (Fisher), but detects a true rate of 2\,\%
 with power of only 0.21. The profile difference of 4 in 200 was therefore out
-of reach of the run that found the difference. The resolution is coarser
+of reach of the run that found the difference. The registered test A11 used
+600 responses per arm, where six events against a zero arm reach $p<0.05$ and
+a true rate of 1.5\,\% is detected with power 0.89. The resolution is coarser
 elsewhere: near the 42\,\% floor, two arms must differ by about 14 points for
 the same power (13.8 points downward and 14.4 upward; two-sided Fisher), so
 mechanisms closer than that cannot be separated there. Only the registered
@@ -2320,13 +2375,14 @@ at call time, binding each field's admissible set to the evidence and checking
 the returned payload in host code enforces referential and value soundness
 behind an API that exposes no logits. The mechanism is ordinary
 validate-and-reask. The check held in every configuration in which the check
-ran, repaired every violation with one named retry, and costs microseconds;
-a reading that shares no code with the verifier confirmed every rejection that
-the records keep. Two questions
-remain open: whether the check adds a measurable benefit to a configuration
-that is already well specified, and how often the misplaced items that
-dominate the failures would mislead a reader, which neither our registered
-human audit nor its two automatic substitutes could yet answer. We report seventeen faults in our own instruments and two in the
+ran, repaired every violation with a named retry, at the first attempt in all
+but three responses, and costs microseconds; a reading that shares no code
+with the verifier confirmed every rejection that the records keep. In the best
+configuration that we found, a registered test measured what the check adds:
+10 violating responses in 600 without the check and none in 600 with the
+check, at the same content. A model judge that passed a registered validity
+check reads the dominant misfiling as a false statement about the data; how
+people read the misplaced items remains open. We report seventeen faults in our own instruments and two in the
 verifier, with what each fault changed. The study evaluates the narration component:
 the shipped default narrator and the product's trigger path were not exercised
 end to end. The check does not yet reach a client model that narrates the same

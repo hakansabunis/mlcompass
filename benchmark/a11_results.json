@@ -1,0 +1,71 @@
+{
+ "cells": {
+  "strong_noverify": {
+   "file": "deepseek_deepseek-chat_profile_strong_noverify_interleaved_n600_seed0_e7e0d8c22.jsonl",
+   "n": 600,
+   "delivered_violations": 10,
+   "c1": 6,
+   "c2_wrong": 0,
+   "c2_not_carried": 4,
+   "c3": 0,
+   "kinds": {
+    "misplaced": 6,
+    "extrinsic": 4
+   },
+   "names_misfiled": 2,
+   "names_unlisted": 0,
+   "names_invented": 4,
+   "retried_responses": 0,
+   "rejected_attempts": 0,
+   "confirmed_by_second_reading": 0,
+   "findings": {},
+   "omitted": 0,
+   "verdicts": {
+    "needs_cleaning": 599,
+    "cannot_determine": 1
+   },
+   "provider_calls": 600,
+   "claims_per_response": 29.436666666666667,
+   "correct_claims_per_response": 29.425,
+   "anchor_value_share": 1.0,
+   "latency_ms_median": 5468.75
+  },
+  "strong_verify": {
+   "file": "deepseek_deepseek-chat_profile_strong_verify_interleaved_n600_seed0_e7e0d8c22.jsonl",
+   "n": 600,
+   "delivered_violations": 0,
+   "c1": 0,
+   "c2_wrong": 0,
+   "c2_not_carried": 0,
+   "c3": 0,
+   "kinds": {},
+   "names_misfiled": 0,
+   "names_unlisted": 0,
+   "names_invented": 0,
+   "retried_responses": 10,
+   "rejected_attempts": 11,
+   "confirmed_by_second_reading": 11,
+   "findings": {
+    "column E does not list": 41,
+    "pair E does not record": 1
+   },
+   "omitted": 0,
+   "verdicts": {
+    "needs_cleaning": 600
+   },
+   "provider_calls": 611,
+   "claims_per_response": 29.39666666666667,
+   "correct_claims_per_response": 29.39666666666667,
+   "anchor_value_share": 1.0,
+   "latency_ms_median": 5435.1
+  }
+ },
+ "complete_pairs": 600,
+ "fisher_two_sided_p": 0.001880675491945995,
+ "rejects_at_0.05": true,
+ "difference": 0.016666666666666666,
+ "newcombe_95": [
+  0.006763980542126969,
+  0.0304052471829256
+ ]
+}

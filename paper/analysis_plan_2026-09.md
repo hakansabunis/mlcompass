@@ -1351,3 +1351,32 @@ interpreted. In the corpus kinds, the fix moves 13 responses of the wording
 sweep from extrinsic to misplaced (34 -> 21 extrinsic) and one bare leakage
 response from extrinsic to contradicting E; the policy table and the deletion
 analysis do not change.
+
+**A11 outcome (2026-10-02, run 14:17-16:10).** 600 complete interleaved
+pairs, one harness commit, no transport errors, 1,211 provider calls. Delivered
+violations: `strong_noverify` 10/600 (1.67 %), `strong_verify` 0/600. Two-sided
+Fisher p = 0.0019, so the registered test rejects at alpha 0.05; difference
+1.67 points, Newcombe 95 % interval 0.68 to 3.04 points. As registered, the
+paper reports a measured benefit of this size; the run is not repeated or
+extended. Descriptive: the 10 unverified violations are 6 misplaced (two
+statistic names cited as columns, `cardinality` and `zero_ratio`; four claims
+on pairs E does not carry, three of them misspelled or renamed statistics such
+as `missding_count`) and 4 extrinsic (the respellings `season_minutes` and
+`tenanture_months`, an invented `product`, two `*_placeholder` columns). The
+verified arm sent back 10 responses (11 rejected attempts); the independent
+reading of `scripts/rejudge_rejections.py` confirms all 11, every offending
+item was dropped, and every final attempt is clean. One response needed two
+retries: the first retry repaired a claim on a column the frame lacks and
+cited another such column. One rejected attempt narrated the columns of the
+Boston housing data (`crim`, `zn`, ... `medv`), which the frame does not have.
+Content: correct claims per response 29.43 unverified, 29.40 verified; the ten
+retried responses carried 236 correct claims on their first attempts and 278
+on their final ones (89 dropped, 131 added); anchor value reported in 100 % of
+responses in both arms; median latency 5.47 s and 5.44 s. Results:
+`benchmark/a11_results.json` (`scripts/analyze_a11.py`).
+
+Interim look, recorded for completeness: at about 15:25, while fault 17 was
+being checked, `scripts/offline_review_analyses.py` read the partial
+unverified records once (5 violating of 358). No decision depended on it; the
+run was neither stopped nor extended, and the registered analysis was run
+once, after the last record.

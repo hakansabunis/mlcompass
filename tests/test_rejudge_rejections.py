@@ -1,9 +1,10 @@
 """Every rejection that the profile records keep is a real violation.
 
-The paper's rejection audit (Table 11) rests on scripts/rejudge_rejections.py,
-which reads only the evidence dumps and the stored attempts. This test pins its
-result to the committed records: thirteen rejected attempts, each one a
-violation by the independent reading, each repaired by the next attempt.
+The paper's rejection audit rests on scripts/rejudge_rejections.py, which
+reads only the evidence dumps and the stored attempts. This test pins its
+result to the committed records: twenty-four rejected attempts (eleven of them
+in the registered run A11), each one a violation by the independent reading,
+and every final attempt clean.
 """
 
 from __future__ import annotations
@@ -18,8 +19,9 @@ import rejudge_rejections as rj  # noqa: E402
 
 def test_every_stored_rejection_is_confirmed_and_repaired():
     rows, total, agree = rj.rejudge()
-    assert total == 13
-    assert agree == 13
+    assert total == 24
+    assert agree == 24
+    assert sum(1 for _ in {(r["run"], r["i"]) for r in rows if r["run"] == "2026-10-02_a11"}) == 10
     assert all(r["finding"] != "nothing found" for r in rows)
     assert all(r["final_clean"] for r in rows)
     assert all(r["fate"] in {"dropped", "corrected", "verdict supplied"} for r in rows)

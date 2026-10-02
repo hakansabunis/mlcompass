@@ -142,15 +142,125 @@
    "correct_final": 28,
    "correct_lost": 3,
    "correct_gained": 8
+  },
+  {
+   "run": "2026-10-02_a11",
+   "arm": "P-STRONG-CONTRACT",
+   "i": 4,
+   "claims_first": 23,
+   "claims_final": 39,
+   "correct_first": 23,
+   "correct_final": 39,
+   "correct_lost": 1,
+   "correct_gained": 17
+  },
+  {
+   "run": "2026-10-02_a11",
+   "arm": "P-STRONG-CONTRACT",
+   "i": 77,
+   "claims_first": 21,
+   "claims_final": 16,
+   "correct_first": 21,
+   "correct_final": 16,
+   "correct_lost": 11,
+   "correct_gained": 6
+  },
+  {
+   "run": "2026-10-02_a11",
+   "arm": "P-STRONG-CONTRACT",
+   "i": 279,
+   "claims_first": 20,
+   "claims_final": 27,
+   "correct_first": 19,
+   "correct_final": 27,
+   "correct_lost": 0,
+   "correct_gained": 8
+  },
+  {
+   "run": "2026-10-02_a11",
+   "arm": "P-STRONG-CONTRACT",
+   "i": 293,
+   "claims_first": 20,
+   "claims_final": 26,
+   "correct_first": 19,
+   "correct_final": 26,
+   "correct_lost": 3,
+   "correct_gained": 10
+  },
+  {
+   "run": "2026-10-02_a11",
+   "arm": "P-STRONG-CONTRACT",
+   "i": 475,
+   "claims_first": 27,
+   "claims_final": 24,
+   "correct_first": 27,
+   "correct_final": 24,
+   "correct_lost": 11,
+   "correct_gained": 8
+  },
+  {
+   "run": "2026-10-02_a11",
+   "arm": "P-STRONG-CONTRACT",
+   "i": 480,
+   "claims_first": 39,
+   "claims_final": 26,
+   "correct_first": 39,
+   "correct_final": 26,
+   "correct_lost": 20,
+   "correct_gained": 7
+  },
+  {
+   "run": "2026-10-02_a11",
+   "arm": "P-STRONG-CONTRACT",
+   "i": 481,
+   "claims_first": 14,
+   "claims_final": 44,
+   "correct_first": 14,
+   "correct_final": 44,
+   "correct_lost": 0,
+   "correct_gained": 30
+  },
+  {
+   "run": "2026-10-02_a11",
+   "arm": "P-STRONG-CONTRACT",
+   "i": 490,
+   "claims_first": 19,
+   "claims_final": 32,
+   "correct_first": 1,
+   "correct_final": 32,
+   "correct_lost": 1,
+   "correct_gained": 32
+  },
+  {
+   "run": "2026-10-02_a11",
+   "arm": "P-STRONG-CONTRACT",
+   "i": 502,
+   "claims_first": 41,
+   "claims_final": 17,
+   "correct_first": 40,
+   "correct_final": 17,
+   "correct_lost": 28,
+   "correct_gained": 5
+  },
+  {
+   "run": "2026-10-02_a11",
+   "arm": "P-STRONG-CONTRACT",
+   "i": 568,
+   "claims_first": 33,
+   "claims_final": 27,
+   "correct_first": 33,
+   "correct_final": 27,
+   "correct_lost": 14,
+   "correct_gained": 8
   }
  ],
  "profile_totals": {
-  "claims_first": 273,
-  "claims_final": 258,
-  "correct_first": 260,
-  "correct_final": 258,
-  "correct_lost": 96,
-  "correct_gained": 94
+  "claims_first": 530,
+  "claims_final": 536,
+  "correct_first": 496,
+  "correct_final": 536,
+  "correct_lost": 185,
+  "correct_gained": 225
  },
  "leakage": {
   "2026-09-18_choices|synthetic|A-GR-CHOICES": {

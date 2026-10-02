@@ -27,7 +27,7 @@ sys.path.insert(0, str(ROOT / "src"))
 import rejudge_rejections as rj  # noqa: E402
 import unified_scoring as u  # noqa: E402
 from analyze_revision_runs import _evidence, _records  # noqa: E402
-from make_tables import newcombe_diff_ci95  # noqa: E402
+from make_tables import fisher_exact_two_sided, newcombe_diff_ci95  # noqa: E402
 
 A11_DIR = ROOT / "scripts" / "runs" / "profile" / "2026-10-02_a11"
 ARMS = ("strong_noverify", "strong_verify")
@@ -85,15 +85,13 @@ def arm_cells() -> dict[str, dict]:
 
 
 def analyse() -> dict:
-    from scipy.stats import fisher_exact  # noqa: PLC0415
-
     cells = arm_cells()
     out: dict = {"cells": cells}
     if set(ARMS) <= set(cells):
         a, b = cells["strong_noverify"], cells["strong_verify"]
         out["complete_pairs"] = len(set(a["indices"]) & set(b["indices"]))
         ka, na, kb, nb = a["delivered_violations"], a["n"], b["delivered_violations"], b["n"]
-        out["fisher_two_sided_p"] = float(fisher_exact([[ka, na - ka], [kb, nb - kb]])[1])
+        out["fisher_two_sided_p"] = float(fisher_exact_two_sided(ka, na, kb, nb))
         out["rejects_at_0.05"] = out["fisher_two_sided_p"] < 0.05
         out["difference"] = ka / na - kb / nb
         out["newcombe_95"] = list(newcombe_diff_ci95(ka, na, kb, nb))
