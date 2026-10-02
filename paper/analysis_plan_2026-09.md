@@ -1252,3 +1252,25 @@ is `deepseek-chat` (temperature 0), from the provider of the narrator that
 fails most often; the paper reports its labels with that caveat. The local
 models available (4B parameters) were not considered strong enough to serve.
 Everything else in A12 is unchanged.
+
+**A12 outcome (2026-10-02).** Both judges labeled all 204 items (no errors).
+Neither passed the validity check. `gpt-5.4-mini`: 41/55 not-false items as A
+or B (Wilson 0.62-0.84) and 66/79 false or absent items as C or D (0.74-0.90).
+`deepseek-chat`: 48/55 (0.76-0.94) and 70/79 (0.80-0.94). Agreement 76 %,
+Cohen's kappa 0.63. As registered, no judge's labels on S1 or S2 are
+interpreted, and A12 is reported as uninformative. Predictions, recorded but
+not interpreted: P3 holds for both judges (S8 and S9 all A); P1 fails for both
+(S1: GPT 40 D, DeepSeek 36 D and 4 B); P2 holds for DeepSeek (S3 22 C) and
+not for GPT (11 C, 11 A).
+
+Exploratory (not registered): the failures are judge errors, not rendering
+errors. Every one of GPT's 11 A labels on S3 quotes, as the claimed column's
+value, the value that the same-suffix sibling (`cat_feature_07` for
+`num_feature_07`, `cat_feature_06` for `num_feature_06`) records for the same
+statistic; the item text shows E's correct value for the claimed pair. All 40
+S1 items mark `r2`, which the item text lists under "Other names in E", and
+the instructions forbid D for such a name. All 15 S4 names appear in the
+frame's column list shown with the item; GPT labeled 14 of them D, DeepSeek 7.
+Files: `scripts/llm_audit.py`, `benchmark/semantic_audit_A7/llm_labels.jsonl`,
+`benchmark/semantic_audit_A7/llm_results.json`,
+`paper/tse_latex/table_llm_rows.tex`. Spend: a few cents on each provider.

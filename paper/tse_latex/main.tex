@@ -678,7 +678,7 @@ which the record ran. ``Tie'' and ``held'' report observed equality: no
 equivalence margin was registered. \emph{Status}: as planned, deviated (run
 with the change that the row describes), exploratory, not tested, or pending.
 The five rows after the first rule record where the study departed from the
-plan; the rows after the second rule are amendments A3, A7, A9, and A10,
+plan; the rows after the second rule are amendments A3, A7, A9, A10, and A12,
 registered for this revision.}
 \label{tab:registered}
 \centering
@@ -717,6 +717,7 @@ A3 R3 & Measure the shipped default narrator & Not run: no budget & not tested \
 A3 R4 & Blind human audit of the scorer on 200 responses & Not run (A5); superseded by A7 & not tested \\
 A7 & Blind semantic audit of 204 items in nine strata: most misfiled names read as right information in the wrong place (P1), most wrong numbers that carry another item's value read as false (P2), and at least 90\,\% of controls read as supported (P3) & Registered on 2026-10-02 and the sheet drawn; the authors did not label the sheet & not run \\
 A10 & Two NLI judges pass a validity check on the audit items whose truth is fixed (at least 90\,\% each way) & Neither passed: DeBERTa 55/55 supported and 60/79 not supported, RoBERTa 53/55 and 31/79, $\kappa=0.25$; reported as uninformative & as planned \\
+A12 & Two LLM judges (\texttt{gpt-5.4-mini}; \texttt{deepseek-chat} after A12a) pass the same validity check & Neither passed: GPT 41/55 not-false items as A or B and 66/79 false items as C or D, DeepSeek 48/55 and 70/79, $\kappa=0.63$; reported as uninformative & as planned \\
 A9.1 & Naming interleaved on one harness: more wrong-number responses under suffixed names & 7 against 1 of 200, Fisher $p=0.068$: not rejected; all 7 suffixed wrong numbers carry the sibling's value & as planned \\
 A9.2 & Leakage retry audit, every attempt kept: the second scorer confirms at least 95\,\% of rejections & 17 of 17 confirmed and 17 of 17 final attempts clean; 170 correct claims before and after the retries & as planned \\
 \bottomrule
@@ -959,9 +960,9 @@ understand. A misplaced item may be harmless to a reader, as a metric's name in
 the cited-column list may be. An item of the same kind can also state a
 false relation, as when a number that $E$ records elsewhere is attached to a
 pair that $E$ does not carry. That semantic judgment needs people. The registered blind
-audit by two of the authors (amendment A7) was not carried out, and the
-automatic substitute registered in its place (A10) failed its validity check
-(Section~\ref{sec:rq1}), so the judgment remains open.
+audit by two of the authors (amendment A7) was not carried out, and the two
+automatic substitutes registered in its place (A10 and A12) failed their
+validity checks (Section~\ref{sec:rq1}), so the judgment remains open.
 Table~\ref{tab:questions} sets out which question each measure answers.
 
 \begin{table}[!htbp]
@@ -978,7 +979,7 @@ Question & Answered by & Status \\
 \midrule
 Does the response break the contract? & (C1)--(C3), by program & every response \\
 Does each name or number appear in $E$ or in the frame? & the kinds, by program & every response \\
-Does the response state a false or unsupported relation? & human audit (A7) or NLI judges (A10) & open: A7 not run, A10 invalid \\
+Does the response state a false or unsupported relation? & human audit (A7), NLI judges (A10), or LLM judges (A12) & open: A7 not run; A10 and A12 invalid \\
 Would the response mislead an engineer? & --- & not studied \\
 \bottomrule
 \end{tabular}
@@ -1182,9 +1183,29 @@ pattern is worth recording as an exploratory observation. DeBERTa labeled all
 22 wrong numbers contradicted, and 16 of its 19 misses on known-unsupported
 items are names close to a real one: twelve are the word \texttt{target}, and
 four are respellings such as \texttt{acquired\_channel}. These are exactly the
-items on which the literal rule and a reader's reading part ways. The semantic
-question therefore remains open, and answering the question needs human
-judgment.
+items on which the literal rule and a reader's reading part ways.
+
+A second registered substitute (amendment A12) put the human sheet's question,
+with its instructions, to two LLMs from different families:
+\texttt{gpt-5.4-mini} and, because Mistral answered every call with a
+rate-limit error, \texttt{deepseek-chat} (A12a), from the provider of the
+narrator that fails most often. The validity check was the
+same in kind: at least 90\,\% of the items that are not false labeled A or B,
+and at least 90\,\% of the false or absent items labeled C or D. Neither judge
+met that bar. \texttt{gpt-5.4-mini} reached 41 of 55 and 66 of 79,
+\texttt{deepseek-chat} 48 of 55 and 70 of 79, and the two judges agreed on
+76\,\% of the items (Cohen's $\kappa=0.63$). As registered, we do not
+interpret their labels on the contested strata. Their errors are still worth
+recording. \texttt{gpt-5.4-mini} labeled 11 of the 22 contradicted numbers as
+supported; each of the 11 quotes, as the claimed column's value, the number
+that the same-suffix sibling records for the same statistic. Both judges
+labeled the misfiled metric name \texttt{r2} as absent from $E$ (40 and 36 of
+40), although $E$ lists the name and the instructions forbid that label, and
+\texttt{gpt-5.4-mini} did the same for 14 of the 15 real columns that the
+frame's column list shows. The judges thus accepted a sibling's number, which
+the value check rejects, and read misfiling as invention, the conflation that
+Table~\ref{tab:kinds} separates. The semantic question therefore remains open,
+and answering the question needs human judgment.
 
 \begin{table}[!htbp]
 \caption{Kinds of violation, with every response in exactly one row
@@ -2002,8 +2023,11 @@ time read zero. Third, describing each field is the cheapest fix, and the
 effect of any fix of this kind holds only for the configuration in which the fix was measured (Table~\ref{tab:conditions}). Fourth, an evaluation of a narrator
 should report contract violations apart from what the violations introduce;
 counted as one hallucination rate, the failing model's errors would overstate
-invention many times over (Table~\ref{tab:kinds}). The lessons apply to any
-narrator of a deterministic tool whose output is finite at call time.
+invention many times over (Table~\ref{tab:kinds}). A model judge does not
+replace that check: two inference models and two LLM judges each failed a
+90\,\% bar on audit items whose truth is fixed (Section~\ref{sec:rq1}). The
+lessons apply to any narrator of a deterministic tool whose output is finite at
+call time.
 
 \paragraph{Simpler designs}
 If every structured fact were rendered deterministically and the model wrote
@@ -2098,8 +2122,8 @@ Profile, natural names, no verifier & 693 & 36 & 36 & 19 \\
 kinds of Table~\ref{tab:kinds} separate what a response introduces from where
 the response puts an item, but a program assigns the kinds, and the kinds do
 not measure what a reader understands. Neither the registered human audit
-(A7, not carried out) nor its automatic substitute (A10, which failed its
-validity check) measures that, so the semantic reading of a misplaced item
+(A7, not carried out) nor its two automatic substitutes (A10 and A12, which
+failed their validity checks) measures that, so the semantic reading of a misplaced item
 remains open. The leakage conclusions hold
 under either reading, whereas the profile rates depend on the binding. The
 guarantee covers specified structured fields of one narration path, relative
@@ -2219,7 +2243,7 @@ the records keep. Two questions
 remain open: whether the check adds a measurable benefit to a configuration
 that is already well specified, and how often the misplaced items that
 dominate the failures would mislead a reader, which neither our registered
-human audit nor its automatic substitute could yet answer. We report sixteen faults in our own instruments and two in the
+human audit nor its two automatic substitutes could yet answer. We report sixteen faults in our own instruments and two in the
 verifier, with what each fault changed. The study evaluates the narration component:
 the shipped default narrator and the product's trigger path were not exercised
 end to end. The check does not yet reach a client model that narrates the same

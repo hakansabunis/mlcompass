@@ -1,0 +1,170 @@
+{
+ "by_stratum": {
+  "gpt": {
+   "S1 misfiled name": {
+    "D": 40
+   },
+   "S2 number E records under another pair": {
+    "C": 17,
+    "D": 8,
+    "A": 5
+   },
+   "S3 wrong number, another item's value": {
+    "C": 11,
+    "A": 11
+   },
+   "S4 real column E does not list": {
+    "D": 14,
+    "A": 1
+   },
+   "S5 invented name, list written in advance": {
+    "D": 10
+   },
+   "S6 invented name": {
+    "D": 30
+   },
+   "S7 number E records nowhere": {
+    "C": 15,
+    "B": 2
+   },
+   "S8 control: admissible name": {
+    "A": 20
+   },
+   "S9 control: claim that matches E": {
+    "A": 20
+   }
+  },
+  "deepseek": {
+   "S1 misfiled name": {
+    "D": 36,
+    "B": 4
+   },
+   "S2 number E records under another pair": {
+    "C": 15,
+    "A": 8,
+    "D": 7
+   },
+   "S3 wrong number, another item's value": {
+    "C": 22
+   },
+   "S4 real column E does not list": {
+    "A": 8,
+    "D": 7
+   },
+   "S5 invented name, list written in advance": {
+    "D": 10
+   },
+   "S6 invented name": {
+    "D": 28,
+    "B": 2
+   },
+   "S7 number E records nowhere": {
+    "B": 4,
+    "C": 9,
+    "A": 3,
+    "D": 1
+   },
+   "S8 control: admissible name": {
+    "A": 20
+   },
+   "S9 control: claim that matches E": {
+    "A": 20
+   }
+  }
+ },
+ "validity": {
+  "gpt": {
+   "not_false_AB": [
+    41,
+    55,
+    [
+     0.6169812861001356,
+     0.8418788528788885
+    ]
+   ],
+   "false_or_absent_CD": [
+    66,
+    79,
+    [
+     0.738543346859784,
+     0.9012329283980431
+    ]
+   ],
+   "valid": false
+  },
+  "deepseek": {
+   "not_false_AB": [
+    48,
+    55,
+    [
+     0.7598297223798235,
+     0.9369578960698056
+    ]
+   ],
+   "false_or_absent_CD": [
+    70,
+    79,
+    [
+     0.7974520720547827,
+     0.9388942070155465
+    ]
+   ],
+   "valid": false
+  }
+ },
+ "missing": {
+  "gpt": 0,
+  "deepseek": 0
+ },
+ "kappa": 0.6321889833314935,
+ "agreement": 0.7598039215686274,
+ "consensus": {
+  "S1 misfiled name": {
+   "D": 36,
+   "disagree": 4
+  },
+  "S2 number E records under another pair": {
+   "C": 9,
+   "disagree": 14,
+   "A": 5,
+   "D": 2
+  },
+  "S3 wrong number, another item's value": {
+   "C": 11,
+   "disagree": 11
+  },
+  "S4 real column E does not list": {
+   "disagree": 9,
+   "D": 6
+  },
+  "S5 invented name, list written in advance": {
+   "D": 10
+  },
+  "S6 invented name": {
+   "D": 28,
+   "disagree": 2
+  },
+  "S7 number E records nowhere": {
+   "disagree": 9,
+   "C": 8
+  },
+  "S8 control: admissible name": {
+   "A": 20
+  },
+  "S9 control: claim that matches E": {
+   "A": 20
+  }
+ },
+ "predictions": {
+  "gpt": {
+   "P1_S1_majority_B": false,
+   "P2_S3_majority_C": false,
+   "P3_controls_A_90": true
+  },
+  "deepseek": {
+   "P1_S1_majority_B": false,
+   "P2_S3_majority_C": true,
+   "P3_controls_A_90": true
+  }
+ }
+}
