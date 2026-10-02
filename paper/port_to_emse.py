@@ -249,8 +249,8 @@ preamble = r"""%% Empirical Software Engineering (Springer) submission, SVJour3.
 
 \begin{document}
 
-\title{Misfiling, Not Invention: How LLM Narrators of Structured Evidence Fail}
-\titlerunning{Misfiling, Not Invention}
+\title{Misfiling, Not Just Invention: Failures in LLM Narration of Structured Evidence}
+\titlerunning{Misfiling, Not Just Invention}
 
 \author{Hakan~Sabuni\c{s} \and Yusuf~\"Unl\"u \and Mehmet~Kemal~\"Ozdemir}
 \authorrunning{H. Sabuni\c{s} et al.}

@@ -32,7 +32,7 @@
 \newtheorem{observation}{Observation}
 \hyphenation{mlcompass evi-dence-closed}
 
-\title{Misfiling, Not Invention: How LLM Narrators of Structured Evidence Fail}
+\title{Misfiling, Not Just Invention: Failures in LLM Narration of Structured Evidence}
 \author{Hakan Sabuni\c{s}, Yusuf \"Unl\"u, Mehmet Kemal \"Ozdemir\\[2pt]
 \small School of Engineering and Natural Sciences, Istanbul Medipol University, Istanbul, T\"urkiye\\
 \small \texttt{hakan.sabunis@std.medipol.edu.tr}}
@@ -57,9 +57,9 @@ checks every answer in host code. We evaluate the contract, implemented in the
 open-source assistant \textbf{mlcompass}, on three LLMs, sixteen
 leakage-analysis tasks, and a dataset-profiling task. Without enforcement, the
 one model that failed often mostly misfiled rather than invented, placing
-items the evidence contains, such as the metric's name, in fields that do not
-admit them, which the only model judge to pass a registered validity check
-classified as false. A field description or the shipped prompt
+evidence items, such as the metric's name, in fields that do not admit them,
+which the only model judge to pass a registered validity check classified as
+false relations. A field description or the shipped prompt
 removes most misfiling, whereas an allowed-value list written for other data
 turns misfiling into invention. Under the contract, no inadmissible column or
 number reached the user, at microseconds per answer; in a registered test of
@@ -222,13 +222,15 @@ data that the list predates. The toolkit's choice semantics, bound to the
 evidence, match our validator on the field that they check and miss what they
 do not check. A registered, interleaved test measures what the verifier adds
 to the best configuration that we found.
-\item A replication package~\cite{replication} with one record per live
-response, the frozen analysis plan with its amendments and deviations, and the
-registered falsifier. Every number is recomputed from immutable response
-records, so the seventeen faults that we found in our own instruments, each
-reported with what the fault changed, altered derived measurements and never
-the records.
+\item A complete, auditable replication package~\cite{replication}:
+immutable records of every live response, the pre-registration history with its
+amendments and deviations, the corrected measurements beside the superseded
+ones, and the registered falsification tests.
 \end{enumerate}
+
+Because every number is recomputed from those records, the seventeen faults
+that we found in our own instruments (Section~\ref{sec:instruments}) changed
+derived measurements and never a record.
 
 We do not claim that LLMs in general misfile rather than invent. The
 diagnosis rests on one failing model, sixteen leakage instances, and one
@@ -591,8 +593,9 @@ column \texttt{age} has mean 38.5 and missing fraction 0.012, and a table
 keyed on the column alone checks a claim about one of these quantities against
 the other. That error is one of the scorer defects in
 Section~\ref{sec:instruments}, reappearing in the production path. The
-evidence's surface shape also has to match the flat claim slot: narrators
-handed a nested quantity invented a flattening, five different ones in all.
+evidence's surface shape also has to match the flat claim slot: handed a
+nested quantity, the narrator in our runs invented a flattening, five
+different ones in all.
 
 \subsection{What the invariant does not cover, and a threat model}
 
@@ -1150,8 +1153,11 @@ questions.
 \paragraph{A semantic reading}
 Whether a misplaced item states a false relation is a semantic question. The
 registered blind audit (A7) was to answer the question on 204 items drawn from
-the flagged responses, each to be labeled A to E (Table~\ref{tab:audit}), but
-the authors did not label the sheet. We registered three automatic substitutes
+the flagged responses, each to be labeled A to E (Table~\ref{tab:audit}). The
+authors decided not to label the sheet; labels from two of the authors would in
+any case not have been an independent validation. The sheet and its sampling script are
+in the replication package, with the key kept sealed, so that independent
+raters can still label the items blind. We registered three automatic substitutes
 in its place, each with the same validity check: on the items whose truth is
 fixed by construction, at least 90\,\% labeled correctly in each direction.
 Two inference models (A10) and two LLM judges (A12) failed the check
@@ -2093,8 +2099,8 @@ Profile, natural names, no verifier & 693 & 36 & 36 & 19 \\
 kinds of Table~\ref{tab:kinds} separate what a response introduces from where
 the response puts an item, but a program assigns the kinds, and the kinds do
 not measure what a reader understands. The registered human audit (A7) was
-not carried out, and two of its three automatic substitutes failed their
-validity checks. The one that passed (A13) gives a single model's
+not carried out; the sheet is kept ready for independent raters. Two of its
+three automatic substitutes failed their validity checks. The one that passed (A13) gives a single model's
 classification, which agrees with ours on misfiled names and classifies them
 as false relations; the classification is not a person's, and the judge comes
 from the family of one narrator. The leakage conclusions hold

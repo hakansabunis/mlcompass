@@ -1,4 +1,19 @@
-# Where this stopped — 2026-10-02 (night)
+# Where this stopped — 2026-10-02 (late night)
+
+**V2.7: DONE** (the V2.6 review: EMSE minor revision, perhaps accept with minor
+changes; TSE between minor and major; no new experiment asked for).
+
+- Title: "Misfiling, Not Just Invention: Failures in LLM Narration of
+  Structured Evidence" (the review's safer option: the paper no longer says
+  that invention is absent; it says misfiling can dominate). Changed in the TSE
+  source, the EMSE port, README and CITATION.cff.
+- Contribution 4 is the auditable package; the seventeen faults follow the list
+  as evidence of auditability, not as a contribution.
+- Abstract says "false relations" (the taxonomy's term); 249 words.
+- RQ1 and Threats say why A7 was not run (the authors decided not to label; two
+  authors' labels would not have been independent anyway) and that the sheet is
+  kept, key sealed, for independent raters.
+- Claim-strength pass: one general "narrators" phrasing scoped to our runs.
 
 **V2.6: DONE** (the V2.5 review: EMSE minor revision, TSE major revision risk;
 no new experiment asked for). Editorial pass only, no number changed:
@@ -44,7 +59,7 @@ no "it". New since V2.4:
 
 ## Next
 
-1. **Title** — shortened 2026-10-02 to "Misfiling, Not Invention: How LLM Narrators of Structured Evidence Fail"
+1. **Title** — changed again 2026-10-02 (V2.7) to "Misfiling, Not Just Invention: Failures in LLM Narration of Structured Evidence"; before that shortened to "Misfiling, Not Invention: How LLM Narrators of Structured Evidence Fail"
    (TSE and EMSE manuscripts, README, CITATION.cff). On 2026-10-01 it had
    become "Misfiling, Not Invention: How an LLM Narrator of Machine-Learning
    Pipeline Evidence Fails, and What an Evidence-Bound Contract Checks",
