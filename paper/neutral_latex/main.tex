@@ -7,7 +7,7 @@
 \usepackage{newtxtext,newtxmath}
 \usepackage{booktabs}
 \usepackage{graphicx}
-\usepackage[numbers,sort&compress]{natbib}
+\usepackage[round]{natbib}
 \usepackage[hidelinks]{hyperref}
 \usepackage{url}
 \usepackage{balance}
@@ -47,26 +47,26 @@ Large language models (LLMs) increasingly assist machine-learning
 development: agents run analysis tools such as profilers and leakage
 detectors, then explain the results. A column or number the tool never
 produced can mislead whoever acts on the explanation. Existing guardrails
-constrain decoding, which needs token probabilities commercial APIs
+constrain decoding, which needs token probabilities commercial endpoints
 withhold, or validate outputs against per-application rules; evaluations treat
 every unsupported item alike. Our core idea: when an LLM narrates a
-deterministic tool's output, every entity and number the narrator may cite is
-known at call time. We therefore propose an evidence-bound runtime contract
-that derives each answer field's admissible values from the tool's output and
-checks every answer in host code. We evaluate the contract, implemented in the
-open-source assistant \textbf{mlcompass}, on three LLMs, sixteen
-leakage-analysis tasks, and a dataset-profiling task. Without enforcement, the
-one model that failed often mostly misfiled rather than invented, placing
-evidence items, such as the metric's name, in fields that do not admit them,
-which the only model judge to pass a registered validity check classified as
-false relations. A field description or the shipped prompt
-removes most misfiling, whereas an allowed-value list written for other data
-turns misfiling into invention. Under the contract, no inadmissible column or
-number reached the user, at microseconds per answer; in a registered test of
-the best configuration, the check removed residual violations (10 of 600 to
-none). Our contributions are field-indexed admissibility, an empirical account
-of misfiling versus invention, a comparison of guardrail configurations, and
-an open replication package.
+deterministic tool's output, every citable entity and number is known at call
+time. We therefore propose an evidence-bound runtime contract that derives
+each answer field's admissible values from the tool's output and checks
+answers in host code. We evaluate the contract, implemented in the open-source
+assistant \textbf{mlcompass}, on three LLMs, sixteen leakage-analysis tasks,
+and a dataset-profiling task. Without enforcement, the one model that failed
+often mostly misfiled rather than invented, placing evidence items, such as
+the metric's name, in fields that do not admit them; the only model judge to
+pass a validity check classified these as false relations. A field description
+or the shipped prompt removes most misfiling; an allowed-value list written
+for other data turns misfiling into invention. Under the contract, no
+inadmissible column or number reached the user through the checked structured
+fields, and local checking took microseconds per answer; in a registered test
+of the best configuration, the check removed residual violations (10 of 600 to
+none). We contribute field-indexed admissibility, an empirical account of
+misfiling versus invention, a comparison of guardrail configurations, and an
+open replication package.
 \end{abstract}
 \noindent\textbf{Keywords:} Large language models, faithfulness, runtime verification, structured output, constrained generation, data leakage.
 \vspace{1.5em}
@@ -79,15 +79,15 @@ an open replication package.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Machine-learning practice relies on single-purpose tools:
-profilers~\cite{ydata}, experiment trackers such as MLflow and
-TensorBoard~\cite{mlflow,tensorflow}, and automated model
-search~\cite{autosklearn}. These tools report numbers, but none of them says what
+profilers \citep{ydata}, experiment trackers such as MLflow and
+TensorBoard \citep{mlflow,tensorflow}, and automated model
+search \citep{autosklearn}. These tools report numbers, but none of them says what
 the numbers \emph{mean}. Large language models (LLMs) now fill
 that gap in many machine-learning workflows: an agent calls the tools, reads
 their structured output, and explains the results to whoever builds, trains,
-or ships the model~\cite{react,toolformer,mcp}. LLMs, however, produce
-content that their input does not support~\cite{ji,huang}, and assistants
-built on LLMs still fail real software tasks~\cite{codex,swebench}.
+or ships the model \citep{react,toolformer,mcp}. LLMs, however, produce
+content that their input does not support \citep{ji,huang}, and assistants
+built on LLMs still fail real software tasks \citep{codex,swebench}.
 
 A concrete case shows what is at stake. Suppose that an engineer's regression
 model scores $R^2=1.0$ on held-out data. \textbf{mlcompass}, the open-source
@@ -96,7 +96,7 @@ score that high as a sign of data leakage. The tool raises the alarm, for
 example, when $R^2>0.999$, when the area under the receiver operating
 characteristic curve (AUC) exceeds 0.995, or when accuracy exceeds 0.99 on at
 least 50 rows. We chose these thresholds ourselves, motivated by the leakage
-problem that Kaufman \emph{et al.} describe~\cite{leakage}. A deterministic
+problem that \citet{leakage} describe. A deterministic
 detector then measures how strongly each feature correlates with the target
 and ranks the columns that may be carrying the target into the features. The
 detector's output is the \emph{evidence}, a dictionary that we write as $E$.
@@ -109,7 +109,7 @@ study (Section~\ref{sec:design}), a sound answer cites the leak column
 
 A structured claim about $E$ can be wrong in two ways. The claim can name an
 entity or quote a number that appears nowhere in $E$. The literature calls
-such an error \emph{extrinsic}~\cite{ji,maynez2020faithfulness}, and we call
+such an error \emph{extrinsic} \citep{ji,maynez2020faithfulness}, and we call
 the error \emph{invention}. Alternatively, the claim can place an item that $E$
 really contains where $E$ does not admit that item, such as the metric's name
 \texttt{r2} in the list of cited columns, or one column's measurement under
@@ -122,14 +122,15 @@ wrong remedy.
 
 Existing defenses act at three points (Table~\ref{tab:taxonomy}). Constrained
 decoding restricts the tokens that a model may
-emit~\cite{outlines,lmql,gcd,guidance,scholak2021picard}, but this approach
-needs the token distribution, which commercial APIs withhold. A provider-side
-schema~\cite{structured} constrains the structure of each answer, and the
+emit \citep{outlines,lmql,gcd,guidance,scholak2021picard}, but this approach
+needs the token distribution, which commercial application programming
+interfaces (APIs) withhold. A provider-side
+schema \citep{structured} constrains the structure of each answer, and the
 caller can check every returned payload against the schema. How the provider
 produced a conforming payload, and whether the provider will do so for the
 next request, cannot be observed from outside. Validate-and-reask toolkits,
-such as Instructor~\cite{liu2023instructor} and Guardrails
-AI~\cite{guardrailsai}, check the returned answer in the caller's code and ask
+such as Instructor \citep{liu2023instructor} and Guardrails
+AI \citep{guardrailsai}, check the returned answer in the caller's code and ask
 again when a check fails. These toolkits supply the loop, but what each field
 of the answer may contain is left to the tool author, and a stock installation
 checks structure only (Section~\ref{sec:rq3}).
@@ -226,7 +227,7 @@ data that the list predates. The toolkit's choice semantics, bound to the
 evidence, match our validator on the field that they check and miss what they
 do not check. A registered, interleaved test measures what the verifier adds
 to the best configuration that we found.
-\item A complete, auditable replication package~\cite{replication}:
+\item A complete, auditable replication package \citep{replication}:
 immutable records of every live response, the pre-registration history with its
 amendments and deviations, the corrected measurements beside the superseded
 ones, and the registered falsification tests.
@@ -249,40 +250,38 @@ check bound to the evidence at call time catches both.
 
 \subsection{Closed-world faithfulness and its measurement}
 
-Definition~\ref{def:closed} is a closed-world assumption~\cite{reiter1978closed}
+Definition~\ref{def:closed} is a closed-world assumption \citep{reiter1978closed}
 over $E$: whatever the evidence does not carry is not admissible under the
 contract. The setting is old. Data-to-text and
 meaning-representation-to-text generation narrate a finite record and measure
 faithfulness against that record offline, using the slot error rate over the
-input's slots~\cite{dusek2020e2e}, relation-generation precision against the
-source table~\cite{wiseman2017challenges}, or table-grounded
-scoring~\cite{dhingra2019parent}. In the taxonomy of Ji \emph{et
-al.}~\cite{ji} and of Maynez \emph{et al.}~\cite{maynez2020faithfulness}, a
+input's slots \citep{dusek2020e2e}, relation-generation precision against the
+source table \citep{wiseman2017challenges}, or table-grounded
+scoring \citep{dhingra2019parent}. In the taxonomy of \citet{ji} and of \citet{maynez2020faithfulness}, a
 name absent from $E$ is an \emph{extrinsic} error, and a real evidence item
 asserted in the wrong place is an \emph{intrinsic} one. We use
 \emph{invented} and \emph{misfiled} for these two classes on a structured
-channel and claim neither category as new. Xu~\cite{xu2025openworld} argues
+channel and claim neither category as new. \citet{xu2025openworld} argues
 that hallucination is unavoidable in an open world but can be mitigated in a
-closed one. Luo \emph{et al.}~\cite{luo2026removal} repair a model's own
-explanations by removal, and AVA~\cite{karnatak2026ava} verifies citations
+closed one. \citet{luo2026removal} repair a model's own
+explanations by removal, and AVA \citep{karnatak2026ava} verifies citations
 against a curated report corpus and abstains when the corpus cannot support an
 answer. For an evidence-closed tool narrator, what changes is where the check
 runs: at call time, on the payload that the user will see, rather than offline
 on a corpus.
 
-Tool-use frameworks~\cite{react,toolformer,mcp} govern how an agent acts, but
+Tool-use frameworks \citep{react,toolformer,mcp} govern how an agent acts, but
 they say nothing about what the agent may afterwards claim about a tool's
 output. Provenance work reconstructs evidence support from traces after the
-fact~\cite{wang2026agenttraces}, and Ng \emph{et
-al.}~\cite{ng2026runtimecontract} argue that agent safety belongs in a runtime
+fact \citep{wang2026agenttraces}, and \citet{ng2026runtimecontract} argue that agent safety belongs in a runtime
 contract. Static leakage detectors for notebook code address the leakage
-problem itself before training~\cite{yang2022leakage,truong2025leakagedetector};
+problem itself before training \citep{yang2022leakage,truong2025leakagedetector};
 our narrator explains a detector's findings after training. The enforcement
 mechanism is classical. Tier~B is a postcondition in the sense of Design by
-Contract~\cite{meyer1992dbc}, and deleting what violates the postcondition is
+Contract \citep{meyer1992dbc}, and deleting what violates the postcondition is
 \emph{suppression}, the weakest edit that an edit automaton can
-make~\cite{ligatti2005edit}. Schneider~\cite{schneider2000enforceable} and
-Falcone \emph{et al.}~\cite{falcone2012verify} characterize which properties a
+make \citep{ligatti2005edit}. \citet{schneider2000enforceable} and
+\citet{falcone2012verify} characterize which properties a
 monitor can enforce at all.
 
 \subsection{Where enforcement acts, and when the allowed set is fixed}\label{sec:taxonomy}
@@ -307,42 +306,42 @@ measure.}
 \toprule
 Locus & Bound & Logits & Guarantees & Example \\
 \midrule
-Decode, grammar & author/call & yes & grammar & \cite{outlines,gcd,scholak2021picard,poesia2022synchromesh} \\
-Decode, span & call & yes & verbatim spans & \cite{signe2026chyd} \\
-Decode, closed loop & call & yes & none (empirical) & \cite{cruz2026atlasrtc} \\
-Provider schema & author/call & no & structure, as a service guarantee & \cite{structured} \\
-Code, policy & author & no & policy contract & \cite{ahn2026harness,zhang2025rvllm,winston2026solver} \\
-Code, context + reask & call & no & what the validator checks & \cite{liu2023instructor,guardrailsai} \\
-Code, ledger & accumulating & no & per-claim provenance & \cite{du2026ledgermind} \\
+Decode, grammar & author/call & yes & grammar & \citealp{outlines,gcd,scholak2021picard,poesia2022synchromesh} \\
+Decode, span & call & yes & verbatim spans & \citealp{signe2026chyd} \\
+Decode, closed loop & call & yes & none (empirical) & \citealp{cruz2026atlasrtc} \\
+Provider schema & author/call & no & structure, as a service guarantee & \citealp{structured} \\
+Code, policy & author & no & policy contract & \citealp{ahn2026harness,zhang2025rvllm,winston2026solver} \\
+Code, context + reask & call & no & what the validator checks & \citealp{liu2023instructor,guardrailsai} \\
+Code, ledger & accumulating & no & per-claim provenance & \citealp{du2026ledgermind} \\
 Code, field-indexed & call & no & (C1)--(C2), (C3) flagged & this paper \\
 \bottomrule
 \end{tabular}}
 \end{table}
 
 Decode-time methods can also bind constraints to the input.
-Grammar-constrained decoding admits input-dependent grammars~\cite{gcd}; PICARD
+Grammar-constrained decoding admits input-dependent grammars \citep{gcd}; PICARD
 and Synchromesh, constrained decoders for text-to-SQL and code, check partial
 programs against a database schema or a program's
-scope~\cite{scholak2021picard,poesia2022synchromesh}; monitor-guided decoding
-consults a static analysis of the repository~\cite{agrawal2023mgd}; and
-CHyD~\cite{signe2026chyd} restricts retrieval-augmented output to spans of the
+scope \citep{scholak2021picard,poesia2022synchromesh}; monitor-guided decoding
+consults a static analysis of the repository \citep{agrawal2023mgd}; and
+CHyD \citep{signe2026chyd} restricts retrieval-augmented output to spans of the
 retrieved context. All of these methods need the token distribution, which a
-commercial endpoint withholds. ATLAS-RTC~\cite{cruz2026atlasrtc}, a
+commercial endpoint withholds. ATLAS-RTC \citep{cruz2026atlasrtc}, a
 token-level runtime controller, intervenes during decoding with masking and
-rollback and reports empirical gains without a guarantee. Le~\cite{le2026schemakey} shows that the
+rollback and reports empirical gains without a guarantee. \citet{le2026schemakey} shows that the
 wording of schema keys moves accuracy in both directions, and
-JSONSchemaBench~\cite{geng2025jsonschemabench} finds that constrained-decoding
+JSONSchemaBench \citep{geng2025jsonschemabench} finds that constrained-decoding
 frameworks differ in which schema features they cover, so what a schema
 enforces depends on the engine that applies the schema. A valid schema does not
-make an answer right either: on OrderBench~\cite{li2026orderbench}, the
+make an answer right either: on OrderBench \citep{li2026orderbench}, the
 strongest of four ordering agents produces schema-valid output every time and
 still gets about one order in five wrong.
 
 Other tools already occupy this paper's row of Table~\ref{tab:taxonomy}.
-Instructor~\cite{liu2023instructor}, a Python library for structured LLM
+Instructor \citep{liu2023instructor}, a Python library for structured LLM
 output, validates a response against context supplied at call time and re-asks
-on failure. Guardrails AI~\cite{guardrailsai}, an open-source validation
-framework, and NVIDIA's NeMo Guardrails~\cite{nemo} ship validate-and-reask
+on failure. Guardrails AI \citep{guardrailsai}, an open-source validation
+framework, and NVIDIA's NeMo Guardrails \citep{nemo} ship validate-and-reask
 loops whose validators can read call-time metadata. Our mechanism is one
 instance of that practice, and we add three things to the practice. The first
 is the field-indexed admissible domain, derived from a deterministic
@@ -352,24 +351,24 @@ which failure actually occurs, what enforcement costs, and which alternatives
 reach the same result. The third is a shipped artifact whose narration path is
 the one that we measured.
 
-Three pieces of work are closest. Ahn and Kim~\cite{ahn2026harness} vary the
+Three pieces of work are closest. \citet{ahn2026harness} vary the
 enforcement layer with the model fixed, over 270 runs on three hosted models,
 and find what we find. Prompts let violations through, a bolt-on guardrail
 over-refuses (88/120 utility against 120/120), and code-owned enforcement keeps
 both safety and utility. Their contract is a policy fixed when the harness
 is written, whereas ours has no admissible domain until the evidence exists.
-The same difference separates our contract from RvLLM~\cite{zhang2025rvllm},
+The same difference separates our contract from RvLLM \citep{zhang2025rvllm},
 which checks outputs at runtime against constraints that domain experts write
 in a specification language. The difference also separates our contract from
-the work of Winston \emph{et al.}~\cite{winston2026solver}, who translate
+the work of \citet{winston2026solver}, who translate
 natural-language policies into satisfiability-modulo-theories (SMT)
-constraints and check each tool call before the call runs. LedgerMind~\cite{du2026ledgermind} lets claims cite only
+constraints and check each tool call before the call runs. LedgerMind \citep{du2026ledgermind} lets claims cite only
 active ledger entries, checks entity and numeric grounding, and restricts
 repair to transitions that add no unprovenanced content. LedgerMind thus
 covers three of our channels and our repair asymmetry
 (Observation~\ref{prop:asym}), which we derived independently. LedgerMind's
 ledger grows during a trajectory, whereas ours is complete before the call.
-EviBound~\cite{chen2025evibound}, which appeared eleven months before our
+EviBound \citep{chen2025evibound}, which appeared eleven months before our
 measurements, gates a machine-learning research agent by querying MLflow for a
 run, its artifacts, and a terminal status, with bounded retries, and checks
 metric values when its acceptance criteria name them. EviBound verifies that
@@ -498,7 +497,7 @@ remaining repair inserts an anchor reference that is absent from $r$.
 
 Tier~B therefore strips unsound content and only \emph{flags} a persistent
 omission, which in edit-automaton terms is suppression without
-insertion~\cite{ligatti2005edit}. In the security setting, insertion is simply
+insertion \citep{ligatti2005edit}. In the security setting, insertion is simply
 a stronger primitive; applied to a narrator, an inserted reference would
 fabricate attribution. With each $A_{E,f}$ and $V_E$ hashed once, checking a
 response costs $O(|r|)$. The step that needed care was keying $V_E$ on the
@@ -621,7 +620,7 @@ would be flagged; no instance that we ran has such a tie.
 The third is the other narration surfaces. The product prints two other
 narrations of the same evidence that no contract governs: an optional LLM
 interpretation panel printed by the evaluation command, and a tool-server
-command whose calling model narrates in the user's editor~\cite{mcp}. The
+command whose calling model narrates in the user's editor \citep{mcp}. The
 interpretation panel is marked unverified. The tool-server narration carries
 no mlcompass marker at all, because the client model writes that narration.
 mlcompass guarantees the contract panel and nothing else.
@@ -629,10 +628,9 @@ mlcompass guarantees the contract panel and nothing else.
 The fourth is adversarial evidence. Column names come from the user's data and
 reach the schema's enums, the prompt, the corrective retry, and the rendered
 panel, and membership in $E$ does not make a string safe. A crafted header is
-a prompt-injection vector~\cite{greshake2023injection}. Schema keys and enums
-are part of the model's instructions~\cite{le2026schemakey}, and through
-Tier~A's enum values a header reaches the channel that the EnumAttack of Zhang
-\emph{et al.}~\cite{zhang2025cda} uses to carry a harmful request past a
+a prompt-injection vector \citep{greshake2023injection}. Schema keys and enums
+are part of the model's instructions \citep{le2026schemakey}, and through
+Tier~A's enum values a header reaches the channel that the EnumAttack of \citet{zhang2025cda} uses to carry a harmful request past a
 model's safety training. The contract guarantees only that what is shown is in
 $E$, and rendered strings are escaped. Capping name length, restricting names
 to an identifier-like character set, and quoting names as data would each
@@ -643,7 +641,7 @@ measured these defenses.
 \section{Study Design}\label{sec:design}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Following the ACM SIGSOFT Empirical Standards~\cite{ralph2020standards}, the
+Following the ACM SIGSOFT Empirical Standards \citep{ralph2020standards}, the
 community's checklists for what an empirical software-engineering study should
 report, we designed the study as a controlled experiment over fixed evidence
 dictionaries. The manipulated variable is the enforcement mechanism (RQ1--RQ3,
@@ -742,11 +740,11 @@ the crowded instance's ten evidence columns.
 
 Two further instances use real data, each narrated after an ordinary
 least-squares fit on all numeric features. \emph{Bodyfat}, with 252
-men~\cite{penrose1985bodyfat}, has a documented leak: body fat is computed from
+men \citep{penrose1985bodyfat}, has a documented leak: body fat is computed from
 body density by Siri's equation, so the fit reaches $R^2=0.978$, and the
 detector names \texttt{Density} ($|\rho|=0.993$) as the only candidate.
 \emph{Sambanis} is the civil-war onset data of Hegre and Sambanis as
-distributed by Muchlinski \emph{et al.}~\cite{muchlinski2016civilwar} (7{,}140
+distributed by \citet{muchlinski2016civilwar} (7{,}140
 country-years). The fit reaches $R^2=0.204$, and no column is a candidate, so
 this instance is a negative control with no anchor. Neither score reaches the
 product's trigger ($R^2>0.999$), so on both datasets we call the narrator
@@ -759,9 +757,9 @@ run, and were first run for this revision. Each instance plants one of six
 registered target-derived leaks (monotone transform, noisy proxy, exact copy,
 inverse, binned copy, duplicated rows) in one of four public tables, so that
 each leak appears in two tables. The tables are insurance
-charges~\cite{lantz2013mlr} (simulated from census figures), Cleveland heart
-disease~\cite{janosi1988heart}, IBM telco churn~\cite{ibm2019telco}, and Ames
-housing~\cite{decock2011ames}. In every arm, the shipped leakage detector
+charges \citep{lantz2013mlr} (simulated from census figures), Cleveland heart
+disease \citep{janosi1988heart}, IBM telco churn \citep{ibm2019telco}, and Ames
+housing \citep{decock2011ames}. In every arm, the shipped leakage detector
 produces $E$. Section~\ref{sec:rq6} describes the profile task of RQ5.
 
 \subsection{Arms}
@@ -994,7 +992,36 @@ its (C3) count is observed like any other. We exclude artifacts, namely a
 such an artifact, and counting the artifacts as violations changes one
 response in 19{,}132. Transport errors are excluded from $N$ and reported. The registered
 runs of 2026-10-02 and 2026-10-03 (amendments A9, A11, and A14) are reported
-in their own paragraphs and are not part of the corpus counts.
+in their own paragraphs and are not part of the corpus counts;
+Table~\ref{tab:inventory} lists every set of responses that the study
+recorded.
+
+\begin{table}[!htbp]
+\caption{What the study recorded. A response is one narration as delivered,
+after any retries; calls include the retries. The corpus feeds RQ1--RQ5; the
+registered runs are reported apart; the audit judges label the 204 items of
+the semantic audit (the inference models locally, the LLM judges through
+their providers).}
+\label{tab:inventory}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lrrl@{}}
+\toprule
+Set & Responses & Calls & Section \\
+\midrule
+Corpus, 2026-09-15 to 2026-09-30 & 19{,}132 & 19{,}968 & RQ1--RQ5 \\
+\quad \texttt{deepseek-chat} & 17{,}522 & & \\
+\quad \texttt{gpt-5.4-mini} & 1{,}450 & & \\
+\quad \texttt{qwen2.5:7b} & 160 & & \\
+A9.1 naming, interleaved & 400 & 400 & RQ5 \\
+A9.2 leakage retry audit & 600 & 617 & RQ2, RQ3 \\
+A11 verifier test, interleaved & 1{,}200 & 1{,}211 & RQ2, RQ3 \\
+A14 partly stale lists, interleaved & 1{,}000 & 1{,}000 & RQ3 \\
+Audit judges (A10, A12, A13) & 1{,}020 labels & 612 & RQ1 \\
+\bottomrule
+\end{tabular}
+\end{table}
 Table~\ref{tab:terms} collects the terms that the rest of the paper uses.
 
 \begin{table}[!htbp]
@@ -1178,7 +1205,9 @@ Two inference models (A10) and two LLM judges (A12) failed the check
 55 of 55 items that are not false and caught 73 of 79 false or absent items.
 As registered, we report this judge's labels on the contested strata as one
 model's classification, validated on the items whose truth is fixed, and not
-as human judgment. The judge classified every misfiled \texttt{r2} (40 of 40,
+as human judgment. The judges were tried in turn on the same items, so the
+judge that passed was not validated on items held out from the earlier
+attempts. The judge classified every misfiled \texttt{r2} (40 of 40,
 Wilson interval 91--100\,\%) as a false relation: a cited column of that name
 asserts a data column that the frame lacks. On numbers that $E$ records under
 another pair, the classification is split. Of 44 such items, 13 are a correct
@@ -1719,7 +1748,7 @@ mechanical & the field, not its content     & 72.0\,\% & [62.5, 79.9] & 1 & 71 &
 Table~\ref{tab:sweep} gives the six rule-free variants of the bare
 instruction. Over identical evidence and schema, the variants move the blended
 entity rate from 9.0\,\% to 72.0\,\%. Wording is already known to move
-behavior this much~\cite{sclar2024formatspread}. The variants also differ in
+behavior this much \citep{sclar2024formatspread}. The variants also differ in
 how much of the answer they specify, and the count of claims on pairs that
 $E$ does not carry follows that ordering across the six variants. The count is
 0 and 1 per hundred where the instruction names the statistic, 8 and 10 where
@@ -1813,10 +1842,10 @@ arm put a wrong number in 9 of 200 responses (4.5\,\% [2.4, 8.3]). Eleven of
 the arm's 12 wrong numbers are a real measurement of the column that shares
 the suffix, such as \texttt{cat\_feature\_07}'s missing rate reported for
 \texttt{num\_feature\_07}, and one appears nowhere in $E$. Under distinct
-names, the same model on the same data puts a wrong number in none of 400
-unverified responses. Each wrong number matches the measurement of the column
-that shares its suffix, which is consistent with confusion between the names
-that our generator chose. A match, however, does not show where the model took
+names, in the runs of 2026-09-24, the same model on the same data put a wrong
+number in none of 400 unverified responses. The match with the column that
+shares the suffix is consistent with confusion between the names that our
+generator chose. A match, however, does not show where the model took
 the number from. The
 comparison across naming schemes is weaker evidence. The main suffixed runs
 (2026-09-19) and the natural-name runs (2026-09-24) are five days apart, in
@@ -1903,8 +1932,9 @@ distinct names reflects our binding choices as much as model error.
 \paragraph{Answer to RQ5}
 The contract binds to a second evidence shape without task-specific code.
 There, Tier~B catches wrong numbers that the per-field enums we use cannot
-express. Each wrong number matches the measurement of a column that shares the
-suffix. That pattern is consistent with confusion between our generated names,
+express. Eleven of the 12 wrong numbers of the first run, and all seven suffixed
+ones of the registered run, match the measurement of the column that shares
+the suffix. That pattern is consistent with confusion between our generated names,
 but the registered interleaved run, 7 against 1 wrong-number responses in 200
 ($p=0.068$), did not reach significance, so the explanation remains
 exploratory.
@@ -2290,7 +2320,13 @@ A9.2 & Leakage retry audit, every attempt kept: the second scorer confirms at le
 \texttt{deepseek-chat}), re-judged without the verifier. \emph{Finding}: what
 an independent reading of $E$ finds; for a wrong number, the column whose
 value the number is. \emph{Retry}: what the next attempt did with the item.
-\emph{Run}: the date of the run; 10-02 is the registered test A11. An attempt
+\emph{Run}: \emph{re-run} is the 2026-09-24 re-run of \texttt{P-CONTRACT}
+on the suffixed frame that kept every attempt (Table~\ref{tab:rq6} reports the
+2026-09-19 run, which kept none); \emph{strong} is the strong natural-name run
+of Table~\ref{tab:rq6}, whose three content rejections and one verdict
+rejection are rows 77, 127, 140, and 81; \emph{R1} is the registered
+confirmatory run that stopped early (A3); \emph{A11} is the registered
+interleaved test. An attempt
 with more than three offending items of one finding takes one row. Every final
 attempt was clean. Generated by \texttt{scripts/rejudge\_rejections.py}.}
 \label{tab:rejections}
@@ -2301,33 +2337,33 @@ attempt was clean. Generated by \texttt{scripts/rejudge\_rejections.py}.}
 \toprule
 Run & Arm & $i$ & Item & Finding & Retry \\
 \midrule
-09-24 & \texttt{P-CONTRACT} & 2 & \texttt{cat\_feature\_03.iqr\_count} & pair not in $E$ & dropped \\
-09-24 & \texttt{P-CONTRACT} & 5 & \texttt{num\_feature\_07.missing\_pct} & value of \texttt{cat\_feature\_07} & corrected \\
-09-24 & \texttt{P-CONTRACT} & 5 & \texttt{num\_feature\_07.missing\_count} & value of \texttt{cat\_feature\_07} & corrected \\
-09-24 & \texttt{P-CONTRACT} & 63 & \texttt{num\_feature\_06.missing\_pct} & value of \texttt{cat\_feature\_06} & corrected \\
-09-24 & \texttt{P-CONTRACT} & 105 & \texttt{num\_feature\_07.missing\_pct} & value of \texttt{cat\_feature\_07} & dropped \\
-09-24 & \texttt{P-CONTRACT} & 108 & \texttt{num\_feature\_07.missing\_pct} & value of \texttt{cat\_feature\_07} & dropped \\
-09-24 & \texttt{P-CONTRACT} & 120 & \texttt{num\_feature\_07.missing\_pct} & value of \texttt{cat\_feature\_07} & corrected \\
-09-24 & \texttt{P-CONTRACT} & 181 & \texttt{num\_feature\_07.missing\_pct} & value of \texttt{cat\_feature\_07} & dropped \\
-09-24 & \texttt{P-CONTRACT} & 194 & \texttt{num\_feature\_07.missing\_pct} & value of \texttt{cat\_feature\_07} & dropped \\
-09-30 & \texttt{P-STRONG-CONTRACT} & 6 & \texttt{deprecated:discount\_rate.z\_score\_count} & column not in $E$ & dropped \\
-09-30 & \texttt{P-STRONG-CONTRACT} & 77 & \texttt{referral\_team} & column not in $E$ & dropped \\
-09-30 & \texttt{P-STRONG-CONTRACT} & 77 & \texttt{referral\_team.missing\_pct} & column not in $E$ & dropped \\
-09-30 & \texttt{P-STRONG-CONTRACT} & 77 & \texttt{referral\_team.missing\_count} & column not in $E$ & dropped \\
-09-30 & \texttt{P-STRONG-CONTRACT} & 81 & \texttt{verdict} & no admissible verdict & verdict supplied \\
-09-30 & \texttt{P-STRONG-CONTRACT} & 127 & \texttt{reference\_count} & column not in $E$ & dropped \\
-09-30 & \texttt{P-STRONG-CONTRACT} & 140 & \texttt{access\_channel} & column not in $E$ & dropped \\
-10-02 & \texttt{P-STRONG-CONTRACT} & 4 & \texttt{risk\_score} & column not in $E$ & dropped \\
-10-02 & \texttt{P-STRONG-CONTRACT} & 77 & \texttt{daystreak} & column not in $E$ & dropped \\
-10-02 & \texttt{P-STRONG-CONTRACT} & 279 & \texttt{agency.missing\_pct} & column not in $E$ & dropped \\
-10-02 & \texttt{P-STRONG-CONTRACT} & 279 & \texttt{balance\_placeholder\_removed} & column not in $E$ & dropped \\
-10-02 & \texttt{P-STRONG-CONTRACT} & 293 & \texttt{device\_type.capitality} & pair not in $E$ & dropped \\
-10-02 & \texttt{P-STRONG-CONTRACT} & 475 & \texttt{label} & column not in $E$ & dropped \\
-10-02 & \texttt{P-STRONG-CONTRACT} & 480 & \texttt{tenant\_months} & column not in $E$ & dropped \\
-10-02 & \texttt{P-STRONG-CONTRACT} & 481 & \texttt{households} & column not in $E$ & dropped \\
-10-02 & \texttt{P-STRONG-CONTRACT} & 490 & \texttt{district}, \texttt{crim}, and 30 more & column not in $E$ & dropped \\
-10-02 & \texttt{P-STRONG-CONTRACT} & 502 & \texttt{months.missing\_count} & column not in $E$ & dropped \\
-10-02 & \texttt{P-STRONG-CONTRACT} & 568 & \texttt{setting\_minutes} & column not in $E$ & dropped \\
+re-run & \texttt{P-CONTRACT} & 2 & \texttt{cat\_feature\_03.iqr\_count} & pair not in $E$ & dropped \\
+re-run & \texttt{P-CONTRACT} & 5 & \texttt{num\_feature\_07.missing\_pct} & value of \texttt{cat\_feature\_07} & corrected \\
+re-run & \texttt{P-CONTRACT} & 5 & \texttt{num\_feature\_07.missing\_count} & value of \texttt{cat\_feature\_07} & corrected \\
+re-run & \texttt{P-CONTRACT} & 63 & \texttt{num\_feature\_06.missing\_pct} & value of \texttt{cat\_feature\_06} & corrected \\
+re-run & \texttt{P-CONTRACT} & 105 & \texttt{num\_feature\_07.missing\_pct} & value of \texttt{cat\_feature\_07} & dropped \\
+re-run & \texttt{P-CONTRACT} & 108 & \texttt{num\_feature\_07.missing\_pct} & value of \texttt{cat\_feature\_07} & dropped \\
+re-run & \texttt{P-CONTRACT} & 120 & \texttt{num\_feature\_07.missing\_pct} & value of \texttt{cat\_feature\_07} & corrected \\
+re-run & \texttt{P-CONTRACT} & 181 & \texttt{num\_feature\_07.missing\_pct} & value of \texttt{cat\_feature\_07} & dropped \\
+re-run & \texttt{P-CONTRACT} & 194 & \texttt{num\_feature\_07.missing\_pct} & value of \texttt{cat\_feature\_07} & dropped \\
+R1 & \texttt{P-STRONG-CONTRACT} & 6 & \texttt{deprecated:discount\_rate.z\_score\_count} & column not in $E$ & dropped \\
+strong & \texttt{P-STRONG-CONTRACT} & 77 & \texttt{referral\_team} & column not in $E$ & dropped \\
+strong & \texttt{P-STRONG-CONTRACT} & 77 & \texttt{referral\_team.missing\_pct} & column not in $E$ & dropped \\
+strong & \texttt{P-STRONG-CONTRACT} & 77 & \texttt{referral\_team.missing\_count} & column not in $E$ & dropped \\
+strong & \texttt{P-STRONG-CONTRACT} & 81 & \texttt{verdict} & no admissible verdict & verdict supplied \\
+strong & \texttt{P-STRONG-CONTRACT} & 127 & \texttt{reference\_count} & column not in $E$ & dropped \\
+strong & \texttt{P-STRONG-CONTRACT} & 140 & \texttt{access\_channel} & column not in $E$ & dropped \\
+A11 & \texttt{P-STRONG-CONTRACT} & 4 & \texttt{risk\_score} & column not in $E$ & dropped \\
+A11 & \texttt{P-STRONG-CONTRACT} & 77 & \texttt{daystreak} & column not in $E$ & dropped \\
+A11 & \texttt{P-STRONG-CONTRACT} & 279 & \texttt{agency.missing\_pct} & column not in $E$ & dropped \\
+A11 & \texttt{P-STRONG-CONTRACT} & 279 & \texttt{balance\_placeholder\_removed} & column not in $E$ & dropped \\
+A11 & \texttt{P-STRONG-CONTRACT} & 293 & \texttt{device\_type.capitality} & pair not in $E$ & dropped \\
+A11 & \texttt{P-STRONG-CONTRACT} & 475 & \texttt{label} & column not in $E$ & dropped \\
+A11 & \texttt{P-STRONG-CONTRACT} & 480 & \texttt{tenant\_months} & column not in $E$ & dropped \\
+A11 & \texttt{P-STRONG-CONTRACT} & 481 & \texttt{households} & column not in $E$ & dropped \\
+A11 & \texttt{P-STRONG-CONTRACT} & 490 & \texttt{district}, \texttt{crim}, and 30 more & column not in $E$ & dropped \\
+A11 & \texttt{P-STRONG-CONTRACT} & 502 & \texttt{months.missing\_count} & column not in $E$ & dropped \\
+A11 & \texttt{P-STRONG-CONTRACT} & 568 & \texttt{setting\_minutes} & column not in $E$ & dropped \\
 \bottomrule
 \end{tabular}
 \end{table*}
@@ -2504,7 +2540,7 @@ scorer's defect.
 \input{ai-disclosure}
 
 \section*{Data Availability}
-The replication package~\cite{replication} contains the artifact source,
+The replication package \citep{replication} contains the artifact source,
 every harness, and the frozen analysis plan with its amendments. The package
 also holds one record per live response with the verbatim reply delivered to
 the user, the scripts that recompute every table from those records, and an
@@ -2544,12 +2580,12 @@ identified scorer false positives. M.K.\"O. supervised the work. All authors
 read and approved the final manuscript.
 
 \paragraph{Code availability.} The source of mlcompass, every harness and every
-analysis script are in the replication package~\cite{replication} under the
+analysis script are in the replication package \citep{replication} under the
 MIT license; the development repository is
 \url{https://github.com/hakansabunis/mlcompass}.
 
 \balance
-\bibliographystyle{unsrtnat}
+\bibliographystyle{plainnat}
 \bibliography{references}
 
 \end{document}

@@ -1,4 +1,28 @@
-# Where this stopped — 2026-10-03
+# Where this stopped — 2026-10-03 (afternoon)
+
+**V3.1: DONE** (the V3.0 review: EMSE minor revision, toward acceptance; no
+new experiment asked for).
+- The reviewer's one numeric discrepancy (Table 13 "3/1" against the 2026-09-30
+  rows of Table A2) was a labeling ambiguity, not a counting error: one
+  09-30 row (i = 6) comes from the registered run R1 of the same day, and the
+  09-24 rows come from the P-CONTRACT re-run that kept every attempt. Table A2
+  now names runs (re-run, strong, R1, A11), and its caption maps the strong
+  rows 77, 127, 140 (content) and 81 (verdict) to Table 13's 3/1.
+- Abstract: the guarantee is stated for the checked structured fields and the
+  microseconds as local checking; no undefined abbreviation (APIs defined at
+  first use in the body); 250 words.
+- RQ5: "each wrong number matches the sibling" now names the subsets (11 of 12
+  in the first run; all 7 suffixed in the registered run).
+- A13: the judges were tried in turn on the same items, so the passing judge
+  was not validated on held-out items.
+- New Table "What the study recorded": corpus 19,132 responses / 19,968 calls
+  (deepseek-chat 17,522; gpt-5.4-mini 1,450; qwen2.5:7b 160), A9.1, A9.2, A11,
+  A14, and the 1,020 judge labels.
+- Neutral build now cites by author and year with an alphabetical reference
+  list (plainnat), like the EMSE build; the conversion lives in
+  paper/author_year.py, shared by both ports.
+- Venue: EMSE special issue PROMPT-SE 2026 (deadline 2027-03-01) fits; select
+  "Research Papers" and "PROMPT-SE 2026" in Editorial Manager.
 
 **V3.0: DONE** (the V2.8 review: EMSE major revision leaning accept).
 - V2.9 text items: the AI declaration and the EMSE ethics statement no longer

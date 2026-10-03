@@ -61,26 +61,26 @@ Large language models (LLMs) increasingly assist machine-learning
 development: agents run analysis tools such as profilers and leakage
 detectors, then explain the results. A column or number the tool never
 produced can mislead whoever acts on the explanation. Existing guardrails
-constrain decoding, which needs token probabilities commercial APIs
+constrain decoding, which needs token probabilities commercial endpoints
 withhold, or validate outputs against per-application rules; evaluations treat
 every unsupported item alike. Our core idea: when an LLM narrates a
-deterministic tool's output, every entity and number the narrator may cite is
-known at call time. We therefore propose an evidence-bound runtime contract
-that derives each answer field's admissible values from the tool's output and
-checks every answer in host code. We evaluate the contract, implemented in the
-open-source assistant \textbf{mlcompass}, on three LLMs, sixteen
-leakage-analysis tasks, and a dataset-profiling task. Without enforcement, the
-one model that failed often mostly misfiled rather than invented, placing
-evidence items, such as the metric's name, in fields that do not admit them,
-which the only model judge to pass a registered validity check classified as
-false relations. A field description or the shipped prompt
-removes most misfiling, whereas an allowed-value list written for other data
-turns misfiling into invention. Under the contract, no inadmissible column or
-number reached the user, at microseconds per answer; in a registered test of
-the best configuration, the check removed residual violations (10 of 600 to
-none). Our contributions are field-indexed admissibility, an empirical account
-of misfiling versus invention, a comparison of guardrail configurations, and
-an open replication package.
+deterministic tool's output, every citable entity and number is known at call
+time. We therefore propose an evidence-bound runtime contract that derives
+each answer field's admissible values from the tool's output and checks
+answers in host code. We evaluate the contract, implemented in the open-source
+assistant \textbf{mlcompass}, on three LLMs, sixteen leakage-analysis tasks,
+and a dataset-profiling task. Without enforcement, the one model that failed
+often mostly misfiled rather than invented, placing evidence items, such as
+the metric's name, in fields that do not admit them; the only model judge to
+pass a validity check classified these as false relations. A field description
+or the shipped prompt removes most misfiling; an allowed-value list written
+for other data turns misfiling into invention. Under the contract, no
+inadmissible column or number reached the user through the checked structured
+fields, and local checking took microseconds per answer; in a registered test
+of the best configuration, the check removed residual violations (10 of 600 to
+none). We contribute field-indexed admissibility, an empirical account of
+misfiling versus invention, a comparison of guardrail configurations, and an
+open replication package.
 \keywords{Large language models \and faithfulness \and runtime verification \and structured output \and constrained generation \and data leakage}
 \end{abstract}
 
@@ -134,7 +134,8 @@ wrong remedy.
 Existing defenses act at three points (Table~\ref{tab:taxonomy}). Constrained
 decoding restricts the tokens that a model may
 emit \citep{outlines,lmql,gcd,guidance,scholak2021picard}, but this approach
-needs the token distribution, which commercial APIs withhold. A provider-side
+needs the token distribution, which commercial application programming
+interfaces (APIs) withhold. A provider-side
 schema \citep{structured} constrains the structure of each answer, and the
 caller can check every returned payload against the schema. How the provider
 produced a conforming payload, and whether the provider will do so for the
@@ -1006,7 +1007,37 @@ its (C3) count is observed like any other. We exclude artifacts, namely a
 such an artifact, and counting the artifacts as violations changes one
 response in 19{,}132. Transport errors are excluded from $N$ and reported. The registered
 runs of 2026-10-02 and 2026-10-03 (amendments A9, A11, and A14) are reported
-in their own paragraphs and are not part of the corpus counts.
+in their own paragraphs and are not part of the corpus counts;
+Table~\ref{tab:inventory} lists every set of responses that the study
+recorded.
+
+\begin{table}[!htbp]
+\caption{What the study recorded. A response is one narration as delivered,
+after any retries; calls include the retries. The corpus feeds RQ1--RQ5; the
+registered runs are reported apart; the audit judges label the 204 items of
+the semantic audit (the inference models locally, the LLM judges through
+their providers).}
+\label{tab:inventory}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\adjustbox{max width=\textwidth}{%
+\begin{tabular}{@{}lrrl@{}}
+\toprule
+Set & Responses & Calls & Section \\
+\midrule
+Corpus, 2026-09-15 to 2026-09-30 & 19{,}132 & 19{,}968 & RQ1--RQ5 \\
+\quad \texttt{deepseek-chat} & 17{,}522 & & \\
+\quad \texttt{gpt-5.4-mini} & 1{,}450 & & \\
+\quad \texttt{qwen2.5:7b} & 160 & & \\
+A9.1 naming, interleaved & 400 & 400 & RQ5 \\
+A9.2 leakage retry audit & 600 & 617 & RQ2, RQ3 \\
+A11 verifier test, interleaved & 1{,}200 & 1{,}211 & RQ2, RQ3 \\
+A14 partly stale lists, interleaved & 1{,}000 & 1{,}000 & RQ3 \\
+Audit judges (A10, A12, A13) & 1{,}020 labels & 612 & RQ1 \\
+\bottomrule
+\end{tabular}}
+\end{table}
 Table~\ref{tab:terms} collects the terms that the rest of the paper uses.
 
 \begin{table}[!htbp]
@@ -1250,7 +1281,9 @@ Two inference models (A10) and two LLM judges (A12) failed the check
 55 of 55 items that are not false and caught 73 of 79 false or absent items.
 As registered, we report this judge's labels on the contested strata as one
 model's classification, validated on the items whose truth is fixed, and not
-as human judgment. The judge classified every misfiled \texttt{r2} (40 of 40,
+as human judgment. The judges were tried in turn on the same items, so the
+judge that passed was not validated on items held out from the earlier
+attempts. The judge classified every misfiled \texttt{r2} (40 of 40,
 Wilson interval 91--100\,\%) as a false relation: a cited column of that name
 asserts a data column that the frame lacks. On numbers that $E$ records under
 another pair, the classification is split. Of 44 such items, 13 are a correct
@@ -1888,10 +1921,10 @@ arm put a wrong number in 9 of 200 responses (4.5\,\% [2.4, 8.3]). Eleven of
 the arm's 12 wrong numbers are a real measurement of the column that shares
 the suffix, such as \texttt{cat\_feature\_07}'s missing rate reported for
 \texttt{num\_feature\_07}, and one appears nowhere in $E$. Under distinct
-names, the same model on the same data puts a wrong number in none of 400
-unverified responses. Each wrong number matches the measurement of the column
-that shares its suffix, which is consistent with confusion between the names
-that our generator chose. A match, however, does not show where the model took
+names, in the runs of 2026-09-24, the same model on the same data put a wrong
+number in none of 400 unverified responses. The match with the column that
+shares the suffix is consistent with confusion between the names that our
+generator chose. A match, however, does not show where the model took
 the number from. The
 comparison across naming schemes is weaker evidence. The main suffixed runs
 (2026-09-19) and the natural-name runs (2026-09-24) are five days apart, in
@@ -1978,8 +2011,9 @@ distinct names reflects our binding choices as much as model error.
 \paragraph{Answer to RQ5}
 The contract binds to a second evidence shape without task-specific code.
 There, Tier~B catches wrong numbers that the per-field enums we use cannot
-express. Each wrong number matches the measurement of a column that shares the
-suffix. That pattern is consistent with confusion between our generated names,
+express. Eleven of the 12 wrong numbers of the first run, and all seven suffixed
+ones of the registered run, match the measurement of the column that shares
+the suffix. That pattern is consistent with confusion between our generated names,
 but the registered interleaved run, 7 against 1 wrong-number responses in 200
 ($p=0.068$), did not reach significance, so the explanation remains
 exploratory.
@@ -2368,7 +2402,13 @@ A9.2 & Leakage retry audit, every attempt kept: the second scorer confirms at le
 \texttt{deepseek-chat}), re-judged without the verifier. \emph{Finding}: what
 an independent reading of $E$ finds; for a wrong number, the column whose
 value the number is. \emph{Retry}: what the next attempt did with the item.
-\emph{Run}: the date of the run; 10-02 is the registered test A11. An attempt
+\emph{Run}: \emph{re-run} is the 2026-09-24 re-run of \texttt{P-CONTRACT}
+on the suffixed frame that kept every attempt (Table~\ref{tab:rq6} reports the
+2026-09-19 run, which kept none); \emph{strong} is the strong natural-name run
+of Table~\ref{tab:rq6}, whose three content rejections and one verdict
+rejection are rows 77, 127, 140, and 81; \emph{R1} is the registered
+confirmatory run that stopped early (A3); \emph{A11} is the registered
+interleaved test. An attempt
 with more than three offending items of one finding takes one row. Every final
 attempt was clean. Generated by \texttt{scripts/rejudge\_rejections.py}.}
 \label{tab:rejections}
@@ -2380,33 +2420,33 @@ attempt was clean. Generated by \texttt{scripts/rejudge\_rejections.py}.}
 \toprule
 Run & Arm & $i$ & Item & Finding & Retry \\
 \midrule
-09-24 & \texttt{P-CONTRACT} & 2 & \texttt{cat\_feature\_03.iqr\_count} & pair not in $E$ & dropped \\
-09-24 & \texttt{P-CONTRACT} & 5 & \texttt{num\_feature\_07.missing\_pct} & value of \texttt{cat\_feature\_07} & corrected \\
-09-24 & \texttt{P-CONTRACT} & 5 & \texttt{num\_feature\_07.missing\_count} & value of \texttt{cat\_feature\_07} & corrected \\
-09-24 & \texttt{P-CONTRACT} & 63 & \texttt{num\_feature\_06.missing\_pct} & value of \texttt{cat\_feature\_06} & corrected \\
-09-24 & \texttt{P-CONTRACT} & 105 & \texttt{num\_feature\_07.missing\_pct} & value of \texttt{cat\_feature\_07} & dropped \\
-09-24 & \texttt{P-CONTRACT} & 108 & \texttt{num\_feature\_07.missing\_pct} & value of \texttt{cat\_feature\_07} & dropped \\
-09-24 & \texttt{P-CONTRACT} & 120 & \texttt{num\_feature\_07.missing\_pct} & value of \texttt{cat\_feature\_07} & corrected \\
-09-24 & \texttt{P-CONTRACT} & 181 & \texttt{num\_feature\_07.missing\_pct} & value of \texttt{cat\_feature\_07} & dropped \\
-09-24 & \texttt{P-CONTRACT} & 194 & \texttt{num\_feature\_07.missing\_pct} & value of \texttt{cat\_feature\_07} & dropped \\
-09-30 & \texttt{P-STRONG-CONTRACT} & 6 & \texttt{deprecated:discount\_rate.z\_score\_count} & column not in $E$ & dropped \\
-09-30 & \texttt{P-STRONG-CONTRACT} & 77 & \texttt{referral\_team} & column not in $E$ & dropped \\
-09-30 & \texttt{P-STRONG-CONTRACT} & 77 & \texttt{referral\_team.missing\_pct} & column not in $E$ & dropped \\
-09-30 & \texttt{P-STRONG-CONTRACT} & 77 & \texttt{referral\_team.missing\_count} & column not in $E$ & dropped \\
-09-30 & \texttt{P-STRONG-CONTRACT} & 81 & \texttt{verdict} & no admissible verdict & verdict supplied \\
-09-30 & \texttt{P-STRONG-CONTRACT} & 127 & \texttt{reference\_count} & column not in $E$ & dropped \\
-09-30 & \texttt{P-STRONG-CONTRACT} & 140 & \texttt{access\_channel} & column not in $E$ & dropped \\
-10-02 & \texttt{P-STRONG-CONTRACT} & 4 & \texttt{risk\_score} & column not in $E$ & dropped \\
-10-02 & \texttt{P-STRONG-CONTRACT} & 77 & \texttt{daystreak} & column not in $E$ & dropped \\
-10-02 & \texttt{P-STRONG-CONTRACT} & 279 & \texttt{agency.missing\_pct} & column not in $E$ & dropped \\
-10-02 & \texttt{P-STRONG-CONTRACT} & 279 & \texttt{balance\_placeholder\_removed} & column not in $E$ & dropped \\
-10-02 & \texttt{P-STRONG-CONTRACT} & 293 & \texttt{device\_type.capitality} & pair not in $E$ & dropped \\
-10-02 & \texttt{P-STRONG-CONTRACT} & 475 & \texttt{label} & column not in $E$ & dropped \\
-10-02 & \texttt{P-STRONG-CONTRACT} & 480 & \texttt{tenant\_months} & column not in $E$ & dropped \\
-10-02 & \texttt{P-STRONG-CONTRACT} & 481 & \texttt{households} & column not in $E$ & dropped \\
-10-02 & \texttt{P-STRONG-CONTRACT} & 490 & \texttt{district}, \texttt{crim}, and 30 more & column not in $E$ & dropped \\
-10-02 & \texttt{P-STRONG-CONTRACT} & 502 & \texttt{months.missing\_count} & column not in $E$ & dropped \\
-10-02 & \texttt{P-STRONG-CONTRACT} & 568 & \texttt{setting\_minutes} & column not in $E$ & dropped \\
+re-run & \texttt{P-CONTRACT} & 2 & \texttt{cat\_feature\_03.iqr\_count} & pair not in $E$ & dropped \\
+re-run & \texttt{P-CONTRACT} & 5 & \texttt{num\_feature\_07.missing\_pct} & value of \texttt{cat\_feature\_07} & corrected \\
+re-run & \texttt{P-CONTRACT} & 5 & \texttt{num\_feature\_07.missing\_count} & value of \texttt{cat\_feature\_07} & corrected \\
+re-run & \texttt{P-CONTRACT} & 63 & \texttt{num\_feature\_06.missing\_pct} & value of \texttt{cat\_feature\_06} & corrected \\
+re-run & \texttt{P-CONTRACT} & 105 & \texttt{num\_feature\_07.missing\_pct} & value of \texttt{cat\_feature\_07} & dropped \\
+re-run & \texttt{P-CONTRACT} & 108 & \texttt{num\_feature\_07.missing\_pct} & value of \texttt{cat\_feature\_07} & dropped \\
+re-run & \texttt{P-CONTRACT} & 120 & \texttt{num\_feature\_07.missing\_pct} & value of \texttt{cat\_feature\_07} & corrected \\
+re-run & \texttt{P-CONTRACT} & 181 & \texttt{num\_feature\_07.missing\_pct} & value of \texttt{cat\_feature\_07} & dropped \\
+re-run & \texttt{P-CONTRACT} & 194 & \texttt{num\_feature\_07.missing\_pct} & value of \texttt{cat\_feature\_07} & dropped \\
+R1 & \texttt{P-STRONG-CONTRACT} & 6 & \texttt{deprecated:discount\_rate.z\_score\_count} & column not in $E$ & dropped \\
+strong & \texttt{P-STRONG-CONTRACT} & 77 & \texttt{referral\_team} & column not in $E$ & dropped \\
+strong & \texttt{P-STRONG-CONTRACT} & 77 & \texttt{referral\_team.missing\_pct} & column not in $E$ & dropped \\
+strong & \texttt{P-STRONG-CONTRACT} & 77 & \texttt{referral\_team.missing\_count} & column not in $E$ & dropped \\
+strong & \texttt{P-STRONG-CONTRACT} & 81 & \texttt{verdict} & no admissible verdict & verdict supplied \\
+strong & \texttt{P-STRONG-CONTRACT} & 127 & \texttt{reference\_count} & column not in $E$ & dropped \\
+strong & \texttt{P-STRONG-CONTRACT} & 140 & \texttt{access\_channel} & column not in $E$ & dropped \\
+A11 & \texttt{P-STRONG-CONTRACT} & 4 & \texttt{risk\_score} & column not in $E$ & dropped \\
+A11 & \texttt{P-STRONG-CONTRACT} & 77 & \texttt{daystreak} & column not in $E$ & dropped \\
+A11 & \texttt{P-STRONG-CONTRACT} & 279 & \texttt{agency.missing\_pct} & column not in $E$ & dropped \\
+A11 & \texttt{P-STRONG-CONTRACT} & 279 & \texttt{balance\_placeholder\_removed} & column not in $E$ & dropped \\
+A11 & \texttt{P-STRONG-CONTRACT} & 293 & \texttt{device\_type.capitality} & pair not in $E$ & dropped \\
+A11 & \texttt{P-STRONG-CONTRACT} & 475 & \texttt{label} & column not in $E$ & dropped \\
+A11 & \texttt{P-STRONG-CONTRACT} & 480 & \texttt{tenant\_months} & column not in $E$ & dropped \\
+A11 & \texttt{P-STRONG-CONTRACT} & 481 & \texttt{households} & column not in $E$ & dropped \\
+A11 & \texttt{P-STRONG-CONTRACT} & 490 & \texttt{district}, \texttt{crim}, and 30 more & column not in $E$ & dropped \\
+A11 & \texttt{P-STRONG-CONTRACT} & 502 & \texttt{months.missing\_count} & column not in $E$ & dropped \\
+A11 & \texttt{P-STRONG-CONTRACT} & 568 & \texttt{setting\_minutes} & column not in $E$ & dropped \\
 \bottomrule
 \end{tabular}}
 \end{table*}

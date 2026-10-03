@@ -11,6 +11,10 @@ from __future__ import annotations
 import re
 import shutil
 from pathlib import Path
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from author_year import TEXTUAL, author_year  # noqa: E402
 
 PAPER = Path(__file__).resolve().parent
 TSE = PAPER / "tse_latex"
@@ -34,7 +38,7 @@ body = body.replace(r"\IEEEPARstart{M}{achine-learning}", "Machine-learning")
 body = body.replace(r"\appendices", r"\appendix")  # IEEEtran -> standard LaTeX
 body = body.replace(r"\begin{IEEEproof}[Proof sketch]", r"\begin{proof}[Proof sketch]")
 body = body.replace(r"\end{IEEEproof}", r"\end{proof}")
-body = body.replace(r"\bibliographystyle{IEEEtran}", r"\bibliographystyle{unsrtnat}")
+body = body.replace(r"\bibliographystyle{IEEEtran}", r"\bibliographystyle{plainnat}")
 DECLARATIONS = r"""
 \section*{Statements and Declarations}
 \paragraph{Funding.} No funding was received for conducting this study.
@@ -63,6 +67,7 @@ MIT license; the development repository is
 """
 assert body.count("\\balance") == 1
 body = body.replace("\\balance", DECLARATIONS + "\\balance")
+body = author_year(body, TEXTUAL)  # name and year, as EMSE asks
 assert "IEEE" not in re.sub(r"%.*", "", body), "an IEEE command is left in the body"
 
 preamble = r"""%% Venue-neutral two-column version, generated from ../tse_latex/main.tex by
@@ -74,7 +79,7 @@ preamble = r"""%% Venue-neutral two-column version, generated from ../tse_latex/
 \usepackage{newtxtext,newtxmath}
 \usepackage{booktabs}
 \usepackage{graphicx}
-\usepackage[numbers,sort&compress]{natbib}
+\usepackage[round]{natbib}
 \usepackage[hidelinks]{hyperref}
 \usepackage{url}
 \usepackage{balance}

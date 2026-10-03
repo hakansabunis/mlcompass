@@ -190,10 +190,13 @@ def main() -> int:
                     "pair E does not record": "pair not in $E$"}.get(finding, finding)
 
         # One row per item; an attempt with more than three items of one finding
-        # and one fate is shown as one row, with the first two items named.
+        # and one fate is shown as one row, with the first two items named. The
+        # run label names the run, not only its date: two runs share 2026-09-30.
+        run_labels = {"2026-09-24_attempts": "re-run", "2026-09-30_strong_natural": "strong",
+                      "2026-09-30_confirm_natural": "R1", "2026-10-02_a11": "A11"}
         groups: dict[tuple, list[str]] = {}
         for row in rows:
-            run = row["run"][5:10]  # 2026-09-24_attempts -> 09-24
+            run = run_labels.get(row["run"], row["run"][5:10])
             k = (run, row["arm"], row["i"], short(row["item"], row["finding"]), row["fate"])
             groups.setdefault(k, []).append(row["item"])
         lines = []
