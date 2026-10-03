@@ -199,6 +199,8 @@ preamble = r"""%% Empirical Software Engineering (Springer) submission, SVJour3.
 \usepackage[htt]{hyphenat}
 \usepackage{url}
 \usepackage[hidelinks]{hyperref}
+% DOIs as full links, as Springer asks; the .bbl only provides \doi.
+\newcommand{\doi}[1]{\url{https://doi.org/#1}}
 \tolerance=1200
 \emergencystretch=2em
 \renewcommand{\topfraction}{0.9}
@@ -301,14 +303,41 @@ def drop_duplicate_eprints(bib: str) -> str:
     entries that already name their arXiv identifier."""
     out = []
     for entry in re.split(r"(?=\n@)", bib):
-        if "arXiv:" in entry:
+        if "arXiv:" in entry or re.search(r"\bdoi\s*=", entry):
             entry = re.sub(r"\n\s*(eprint|archivePrefix|primaryClass)\s*=\s*\{[^}]*\},?", "", entry)
         out.append(entry)
     return "".join(out)
 
 
+# Journal names abbreviated by the ISSN List of Title Word Abbreviations, as
+# Springer asks (no full stops, Springer style).
+JOURNAL_ABBREV = {
+    "IEEE Data Engineering Bulletin": "IEEE Data Eng Bull",
+    "ACM Computing Surveys": "ACM Comput Surv",
+    "Proceedings of the ACM on Programming Languages": "Proc ACM Program Lang",
+    "ACM Transactions on Knowledge Discovery from Data": "ACM Trans Knowl Discov Data",
+    "ACM Transactions on Information and System Security": "ACM Trans Inf Syst Secur",
+    "International Journal of Information Security": "Int J Inf Secur",
+    "Information Processing Letters": "Inf Process Lett",
+    "ACM Transactions on Programming Languages and Systems": "ACM Trans Program Lang Syst",
+    "Computer Speech \\& Language": "Comput Speech Lang",
+    "International Journal on Software Tools for Technology Transfer": "Int J Softw Tools Technol Transf",
+    "Harvard Data Science Review": "Harv Data Sci Rev",
+    "Medicine and Science in Sports and Exercise": "Med Sci Sports Exerc",
+    "Political Analysis": "Polit Anal",
+    "Journal of Statistics Education": "J Stat Educ",
+}
+
+
+def abbreviate_journals(bib: str) -> str:
+    for full, short in JOURNAL_ABBREV.items():
+        bib = bib.replace("journal = {" + full + "}", "journal = {" + short + "}")
+    return bib
+
+
 (EMSE / "references.bib").write_text(
-    drop_duplicate_eprints((TSE / "references.bib").read_text(encoding="utf-8")), encoding="utf-8"
+    abbreviate_journals(drop_duplicate_eprints((TSE / "references.bib").read_text(encoding="utf-8"))),
+    encoding="utf-8",
 )
 
 # The upload set: one flat folder, as Editorial Manager wants it.

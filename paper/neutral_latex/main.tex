@@ -147,8 +147,7 @@ For an evidence-closed task, checking the structured claims against the
 evidence takes one membership test per field and one numeric comparison per
 claim, so the soundness of those claims can be enforced rather than merely
 measured. We build an \textbf{evidence-bound runtime contract} on this
-observation. The narrator answers by calling a tool whose input is described by
-a JSON Schema, in which an \texttt{enum} lists the only values that a field
+observation. The narrator answers by calling a tool whose input is described by a JavaScript Object Notation (JSON) Schema, in which an \texttt{enum} lists the only values that a field
 may take. \emph{Tier~A} builds these lists from $E$ at call time, so that the
 column field admits exactly the columns in $E$. An enum, however, is a request
 to the model and not a check. \emph{Tier~B} therefore re-checks the returned
@@ -318,8 +317,7 @@ Code, field-indexed & call & no & (C1)--(C2), (C3) flagged & this paper \\
 \end{table}
 
 Decode-time methods can also bind constraints to the input.
-Grammar-constrained decoding admits input-dependent grammars \citep{gcd}; PICARD
-and Synchromesh, constrained decoders for text-to-SQL and code, check partial
+Grammar-constrained decoding admits input-dependent grammars \citep{gcd}; PICARD and Synchromesh, constrained decoders for database queries and code, check partial
 programs against a database schema or a program's
 scope \citep{scholak2021picard,poesia2022synchromesh}; monitor-guided decoding
 consults a static analysis of the repository \citep{agrawal2023mgd}; and
@@ -1198,7 +1196,7 @@ in the replication package, with the key kept sealed, so that independent
 raters can still label the items blind. We registered three automatic substitutes
 in its place, each with the same validity check: on the items whose truth is
 fixed by construction, at least 90\,\% labeled correctly in each direction.
-Two inference models (A10) and two LLM judges (A12) failed the check
+Two natural language inference (NLI) models (A10) and two LLM judges (A12) failed the check
 (Appendix~\ref{app:judges}). The third and last substitute (A13),
 \texttt{gpt-5.5} pinned to the snapshot of 2026-04-23, passed: the judge kept
 55 of 55 items that are not false and caught 73 of 79 false or absent items.
@@ -2308,7 +2306,7 @@ A3 R3 & Measure the shipped default narrator & Not run: no budget & not tested \
 A3 R4 & Blind human audit of the scorer on 200 responses & Not run (A5); superseded by A7 & not tested \\
 A7 & Blind semantic audit of 204 items in nine strata: most misfiled names read as right information in the wrong place (P1), most wrong numbers that carry another item's value read as false (P2), and at least 90\,\% of controls read as supported (P3) & Registered on 2026-10-02 and the sheet drawn; the authors did not label the sheet & not run \\
 A10 & Two NLI judges pass a validity check on the audit items whose truth is fixed (at least 90\,\% each way) & Neither passed: DeBERTa 55/55 supported and 60/79 not supported, RoBERTa 53/55 and 31/79, $\kappa=0.25$; reported as uninformative & as planned \\
-A12 & Two LLM judges (\texttt{gpt-5.4-mini}; \texttt{deepseek-chat} after A12a) pass the same validity check & Neither passed: GPT 41/55 not-false items as A or B and 66/79 false items as C or D, DeepSeek 48/55 and 70/79, $\kappa=0.63$; reported as uninformative & as planned \\
+A12 & Two LLM judges (\texttt{gpt-5.4-mini}; \texttt{deepseek-chat} after A12a) pass the same validity check & Neither passed: \texttt{gpt-5.4-mini} 41/55 not-false items as A or B and 66/79 false items as C or D, \texttt{deepseek-chat} 48/55 and 70/79, $\kappa=0.63$; reported as uninformative & as planned \\
 A9.2 & Leakage retry audit, every attempt kept: the second scorer confirms at least 95\,\% of rejections & 17 of 17 confirmed and 17 of 17 final attempts clean; 170 correct claims before and after the retries & as planned \\
 \bottomrule
 \end{tabular}
