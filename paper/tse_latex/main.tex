@@ -58,30 +58,29 @@ E-mail: hakan.sabunis@std.medipol.edu.tr}}
 
 \IEEEtitleabstractindextext{%
 \begin{abstract}
-Large language models (LLMs) increasingly assist machine-learning
-development: agents run analysis tools such as profilers and leakage
-detectors, then explain the results. A column or number the tool never
-produced can mislead whoever acts on the explanation. Existing guardrails
-constrain decoding, which needs token probabilities commercial endpoints
-withhold, or validate outputs against per-application rules; evaluations treat
-every unsupported item alike. Our core idea: when an LLM narrates a
-deterministic tool's output, every citable entity and number is known at call
-time. We therefore propose an evidence-bound runtime contract that derives
-each answer field's admissible values from the tool's output and checks
-answers in host code. We evaluate the contract, implemented in the open-source
-assistant \textbf{mlcompass}, on three LLMs, sixteen leakage-analysis tasks,
-and a dataset-profiling task. Without enforcement, the one model that failed
-often mostly misfiled rather than invented, placing evidence items, such as
-the metric's name, in fields that do not admit them; the only model judge to
-pass a validity check classified these as false relations. A field description
-or the shipped prompt removes most misfiling; an allowed-value list written
-for other data turns misfiling into invention. Under the contract, no
-inadmissible column or number reached the user through the checked structured
-fields, and local checking took microseconds per answer; in a registered test
-of the best configuration, the check removed residual violations (10 of 600 to
-none). We contribute field-indexed admissibility, an empirical account of
-misfiling versus invention, a comparison of guardrail configurations, and an
-open replication package.
+Large language models (LLMs) increasingly narrate what machine learning
+tools, such as profilers and leakage detectors, report. A column or number the
+tool never produced can mislead whoever acts on the explanation. Existing
+guardrails either constrain decoding, which needs token probabilities
+commercial endpoints withhold, or check outputs against rules written per
+application; evaluations report one hallucination rate for every unsupported
+item. Our key idea is that a deterministic tool fixes every citable entity and
+number at call time. We therefore propose a runtime contract bound to the
+evidence: each answer field admits only values from the tool output, and host
+code checks every answer. We evaluate the contract in the open source
+assistant \textbf{mlcompass} on three LLMs, sixteen leakage analysis tasks,
+and a profiling task. Without enforcement, the one model that failed often
+mostly misfiled rather than invented, placing evidence items such as the
+metric name in inadmissible fields, which the only validated model judge
+classified as false relations. A field description or the shipped prompt
+removed most misfiling; allowed values written for other data turned
+misfiling into invention. Under the contract, no inadmissible column or number
+reached the user through the checked structured fields, at microseconds of
+local checking per answer. In a registered test of the best configuration, the
+check removed residual violations (10 of 600 to none). We contribute
+admissibility defined per output field, which separates misfiling from
+invention, an empirical account of how such narrators fail, a comparison of
+guardrail configurations, and an open replication package.
 \end{abstract}
 
 \begin{IEEEkeywords}
