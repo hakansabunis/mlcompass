@@ -1,4 +1,18 @@
-# Where this stopped — 2026-10-02 (late night)
+# Where this stopped — 2026-10-03
+
+**V3.0: DONE** (the V2.8 review: EMSE major revision leaning accept).
+- V2.9 text items: the AI declaration and the EMSE ethics statement no longer
+  say that the authors labeled the audit; content language limited to what was
+  measured; confirmatory results named in the design; novelty as a failure
+  model plus an enforceable specification; statements and declarations in the
+  neutral build.
+- **A14 (registered, interleaved, 5 x 200):** author-time enums covering 0, 3,
+  5, 8, 10 of the crowded instance's 10 columns (anchor in every covering
+  list): invented names 143, 2, 0, 3, 0 of 200. P1 (trend) holds, p = 4e-77;
+  P2 (k = 8 above k = 10) not supported, 3 vs 0, p = 0.25. The stale-list
+  failure is concentrated in a list that misses the evidence and the anchor.
+- Not done, by decision of the first author: R3 (claude-opus-4-7; no Anthropic
+  key, about 40 USD) and a human audit (the sheet stays ready, key sealed).
 
 **V2.7: DONE** (the V2.6 review: EMSE minor revision, perhaps accept with minor
 changes; TSE between minor and major; no new experiment asked for).

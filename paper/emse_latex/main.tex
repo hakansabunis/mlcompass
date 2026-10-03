@@ -204,7 +204,9 @@ filed as a cited column, as a false relation. A one-sentence description of the
 cited-column field, or the prompt that mlcompass ships, removes nearly all
 misfiling; temperature 0 removes most of the misfiling; and the failure
 returns wherever the fix is absent. An allowed-column list written in advance
-turns misfiling into invention on data that the list predates. Under the
+turns misfiling into invention on data that the list predates, whereas a list
+that still covers the anchor and part of the evidence does almost as well as
+the list built at call time. Under the
 contract, no violation of the checked channels reached the user in any
 configuration, at microseconds per response. In the best configuration that we
 found, a registered interleaved test measured what the verifier adds: a
@@ -664,8 +666,9 @@ by a journal. We call a result \emph{confirmatory} only when the plan fixed its
 prediction and test before the runs: the X- and H-items of
 Table~\ref{tab:registered}, the prediction
 R2a on the twelve frozen instances (A3), the interleaved naming run (A9.1), the
-leakage retry audit (A9.2), the interleaved test of the verifier (A11), and the
-validity check of each audit judge (A10, A12, A13). Every other comparison,
+leakage retry audit (A9.2), the interleaved test of the verifier (A11), the interleaved
+test of partly stale lists (A14), and the validity check of each audit judge
+(A10, A12, A13). Every other comparison,
 including every comparison across dates or harness versions, is exploratory.
 
 {\footnotesize\setlength{\tabcolsep}{2.4pt}
@@ -727,6 +730,7 @@ A3 R2a & On 12 instances frozen in July, misfiling dominates and invented names 
 A3 R1, R2b & The verifier lowers delivered violations in a well-specified configuration (profile, $N=600$; 12 instances) & Started, not completed: 93 and 91 of 600 profile responses, and 50 and 0 of 2{,}400 on the instances, when the provider balance ran out (A4); no test run, partial cells descriptive & not tested \\
 A9.1 & Naming interleaved on one harness: more wrong-number responses under suffixed names & 7 against 1 of 200, Fisher $p=0.068$: not rejected; all 7 suffixed wrong numbers carry the sibling's value & as planned \\
 A11 & The verifier lowers delivered violations in a well-specified configuration, arms interleaved (profile, natural names, $N=600$ each) & 10/600 against 0/600, Fisher $p=0.002$; difference 1.7 points [0.7, 3.0]: supported & as planned \\
+A14 & Author-time enums covering 0, 3, 5, 8, 10 of the 10 evidence columns, interleaved: invented names fall as coverage rises (P1) and stay above the call-time list at 8 of 10 (P2) & 143, 2, 0, 3, 0 of 200: P1 holds (trend $p<10^{-76}$); P2 not supported (3 against 0, Fisher $p=0.25$) & as planned \\
 A13 & One stronger LLM judge (\texttt{gpt-5.5}, pinned snapshot) passes the same validity check & Passed: 55/55 and 73/79 (64/65 after fault~17); misfiled \texttt{r2} read as a false relation in 40/40 (P1 fails; P2, P3 hold) & as planned \\
 \end{longtable}}
 
@@ -1001,8 +1005,8 @@ its (C3) count is observed like any other. We exclude artifacts, namely a
 \texttt{null} column and several real names in one string. Two responses carry
 such an artifact, and counting the artifacts as violations changes one
 response in 19{,}132. Transport errors are excluded from $N$ and reported. The registered
-runs of 2026-10-02 (amendments A9 and A11) are reported in their own
-paragraphs and are not part of the corpus counts.
+runs of 2026-10-02 and 2026-10-03 (amendments A9, A11, and A14) are reported
+in their own paragraphs and are not part of the corpus counts.
 Table~\ref{tab:terms} collects the terms that the rest of the paper uses.
 
 \begin{table}[!htbp]
@@ -1546,6 +1550,22 @@ column enum and 0\,\% (0/200) with the enum built at call time. On evidence
 that the list predates, the author-time list produces the failure that the
 list was supposed to prevent.
 
+A registered, interleaved test varied how stale the list is (amendment A14).
+Lists of ten entries covered 0, 3, 5, 8, or 10 of the crowded instance's ten
+evidence columns, the rest taken from the reference list; every list that
+covered any column included the anchor, and the lists were nested. Responses
+with an invented name fell from 143 of 200 without coverage, which reproduces
+the earlier stale arm, to 2, 0, 3, and 0 of 200 (Cochran--Armitage test for
+trend, $p<10^{-76}$). At 8 of 10 columns the residual did not differ from the
+list built at call time (3 against 0 of 200, Fisher $p=0.25$), so the second
+registered prediction is not supported. The remaining inventions cite stale
+entries that the list still carries, such as \texttt{feature\_12}. The
+failure of the author-time list is thus concentrated in a list that misses the
+evidence and the anchor; a partly stale list that keeps the anchor behaves,
+at this resolution, like the list built at call time. Because every covering
+list included the anchor, the test does not separate coverage of the anchor
+from coverage of the other columns.
+
 \begin{table}[!htbp]
 \caption{What the verifier did on the enforced arms (reference battery and
 the profile task), $N=200$ each. A response is \emph{clean} when its first
@@ -2070,6 +2090,8 @@ Bare instruction, open schema, $T=1.0$ (four runs) & 40.5--49.0 \\
 \quad a typed schema without a column list & 4.0--7.0 \\
 \quad an enum bound to $E$ at call time & 0 \\
 Bare instruction on the crowded instance (2026-09-24; 2026-10-02) & 61.0; 57.0 \\
+\quad an author-time enum covering 0 of 10 columns (A14) & 71.5 \\
+\quad the same covering 3, 5, or 8 of 10, anchor included & 0--1.5 \\
 Bare instruction on twelve public-table instances & 26.5--55.5 \\
 Bare instruction on two real datasets & 20.5--21.5 \\
 Bare instruction, \texttt{gpt-5.4-mini} & 0 \\
@@ -2081,8 +2103,12 @@ Bare instruction, \texttt{qwen2.5:7b} & 0 \\
 \paragraph{Binding at call time}
 An enum written for the reference task turned 61\,\% misfiling into
 72.5\,\% invention on the crowded instance, none of whose columns the enum
-lists; the call-time enum read zero. That control is extreme, and partly stale
-lists, the realistic case, are untested.
+lists; the call-time enum read zero. That control is extreme. Lists that kept the
+anchor and covered three to eight of the ten columns read 0 to 1.5\,\%
+invention, which 200 responses per list cannot tell apart from the list built
+at call time (A14). An author-time list is thus safe only as far as the list
+happens to cover the evidence, which the list's author cannot check in
+advance; binding at call time removes that dependence at no cost.
 
 \paragraph{What carries over}
 Four design lessons follow from the measurements and do not depend on
@@ -2092,7 +2118,8 @@ over every name in the evidence passes the dominant failure: 98.7\,\% of the
 contains, in a field that does not admit that name. Second, the admissible
 sets should be derived from the producer's output at call time: a list written
 for other data turned misfiling into invention, whereas the list built at call
-time read zero. Third, describing each field is the cheapest fix, and the
+time read zero, and a list written in advance protects only as far as the list
+happens to cover the evidence. Third, describing each field is the cheapest fix, and the
 effect of any fix of this kind holds only for the configuration in which the fix was measured (Table~\ref{tab:conditions}). Fourth, an evaluation of a narrator
 should report contract violations apart from what the violations introduce;
 counted as one hallucination rate, the failing model's errors would overstate
@@ -2216,8 +2243,8 @@ same day as its floor (2026-09-24); the neutral description, temperature 0,
 and the prompt without its claim ran one to three days later against that
 floor. Their differences (49\,\% against 0--2\,\%) are far larger than the
 floor's movement between runs (40.5--49\,\%), but these comparisons are not
-same-day controls. Arms ran in blocks, except in the registered runs A9.1 and
-A11, which interleave their arms index by index, so drift within a day is
+same-day controls. Arms ran in blocks, except in the registered runs A9.1, A11,
+and A14, which interleave their arms index by index, so drift within a day is
 controlled only there. The provider serves a rolling model name, and the
 unconstrained rates and retry counts move between runs, by more than the date
 alone explains (Appendix~\ref{app:more}). The harness and adapter

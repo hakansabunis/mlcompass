@@ -1422,3 +1422,21 @@ an order drawn at random per index (seed 0), one harness commit, temperature
   wiring; those records are not analyzed.
 - Excluded from the corpus counts with the other registered runs (`A9_DIRS`).
 - Estimated cost: about 1,000 calls, about 0.5 USD.
+
+**A14 outcome (2026-10-03, run 11:33-12:25).** 200 complete interleaved
+indices, five levels, no transport errors, one harness commit. Responses with
+an invented name: k = 0: 143/200 (71.5 %, Wilson 64.9-77.3); k = 3: 2/200
+(1.0 %); k = 5: 0/200; k = 8: 3/200 (1.5 %); k = 10: 0/200. P1 holds:
+Cochran-Armitage z = -18.6, two-sided p = 4e-77. P2 is not supported: 3 against
+0 of 200 at k = 8 and k = 10, Fisher p = 0.25. As registered, both are
+reported; the run is not repeated or extended. Descriptive: any violation 160,
+2, 0, 5, 0; omissions of the anchor 136, 0, 0, 2, 0; abstentions 44, 0, 0, 0,
+0. The k = 0 level reproduces the 2026-09-15 stale arm (143 against 145 of 200
+with an invented name). The inventions at k = 3 and k = 8 cite stale entries
+that the list still carries (`feature_4`, `feature_5`, `feature_12`, once
+`feature_10`), and one cites `sensor_10`, which neither E nor the list
+contains; the two omissions at k = 8 cite seven sensors but not the anchor,
+although the anchor is in the list. Every list that covers any column includes
+the anchor, so A14 does not separate coverage of the anchor from coverage of
+the other columns. Results: `benchmark/a14_results.json`
+(`scripts/analyze_a14.py`).
