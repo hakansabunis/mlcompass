@@ -1885,6 +1885,111 @@ def live_run(
     return out
 
 
+# Analysis plan A14: author-time domains that are only partly stale. Each list
+# has as many entries as the evidence has columns; k of them are evidence
+# columns (the anchor first, then a fixed random order of the others) and the
+# rest come from the frozen reference list, so the lists are nested: every
+# column covered at k is covered at every larger k.
+STALE_COVERAGE_KS: tuple[int, ...] = (0, 3, 5, 8, 10)
+STALE_COVERAGE_SEED = 20261003
+
+
+def coverage_lists(
+    evidence_columns: list[str],
+    anchor: str | None,
+    ks: tuple[int, ...] = STALE_COVERAGE_KS,
+    stale: tuple[str, ...] = STATIC_SCHEMA_COLUMNS,
+    seed: int = STALE_COVERAGE_SEED,
+) -> dict[int, tuple[str, ...]]:
+    """The author-time column list for each coverage k (A14)."""
+    m = len(evidence_columns)
+    others = sorted(c for c in evidence_columns if c != anchor)
+    random.Random(seed).shuffle(others)
+    order = ([anchor] if anchor in evidence_columns else []) + others
+    fill = [c for c in stale if c not in evidence_columns]
+    out: dict[int, tuple[str, ...]] = {}
+    for k in ks:
+        if not 0 <= k <= m or m - k > len(fill):
+            raise ValueError(f"coverage {k} impossible with {m} evidence columns")
+        out[k] = tuple(sorted(order[:k] + fill[: m - k]))
+    return out
+
+
+def interleave_coverage_orders(seed: int, n: int, labels: list[str]) -> list[tuple[str, ...]]:
+    """For each index, the order in which the coverage levels are called (A14)."""
+    rng = random.Random(f"interleave-coverage-{seed}")
+    orders = []
+    for _ in range(n):
+        row = list(labels)
+        rng.shuffle(row)
+        orders.append(tuple(row))
+    return orders
+
+
+def live_run_coverage(
+    provider: str,
+    n: int,
+    evidence: dict[str, Any],
+    allowed: list[str],
+    lists: dict[int, tuple[str, ...]],
+    model: str | None,
+    scorer_ctx: tuple[set[str], dict[str, float], str | None],
+    log_dir: str,
+    task_label: str,
+    seed: int,
+    resume: bool,
+    temperature: float | None,
+) -> dict[str, list[dict[str, Any]]]:
+    """Analysis plan A14: the stale-enum arm at several coverages, interleaved.
+
+    One call per coverage level per index, in an order drawn per index; every
+    level writes its own log. On resume, an index is completed level by level,
+    so a run stopped mid-index neither loses nor repeats a call.
+    """
+    import time
+
+    kind, client, default_model = _build_live_client(provider)
+    use_model = model or default_model
+    allowed_set, corr_map, anchor = scorer_ctx
+    ev_hash = _evidence_hash(evidence)
+    provenance = run_provenance()
+    labels = [f"k{k}" for k in lists]
+    logs = {
+        f"k{k}": RunLog(log_dir, provider, use_model, task_label, f"static_schema_k{k}", n, seed,
+                        resume, evidence_hash=ev_hash)
+        for k in lists
+    }
+    done = {label: len(log.prior) for label, log in logs.items()}
+    out: dict[str, list[dict[str, Any]]] = {label: list(log.prior) for label, log in logs.items()}
+    orders = interleave_coverage_orders(seed, n, labels)
+    for label, k in zip(labels, lists):
+        cov = _static_schema_coverage(list(lists[k]), list(allowed), anchor)
+        print(f"  {label}: {cov['overlap']}/{cov['n_evidence']} evidence columns in the list, "
+              f"anchor in list: {cov['anchor_in_static']}", file=sys.stderr)
+    for i in range(min(done.values()), n):
+        for pos, label in enumerate(orders[i]):
+            if i < done[label]:
+                continue
+            k = int(label[1:])
+            t0 = time.perf_counter()
+            r = _live_one_response(kind, client, use_model, "static_schema", evidence, allowed,
+                                   strict=False, temperature=temperature, static_columns=lists[k])
+            r["latency_ms"] = round((time.perf_counter() - t0) * 1000.0, 1)
+            out[label].append(r)
+            flags = score_one(r, allowed_set, corr_map, anchor)
+            logs[label].append({
+                "provider": provider, "task": task_label, "seed": seed, "evidence_hash": ev_hash,
+                "arm_id": f"A-STALE-ENUM-K{k}", "schema_variant": "plain",
+                "system_prompt_variant": "default", "strict": True, "prompt_variant": "bare",
+                "n_planned": n, "provenance": provenance,
+                "interleave": {"order": list(orders[i]), "position": pos},
+                "i": i, "arm": f"static_schema_k{k}", "model": use_model, **r, "scored": flags,
+            })
+        if (i + 1) % 20 == 0:
+            print(f"  {i + 1}/{n} indices", file=sys.stderr)
+    return out
+
+
 def sweep_run(
     provider: str,
     n: int,
@@ -2468,6 +2573,13 @@ def main() -> int:
         "attempt (live only). Use a fresh --log-dir.",
     )
     ap.add_argument(
+        "--interleave-coverage",
+        action="store_true",
+        help="Analysis plan A14: the stale-enum arm with author-time lists covering 0, 3, 5, "
+        "8 and 10 of the evidence columns, interleaved per index (live, synthetic-crowded). "
+        "Use a fresh --log-dir.",
+    )
+    ap.add_argument(
         "--only-floor",
         action="store_true",
         help="Run only layer1 (A-L1), e.g. with --temperature 0. Use a separate --log-dir.",
@@ -2905,6 +3017,19 @@ def main() -> int:
             f"{args.guardrails_reasks} (contract parity: max_retries=2)",
             file=sys.stderr,
         )
+    if getattr(args, "interleave_coverage", False):
+        if args.mode != "live" or task_label != "synthetic_crowded" or not log_dir:
+            raise SystemExit("--interleave-coverage needs --mode live, --task synthetic-crowded "
+                             "and a --log-dir.")
+        lists = coverage_lists(list(allowed), anchor)
+        _cost_banner(tuple(f"static_schema_k{k}" for k in lists), args.n)
+        by_level = live_run_coverage(args.provider, args.n, evidence, allowed, lists, args.model,
+                                     scorer_ctx, log_dir, task_label, args.seed, args.resume,
+                                     args.temperature)
+        for label, rs in by_level.items():
+            errors = sum(1 for r in rs if r.get("error"))
+            print(f"  {label}: {len(rs)} responses, {errors} transport errors", file=sys.stderr)
+        return 0
     if args.mode == "mock":
         if any(arm in MECHANISM_BASELINE_ARMS for arm in arms):
             raise SystemExit("The baseline arms are live measurements; add --mode live.")

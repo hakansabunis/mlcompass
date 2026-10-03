@@ -1380,3 +1380,45 @@ being checked, `scripts/offline_review_analyses.py` read the partial
 unverified records once (5 violating of 358). No decision depended on it; the
 run was neither stopped nor extended, and the registered analysis was run
 once, after the last record.
+
+### A14 — Author-time domains that are only partly stale, interleaved (2026-10-03, registered before any call)
+
+**Why.** The V2.8 review: the stale-enum control is extreme, because the
+author-time list covers none of the crowded instance's evidence columns,
+whereas a real list written in advance is usually partly stale. The paper says
+that partly stale lists are untested. A14 tests them.
+
+**Design.** The crowded instance (frozen #14; ten evidence columns
+`sensor_00` ... `sensor_08` and `sensor_ref`; anchor `sensor_ref`),
+`deepseek-chat`, the `static_schema` arm (provider strict mode over an
+author-time column enum, bare prompt; the arm of A-STATIC-ENUM-STALE). Five
+author-time lists of ten entries cover k = 0, 3, 5, 8 and 10 of the evidence
+columns (0, 25, 50, 75 and 100 %, rounded up). `coverage_lists()` takes the
+anchor first and then the other evidence columns in a fixed random order (seed
+20261003), and fills each list with the frozen reference list, so the lists
+are nested and every list covering any column includes the anchor. k = 0 is
+the A-STATIC-ENUM-STALE list; k = 10 is the evidence's own columns, the
+call-time strict enum. N = 200 per level, one call of each level per index in
+an order drawn at random per index (seed 0), one harness commit, temperature
+1.0, every response logged:
+
+    python scripts/reproduce_hallucination_ablation.py --mode live --provider deepseek \
+        --task synthetic-crowded --interleave-coverage --n 200 \
+        --log-dir scripts/runs/2026-10-03_a14
+
+- Primary outcome: responses with an invented name, a cited name in neither E
+  nor the frame (`names_invented` of `scripts/unified_scoring.py`).
+- Descriptive: any contract violation, misfiled names, omissions of the
+  anchor, abstentions, per level with Wilson 95 % intervals.
+- P1: the invented-name share falls as coverage rises: two-sided
+  Cochran-Armitage test for trend over the five levels (scores k), alpha 0.05.
+- P2: at k = 8 the invented-name share still exceeds k = 10: two-sided Fisher
+  exact test, alpha 0.05.
+- Analysis code: `scripts/analyze_a14.py`, committed with this registration.
+- Consequences: reported as registered whatever the outcome; the run is not
+  repeated or extended. The k = 0 level is compared descriptively with the
+  2026-09-15 stale arm (145 of 200 with an invented name).
+- Smoke: one index per level (5 calls) into a separate directory checks the
+  wiring; those records are not analyzed.
+- Excluded from the corpus counts with the other registered runs (`A9_DIRS`).
+- Estimated cost: about 1,000 calls, about 0.5 USD.
