@@ -97,7 +97,7 @@ no "it". New since V2.4:
 
 ## Next
 
-1. **Title** — set by the first author 2026-10-02 (V2.8): "Misfiling Over Invention: Enforcing Evidence-Bound Runtime Contracts for LLM Tool Narrators". Before that, (V2.7) "Misfiling, Not Just Invention: Failures in LLM Narration of Structured Evidence"; before that shortened to "Misfiling, Not Invention: How LLM Narrators of Structured Evidence Fail"
+1. **Title** — 2026-10-03 (V3.3), no hyphen and no colon: "Catching Misfiling in LLM Tool Narrators with Runtime Contracts Bound to Evidence". Before that, set by the first author 2026-10-02 (V2.8): "Misfiling Over Invention: Enforcing Evidence-Bound Runtime Contracts for LLM Tool Narrators". Before that, (V2.7) "Misfiling, Not Just Invention: Failures in LLM Narration of Structured Evidence"; before that shortened to "Misfiling, Not Invention: How LLM Narrators of Structured Evidence Fail"
    (TSE and EMSE manuscripts, README, CITATION.cff). On 2026-10-01 it had
    become "Misfiling, Not Invention: How an LLM Narrator of Machine-Learning
    Pipeline Evidence Fails, and What an Evidence-Bound Contract Checks",

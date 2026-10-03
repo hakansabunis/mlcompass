@@ -107,7 +107,7 @@ preamble = r"""%% Venue-neutral two-column version, generated from ../tse_latex/
 \title{""" + title + r"""}
 \author{Hakan Sabuni\c{s}, Yusuf \"Unl\"u, Mehmet Kemal \"Ozdemir\\[2pt]
 \small School of Engineering and Natural Sciences, Istanbul Medipol University, Istanbul, T\"urkiye\\
-\small \texttt{hakan.sabunis@std.medipol.edu.tr}}
+\small \texttt{hakansabunis@gmail.com}, \texttt{ysffms@gmail.com}, \texttt{mkozdemir@medipol.edu.tr}}
 \date{}
 
 \begin{document}

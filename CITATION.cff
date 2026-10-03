@@ -29,11 +29,11 @@ authors:
   - family-names: "Sabuniş"
     given-names: "Hakan"
     affiliation: "Istanbul Medipol University"
-    email: "hakan.sabunis@std.medipol.edu.tr"
+    email: "hakansabunis@gmail.com"
   - family-names: "Ünlü"
     given-names: "Yusuf"
     affiliation: "Istanbul Medipol University"
-    email: "yusuf.unlu@std.medipol.edu.tr"
+    email: "ysffms@gmail.com"
   - family-names: "Özdemir"
     given-names: "Mehmet Kemal"
     affiliation: "Istanbul Medipol University"
@@ -46,7 +46,7 @@ authors:
 preferred-citation:
   type: unpublished
   title: >-
-    Misfiling Over Invention: Enforcing Evidence-Bound Runtime Contracts for LLM Tool Narrators
+    Catching Misfiling in LLM Tool Narrators with Runtime Contracts Bound to Evidence
   authors:
     - family-names: "Sabuniş"
       given-names: "Hakan"
@@ -63,6 +63,6 @@ preferred-citation:
     country: "TR"
   notes: >-
     Unpublished manuscript, under submission. The maintained source is
-    paper/tse_latex/ (IEEE two-column). paper/emse_latex/ is an earlier
-    long-form version, frozen and no longer kept in step; where the two
-    disagree the TSE source is correct.
+    paper/tse_latex/ (IEEE two-column); paper/emse_latex/ (EMSE) and
+    paper/neutral_latex/ (venue-neutral two-column) are generated from it by
+    paper/port_to_emse.py and paper/port_to_neutral.py.
