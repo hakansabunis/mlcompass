@@ -168,10 +168,12 @@ statistic, value) claims, and for coverage of the top-ranked candidate. Tier~B
 answers a violation with a corrective retry that names the problem. Content
 that still violates the contract after the retries is stripped, and a
 persistent omission is flagged. The mechanism is ordinary validate-and-reask,
-and we do not claim the mechanism as new. What this paper adds is a
-field-indexed definition of admissibility, which separates misfiling from
-invention, and the use of the contract as an instrument for measuring how
-narrators fail. The contract is the default narration path of mlcompass (MIT
+and we do not claim the mechanism as new. What this paper adds is an
+empirical failure model and an enforceable specification for evidence-closed
+narration: a field-indexed definition of admissibility, which separates
+misfiling from invention; measurements of how a narrator fails against that
+definition; and evidence on how binding the admissible sets at call time
+compares with rules written in advance. The contract is the default narration path of mlcompass (MIT
 license), where the contract guards the leakage investigation described above.
 We describe the contract as shipped rather than as in production, because we
 have no deployment telemetry. We keep to this narrow scope throughout: a
@@ -208,7 +210,7 @@ configuration, at microseconds per response. In the best configuration that we
 found, a registered interleaved test measured what the verifier adds: a
 violation in 10 of 600 responses without the verifier and in none of 600 with
 the verifier (Fisher $p=0.002$; difference 1.7 points, Newcombe 95\,\% interval
-0.7 to 3.0), at the same content per response.
+0.7 to 3.0), with no observed reduction in the content measures.
 
 The paper makes four contributions.
 \begin{enumerate}
@@ -658,7 +660,13 @@ package. Table~\ref{tab:registered} reports what the plan registered and what
 became of each item, and Table~\ref{tab:registered-more} in
 Appendix~\ref{app:trail} completes the list. The plan is a pre-registration kept in the replication
 package with its commit history; the plan is not a Registered Report accepted
-by a journal.
+by a journal. We call a result \emph{confirmatory} only when the plan fixed its
+prediction and test before the runs: the X- and H-items of
+Table~\ref{tab:registered}, the prediction
+R2a on the twelve frozen instances (A3), the interleaved naming run (A9.1), the
+leakage retry audit (A9.2), the interleaved test of the verifier (A11), and the
+validity check of each audit judge (A10, A12, A13). Every other comparison,
+including every comparison across dates or harness versions, is exploratory.
 
 {\footnotesize\setlength{\tabcolsep}{2.4pt}
 \begin{longtable}{@{}l>{\raggedright\arraybackslash}p{3.2cm}>{\raggedright\arraybackslash}p{4.85cm}l@{}}
@@ -1060,10 +1068,14 @@ harness, the analysis scripts that compute the reported tables, and parts of
 the artifact's verification code; ran the experiment batteries under the
 authors' direction; checked bibliographic entries against their sources;
 simulated a multi-reviewer pre-submission review whose findings the authors
-addressed; and built the sheet and the sampling script of the blind audit,
-whose items the authors label themselves. The large language models \texttt{deepseek-chat},
-\texttt{gpt-5.4-mini} and \texttt{qwen2.5:7b} are subjects of the study and
-are described above. The authors chose the research
+addressed; built the sheet and the sampling script of the registered blind audit, which
+the authors decided not to label; and wrote the scripts through which model
+judges labeled the audit items in its place. The large language models
+\texttt{deepseek-chat}, \texttt{gpt-5.4-mini} and \texttt{qwen2.5:7b} are
+subjects of the study and are described above; two
+inference models, \texttt{gpt-5.4-mini}, \texttt{deepseek-chat} and
+\texttt{gpt-5.5} served as judges of the semantic audit
+(Section~\ref{sec:rq1}). The authors chose the research
 questions and the study design, reviewed and edited all text, inspected and
 tested the code, recomputed every reported number from the released run
 records, verified every reference, and made all analytical and interpretive
@@ -1512,10 +1524,12 @@ ten responses, and the independent reading of the rejection audit below
 confirms all eleven rejected attempts. One of those attempts narrated the
 columns of a different, well-known dataset (\texttt{crim}, \texttt{zn},
 \ldots, \texttt{medv}). The verifier cost 11 extra calls in 600 (1.8\,\%), and
-the two arms delivered the same content: 29.4 correct claims per response, the
-anchor's value in every response, and median latencies of 5.47 and 5.44\,s.
-In the best configuration that we found, the verifier therefore removes a
-small but measurable residue of violations at no measurable loss.
+we observed no reduction in the content measures: 29.4 correct claims per
+response in each arm and the anchor's value in every response, at median
+latencies of 5.47 and 5.44\,s. These measures do not establish that the
+answers are equivalent. In the best configuration that we found, the verifier
+therefore removes a small but measurable residue of violations with no
+observed loss in what we measured.
 
 \paragraph{An author-time enum on new data}
 On the reference task, the author-time list is the evidence's own column set,
@@ -1716,8 +1730,8 @@ retries add calls. Every rejection that the records keep, 24 on the profile
 task and 17 in a registered leakage re-run, was confirmed by a reading that
 shares no code with the verifier. In the best configuration that we found, the
 registered interleaved test measured a benefit of the verifier: 10 against 0
-violating responses in 600 per arm (Fisher $p=0.002$), with no loss of
-content. In these configurations, a
+violating responses in 600 per arm (Fisher $p=0.002$), with no observed
+reduction in the content measures. In these configurations, a
 stock guardrail loop stays near the floor, and an enum written for other data
 causes invention. An enum or choice list bound to $E$ matches the contract
 only on the column field, and the toolkit running our checks matches the
@@ -2279,7 +2293,7 @@ but three responses, and costs microseconds; a reading that shares no code
 with the verifier confirmed every rejection that the records keep. In the best
 configuration that we found, a registered test measured what the check adds:
 10 violating responses in 600 without the check and none in 600 with the
-check, at the same content. The one model judge that passed a registered
+check, with no observed reduction in the content measures. The one model judge that passed a registered
 validity check classified the dominant misfiling as a false relation; how
 people read the misplaced items remains open. We report seventeen faults in our own instruments and two in the
 verifier, with what each fault changed. The study evaluates the narration component:
@@ -2549,8 +2563,8 @@ declare that are relevant to the content of this article. mlcompass is released
 by the authors under the MIT license and is not a commercial product.
 
 \paragraph{Ethics approval.} Not applicable: the study involved no human
-participants and no animals. The items of the blind audit are labeled by the
-authors themselves.
+participants and no animals. The registered blind audit was not labeled by
+people; model judges labeled its items, as the paper reports.
 
 \paragraph{Consent to participate and to publish.} Not applicable.
 

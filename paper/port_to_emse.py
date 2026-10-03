@@ -187,7 +187,7 @@ body = phrase(body, r"{\footnotesize $^{*}$Also", r"{\footnotesize $^{a}$Also")
 # The use of an LLM is documented in the methods.
 ai = (TSE / "ai-disclosure.tex").read_text(encoding="utf-8")
 ai = ai[ai.index(r"\paragraph{Declaration of AI-assisted tools}") + len(r"\paragraph{Declaration of AI-assisted tools}"):]
-ai = phrase(ai, r"are described in Section~\ref{sec:design}.", "are described above.")
+ai = phrase(ai, r"are described in Section~\ref{sec:design};", "are described above;")
 rq1 = body.index(r"\section{RQ1")
 rq1 = body.rindex("\n", 0, rq1 - 1) + 1  # start of the rule line above the section
 body = body[:rq1] + "\\subsection{Use of AI tools}\\label{sec:ai}\n" + ai.strip() + "\n\n" + body[rq1:]
@@ -281,8 +281,8 @@ declare that are relevant to the content of this article. mlcompass is released
 by the authors under the MIT license and is not a commercial product.
 
 \paragraph{Ethics approval.} Not applicable: the study involved no human
-participants and no animals. The items of the blind audit are labeled by the
-authors themselves.
+participants and no animals. The registered blind audit was not labeled by
+people; model judges labeled its items, as the paper reports.
 
 \paragraph{Consent to participate and to publish.} Not applicable.
 

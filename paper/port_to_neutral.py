@@ -35,6 +35,34 @@ body = body.replace(r"\appendices", r"\appendix")  # IEEEtran -> standard LaTeX
 body = body.replace(r"\begin{IEEEproof}[Proof sketch]", r"\begin{proof}[Proof sketch]")
 body = body.replace(r"\end{IEEEproof}", r"\end{proof}")
 body = body.replace(r"\bibliographystyle{IEEEtran}", r"\bibliographystyle{unsrtnat}")
+DECLARATIONS = r"""
+\section*{Statements and Declarations}
+\paragraph{Funding.} No funding was received for conducting this study.
+
+\paragraph{Competing interests.} The authors have no competing interests to
+declare that are relevant to the content of this article. mlcompass is released
+by the authors under the MIT license and is not a commercial product.
+
+\paragraph{Ethics approval.} Not applicable: the study involved no human
+participants and no animals. The registered blind audit was not labeled by
+people; model judges labeled its items, as the paper reports.
+
+\paragraph{Consent to participate and to publish.} Not applicable.
+
+\paragraph{Author contributions.} H.S. designed and implemented the contract
+and the measurement harnesses, and ran the batteries. Y.\"U. designed the
+downstream benchmark protocol and performed the independent review that
+identified scorer false positives. M.K.\"O. supervised the work. All authors
+read and approved the final manuscript.
+
+\paragraph{Code availability.} The source of mlcompass, every harness and every
+analysis script are in the replication package~\cite{replication} under the
+MIT license; the development repository is
+\url{https://github.com/hakansabunis/mlcompass}.
+
+"""
+assert body.count("\\balance") == 1
+body = body.replace("\\balance", DECLARATIONS + "\\balance")
 assert "IEEE" not in re.sub(r"%.*", "", body), "an IEEE command is left in the body"
 
 preamble = r"""%% Venue-neutral two-column version, generated from ../tse_latex/main.tex by
