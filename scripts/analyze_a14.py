@@ -67,8 +67,8 @@ def level_cells() -> dict[int, dict]:
             "abstain": sum(str(r.get("verdict") or "") == "cannot_determine" for r in recs),
             "kinds": {kind: sum(s["kind"] == kind for s in scored)
                       for kind in ("extrinsic", "contradicts", "misplaced", "omission")},
-            "static_columns": recs[0].get("static_columns"),
-            "coverage": (recs[0].get("coverage") or {}).get("overlap"),
+            "static_columns": (recs[0].get("baseline") or {}).get("static_columns"),
+            "coverage": ((recs[0].get("baseline") or {}).get("coverage") or {}).get("overlap"),
         }
     return dict(sorted(cells.items()))
 
