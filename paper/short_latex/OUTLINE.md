@@ -1,153 +1,152 @@
-# 12-page version: outline and evidence map
+# Outline and evidence map (V6, Q1 flow)
 
-**V5 (2026-10-08): `main.tex` was rewritten from scratch as a 10 to 12 page paper**
-rather than condensed from the extended version; V4.0, the condensed and revised
-draft, is commit 64f3894. V5 keeps the V4.0 review fixes (registration status,
-equivalence band, A11 history, strict-flag and judge caveats, closest work) and
-tells one story: the failure is misfiling, binding at call time beats a list written
-in advance, and the check is cheap. Build: 10 pages including references, text 8.1
-pages, 7,300 words of prose, abstract 190 words, 5 tables, Fig. 1, Algorithm 1,
-51 references; `check_numbers.py` finds every number in the extended version.
-The outline below describes V4.0.
-
-ARS `academic-paper`, outline-only mode (Phase 0 → 2). Source: `../tse_latex/main.tex`
-(the full paper, which becomes the online extended version). Draft: `main.tex` in
-this directory.
-
-## State after the review round (2026-10-08)
-
-A five-reviewer ARS panel (reports in `paper/reviews/short_v1/`, kept local) asked for
-major revision with no new data. Applied: Table II lists every registered item with its
-status; the registered 2-point equivalence band and 5-point materiality bar are applied
-(X3 not material, X4 inside the band); the losing-condition sentences LC-1, LC-3 and
-LC-5 are printed; A11's history (A3 R1 and R2b stopped, the interim look) is disclosed;
-the strict flag went to the provider's standard endpoint and may not have applied; the
-judge validation could not test the B label; the closest work (FAX, Huang and Deng,
-ProvenanceGuard, VERITYGATE) and error typologies (FRANK, Thomson and Reiter, slot
-aligners) are cited; terms are defined; tables are no longer shrunk; the DOI of the
-replication package and the extended version is printed. The same factual corrections
-went into the extended version.
-
-Build: 12 pages including references; text ends at 83 % of page 10 (9.8 pages),
-references end at 38 % of page 12. 8,247 words of prose, 7 tables, Fig. 1, Algorithm 1,
-57 references. Checks: `measure.py` (pages, fonts, abstract, the pronoun rule) and
-`check_numbers.py` (every number is in the extended version).
+ARS `academic-paper`, outline-only mode. Source draft: `main.tex` (V5, commit 0e47720).
+Every number comes from `../tse_latex/main.tex` (the extended version) and is checked
+by `check_numbers.py`. Earlier outlines are in git history (V4.0: 64f3894).
 
 ## Phase 0: Paper Configuration Record
 
 | Parameter | Value |
 |---|---|
-| Topic | Runtime contracts bound to a deterministic tool's output, for LLM narrators of that output |
-| Research questions | RQ1 how an unconstrained narrator fails and what removes the failure; RQ2 what the contract guarantees and costs, against the alternatives a practitioner would use; RQ3 whether contract and failure carry over to a second evidence shape |
-| Paper type | IMRaD, empirical software engineering (controlled experiment) |
-| Discipline | Software engineering / trustworthy LLM systems |
-| Target | One version for every venue: IEEE TSE (free up to 12 pages including references and biographies), conference format 10 + 2, and EMSE (no limit) |
-| Citation format | IEEE (IEEEtran) |
-| Output | LaTeX, IEEEtran journal, two columns |
-| Language | English |
-| Abstract | 150 to 200 words, five parts (problem; prevailing approaches and their limits; proposal; results; contributions); no dashes, hyphens or apostrophes |
-| Length | 10 pages of text (title to Data Availability) + 2 pages of references; about 6,300 words of prose, 5 tables, Fig. 1 |
-| Existing materials | The full paper (26 pages, 18,355 prose words, 19 tables, 60 references), all run records and scripts |
-| Co-authors | H. Sabuniş (corresponding), Y. Ünlü, M. K. Özdemir; Istanbul Medipol University |
-| Funding | none |
-| Operational mode | outline-only, then condensation by hand from this outline |
+| Topic | Faithful narration of deterministic tool output by LLMs, enforced by a runtime contract bound to that output |
+| Thesis | When the citable entities and quantities of a narration are fixed at call time, admissibility can be defined per answer field and enforced by a membership check; measured against that definition, a failing narrator mostly misfiles rather than invents |
+| Framing | An idea and its evaluation. mlcompass is the testbed, not the subject; no audience-specific framing. The word "engineer" does not appear (the affiliation "School of Engineering and Natural Sciences" is a proper name and stays) |
+| Paper type | IMRaD, empirical software engineering, controlled experiment with registered tests |
+| Target | Q1 SE journal (TSE, EMSE) and 10+2 conference formats; 10 to 12 pages including references |
+| Citation format | IEEE |
+| Abstract | 150 to 200 words in five parts: problem; prevailing approaches and their limits; proposal; results; contributions. No dashes, hyphens, or apostrophes |
+| Constraints | No pronoun "it"; same data and numbers; three RQs |
+| Mode | outline-only, then drafting by hand |
 
-Confirmed by the user on 2026-10-06 ("12 sayfalık okey ... geri kalanı online").
+Confirmed by the user on 2026-10-08 (five-part abstract, no "engineer", Q1 flow, ARS
+outline and abstract skills).
 
 ## Phase 1: Literature
 
-Skipped: the sources are the full paper's 60 verified references. The 12-page version
-keeps 47 of them and adds the extended version (list below); the other 13 stay in the
-extended version.
+Skipped: the 51 verified references of V5 are kept; no source is added or removed.
 
-## Phase 2: Outline (word budget = prose, floats excluded)
+## Phase 2: Outline
 
-| § | Section | Words | Floats | Was (words) |
+Argument flow: context → problem → why the error kind matters → gap → idea →
+evaluation → findings → implications → limits.
+
+| § | Section | Words | Floats | Purpose |
 |---|---|---|---|---|
-| – | Abstract | 190 | | 250 |
-| I | Introduction | 850 | | 1,619 |
-| II | Background and Related Work | 550 | Table I taxonomy | 896 |
-| III | The Evidence-Bound Contract | 750 | Fig. 1 | 2,323 (§III + §IV) |
-| IV | Study Design | 700 | Table II registered predictions | 2,281 |
-| V | RQ1: How the Unconstrained Narrator Fails | 850 | Table III kinds | 1,847 + 391 (old RQ4) |
-| VI | RQ2: What Enforcement Guarantees and Costs | 1,100 | Table IV arms | 2,900 |
-| VII | RQ3: A Second Evidence Shape | 450 | Table V profile | 1,263 |
-| VIII | Discussion | 400 | | 887 |
-| IX | Threats to Validity | 450 | | 1,054 |
-| X | Conclusion | 170 | | 387 |
-| – | Acknowledgments, AI declaration, Data Availability | 330 | | 431 |
-| | **Total** | **≈ 6,600** | 5 tables, 1 figure | 18,355 |
+| – | Abstract | 190 | | Five parts, as configured |
+| I | Introduction | 950 | | Context, problem, gap, idea, RQs, findings, contributions, scope |
+| II | Background and Related Work | 650 | Table I | Typologies, where constraints act, closest work |
+| III | Evidence-Bound Narration | 1,050 | Fig. 1, Alg. 1 | Definitions, contract, guarantee and its limits, implementation |
+| IV | Evaluation Design | 950 | Table II | Testbed, tasks, narrators, configurations, measures, registration |
+| V | RQ1: How narrators fail | 850 | Table III | Composition, kinds, semantic reading, what removes the failure |
+| VI | RQ2: Enforcement and its alternatives | 1,250 | Table IV | Mechanisms, call-time binding, registered verifier test, cost |
+| VII | RQ3: A second evidence shape | 450 | Table V | Profile task, misfiled values, tier separation |
+| VIII | Implications | 450 | | Four design principles for tool narrators; alternatives; transfer |
+| IX | Threats to Validity | 450 | | Construct, internal, external, conclusion |
+| X | Conclusion | 200 | | Thesis restated with the evidence |
+| | **Total** | **≈ 7,300** | 5 tables, 1 figure, 1 algorithm | |
 
-Section purposes and transitions:
+### I. Introduction (≈ 950)
+- **I.1 Context.** LLMs increasingly sit between deterministic tools and the people or
+  programs that consume their results: an agent calls a tool, reads the structured
+  output, and narrates the result [react, toolformer, mcp]. The narration inherits
+  the authority of the tool.
+- **I.2 Problem, with one concrete case.** A leakage detector reports $R^2=1.0$; the
+  narrator cites `r2` as a leaking column in 42 % of answers on one model. `r2` is the
+  metric's name, carried by the evidence. The structured field is consumed by
+  programs and displayed as verified [ji, huang].
+- **I.3 Why the kind of error matters.** Invention (extrinsic) vs misfiling (intrinsic)
+  [ji, maynez]; different remedies; one rate hides which applies.
+- **I.4 Gap.** Constrained decoding needs logits; provider schemas are unobservable;
+  validate-and-reask leaves admissibility to the author and stock installs check
+  structure only (Table I).
+- **I.5 Idea.** Evidence-closed narration (Definition 1); field-indexed admissibility
+  derived at call time; two tiers; the mechanism is not new, the definition and what
+  the definition reveals are.
+- **I.6 Evaluation and findings.** Three RQs; mlcompass as an open testbed; 19,132 +
+  3,200 responses; three findings (misfiling dominates; author-time lists turn
+  misfiling into invention; the check is cheap, ties enumerations on names, removes a
+  residue in the registered test).
+- **I.7 Contributions** (definition; failure account; comparison) and **scope** (one
+  failing model; no general claim).
+- *Transition:* the gap is positioned against prior work.
 
-- **I** problem (narrators of ML tools), the leakage example, invention vs misfiling, the three
-  places defenses act and their limits, Definition 1, the contract in one paragraph, three
-  RQs, headline numbers, four contributions, scope. → II places the contract among
-  existing enforcement.
-- **II** closed-world faithfulness and data-to-text; classical enforcement (DbC, edit
-  automata); decode-time and schema methods; the closest validate-and-reask work.
-  → III states the contract precisely.
-- **III** E, per-field admissibility, Definition 2 (C1–C3), misfiled / unlisted / invented,
-  Tier A / Tier B, deletion guarantee and repair asymmetry in prose, Fig. 1, how the
-  implementation was tested, the generic layer, what the invariant does not cover.
-  → IV says how it was measured.
-- **IV** pre-registration and Table II, subjects, models and sampling, arms, measures and
-  kinds, instrument faults in two sentences. → V–VII answer the RQs.
-- **V** floor rate, composition (1,807 / 1,829), twelve frozen instances, real data, Table III,
-  semantic audit (A13), what removes the failure (description, prompt, T = 0, wording).
-- **VI** Table IV, the toolkit comparison, binding at call time and A14, the registered test
-  A11, cost, the rejection audit, why Tier B is still needed, providers without failures.
-- **VII** profile task, wrong numbers and naming (A9.1), how the tiers separate.
-- **VIII** four design lessons, simpler designs, where the contract transposes.
-- **IX** construct, internal, external, conclusion validity.
+### II. Background and Related Work (≈ 650)
+- Faithfulness to a finite record: data-to-text metrics [dusek, wiseman, dhingra];
+  typologies [pagnoni, thomson]; generation-time slot checks [wen, juraska]; what
+  differs for a commercial API. Closed world [reiter]; DbC [meyer]; edit automata
+  [ligatti]; enforceability [schneider].
+- Where constraints act (Table I): decode time [gcd, picard, synchromesh, chyd,
+  atlas-rtc]; schemas [geng, le]; validate-and-reask [instructor, guardrails, nemo];
+  policy contracts [ahn, rvllm, winston]; ledger [ledgermind]; EviBound.
+- Narration under a check: FAX, Huang and Deng, ProvenanceGuard, VERITYGATE; none
+  indexes admissibility by field or measures misfiling against invention.
+- *Transition:* the contract is defined.
 
-## Evidence map: what stays, where
+### III. Evidence-Bound Narration (≈ 1,050)
+- Evidence in the leakage task; Definition 1; why a flat membership test fails (`r2`);
+  entity fields, $A_{E,col}$, $V_E$, anchor, commit; Definition 2 (C1–C3); channels;
+  misfiled / unlisted / invented.
+- Two tiers; Fig. 1; Algorithm 1; the deletion guarantee for (C1)–(C2), reported
+  without interval; (C3) flagged (repair asymmetry); anchor re-check after stripping.
+- Implementation: task-agnostic layer, forty-line specification, $O(|r|)$, pair-keyed
+  value table, tests (36 mutation, 10 fault injection, $10^6$ property cases built after
+  the runs, two defects, NaN fix date).
+- What the contract does not cover: verdict, free text, trusted producer, other
+  surfaces, injection through column names [greshake, zhang-cda].
+- *Transition:* how the idea is evaluated.
 
-| Claim / number | § |
-|---|---|
-| Floor 42.0 % [35.4, 48.9]; four runs 42.0–49.0, χ² p = 0.34 | V |
-| 1,807 of 1,829 flagged misfile, 13 invented (11 the word `target`) | I, V, X |
-| 12 frozen instances: 817 / 1,888; R2a held at 1.5 % | IV (Table II), V |
-| Real data 21.5 % / 20.5 %, always `r2` | V |
-| Kinds: 1,831 = 1,772 misplaced + 57 extrinsic + 1 + 1; 145 of 152 on the stale enum | V, Table III |
-| A13 judge 55/55, 73/79 (64/65 corrected), `r2` false relation 40/40 [91, 100]; A10, A12 failed | V, Table II |
-| Description 49.0 → 0.5 %; rules 7.0 %; shipped 0/200; T = 0 2.0 %; crowded 61.0 % | V |
-| Wording sweep 9.0–72.0 %; pairs not carried 0 to 45 per hundred | V |
-| Guardrails stock 43.5 vs choices 0 (same day); 3 vs 0 on crowded | VI |
-| Typed schema 4.0–7.0 %; call-time enum 0 | VI |
-| Stale enum 145/200 invented (72.5 %), 139 omit anchor; A14 143/2/0/3/0, trend p < 10⁻⁷⁶, P2 p = 0.25 | VI |
-| A11 10/600 vs 0/600, p = 0.002, [0.7, 3.0]; 29.4 correct claims; 5.47 vs 5.44 s | I, VI, X |
-| 17 µs per response, 15 µs binding; 3.3 vs 2.8 s; nothing stripped | VI |
-| 24 + 17 rejections confirmed independently; 170 claims before and after | VI |
-| gpt-5.4-mini 0 in 200; qwen 2/20 | VI |
-| Profile: 24 vs 10 columns, 13 vs 1 statistics, 196 vs 10 quantities; 9/200 wrong numbers, 11 of 12 sibling values; A9.1 7 vs 1, p = 0.068; tiers 20→1, 8→5, 9 vs 11 | VII |
-| 98.7 % of 1,831 use a name in E; four of five judges failed | VIII |
-| Free-text 8.8 vs 12.6 %; 512 of 2,400 calls lost; power figures | IX |
+### IV. Evaluation Design (≈ 950)
+- Testbed: mlcompass, open source, shipped leakage path; controlled experiment
+  [ralph].
+- Tasks (reference, crowded, bodyfat, sambanis, twelve frozen); narrators and
+  sampling; configurations (floor, shipped prompt, field description verbatim,
+  Guardrails trio, strong pair, strict flag caveat); measures (violations, kinds,
+  Wilson, tolerance, two scorers, seventeen faults); registration (Table II, band and
+  bar, structural zeros, status of remaining items, three deviations).
+- *Transition:* results by RQ.
 
-## Moved to the extended version (nothing deleted)
+### V–VII. Results
+- **RQ1:** floor 42.0 %; four tasks 1,012; real data 21.5 / 20.5 %; twelve frozen
+  817 / 1,888, prediction held; 1,807 / 1,829 and 13; Table III kinds (1,831 =
+  1,772 + 57 + 1 + 1; stale enum 145 / 152); A13 judge (55/55, 73/79, 64/65; 40/40,
+  contrary to prediction; no B items); remedies (0.5, 0, 7.0, 2.0, 61.0; other models;
+  wording 9–72 %).
+- **RQ2:** Table IV; LC-1 parity on names; LC-5 (check and binding, not loop);
+  Guardrails 43.5 vs 0, crowded 3 vs 0; typed schema 4.0–7.0, not material; stale list
+  145 / 200, A14 143 / 2 / 0 / 3 / 0, trend carried by the empty list, 8 of 10
+  indistinguishable; strong arms 0 / 200, pooled [−0.5, 0.5]; A3 stopped (93, 91, 50);
+  A11 10 / 600 vs 0 / 600, interim look, slips, content and latency; cost (17 µs,
+  15 µs, 3.3 vs 2.8 s, retries, nothing stripped, content kept, shipped prompt a
+  quarter); rejections (24 + 17); why Tier B.
+- **RQ3:** profile shape (24 / 13 / 196); misfiled values 9 / 200, 11 of 12; natural
+  names 0 / 400; A9.1 7 vs 1; tiers separate (20→1, 8→5, 9 vs 11); X2 void (LC-3);
+  class balance 26→10, 17→10.
 
-Table of all registered items with timestamps and deviations (old Table 1, A1); arms
-definition table; statistic alias table; four-questions table; inventory table; terms
-table; delivery table; retry table; wording-sweep table; conditions table; policy
-sensitivity table; corrections table and the seventeen faults in detail; rejection
-table (A2); Algorithm 1; the repair-asymmetry observation and proof sketch; the
-tolerance and integer-claim analysis; abstention and verdict counts; drift between runs;
-deletion-without-retry analysis; the class-balance re-scoring; the failed judges in
-detail; the free-text scan in detail; the downstream benchmark.
+### VIII. Implications (≈ 450)
+- Four principles for systems that narrate tool output: index admissibility by field
+  (98.7 %); bind at call time; describe fields but keep the check (fix effects are
+  configuration-specific, 20–61 %); report violations apart from what they introduce
+  [pagnoni, thomson]; judges are not a substitute (four of five failed; two cents vs
+  microseconds).
+- Alternatives not run (host-rendered numbers, derived verdict [huang-deng],
+  relational schema); retry vs strip (6–16 %, 41.5–59 %); transfer conditions.
 
-## References kept (47 of 60, plus the extended version)
+### IX–X. Threats and Conclusion
+- Construct (consistency with E; S4 rejected truths; policy re-scoring; judge; free
+  text 8.8 vs 12.6 %); internal (blocks, rolling alias); external (one provider;
+  four of sixteen tasks; 512 lost calls; default narrator not measured; enum size);
+  conclusion validity (power 0.8 / 0.21 / 0.89).
+- Conclusion: the thesis with its evidence and its limit.
 
-react, toolformer, mcp, ji, huang, maynez2020faithfulness, leakage, ydata, mlflow,
-outlines, gcd, scholak2021picard, poesia2022synchromesh, structured, liu2023instructor,
-guardrailsai, nemo, reiter1978closed, dusek2020e2e, wiseman2017challenges,
-dhingra2019parent, meyer1992dbc, ligatti2005edit, schneider2000enforceable,
-signe2026chyd, cruz2026atlasrtc, geng2025jsonschemabench, le2026schemakey,
-ahn2026harness, zhang2025rvllm, winston2026solver, du2026ledgermind, chen2025evibound,
-greshake2023injection, ralph2020standards, penrose1985bodyfat, muchlinski2016civilwar,
-lantz2013mlr, janosi1988heart, ibm2019telco, decock2011ames, sclar2024formatspread,
-yang2022leakage, truong2025leakagedetector, wang2026agenttraces, ng2026runtimecontract,
-replication, extended (new).
+## Evidence map
 
-Dropped here, kept in the extended version: tensorflow, autosklearn, codex, swebench,
-lmql, guidance, xu2025openworld, luo2026removal, karnatak2026ava, falcone2012verify,
-agrawal2023mgd, li2026orderbench, zhang2025cda. `check_numbers.py` prints both lists.
+Unchanged from V5: every number listed above appears in `../tse_latex/main.tex`;
+sources per section as listed. No new source.
+
+## Changes from V5
+
+1. Every mention of an "engineer" is replaced by the reader, the user, or a consuming
+   program; the opening states the general setting before the case.
+2. The introduction follows context → problem → gap → idea → evaluation; the
+   Discussion becomes "Implications" for systems that narrate tool output.
+3. The abstract is rewritten with the ARS abstract mode in the five configured parts.

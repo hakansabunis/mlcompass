@@ -55,28 +55,28 @@ E-mail: hakansabunis@gmail.com (H.~Sabuni\c{s}), ysffms@gmail.com
 
 \IEEEtitleabstractindextext{%
 \begin{abstract}
-Large language models (LLMs) now explain machine learning tool output, and an
-explanation citing a column or number the tool never produced can mislead the
-engineer. Current guardrails constrain decoding, which needs token
-probabilities that commercial endpoints withhold, or run checks each tool
-author must write, and one hallucination rate cannot separate invented items
-from misplaced ones. Since a deterministic tool fixes every citable entity and
-number before the model is called, we bind each answer field to the values the
-tool produced and check every answer in host code. In the open source
-assistant mlcompass, with three LLMs, sixteen leakage tasks, and a profiling
-task, the one model that failed often mostly misfiled rather than invented,
-placing real evidence items such as the metric name in inadmissible fields.
-Under the contract, no inadmissible column or number reached the user, at
-microseconds of local checking per answer; an enum bound to the evidence
-matched the check on column names, and on the profiling task a registered test
-showed the check removing residual violations, 10 of 600 against none. We
-contribute field level admissibility, a failure account, and a guardrail
-comparison.
+Large language models (LLMs) increasingly narrate deterministic tool output,
+and a narration may invent an item absent from the evidence or misfile a real
+item into an inadmissible field. Prevailing defenses constrain decoding, which
+requires token probabilities that commercial interfaces withhold, or apply
+checks that each tool author must define, and one hallucination rate does not
+separate the two errors. We propose evidence closed narration: admissible
+values for every answer field are derived from the tool output at call time and
+enforced by a runtime contract that checks each answer in host code. In the
+open source assistant mlcompass, across three LLMs and seventeen tasks, only one
+model failed often: 1,807 of its 1,829 flagged responses misfiled and 13
+invented. A field description removed most misfiling; a list written in advance
+turned misfiling into invention on new data. Under the contract, no
+inadmissible column or number reached the user, at microseconds of local
+checking; an enumeration bound to the evidence matched the check on column
+names, and a registered test on profiling found 10 of 600 violations without
+the check, none with the check. We contribute field indexed admissibility, an
+empirical account of narrator failure, and a guardrail comparison.
 \end{abstract}
 
 \begin{IEEEkeywords}
-Large language models, faithfulness, runtime verification, structured
-output, constrained generation, data leakage.
+Tool use, faithfulness, hallucination, runtime verification, structured
+output, guardrails, data leakage.
 \end{IEEEkeywords}}
 
 \maketitle
@@ -87,27 +87,34 @@ output, constrained generation, data leakage.
 \section{Introduction}\label{sec:intro}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\IEEEPARstart{A}{n} engineer trains a regression model and sees $R^2=1.0$ on
-held-out data. A score that high usually means that the target has leaked into
-the features~\cite{leakage}. \textbf{mlcompass}, the open-source assistant for
-machine-learning pipelines that we study, answers such a score in two steps. A
-deterministic detector measures how strongly each feature correlates with the
-target and ranks the columns that may carry the target. A large language model
-(LLM) then explains the detector's output, which we call the \emph{evidence}
-$E$, to the engineer~\cite{react,toolformer,mcp}. The explanation is a
-structured answer: a verdict (leakage likely, leakage uncertain, score
-legitimate, or cannot determine), the columns cited as evidence, and claims of
-the form (column, statistic, value). On our reference task, a sound answer cites
-the column \texttt{log\_target\_v2} and its correlation of 0.999.
+\IEEEPARstart{L}{arge} language models (LLMs) increasingly stand between
+deterministic tools and whoever consumes the tools' results. An agent calls a
+tool, reads the structured output, and narrates what the output
+means~\cite{react,toolformer,mcp}. The narration borrows the authority of the
+tool, yet LLMs produce content that their input does not support~\cite{ji,huang}.
+This paper studies faithful narration in the setting where the tool's output is
+fully known at the moment of narration, and asks what that knowledge allows a
+system to guarantee.
 
-The model that writes the explanation, the \emph{narrator}, is the weak
-link~\cite{ji,huang}. Without safeguards, one of the narrators we tested cited
-\texttt{r2} as a leaking column in 42\,\% of its answers. The string \texttt{r2}
-is not a column; the string is the name of the metric under investigation, which
-$E$ carries for that reason. The mlcompass panel prints the cited columns under
-the heading ``Evidence cited (verified against the evidence)'', so the engineer
-would have seen a metric presented as a verified leak column, and any script
-reading the field would have acted on a column that does not exist.
+A leakage diagnosis illustrates the setting. A regression model that scores
+$R^2=1.0$ on held-out data usually signals that the target has leaked into the
+features~\cite{leakage}. In \textbf{mlcompass}, the open-source assistant for
+machine-learning pipelines that serves as our testbed, a deterministic detector
+measures how strongly each feature correlates with the target and ranks the
+columns that may carry the target. An LLM, the \emph{narrator}, then explains the
+detector's output, the \emph{evidence} $E$, in a structured answer: a verdict
+(leakage likely, leakage uncertain, score legitimate, or cannot determine), the
+columns cited as evidence, and claims of the form (column, statistic, value). On
+our reference task, a sound answer cites the column \texttt{log\_target\_v2} and
+its correlation of 0.999.
+
+Without safeguards, one of the narrators that we tested cited \texttt{r2} as a
+leaking column in 42\,\% of its answers. The string \texttt{r2} is not a column;
+the string is the name of the metric under investigation, which $E$ carries for
+that reason. Because mlcompass prints the cited columns under the heading
+``Evidence cited (verified against the evidence)'', a reader would see a metric
+presented as a verified leak column, and a program that consumes the field would
+act on a column that does not exist.
 
 This error is not the one that most defenses target. The narrator invented
 nothing: the name is in $E$. The narrator placed a real item in a field that does
@@ -146,7 +153,7 @@ measure narrators against the definition. We ask three research questions.
 \item \textbf{RQ1}: How does an unconstrained narrator of tool evidence fail, and
 which changes to its configuration remove the failure?
 \item \textbf{RQ2}: What does the contract guarantee and cost, and how do the
-alternatives that a practitioner would reach for compare?
+alternatives in common use compare?
 \item \textbf{RQ3}: Do the contract and the failure carry over to a second kind
 of evidence?
 \end{itemize}
@@ -172,8 +179,8 @@ deterministic tool's output, which separates misfiling from invention and which 
 membership test can enforce behind any API (Section~\ref{sec:contract});
 (ii)~an empirical account of how a tool narrator fails against that definition,
 and of which configuration changes remove the failure (Section~\ref{sec:rq1});
-and (iii)~a comparison of the alternatives that a practitioner would reach for,
-with a registered test of what the verifier adds (Section~\ref{sec:rq2}). The
+and (iii)~a comparison of the alternatives in common use, with a registered test
+of what the verifier adds (Section~\ref{sec:rq2}). The
 replication package~\cite{replication} holds every response, and an extended
 version of this paper~\cite{extended} holds the full audit trail.
 
@@ -274,7 +281,7 @@ rejection rates. None of these works indexes admissibility by field or measures
 how often a failing narrator misfiles rather than invents.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{An Evidence-Bound Contract}\label{sec:contract}
+\section{Evidence-Bound Narration}\label{sec:contract}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \subsection{Evidence and admissibility}
@@ -409,13 +416,14 @@ training~\cite{zhang2025cda}. Rendered strings are escaped; nothing more is
 guaranteed about them.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Study Design}\label{sec:design}
+\section{Evaluation Design}\label{sec:design}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-We ran a controlled experiment over fixed evidence, following the ACM SIGSOFT
-Empirical Standards~\cite{ralph2020standards}. The manipulated variable is the
-enforcement mechanism, the instruction, or the naming and description of the
-evidence; the outcome is what reaches the user.
+We evaluated the idea in a controlled experiment over fixed evidence, following
+the ACM SIGSOFT Empirical Standards~\cite{ralph2020standards}, with mlcompass as
+the testbed: the contract guards the leakage narration that the tool ships. The
+manipulated variable is the enforcement mechanism, the instruction, or the
+naming and description of the evidence; the outcome is what reaches the user.
 
 \paragraph{Tasks}
 The \emph{reference} task is a frame of 1,000 rows and fourteen columns whose
@@ -853,11 +861,12 @@ verification, and there the failure was misfiled values, which only Tier~B
 catches.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Discussion}\label{sec:discussion}
+\section{Implications}\label{sec:discussion}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\paragraph{Lessons for tool builders}
-Four lessons follow from the measurements. \emph{Index admissibility by field.} A
+\paragraph{Design principles for tool narrators}
+Four principles follow from the measurements for any system that narrates the
+output of a deterministic tool. \emph{Index admissibility by field.} A
 membership test over every name in the evidence would have passed 98.7\,\% of the
 1{,}831 violating answers on the bare leakage arms, because the evidence contains
 their names. \emph{Bind the admissible sets at call time.} A list written in
@@ -900,8 +909,8 @@ output, not correctness.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \paragraph{Construct}
-We measure consistency with $E$, not the effect of an explanation on an
-engineer's decision, and a contract violation is not always a false statement:
+We measure consistency with $E$, not the effect of a narration on the decisions
+of its readers, and a contract violation is not always a false statement:
 all 15 real columns that $E$ does not list were judged supported by the validated
 judge, and the contract rejects them. The kinds are assigned by program. Under
 one strict and one lenient policy for dataset-level quantities, 98.7\,\% of the

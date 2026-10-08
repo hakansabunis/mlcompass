@@ -48,6 +48,8 @@ its = [m.start() for m in re.finditer(r"\b[Ii]t\b", re.sub(r"(?<!\\)%.*", "", bo
 print("pronoun 'it':", len(its))
 for i in its[:10]:
     print("   ...", re.sub(r"\s+", " ", body[max(0, i - 60):i + 40]), "...")
+eng = re.findall(r"\b[Ee]ngineer\w*", tex.replace("School of Engineering and Natural Sciences", ""))
+print("'engineer' (affiliation excepted):", len(eng))
 cited = {k.strip() for m in re.finditer(r"\\cite[a-z]*\{([^}]*)\}", tex) for k in m.group(1).split(",")}
 print("cited keys:", len(cited))
 sys.exit(0)
