@@ -144,6 +144,22 @@ paper/tse_latex/*.aux
 paper/tse_latex/*.bbl
 paper/tse_latex/*.out
 
+# 12-page version and the neutral build that becomes paper/extended_version.pdf
+paper/short_latex/main.pdf
+paper/short_latex/*.log
+paper/short_latex/*.blg
+paper/short_latex/*.aux
+paper/short_latex/*.bbl
+paper/short_latex/*.out
+paper/short_latex/build.out
+paper/neutral_latex/main.pdf
+paper/neutral_latex/*.log
+paper/neutral_latex/*.blg
+paper/neutral_latex/*.aux
+paper/neutral_latex/*.bbl
+paper/neutral_latex/*.out
+paper/emse_submission/build.out
+
 # EMSE upload set: build outputs are not part of it
 paper/emse_submission/*.log
 paper/emse_submission/*.blg

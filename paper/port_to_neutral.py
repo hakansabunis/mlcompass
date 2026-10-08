@@ -66,7 +66,9 @@ MIT license; the development repository is
 
 """
 assert body.count("\\balance") == 1
-body = body.replace("\\balance", DECLARATIONS + "\\balance")
+# No column balancing here: with the declarations and the reference list it
+# pushed the last two pages 9 to 16pt past the bottom margin.
+body = body.replace("\\balance", DECLARATIONS)
 body = author_year(body, TEXTUAL)  # name and year, as EMSE asks
 assert "IEEE" not in re.sub(r"%.*", "", body), "an IEEE command is left in the body"
 
@@ -82,6 +84,7 @@ preamble = r"""%% Venue-neutral two-column version, generated from ../tse_latex/
 \usepackage[round]{natbib}
 \usepackage[hidelinks]{hyperref}
 \usepackage{url}
+\usepackage{xurl}  % break long URLs in the reference list anywhere
 \usepackage{balance}
 \usepackage{algorithm}
 \usepackage{algpseudocode}
@@ -108,7 +111,8 @@ preamble = r"""%% Venue-neutral two-column version, generated from ../tse_latex/
 \author{Hakan Sabuni\c{s}, Yusuf \"Unl\"u, Mehmet Kemal \"Ozdemir\\[2pt]
 \small School of Engineering and Natural Sciences, Istanbul Medipol University, Istanbul, T\"urkiye\\
 \small \texttt{hakansabunis@gmail.com}, \texttt{ysffms@gmail.com}, \texttt{mkozdemir@medipol.edu.tr}}
-\date{}
+\date{\small Extended version: the condensed paper of the same title cites this
+document for the full audit trail.}
 
 \begin{document}
 \twocolumn[

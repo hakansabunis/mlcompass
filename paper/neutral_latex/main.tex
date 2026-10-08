@@ -10,6 +10,7 @@
 \usepackage[round]{natbib}
 \usepackage[hidelinks]{hyperref}
 \usepackage{url}
+\usepackage{xurl}  % break long URLs in the reference list anywhere
 \usepackage{balance}
 \usepackage{algorithm}
 \usepackage{algpseudocode}
@@ -36,7 +37,8 @@
 \author{Hakan Sabuni\c{s}, Yusuf \"Unl\"u, Mehmet Kemal \"Ozdemir\\[2pt]
 \small School of Engineering and Natural Sciences, Istanbul Medipol University, Istanbul, T\"urkiye\\
 \small \texttt{hakansabunis@gmail.com}, \texttt{ysffms@gmail.com}, \texttt{mkozdemir@medipol.edu.tr}}
-\date{}
+\date{\small Extended version: the condensed paper of the same title cites this
+document for the full audit trail.}
 
 \begin{document}
 \twocolumn[
@@ -383,7 +385,8 @@ as a column or quote a correlation that $E$ does not contain.
 \subsection{The evidence, and why admissibility is per field}
 
 In the leakage investigation, the evidence dictionary $E$ holds four things:
-the suspicious metric and its value; the correlation of each feature with the
+the suspicious metric and its value; for the ten features most correlated with
+the target, the correlation of each feature with the
 target $y$, taking whichever of $\rho_P$ and $\rho_S$ has the larger magnitude
 and keeping its sign; a ranked candidate-leak set
 $C=\{c:\max(|\rho_P(c,y)|,|\rho_S(c,y)|)\ge 0.99\}$; and the perfect-match
@@ -531,6 +534,9 @@ cited-column list and each claim's column to enums built from $E$ at call
 time, and an enum remains a request to the model. On \texttt{deepseek-chat},
 every Tier~A arm in the main battery ran without the provider's strict
 decoding flag, and we report the one arm that ran with the flag separately.
+The harness sent that flag to the provider's standard endpoint, whose
+documentation does not describe strict mode, so the flag may have had no
+effect.
 Tier~B re-checks the returned tool input in plain code for (C1), for (C2)
 within $\tau=0.005$, and for (C3).
 
@@ -618,6 +624,9 @@ The third is the other narration surfaces. The product prints two other
 narrations of the same evidence that no contract governs: an optional LLM
 interpretation panel printed by the evaluation command, and a tool-server
 command whose calling model narrates in the user's editor \citep{mcp}. The
+\texttt{advise} command also sends the dataset profile to an LLM without the
+contract; the profile narrator of Section~\ref{sec:rq6} runs only in the
+measurement harness. The
 interpretation panel is marked unverified. The tool-server narration carries
 no mlcompass marker at all, because the client model writes that narration.
 mlcompass guarantees the contract panel and nothing else.
@@ -670,8 +679,10 @@ counting X5 as $p=1$ would move X3's adjusted $p$ from 0.015 to 0.022). X- and H
 2026-09-14 at 19:34~UTC, and the first record that they govern started on
 2026-09-15 at 18:23~UTC. A3 was committed on 2026-09-30 at 15:50~UTC, and its
 first call started at 15:51~UTC. Every record pins the harness commit under
-which the record ran. ``Tie'' and ``held'' report observed equality: no
-equivalence margin was registered. \emph{Status}: as planned, deviated (run
+which the record ran. The plan registered a 2-point equivalence band and a
+5-point bar below which a significant difference is reported as not material:
+X3's difference is significant but not material, and X4's interval lies inside
+the band. \emph{Status}: as planned, deviated (run
 with the change that the row describes), exploratory, not tested, or not run.
 The five rows after the first rule record where the study departed from the
 plan; the rows after the second rule are the amendments, registered for this
@@ -694,7 +705,7 @@ X4 & Our checks inside the Guardrails loop tie the contract & 0.0\,pp [$-1.9$, 1
 X5 & Contract against NeMo Guardrails & Not run: the adapter was not built & not tested \\
 H7 & Stock Guardrails loop within 2\,pp of the floor & Not met: 35.5 against 42.0\,\%, but not the 10\,pp drop that rejects the prediction & as planned \\
 H8 & Typed schema without column list within 2\,pp of the floor & Neither held nor rejected: the registered rule rejects only at 0/200, so the rule cannot register the large drop observed (4.0 against 42.0\,\%) & as planned \\
-H9 & Strict call-time enum ties the contract on entity & Held (2026-09-24); the run without the flag is \texttt{A-TIER-A-ONLY} & as planned \\
+H9 & Strict call-time enum ties the contract on entity & Held (2026-09-24); the run without the flag is \texttt{A-TIER-A-ONLY}; the flag went to the provider's standard endpoint and may not have applied & as planned \\
 H10 & Strict enum fails on an activated non-entity channel & Void with X2 & not tested \\
 H11 & Our checks inside Guardrails match the contract on every channel & Held & as planned \\
 H12 & Wording effects differ between providers & Not run: the sweep ran on one provider & not tested \\
@@ -1447,7 +1458,8 @@ median latencies of the two arms were within 0.1\,s of each other
 rate on leakage. Pooled over the four instances (800 responses per arm, an
 exploratory pooling), the difference is 0, with a Newcombe interval of $-0.5$
 to 0.5 points. A benefit larger than half a point on these instances is
-therefore unlikely, although no margin was registered.
+therefore unlikely; the interval lies inside the plan's 2-point equivalence
+band, although this comparison was not registered.
 
 On the profile task, an exploratory run under natural names gave the one
 difference that we observed: 4 of 200 unverified responses against none
@@ -1455,17 +1467,22 @@ verified (Fisher $p=0.12$; difference 2.0 points, Newcombe interval $-0.2$ to
 5.0). The unverified violations cite \texttt{reference\_count} beside the real
 \texttt{referral\_count}, attach real numbers to invented
 \texttt{*\_placeholder} columns, or attach a number to a statistic that $E$
-lacks. The confirmatory test that we registered next (amendment A3) stopped
-when the provider balance ran out after 93 and 91 responses, none with a
-violation, and we run no test on the partial cells. What the verifier adds is a check whose result does not
-depend on the configuration.
+lacks. The confirmatory test that we registered next (amendment A3) had a
+profile leg (R1) and a leg on the twelve frozen instances (R2b). Both stopped
+when the provider balance ran out, R1 after 93 and 91 responses and R2b after
+50 unverified responses, none with a violation, and we run no test on the
+partial cells. What the verifier adds is a check whose result does not depend
+on the configuration.
 
 \paragraph{The registered test}
-Because R1 stopped early, we registered a new test before any call (amendment
-A11), which is not pooled with R1. On the profile task under natural names,
-the two strong arms ran 600 responses each, one call of each arm per index in
-an order drawn at random per index, on one harness commit at temperature 1.0,
-with every attempt kept. The unverified arm delivered a violation in 10 of 600
+A3 had registered that its run would not be repeated or extended. When budget
+returned, we registered a new test on the profile task alone, before any call
+(amendment A11), which is not pooled with R1. On the profile task under natural
+names, the two strong arms ran 600 responses each, one call of each arm per
+index in an order drawn at random per index, on one harness commit at
+temperature 1.0, with every attempt kept. One interim look at the partial
+unverified records (5 violating of 358) is recorded in the plan; no decision
+depended on the look, and the run was neither stopped nor extended. The unverified arm delivered a violation in 10 of 600
 responses (1.7\,\% [0.9, 3.0]) and the verified arm in none (0\,\% [0, 0.6]).
 The registered two-sided Fisher test rejects ($p=0.002$), and the difference
 of 1.7 points has a Newcombe 95\,\% interval of 0.7 to 3.0. The ten violations
@@ -1589,7 +1606,7 @@ the vacuous zero that an empty answer would give. Nearly every delivered
 claim matches $E$, and every arm reports the anchor's measured correlation in
 at least 99.5\,\% of its responses. The arms that carry the shipped prompt
 report little beyond the anchor: they deliver about a quarter of the correct
-claims that the bare and contract arms deliver (2.2--3.2 against 9.6--9.8 per
+claims that the bare and contract arms deliver (2.2--3.1 against 9.6--9.8 per
 response). Part of what the shipped prompt buys is therefore a narrower
 answer, whereas the contract keeps the content of the bare answer.
 
@@ -1995,8 +2012,9 @@ falsifier that the analysis plan registered, which we built late, reproduces
 that refutation at its third generated case on the earlier code. The falsifier
 then found a second defect: a 400-digit integer, which a JSON parser returns
 as an exact integer, crashed the value check. Both defects are fixed, and the
-fixed verifier passes $10^6$ generated cases. No recorded response carries
-either value, so no reported number changes.
+fixed verifier passes $10^6$ generated cases. The NaN fix came on 2026-09-24,
+after the main battery; no recorded response carries either value, so no
+reported number changes.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Discussion}\label{sec:discussion}
@@ -2581,7 +2599,7 @@ analysis script are in the replication package \citep{replication} under the
 MIT license; the development repository is
 \url{https://github.com/hakansabunis/mlcompass}.
 
-\balance
+
 \bibliographystyle{plainnat}
 \bibliography{references}
 
