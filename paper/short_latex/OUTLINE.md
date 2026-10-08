@@ -1,5 +1,15 @@
 # 12-page version: outline and evidence map
 
+**V5 (2026-10-08): `main.tex` was rewritten from scratch as a 10 to 12 page paper**
+rather than condensed from the extended version; V4.0, the condensed and revised
+draft, is commit 64f3894. V5 keeps the V4.0 review fixes (registration status,
+equivalence band, A11 history, strict-flag and judge caveats, closest work) and
+tells one story: the failure is misfiling, binding at call time beats a list written
+in advance, and the check is cheap. Build: 10 pages including references, text 8.1
+pages, 7,300 words of prose, abstract 190 words, 5 tables, Fig. 1, Algorithm 1,
+51 references; `check_numbers.py` finds every number in the extended version.
+The outline below describes V4.0.
+
 ARS `academic-paper`, outline-only mode (Phase 0 → 2). Source: `../tse_latex/main.tex`
 (the full paper, which becomes the online extended version). Draft: `main.tex` in
 this directory.
