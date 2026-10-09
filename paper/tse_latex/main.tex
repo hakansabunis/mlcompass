@@ -552,11 +552,13 @@ schema, through whose submission tool the answers arrive. The contract spans
 the last two layers as two enforcement \emph{tiers}. Tier~A restricts the
 cited-column list and each claim's column to enums built from $E$ at call
 time, and an enum remains a request to the model. On \texttt{deepseek-chat},
-every Tier~A arm in the main battery ran without the provider's strict
-decoding flag, and we report the one arm that ran with the flag separately.
-The harness sent that flag to the provider's standard endpoint, whose
-documentation does not describe strict mode, so the flag may have had no
-effect.
+the contract's Tier~A arms ran without the provider's strict decoding flag,
+whereas the typed-schema arms, \texttt{A-STRICT-ENUM}, and the lists of A14 sent
+the flag. The harness sent the flag to the provider's standard endpoint, whose
+documentation does not describe strict mode, and the records show that the flag
+was not enforced: on the crowded instance, 13 of the 145 responses of the
+author-time list that cited invented names also cited the anchor, which the list
+does not contain. No arm therefore measured decoding enforced by the provider.
 Tier~B re-checks the returned tool input in plain code for (C1), for (C2)
 within $\tau=0.005$, and for (C3).
 
@@ -720,7 +722,7 @@ Item & Prediction & Outcome & Status \\
 \midrule
 X1 & Contract below the stock Guardrails loop & Stock loop higher by 35.5\,pp [28.9, 42.3], $p_{\mathrm{Holm}}<10^{-23}$; registered on a real-data task, where only the floor, shipped, and strong arms were later run; reported on the synthetic task & deviated \\
 X2 & Contract below the strict call-time enum on a channel other than entity & Void: no such channel activated on leakage & not tested \\
-X3 & Contract below a typed schema without column list & Schema higher by 4.0\,pp [1.3, 7.7], $p_{\mathrm{Holm}}=0.015$; that arm ran without the strict flag & deviated \\
+X3 & Contract below a typed schema without column list & Schema higher by 4.0\,pp [1.3, 7.7], $p_{\mathrm{Holm}}=0.015$, not material; that arm sent the strict flag, which was not enforced & deviated \\
 X3b & Contract against the author-time list (exploratory) & Equal on the reference task; 76.0 against 0\,\% on the crowded instance (invented names 72.5\,\%) & exploratory \\
 X4 & Our checks inside the Guardrails loop tie the contract & 0.0\,pp [$-1.9$, 1.9], $p=1$ & as planned \\
 X5 & Contract against NeMo Guardrails & Not run: the adapter was not built & not tested \\
@@ -1506,8 +1508,12 @@ unverified records (5 violating of 358) is recorded in the plan; no decision
 depended on the look, and the run was neither stopped nor extended. The unverified arm delivered a violation in 10 of 600
 responses (1.7\,\% [0.9, 3.0]) and the verified arm in none (0\,\% [0, 0.6]).
 The registered two-sided Fisher test rejects ($p=0.002$), and the difference
-of 1.7 points has a Newcombe 95\,\% interval of 0.7 to 3.0. The ten violations
-are slips rather than the misfiling of the bare instruction. Two cite a
+of 1.7 points has a Newcombe 95\,\% interval of 0.7 to 3.0. The whole interval
+lies below the plan's 5-point materiality bar, so the difference is significant
+but not material; A11 registered its own consequence, to report a benefit of the
+observed size. The ten violations are slips rather than the misfiling of the
+bare instruction, and nine of them fall outside the enumerations that Tier~A
+writes, so A11 does not exercise the value channel. Two cite a
 statistic name (\texttt{cardinality}, \texttt{zero\_ratio}) as a column. Four
 claim a pair that $E$ does not carry, three of them under a statistic name that
 the profiler does not use, such as the misspelled \texttt{missding\_count}.
