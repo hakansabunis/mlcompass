@@ -59,13 +59,13 @@ Large language models (LLMs) increasingly narrate deterministic tool output,
 and a narration can invent an item absent from that output or misfile a real
 item into an inadmissible field. Prevailing defenses constrain decoding, which
 needs token probabilities that commercial interfaces withhold, rely on
-unobservable provider schemas, or check answers against pooled lists of
-entities and numbers, which pass a real item in the wrong field. We propose
-evidence closed narration: every answer field admits only values derived from
-the tool output at call time, numbers are keyed to entity and statistic, and
-host code checks each answer. In the open source assistant mlcompass, one of
-three LLMs failed often; 1,772 of its 1,831 violating answers used only items
-from the evidence. A field description removed most such errors; a list written
+unobservable provider schemas, or check answers against pooled lists that pass
+a real item in the wrong field. We propose evidence closed narration: every
+answer field admits only tool output values bound at call time, numbers are
+keyed to entity and statistic, and host code checks each answer. In the
+assistant mlcompass, one of three LLMs failed often; 1,772 of its 1,831
+violating answers used only items from the evidence, almost always the metric
+name in a column field. A field description removed most such errors; a list written
 for other data turned them into invention. Under the contract, no inadmissible
 column or number reached the user through the structured fields, at
 microseconds of local checking; an evidence bound enumeration did as well on
@@ -403,8 +403,9 @@ text reaches the user marked unverified.}
 \end{algorithmic}
 \end{algorithm}
 
-Deletion makes (C1) and (C2) hold for every structured claim that reaches the
-user, whatever the model does. The guarantee is a property of the design, so we
+The contract therefore offers two different things: a guarantee for (C1) and
+(C2), and a flag for (C3). Deletion makes (C1) and (C2) hold for every
+structured claim that reaches the user, whatever the model does. The guarantee is a property of the design, so we
 report an enforced arm's zero on these channels as what the verifier did and
 attach no interval to the zero. (C3) is different. Deletion cannot repair a
 missing anchor; any repair would add a reference that the model did not produce
@@ -415,7 +416,12 @@ anchor.
 
 \subsection{Implementation}
 
-The contract is a layer that names no task. A specification of about forty lines
+The contract is not tied to our code. Written for Instructor, the check is a
+field validator that reads $E$ from the validation context and asks again on
+failure~\cite{liu2023instructor}, at the same cost: one specification per
+evidence shape. What the design contributes is what such a validator should
+check, at which granularity, and the measurements that show why. In our
+implementation, the contract is a layer that names no task. A specification of about forty lines
 says how to read one evidence shape: which fields are entities, which
 statistics each entity has, and which entity is the anchor. Leakage is one
 specification; a dataset profiler is a second (Section~\ref{sec:rq3}). Checking an
@@ -527,9 +533,12 @@ construction, so a test against that arm asks whether the other arm's rate
 exceeds zero. The remaining registered items were void (X2, H10: no non-entity
 channel activated on leakage), not run or stopped (X5, H12, H15, A3~R1, R2b, R3,
 R4, and the human audit A7), or are reported in the extended version (H7--H9,
-H11, H13, H14, H16, A9.2, A10, A12). Three deviations matter for reading the results: X1 ran on the
-synthetic rather than the registered real-data task, the model panel changed
-without an amendment, and the property-based search was built after the runs.
+H11, H13, H14, H16, A9.2, A10, A12). The deviations differ in weight. The stopped
+A3 runs matter most, because the registered test of the verifier on the twelve
+frozen tasks never ran; the model panel, changed without an amendment, limits
+generality; the property-based search, built after the runs, tests the code but
+not the runs; and X1, moved from the registered real-data task to the synthetic
+one, is a control and carries no conclusion.
 
 \begin{table}[!htbp]
 \caption{Registered tests on which the results rest, strongest comparisons
@@ -664,9 +673,11 @@ second only through the first, and pays the third.
 
 \paragraph{What removes the failure}
 The bare instruction says ``list every column from the evidence you cite'', and
-the open schema says nothing about the cited-column field. Adding the field
-description took the rate from 49.0\,\% (98/200, 2026-09-24) to 0.5\,\% [0.1,
-2.8]. The shipped prompt gave 0/200 with or without its two sentences claiming
+the open schema says nothing about the cited-column field. A version of the
+field description that names \texttt{r2}, run on the same day as the floor, and
+the neutral description, run the next day, each took the rate from 49.0\,\%
+(98/200, 2026-09-24) to 0.5\,\% [0.1, 2.8]. The arms were not interleaved, but the
+drop far exceeds the floor's movement across four runs (40.5 to 49.0\,\%). The shipped prompt gave 0/200 with or without its two sentences claiming
 that violations are rejected; its first three rules alone left 7.0\,\% [4.2,
 11.4]; and temperature 0 left 2.0\,\% [0.8, 5.0]. Our names do not explain the
 failure: on the crowded task, whose columns all differ, the undescribed field gave
@@ -814,23 +825,33 @@ extra calls in 600, and we saw no loss in what we measured: 29.4 correct claims
 per answer in each arm, the anchor's value in every answer, and median latencies
 of 5.47 and 5.44\,s.
 
-\paragraph{Cost}
-One named retry repaired every violation that the verifier met in the main runs;
-a second retry was needed twice in 200 under a correction that names no problem,
-and once in A11. Nothing was ever stripped, so deletion remained the worst case
-that guarantees (C1) and (C2) without ever being used. Verification and stripping
-take a median of 17\,$\mu$s per answer (95th percentile 41\,$\mu$s), and binding
-$E$ takes 15\,$\mu$s. End to end, the contract arm took a median of 3.3\,s per
-answer against 2.8\,s for the floor, most likely because of the larger schema,
-although runs on different dates cannot separate the two; arms that needed
-retries took 3.6 to 4.9\,s. The zeros are not vacuous: all but one reference
-answer delivered at least one claim, none abstained, and the contract arms
-delivered as many correct claims as the floor. The arms with the shipped prompt
-delivered about a quarter as many, so part of what the prompt buys is a narrower
-answer. A script that reads only the evidence and the stored attempt, sharing no
-code with the verifier, confirmed every rejection that the records keep: 24 on the
-profiling task and 17 in a registered leakage re-run (A9.2), where the retried
-answers carried 170 correct claims before the retry and 170 after.
+\paragraph{Cost in time}
+The local check and the call to the model differ in scale. Verification and
+stripping take a median of 17\,$\mu$s per answer (95th percentile 41\,$\mu$s),
+and binding $E$ takes 15\,$\mu$s. End to end, the contract arm took a median of
+3.3\,s per answer against 2.8\,s for the floor; the difference comes from the
+request, most likely the larger schema, and not from the check, although runs on
+different dates cannot separate schema from provider. Retries add calls: one
+named retry repaired every violation that the verifier met in the main runs, a
+second retry was needed twice in 200 under a correction that names no problem
+and once in A11, and arms that needed retries took 3.6 to 4.9\,s.
+
+\paragraph{Content kept and content refused}
+The check could buy compliance by emptying answers; the records show that the
+check did not. All but one reference answer delivered at least one claim, none
+abstained, and the contract arms delivered as many correct claims per answer as
+the floor (Table~\ref{tab:arms}), as did both arms of A11. Nothing was ever
+stripped in a live run, so deletion, the step that guarantees (C1) and (C2),
+removed no content; how much a deletion would remove under real use therefore
+remains unobserved. The retries rewrote answers without shedding correct
+content: in a registered leakage re-run that kept every attempt (A9.2), the
+retried answers carried 170 correct claims before the retry and 170 after, and a
+script that shares no code with the verifier confirmed every rejection that the
+records keep, 24 on the profiling task and 17 in that re-run. What the contract
+refuses that is true, the price of the closed world, is counted in
+Section~\ref{sec:rq1}. The arms with the shipped prompt, by contrast, delivered
+about a quarter as many correct claims, so part of what that prompt buys is a
+narrower answer.
 
 \paragraph{Why Tier~B, not only enumerations}
 An enumeration per field expresses the column domain, which is why the
@@ -995,7 +1016,9 @@ of its readers; a contract violation is not always a false statement, and the
 kinds are assigned by program (Section~\ref{sec:rq1}). Under one strict and one
 lenient policy for dataset-level quantities, 98.7\,\% of the flagged bare leakage
 answers misfile under every policy, whereas the lenient policy lowers the
-unverified profile counts from 36 to 19 and from 29 to 22. No person labeled any
+unverified profile counts from 36 to 19 and from 29 to 22. No user study was run,
+so the effect of a misfiled item on what a reader decides is not measured, and
+no person labeled any
 answer, and the semantic reading rests on one model's labels. The free text is
 unverified; a scan
 of 7{,}198 narrations found no clear displacement of ungrounded content into the
@@ -1071,7 +1094,12 @@ The replication package~\cite{replication}, archived at
 \url{https://github.com/hakansabunis/mlcompass}, contains the artifact, every
 harness, the frozen analysis plan with its amendments, one record per live
 response with the verbatim reply delivered to the user, and the scripts that
-recompute every table. The extended version~\cite{extended} reports the full audit
+recompute every table. Every record pins the commits of the harness and the
+adapter under which the record ran; the tables are recomputed offline from the
+records, without any call to a model, by \texttt{scripts/make\_tables.py},
+\texttt{scripts/unified\_scoring.py}, and the scripts named in the captions; and
+the dependency floors are declared in the package metadata. The extended
+version~\cite{extended} reports the full audit
 trail: every registered item with its timestamps and status, the instrument
 faults, the free-text scan, and a downstream benchmark. Code is released under the
 MIT license and data under CC-BY 4.0.
