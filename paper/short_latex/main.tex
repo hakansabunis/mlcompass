@@ -416,11 +416,13 @@ anchor.
 
 \subsection{Implementation}
 
-The contract is not tied to our code. Written for Instructor, the check is a
-field validator that reads $E$ from the validation context and asks again on
-failure~\cite{liu2023instructor}, at the same cost: one specification per
-evidence shape. What the design contributes is what such a validator should
-check, at which granularity, and the measurements that show why. In our
+The contract is not tied to our code. In Instructor, for example, the check
+could be written as a field validator that reads $E$ from the validation context
+and asks again on failure~\cite{liu2023instructor}; the design would still need
+one specification per evidence shape. We did not build or measure such a port,
+so this is a statement of feasibility, not a measured equivalence. What the
+design contributes is what such a validator should check, at which granularity,
+and the measurements that show why. In our
 implementation, the contract is a layer that names no task. A specification of about forty lines
 says how to read one evidence shape: which fields are entities, which
 statistics each entity has, and which entity is the anchor. Leakage is one
@@ -985,16 +987,24 @@ per item, against microseconds for the check.
 \paragraph{Design alternatives}
 Stripping without a retry would be cheaper, but would have deleted content from
 6--16\,\% of \texttt{A-STRESS} answers and 41.5--59\,\% of the Guardrails arms'
-answers, all of which one named retry repaired. Where the host renders the
-answer, letting the model choose evidence identifiers while the host fills in
-every number is preferable for the value channel, because the design removes
-that channel by construction; the verdict, too, could be derived from $E$, which
-would close the channel through which Huang and Deng show a verified verdict
-being inverted~\cite{huang2026narration}. We ran neither design. The entity
-fields and the anchor would still need a check, because an enumeration is a
-request: 5 of 200 natural-name answers of \texttt{P-TIER-A-ONLY} put an
-inadmissible name into a column field. A narrator whose output crosses a
-tool-server boundary, finally, cannot have its numbers filled in by the host.
+answers, all of which one named retry repaired.
+
+A simpler design asks why the model should write numbers at all: the model could
+choose evidence identifiers and the host could fill in every number. Where the
+host renders the answer, that design is preferable for the value channel,
+because the design removes the channel by construction, and the verdict, too,
+could be derived from $E$, closing the channel through which Huang and Deng show
+a verified verdict being inverted~\cite{huang2026narration}. We ran neither
+design. Two situations still require a check on what the model wrote. First,
+the entity fields and the anchor remain the model's choice, and an enumeration is
+a request: 5 of 200 natural-name answers of \texttt{P-TIER-A-ONLY} put an
+inadmissible name into a column field. Second, when the narration crosses a
+tool-server boundary, the narrator is a client model that the tool does not run,
+and the host can inspect that model's answer but cannot fill in the answer's
+numbers. Host filling and the check are therefore complements: the first removes
+the value channel where the host controls rendering, and the second binds what a
+model writes where the host does not. Numbers inside free sentences escape both
+designs, and our contract leaves that channel unverified.
 
 \paragraph{Beyond leakage}
 The design needs a deterministic producer, a finite set of observed entities and
