@@ -58,20 +58,19 @@ E-mail: hakansabunis@gmail.com (H.~Sabuni\c{s}), ysffms@gmail.com
 Large language models (LLMs) increasingly narrate deterministic tool output,
 and a narration can invent an item absent from that output or misfile a real
 item into an inadmissible field. Prevailing defenses constrain decoding, which
-needs token probabilities that commercial interfaces withhold, rely on
-unobservable provider schemas, or check answers against pooled lists that pass
-a real item in the wrong field. We propose evidence closed narration: every
-answer field admits only tool output values bound at call time, numbers are
-keyed to entity and statistic, and host code checks each answer. In the
-assistant mlcompass, one of three LLMs failed often; 1,772 of its 1,831
-violating answers used only items from the evidence, almost always the metric
-name in a column field. A field description removed most such errors; a list written
-for other data turned them into invention. Under the contract, no inadmissible
-column or number reached the user through the structured fields, at
-microseconds of local checking; an evidence bound enumeration did as well on
-column names, and the check removed a small residue, 10 violations in
-600, from the best configuration. We contribute an account of narrator failure,
-a transferable design, and a registered guardrail comparison.
+needs token probabilities commercial interfaces withhold, rely on unobservable
+provider schemas, or check answers against pooled lists that pass a real item
+in the wrong field. We propose evidence closed narration: every answer field
+admits only tool output values bound at call time, numbers are keyed to entity
+and statistic, and host code checks each answer. In mlcompass, one of three
+LLMs failed often; 1,772 of its 1,831 violating answers used only items from
+the evidence, almost always the metric name in a column field. A field
+description removed most such errors; a list written for other data turned them
+into invention. Under the contract, no inadmissible column or number reached the
+user in structured fields, at microseconds of local checking; an evidence bound
+enumeration did as well on column names, and the check removed a small residue
+(10 of 600) from the best configuration. We contribute a field level instrument,
+an account of narrator failure, and a map of which check covers which error.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -129,18 +128,15 @@ answer with the evidence as a pool of names and numbers passes a misfiled item
 by construction, because the item is in the pool.
 
 Existing defenses act in three places (Table~\ref{tab:taxonomy}). Constrained
-decoding run by the caller restricts the tokens that a model may
-emit~\cite{outlines,gcd,scholak2021picard} and needs token probabilities, which
-commercial application programming interfaces (APIs) do not expose; providers
-offer strict schema modes~\cite{structured} instead, whose enforcement cannot be
+decoding run by the caller~\cite{outlines,gcd,scholak2021picard} needs token
+probabilities, which commercial application programming interfaces (APIs) do
+not expose, and the strict schema modes of providers~\cite{structured} cannot be
 observed from outside. Validate-and-reask toolkits such as
-Instructor~\cite{liu2023instructor} and Guardrails~AI~\cite{guardrailsai} check
-the returned answer in the caller's code, with validators that may read
-call-time context, and ask again when a check fails; which values each field
-admits is left to the author of the validators, and a fresh installation checks
-structure only. Recent checkers for narrations compare entities and numbers with
-pools drawn from the evidence~\cite{gupta2026veritygate,du2026ledgermind}, which
-accept a misfiled item.
+Instructor~\cite{liu2023instructor} and Guardrails~AI~\cite{guardrailsai} leave
+which values each field admits to the author of the validators, and recent
+narration checkers compare entities and numbers with pools drawn from the
+evidence~\cite{gupta2026veritygate,du2026ledgermind}, which accept a misfiled
+item.
 
 For a narrator of a deterministic tool, which values each field admits has an
 exact answer before the narrator is called: the columns, statistics, and values
@@ -171,35 +167,37 @@ misfiling: under the bare instruction, 1{,}772 of its 1{,}831 violating answers
 used only items that $E$ contains, almost always \texttt{r2} in the cited-column
 field, so a check against the pooled evidence would have passed them. One
 sentence describing the field removed nearly all of these errors, whereas a
-column list written for other data turned misfiling into invention: 145 of 200
-answers cited columns that existed only in the list. Under the contract, no
-inadmissible column or number reached the user through the structured fields in
-any configuration that we ran, at microseconds of local checking. The comparison
-also shows the limits of the check. On column names, an enumeration bound to $E$
-did as well, and in the best configuration that we found, the check removed a
-residue of 10 violations in 600 answers on the profiling task, a significant
-difference that lies below the 5-point bar that our plan registered for
-practical materiality.
+column list written for other data turned misfiling into invention. Under the
+contract, no inadmissible column or number reached the user through the
+structured fields in any configuration that we ran, at microseconds of local
+checking. The comparison also shows where simpler mechanisms suffice: on column
+names, an enumeration bound to $E$ did as well, and in the best configuration
+that we found, the check removed only a small residue.
 
 The paper makes three contributions:
-(i)~an empirical account of how a tool narrator fails when measured at the
-granularity of answer fields: the dominant failure is structural misfiling,
-which pooled checks pass and a field description largely prevents
-(Section~\ref{sec:rq1});
-(ii)~a transferable design for evidence-bound narration, with admissibility per
-field and values keyed per pair, derived at call time and checked in host code,
-together with the conditions under which the design applies
-(Sections~\ref{sec:contract} and~\ref{sec:discussion}); and
-(iii)~a registered comparison with the alternatives in common use that states
-when each alternative suffices (Section~\ref{sec:rq2}). The replication
+(i)~an instrument for measuring and enforcing the faithfulness of tool narration,
+admissibility per answer field with each number keyed to an (entity, statistic)
+pair, derived from the tool output at call time (Section~\ref{sec:contract});
+(ii)~an empirical account of how a failing narrator breaks the instrument's
+conditions: the dominant failure is structural misfiling, induced by an
+undescribed field, which pooled checks pass and a field description largely
+prevents (Section~\ref{sec:rq1}); and
+(iii)~a registered comparison that maps which mechanism covers which kind of
+error, including where simpler mechanisms suffice and where the check adds little
+(Section~\ref{sec:rq2}, Table~\ref{tab:coverage}). The replication
 package~\cite{replication} holds every response, and an extended version of this
 paper~\cite{extended} holds the full audit trail.
 
-We do not claim that LLMs in general misfile rather than invent. The failure
-occurred on one of three models, served under a rolling name, and centered on
-one string. Our claim is narrower: when a narrator of tool evidence fails,
-misfiling can dominate, a pooled check or a single hallucination rate would not
-show the misfiling for what the misfiling is, and a check keyed to fields and
+The study is a case study of one testbed, and we state what the paper does not
+claim. We do not claim a new enforcement mechanism; the loop is ordinary
+validate-and-reask. We do not claim that LLMs in general misfile rather than
+invent: the failure occurred on one of three models, served under a rolling name,
+and centered on one string. We do not claim superiority over provider-enforced
+strict decoding or over a host that fills in numbers, neither of which we
+measured. And we do not claim that a misfiled item misleads a person, since no
+person labeled our data. Our claim is that when a narrator of tool evidence
+fails, misfiling can dominate, a pooled check or a single hallucination rate would
+not show the misfiling for what the misfiling is, and a check keyed to fields and
 pairs catches both kinds of error.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -207,26 +205,23 @@ pairs catches both kinds of error.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \paragraph{Faithfulness to a finite record}
-Data-to-text generation has long measured faithfulness against a finite input
-record, with slot error rates~\cite{dusek2020e2e}, relation-generation
+Data-to-text generation measures faithfulness against a finite input record, with
+slot error rates~\cite{dusek2020e2e}, relation-generation
 precision~\cite{wiseman2017challenges}, and table-grounded
-metrics~\cite{dhingra2019parent}. Error typologies already separate kinds of
+metrics~\cite{dhingra2019parent}, and error typologies already separate kinds of
 error: FRANK distinguishes entity errors from out-of-article
 errors~\cite{pagnoni2021frank}, and Thomson and Reiter annotate wrong numbers,
 wrong entities, and context errors~\cite{thomson2020gold}. Generators have also
-checked their output against the input while decoding, by reranking candidates
-for missing and redundant slots~\cite{wen2015sclstm,juraska2018slot}. In these
-terms, a misfiled name or value is an entity or context error, or a wrong-value
-slot, and an invented one is an out-of-article error. We borrow these categories
-and claim neither them nor the idea of a check. What differs
-for a tool narrator is the setting: the check must run on the payload that a
-commercial API returns, without beams or token probabilities, before the user
-sees the answer. Our evidence-closed assumption is a closed-world
-assumption~\cite{reiter1978closed}. The enforcement is a postcondition in the
-sense of Design by Contract~\cite{meyer1992dbc}, deleting what violates the
-postcondition is suppression in the edit-automaton model~\cite{ligatti2005edit},
-and Schneider~\cite{schneider2000enforceable} characterizes what a monitor can
-enforce at all.
+reranked candidates for missing and redundant
+slots~\cite{wen2015sclstm,juraska2018slot}. In these terms, a misfiled name or
+value is an entity or context error, and an invented one an out-of-article error.
+We claim neither the categories nor the idea of a check. What differs for a tool
+narrator is the setting: the check must run on the payload that a commercial API
+returns, without beams or token probabilities, before the user sees the answer.
+Our evidence-closed assumption is a closed-world
+assumption~\cite{reiter1978closed}; the enforcement is a postcondition in the
+sense of Design by Contract~\cite{meyer1992dbc}, and deletion is suppression in
+the edit-automaton model~\cite{ligatti2005edit,schneider2000enforceable}.
 
 \begin{table}[!htbp]
 \caption{Where a constraint on LLM output acts. \emph{Bound}: when the allowed
@@ -262,25 +257,22 @@ Decode-time methods can bind constraints to the input: grammar-constrained
 decoding admits input-dependent grammars~\cite{gcd}, PICARD and Synchromesh check
 partial programs against a database schema or a program's
 scope~\cite{scholak2021picard,poesia2022synchromesh}, and
-CHyD~\cite{signe2026chyd} restricts output to spans of the retrieved context.
-All of them need token probabilities; ATLAS-RTC~\cite{cruz2026atlasrtc}
-intervenes during decoding without a guarantee. What a schema enforces depends on
-the engine that applies the schema~\cite{geng2025jsonschemabench}, and even the
-wording of schema keys moves accuracy~\cite{le2026schemakey}. Instructor and
-Guardrails~AI run validate-and-reask loops whose validators can read call-time
-data, and NeMo Guardrails~\cite{nemo} applies output rails that block or rewrite
-a response. Policy contracts fix their domain when the harness is written. Ahn
-and Kim~\cite{ahn2026harness} find, as we do, that prompts let violations
-through while enforcement in code keeps both safety and utility;
-RvLLM~\cite{zhang2025rvllm} checks outputs against constraints written by
-experts; and Winston \emph{et al.}~\cite{winston2026solver} compile policies
-into solver constraints. Our contract has no domain until the evidence exists.
-LedgerMind~\cite{du2026ledgermind} lets claims cite only active ledger entries,
-checks entity and numeric grounding against the cited entries with a tolerance,
-and restricts repair to edits that add nothing unprovenanced, our repair
-asymmetry in another form; that ledger grows during a trajectory, whereas ours is
-complete before the call. EviBound~\cite{chen2025evibound} gates a research agent
-by querying the run tracker for the run that the agent claims.
+CHyD~\cite{signe2026chyd} restricts output to spans of the retrieved context; all
+need token probabilities, and ATLAS-RTC~\cite{cruz2026atlasrtc} intervenes during
+decoding without a guarantee. What a schema enforces depends on the engine that
+applies the schema~\cite{geng2025jsonschemabench}, and the wording of schema keys
+moves accuracy~\cite{le2026schemakey}. Instructor and Guardrails~AI run
+validate-and-reask loops whose validators can read call-time data, and NeMo
+Guardrails~\cite{nemo} applies output rails that block or rewrite a response.
+Policy contracts fix their domain when the harness is written~\cite{ahn2026harness,zhang2025rvllm,winston2026solver};
+Ahn and Kim find, as we do, that prompts let violations through while enforcement
+in code keeps both safety and utility. Our contract has no domain until the
+evidence exists. LedgerMind~\cite{du2026ledgermind} checks entity and numeric
+grounding against the cited ledger entries with a tolerance and restricts repair
+to edits that add nothing unprovenanced, our repair asymmetry in another form;
+that ledger grows during a trajectory, whereas ours is complete before the call.
+EviBound~\cite{chen2025evibound} gates a research agent by querying the run
+tracker for the run that the agent claims.
 
 \paragraph{Narration under a check}
 Four recent works check what a model says about tool output.
@@ -416,27 +408,22 @@ anchor.
 
 \subsection{Implementation}
 
-The contract is not tied to our code. In Instructor, for example, the check
-could be written as a field validator that reads $E$ from the validation context
-and asks again on failure~\cite{liu2023instructor}; the design would still need
-one specification per evidence shape. We did not build or measure such a port,
-so this is a statement of feasibility, not a measured equivalence. What the
-design contributes is what such a validator should check, at which granularity,
-and the measurements that show why. In our
-implementation, the contract is a layer that names no task. A specification of about forty lines
-says how to read one evidence shape: which fields are entities, which
-statistics each entity has, and which entity is the anchor. Leakage is one
-specification; a dataset profiler is a second (Section~\ref{sec:rq3}). Checking an
-answer costs $O(|r|)$, provided that $V_E$ is keyed on the pair (entity,
-statistic): a table keyed on the entity alone checks a claim about one statistic
-against another. Thirty-six hand-written mutation tests, ten fault-injection
-tests that drive the shipped path with a narrator that repeats one fault, and a
-registered property-based search over $10^6$ generated (evidence, response) pairs
-support the implementation without proving the implementation correct. The
-search, built after the experiments, found two defects: a NaN claim value passed
-the verifier, and a 400-digit integer crashed the value check. Both are fixed;
-the NaN fix came on 2026-09-24, after the main runs, and no recorded response
-carries either value.
+The contract is not tied to our code: in Instructor, for example, the check could
+be written as a field validator that reads $E$ from the validation context and
+asks again on failure~\cite{liu2023instructor}. We did not build such a port, so
+this is a statement of feasibility, not a measured equivalence; what the design
+contributes is what such a validator should check, and at which granularity. In
+our implementation, the contract is a layer that names no task. A specification
+of about forty lines says which fields are entities, which statistics each
+entity has, and which entity is the anchor; leakage is one specification and a
+dataset profiler a second (Section~\ref{sec:rq3}). Checking an answer costs
+$O(|r|)$. Thirty-six hand-written mutation tests, ten fault-injection tests on
+the shipped path, and a registered property-based search over $10^6$ generated
+(evidence, response) pairs support the implementation without proving the
+implementation correct. The search, built after the experiments, found two
+defects, a NaN claim value that passed and a 400-digit integer that crashed the
+value check; both are fixed, the NaN fix after the main runs, and no recorded
+response carries either value.
 
 \subsection{What the contract does not cover}
 
@@ -501,11 +488,9 @@ toolkit's own validator was not tested); and our checks. The two \emph{strong}
 arms combine everything that helped (shipped prompt, call-time enumeration, field
 description) and differ only in whether Tier~B runs. Every retry loop has a
 budget of 2. The arms with a typed schema, \texttt{A-STRICT-ENUM}, and the lists
-of A14 also sent the provider's \emph{strict} flag, which asks the provider to
-enforce the schema during decoding. The harness sent the flag to the provider's
-standard endpoint, whose documentation does not describe strict mode, and the
-records show that the flag was not enforced (Section~\ref{sec:rq2}); no arm
-therefore measured decoding enforced by the provider, and every enumeration in
+of A14 sent the provider's \emph{strict} flag to the provider's standard
+endpoint, whose documentation does not describe strict mode; the records show
+that the flag was not enforced (Section~\ref{sec:rq2}), so every enumeration in
 this study acted as a request to the model.
 
 \paragraph{Measures}
@@ -518,29 +503,26 @@ that applies: \emph{extrinsic} (a name or number that $E$ lacks),
 \emph{misplaced} (only items of $E$, in an inadmissible place), or
 \emph{omission}. The middle two kinds are misfiling. The narrators copy numbers,
 so the tolerance hardly matters: 22 answers carry a wrong number at every $\tau$
-from $5\times10^{-4}$ to $0.01$. We report Wilson 95\,\% intervals with the raw
-counts. Two scorers written independently from the definitions agree on every
-entity flag across all 16{,}698 leakage records, and the seventeen faults that we
-found in our own instruments changed derived numbers, never records; the extended
-version lists them.
+from $5\times10^{-4}$ to $0.01$. We report Wilson 95\,\% intervals with raw
+counts. Two independently written scorers agree on every entity flag across all
+16{,}698 leakage records, and the seventeen faults that we found in our own
+instruments changed derived numbers, never records~\cite{extended}.
 
 \paragraph{Registration}
 The analysis plan and its amendments were frozen before the runs that they
 govern. A result is \emph{confirmatory} only if the plan fixed its prediction
 and test in advance; Table~\ref{tab:registered} lists the registered tests on
-which the results below rest. The plan also registered a 2-point equivalence band
-and a 5-point bar below which a significant difference is reported as not
-material. When one arm has a verifier, the arm's zero on (C1) and (C2) holds by
-construction, so a test against that arm asks whether the other arm's rate
-exceeds zero. The remaining registered items were void (X2, H10: no non-entity
-channel activated on leakage), not run or stopped (X5, H12, H15, A3~R1, R2b, R3,
-R4, and the human audit A7), or are reported in the extended version (H7--H9,
-H11, H13, H14, H16, A9.2, A10, A12). The deviations differ in weight. The stopped
-A3 runs matter most, because the registered test of the verifier on the twelve
-frozen tasks never ran; the model panel, changed without an amendment, limits
-generality; the property-based search, built after the runs, tests the code but
-not the runs; and X1, moved from the registered real-data task to the synthetic
-one, is a control and carries no conclusion.
+which the results rest. The plan also registered a 2-point equivalence band and
+a 5-point bar below which a significant difference is not material. When one arm
+has a verifier, the arm's zero on (C1) and (C2) holds by construction, so a test
+against that arm asks whether the other arm's rate exceeds zero. The remaining
+registered items were void (X2, H10: no non-entity channel activated on leakage),
+not run or stopped (X5, H12, H15, A3~R1, R2b, R3, R4, and the human audit A7), or
+are reported in the extended version (H7--H9, H11, H13, H14, H16, A9.2, A10,
+A12). Of the deviations, the stopped A3 runs weigh most, because the registered
+test of the verifier on the twelve frozen tasks never ran; the panel, changed
+without an amendment, limits generality; and X1, moved to the synthetic task, is
+a control and carries no conclusion.
 
 \begin{table}[!htbp]
 \caption{Registered tests on which the results rest, strongest comparisons
@@ -584,17 +566,16 @@ before any run, the floor cited an inadmissible name in 26.5 to 55.5\,\% of
 answers per task, 817 of 1{,}888 in all: 795 misfiled, 18 cited only the frame's
 own target column, which $E$ does not list, and 4 cited only an invented name,
 so the registered prediction held. Across all sixteen tasks, 1{,}807 of the
-1{,}829 flagged answers misfiled, and 13 used an invented name, some of them in
-an answer that also misfiled; 11 of the 13 wrote \texttt{target} for the frame's
-\texttt{y\_true}. These answers come from cells that differ in arm, task, and
-date, so the composition describes the flagged answers rather than an error rate
-over independent tasks. The failure is also narrow in form: almost every
-misfiled name is \texttt{r2}. In the floor run of 2026-09-19, whose narrations
-were recorded, 81 of 200 answers listed \texttt{r2} among the cited columns, 73
-of them beside all ten evidence columns, and no narration called \texttt{r2} a
-column. The narrator appears to read the undescribed field as a list of the
-evidence that the narrator used, which makes the failure a property of the
-interface as much as of the model.
+1{,}829 flagged answers misfiled, and 13 used an invented name, some in an answer
+that also misfiled; 11 of the 13 wrote \texttt{target} for the frame's
+\texttt{y\_true}. The answers come from cells that differ in arm, task, and date,
+so the composition describes the flagged answers, not an error rate over
+independent tasks. The failure is narrow in form. In the floor run of
+2026-09-19, whose narrations were recorded, 81 of 200 answers listed \texttt{r2}
+among the cited columns, 73 of them beside all ten evidence columns, and no
+narration called \texttt{r2} a column: the narrator appears to read the
+undescribed field as a list of the evidence used, so the failure is a property
+of the interface as much as of the model.
 
 \begin{table*}[!tp]
 \caption{Kinds of violation; every answer is in exactly one row
@@ -643,23 +624,21 @@ pooled evidence would pass every one of them, and a contract rate read as a
 hallucination rate would overstate invention many times over.
 
 \paragraph{A semantic reading}
-Whether a misfiled \texttt{r2} states a false relation is a semantic question. We
-registered a blind human audit of 204 items (A7) and did not carry the audit out;
-the sheet and its sampling script are in the replication package with the key
-sealed. In its place we registered automatic judges, each with the same validity
-check: at least 90\,\% correct in each direction on the items whose truth is fixed
-by construction. Two natural language inference models (A10) and two LLM judges
-(A12) failed. The fifth judge, \texttt{gpt-5.5} pinned to the snapshot of
-2026-04-23 (A13), passed, keeping 55 of 55 items that are not false and catching
-73 of 79 false or absent items (64 of 65 after correcting the strata for one
-instrument fault). Contrary to our registered prediction that misfiled names
-would read as right information in the wrong place, the judge classified all 40
-misfiled \texttt{r2} items (Wilson interval 91--100\,\%) as false relations: a
-cited column of that name asserts a column that the frame lacks. The validity
-check, however, held no item whose true label is ``right information, wrong
-place'', and the judge gave that label to no item, so the check cannot validate
-the distinction on which this reading turns. We report one model's
-classification, not a human judgment.
+Whether a misfiled \texttt{r2} states a false relation is a semantic question. The
+registered blind human audit of 204 items (A7) was not carried out; the sheet
+and its sampling script are in the replication package with the key sealed. In
+its place we registered automatic judges with one validity check, at least
+90\,\% correct in each direction on items whose truth is fixed by construction.
+Two natural language inference models (A10) and two LLM judges (A12) failed. The
+fifth judge, \texttt{gpt-5.5} pinned to the snapshot of 2026-04-23 (A13), passed,
+keeping 55 of 55 items that are not false and catching 73 of 79 false or absent
+items (64 of 65 after one instrument fault was corrected). Contrary to our
+registered prediction that misfiled names would read as right information in
+the wrong place, the judge classified all 40 misfiled \texttt{r2} items (Wilson
+interval 91--100\,\%) as false relations. The validity check, however, held no
+item whose true label is ``right information, wrong place'', and the judge gave
+that label to no item, so the check cannot validate the distinction on which the
+reading turns; we report one model's classification, not a human judgment.
 
 \paragraph{What a violation means}
 Three quantities must therefore be kept apart. \emph{Structural violations} are
@@ -764,6 +743,45 @@ flag on the crowded task, and 13 of the 145 answers that cited columns from the
 list also cited the anchor, which the list does not contain; decoding enforced
 by the provider could not have produced them.
 
+\begin{table*}[!tp]
+\caption{What each kind of check does with each kind of error. Cells follow from
+the definition of the check; a dagger marks a cell that our records also show
+(Sections~\ref{sec:rq1}--\ref{sec:rq3}). The pooled check follows the entity and
+number gates of VERITYGATE~\cite{gupta2026veritygate}; the pooled and data-frame
+checks did not run as arms, so their cells are read off their definitions and the
+recorded answers.}
+\label{tab:coverage}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}p{3.15cm}p{2.2cm}p{2.2cm}p{2.2cm}p{2.35cm}p{2.2cm}p{2.15cm}@{}}
+\toprule
+Check & Metric name in a column field & Real column not in $E$ & Invented column & Neighbour's value for a carried pair & Number under an uncarried pair & Anchor omitted \\
+\midrule
+Pooled names and numbers & passes$^\dagger$ (1{,}772 of 1{,}831) & rejected & rejected & passes$^\dagger$ (11 of 12) & passes$^\dagger$ (a number of $E$) & not checked \\
+Columns of the data frame & rejected & passes & rejected & not checked & not checked & not checked \\
+List written in advance, as a request & refused if absent from the list & depends on the list & passes if listed$^\dagger$ (145 of 200) & not checked & not checked & unnameable if absent$^\dagger$ \\
+Enumeration bound at call time, as a request & requested out; 5 of 200 slipped$^\dagger$ & requested out & requested out & not expressible & statistic names only$^\dagger$ (20 to 1) & not checked \\
+Choice list on the cited field & cited field only; 1 slipped$^\dagger$ & cited field only & cited field only & not checked; 2 slipped$^\dagger$ & not checked & not checked \\
+Field and pair check (Tier~B) & rejected$^\dagger$ & rejected, true or not & rejected & rejected within $\tau$$^\dagger$ & rejected$^\dagger$ & flagged \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\paragraph{Which check covers which error}
+Table~\ref{tab:coverage} combines these results with the definitions of the
+checks. Each simpler check covers part of the space. A pooled check catches
+invention but passes both kinds of misfiling; a check against the data frame
+catches the metric name but no number; an enumeration, as a request, steers names
+but cannot express a value that depends on a sibling field; and a choice list
+covers the field to which the list is attached. The field and pair check covers
+every column of the table, flags rather than repairs an omission, and pays for
+the coverage by rejecting true columns that the evidence does not list. The
+comparison therefore supports a claim about coverage, not about rate: where a
+simpler check covers the errors that a narrator actually makes, the simpler check
+suffices, and the field and pair check matters where the configuration, the data,
+or the model changes.
+
 \paragraph{Stock guardrails check structure}
 On 2026-09-18, the stock Guardrails loop and the same loop with a choice list
 built from $E$ read 43.5\,\% against 0\,\%, with 88 answers sent back and
@@ -801,31 +819,25 @@ The two strong arms read 0 in 200 on the reference, crowded, and both real
 datasets on 2026-09-30, and the verifier never had to send a leakage answer back;
 pooled over the four tasks, the difference is 0 with a Newcombe interval of $-0.5$
 to 0.5 points. On the profiling task, an exploratory run left 4 of 200 unverified
-answers in violation against none verified ($p=0.12$). We registered a
-confirmatory test of both tasks (A3); both legs stopped when the provider balance
-ran out, with no violation in their 93, 91, and 50 answers, and the registration
-excluded repeating or extending that run. We therefore registered a new test on
-the profiling task alone, before any call (A11): 600 answers per strong arm, one
-call of each arm per index in a random order, on one harness commit, with every
-attempt kept. One interim look at 358 unverified records (5 violating) is
-recorded in the plan; no decision depended on the look. The unverified arm
-delivered a violation in 10 of 600 answers (1.7\,\% [0.9, 3.0]) and the verified
-arm in none, so the registered two-sided Fisher test rejects ($p=0.002$; difference
-1.7 points, Newcombe interval 0.7 to 3.0). Two readings limit this result. First,
-the whole interval lies below the 5-point bar that the plan set for practical
-materiality, so by our own rule the difference is significant but not material;
-A11 registered its own consequence, to report a benefit of the observed size, and
-we read the result as a residue that the check removes at negligible cost, not
-as a large improvement. Second, A11 does not exercise the value channel. The ten
-violations are slips: two cite a statistic name as a column, four claim a pair
-that $E$ does not carry, three of them under a statistic name that the profiler
-does not use, such as the misspelled \texttt{missding\_count}, and four name a
-column that the frame lacks. Nine of the ten fall outside the enumerations that
-Tier~A writes, so an enumeration enforced by the provider would have refused
-them too, and none is a wrong number for a carried pair. The verifier cost 11
-extra calls in 600, and we saw no loss in what we measured: 29.4 correct claims
-per answer in each arm, the anchor's value in every answer, and median latencies
-of 5.47 and 5.44\,s.
+answers in violation against none verified ($p=0.12$). A registered test of both
+tasks (A3) stopped when the provider balance ran out, with no violation in its
+93, 91, and 50 answers, and A3 excluded repeating that run, so we registered a
+new test on the profiling task alone before any call (A11): 600 answers per
+strong arm, interleaved in a random order on one harness commit, every attempt
+kept, and one interim look recorded in the plan on which no decision depended.
+The unverified arm delivered a violation in 10 of 600 answers (1.7\,\% [0.9,
+3.0]) and the verified arm in none (Fisher $p=0.002$; difference 1.7 points,
+Newcombe interval 0.7 to 3.0). Two readings limit this result. The whole interval
+lies below the registered 5-point bar, so the difference is significant but not
+material: the check removes a residue at negligible cost rather than producing a
+large improvement. And A11 does not exercise the value channel: the ten
+violations are slips (two statistic names cited as columns, four pairs that $E$
+does not carry, such as the misspelled \texttt{missding\_count}, and four columns
+that the frame lacks), nine of the ten fall outside the enumerations that Tier~A
+writes, and none is a wrong number for a carried pair. The verifier cost 11 extra
+calls in 600, and we saw no loss in what we measured: 29.4 correct claims per
+answer in each arm, the anchor's value in every answer, and median latencies of
+5.47 and 5.44\,s.
 
 \paragraph{Cost in time}
 The local check and the call to the model differ in scale. Verification and
@@ -843,17 +855,14 @@ The check could buy compliance by emptying answers; the records show that the
 check did not. All but one reference answer delivered at least one claim, none
 abstained, and the contract arms delivered as many correct claims per answer as
 the floor (Table~\ref{tab:arms}), as did both arms of A11. Nothing was ever
-stripped in a live run, so deletion, the step that guarantees (C1) and (C2),
-removed no content; how much a deletion would remove under real use therefore
-remains unobserved. The retries rewrote answers without shedding correct
-content: in a registered leakage re-run that kept every attempt (A9.2), the
-retried answers carried 170 correct claims before the retry and 170 after, and a
-script that shares no code with the verifier confirmed every rejection that the
-records keep, 24 on the profiling task and 17 in that re-run. What the contract
-refuses that is true, the price of the closed world, is counted in
-Section~\ref{sec:rq1}. The arms with the shipped prompt, by contrast, delivered
-about a quarter as many correct claims, so part of what that prompt buys is a
-narrower answer.
+stripped in a live run, so deletion removed no content, and how much deletion
+would remove under real use remains unobserved. The retries rewrote answers
+without shedding correct content: in a registered leakage re-run that kept every
+attempt (A9.2), the retried answers carried 170 correct claims before the retry
+and 170 after, and a script sharing no code with the verifier confirmed every
+kept rejection, 24 on the profiling task and 17 in that re-run. The arms with the
+shipped prompt delivered about a quarter as many correct claims, so part of what
+that prompt buys is a narrower answer.
 
 \paragraph{Why Tier~B, not only enumerations}
 An enumeration per field expresses the column domain, which is why the
@@ -939,18 +948,15 @@ The enumeration removed almost all claims on pairs that $E$ does not carry (20 t
 1 under natural names), fewer inadmissible names (8 to 5), and no wrong numbers (9
 against 11 under suffixed names). An enumeration can refuse a statistic that a
 column lacks, but cannot constrain a number whose admissible value depends on
-sibling fields. Tier~B caught both, and every contract arm read zero. A check
-against the pooled evidence would not have: 11 of the 12 wrong numbers on the
-suffixed floor, and all seven in A9.1, are numbers that $E$ carries for a
-neighbouring column. This evidence is exploratory and comes from outside the
-registered design. On leakage, the registered test of a channel that
-enumerations cannot express was void (X2), the registered naming test did not
-reach significance, and no host-filled or per-pair schema arm ran, so the claim
-that only a pair-keyed check catches misfiled values holds among the arms that
-ran. Most claims on
-uncarried pairs are the class balance, which the profiler reports for the task as
-a whole and the narrator attaches to the target column. The contract offers that
-correct figure no slot, a design choice of ours; with the class shares admitted
+sibling fields. Tier~B caught both, and every contract arm read zero; a pooled
+check would not have, since 11 of the 12 wrong numbers on the suffixed floor and
+all seven in A9.1 are numbers that $E$ carries for a neighbouring column. This
+evidence is exploratory: the registered test of such a channel on leakage was
+void (X2), the registered naming test did not reach significance, and no
+host-filled or per-pair schema arm ran, so the claim holds among the arms that
+ran. Most claims on uncarried pairs are the class balance, which the profiler
+reports for the whole task and the narrator attaches to the target column; the
+contract offers that correct figure no slot, and with the class shares admitted
 on the target column, the floor falls from 26 to 10 violating answers under
 natural names and from 17 to 10 under suffixed names.
 
@@ -965,24 +971,19 @@ channel is exploratory.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \paragraph{Design principles for tool narrators}
-Four principles follow from the measurements. We state them for narrators like
-the one we studied, whose failure was structural; other models and tools may fail
-differently. \emph{Check at the granularity of fields and pairs.} A check against
-the pooled evidence would have passed 1{,}772 of the 1{,}831 violating answers
-on the bare leakage arms, and 11 of the 12 misfiled values on the suffixed
-profile frame. \emph{Bind the admissible sets at call time.} A list written for
-other data turned misfiling into invention, and a list written in advance is safe
-only to the extent of a coverage that the list's author cannot check.
-\emph{Describe every field, and still check.} A one-sentence description was the
-cheapest fix, and the description and the shipped prompt held wherever we
-measured them, but the effect of such a fix is known only where the fix was
-measured, whereas the effect of the check follows from code in the caller's
-process; the residue that the check removed in A11 was small. \emph{Report
-violations apart from what they introduce}, as data-to-text evaluation already
-separates kinds of error~\cite{pagnoni2021frank,thomson2020gold}. A model judge
-does not replace that report: four of the five judges that we tried failed a
-90\,\% bar on items of known truth, and the one that passed costs about two cents
-per item, against microseconds for the check.
+Four principles follow, stated for narrators like the one we studied, whose
+failure was structural. \emph{Check at the granularity of fields and pairs}, since
+pooled checks pass misfiling (Table~\ref{tab:coverage}). \emph{Bind the
+admissible sets at call time}, since a list written in advance is safe only to the
+extent of a coverage that the list's author cannot check. \emph{Describe every
+field, and still check}: a one-sentence description was the cheapest fix, but the
+effect of such a fix is known only where the fix was measured, whereas the effect
+of the check follows from code in the caller's process. \emph{Report violations
+apart from what they introduce}, as data-to-text evaluation already
+does~\cite{pagnoni2021frank,thomson2020gold}; a model judge does not replace that
+report, since four of the five judges that we tried failed a 90\,\% bar on items
+of known truth, and the one that passed costs about two cents per item, against
+microseconds for the check.
 
 \paragraph{Design alternatives}
 Stripping without a retry would be cheaper, but would have deleted content from
@@ -1021,20 +1022,16 @@ consistency with the tool's output, not correctness.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \paragraph{Construct}
-We measure consistency with $E$, not the effect of a narration on the decisions
-of its readers; a contract violation is not always a false statement, and the
-kinds are assigned by program (Section~\ref{sec:rq1}). Under one strict and one
-lenient policy for dataset-level quantities, 98.7\,\% of the flagged bare leakage
-answers misfile under every policy, whereas the lenient policy lowers the
-unverified profile counts from 36 to 19 and from 29 to 22. No user study was run,
-so the effect of a misfiled item on what a reader decides is not measured, and
-no person labeled any
-answer, and the semantic reading rests on one model's labels. The free text is
-unverified; a scan
-of 7{,}198 narrations found no clear displacement of ungrounded content into the
-prose (8.8\,\% of narrations on reference arms that can reject a claim against
-12.6\,\% on arms that cannot), but a misfiled name is in $E$ and so invisible to
-that scan.
+We measure consistency with $E$; a contract violation is not always a false
+statement, and the kinds are assigned by program (Section~\ref{sec:rq1}). Under
+one strict and one lenient policy for dataset-level quantities, 98.7\,\% of the
+flagged bare leakage answers misfile under every policy, whereas the lenient
+policy lowers the unverified profile counts from 36 to 19 and from 29 to 22. No
+user study was run and no person labeled any answer, so the effect of a misfiled
+item on what a reader decides is not measured. The free text is unverified; a
+scan of 7{,}198 narrations found no clear displacement of ungrounded content into
+the prose (8.8\,\% on reference arms that can reject a claim against 12.6\,\% on
+arms that cannot), but a misfiled name is in $E$ and so invisible to that scan.
 
 \paragraph{Internal}
 Arms ran in blocks, except in the registered runs A9.1, A11, and A14, which
@@ -1046,11 +1043,9 @@ to the provider alone.
 \paragraph{External}
 The failure occurred on one of three providers, at temperature 1.0, on particular
 dates, and centered on one string, so every comparison rests on
-\texttt{deepseek-chat} and on one evidence schema. No enforced strict mode, toolkit
-validator of the toolkit's own, host-filled design, or producer outside mlcompass
-was measured, and the conclusions are limited to the alternatives that ran. The
-contract arms ran
-on four of the sixteen leakage tasks and on the profiling task; on the twelve
+\texttt{deepseek-chat} and one evidence schema, and the conclusions are limited to
+the alternatives that ran. The contract arms ran on four of the sixteen leakage
+tasks and on the profiling task; on the twelve
 frozen tasks, 512 of the floor's 2{,}400 calls were lost when the provider balance
 ran out, each cell's last calls. The shipped default narrator,
 \texttt{claude-opus-4-7}, was registered and not measured for lack of budget, and
@@ -1075,22 +1070,19 @@ When an LLM narrates a deterministic tool's output, which values each field of
 the narration admits has an exact answer at call time. We made that answer
 explicit, at the granularity of fields and of (entity, statistic) pairs, and
 measured three narrators against the answer. The one narrator that failed often
-did not, for the most part, invent: 1{,}807 of its 1{,}829 flagged answers placed
-an item that the evidence contains, above all the metric's name \texttt{r2}, in a
-field that does not admit the item, a failure that a check against the pooled
-evidence would pass and that a one-sentence field description removed where we
-measured the description. A list of columns written for other data turned the
-failure into invention. Checking every answer in host code at this granularity
-let no inadmissible column or number reach the user through the structured
-fields, behind an API that exposes no token probabilities, at microseconds of
-local checking. The check is not the only mechanism that works: on column names,
-an enumeration bound to the evidence did as well, and in the best configuration
-that we found the check removed only a small residue. What the study contributes
-is therefore less a new mechanism than an account of how a tool narrator fails
-and a design that catches that failure wherever the configuration does not.
-These results come from one failing model on one testbed, and the check does not
-yet reach a client model that narrates the same evidence across a tool-server
-boundary.
+mostly misfiled rather than invented: 1{,}807 of its 1{,}829 flagged answers placed
+an item of the evidence, above all the metric's name \texttt{r2}, in a field that
+does not admit the item, a failure that pooled checks pass and a one-sentence
+field description removed where we measured the description. A list written for
+other data turned the failure into invention. Checking every answer in host code
+at this granularity let no inadmissible column or number reach the user through
+the structured fields, at microseconds of local checking. The check is not the
+only mechanism that works: on column names an enumeration bound to the evidence
+did as well, and in the best configuration the check removed only a small
+residue. The study therefore contributes less a new mechanism than an account of
+how a tool narrator fails, a map of which check covers which error, and a design
+that catches the failure wherever the configuration does not. The results come
+from one failing model on one testbed.
 
 \section*{Acknowledgments}
 We thank the readers of earlier drafts whose disagreement located a defect in our
