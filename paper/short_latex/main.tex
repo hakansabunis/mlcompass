@@ -172,7 +172,8 @@ nothing inadmissible reached the user through the structured fields in any
 configuration that we ran, and where simpler mechanisms sufficed, the check
 removed only a small residue.
 
-The paper makes three contributions:
+The paper offers a contract and its empirical analysis, not a new verification
+algorithm, in three contributions:
 (i)~an instrument for measuring and enforcing the faithfulness of tool narration,
 admissibility per answer field with each number keyed to an (entity, statistic)
 pair, derived from the tool output at call time (Section~\ref{sec:contract});
@@ -284,11 +285,11 @@ the inversion; their channel is the verdict, which our contract leaves
 unchecked. ProvenanceGuard~\cite{alvarez2026provenanceguard} targets claims that
 are supported somewhere but attributed to the wrong source, which is misfiling at
 the granularity of sources. VERITYGATE~\cite{gupta2026veritygate}, posted while
-our runs were under way, is the closest in setting: four gates check that the
-evidence identifiers of a narration exist, that each entity belongs to the set
-that the backend emitted, that each number string matches exactly some number
-string of the evidence, and that each claim type cites the evidence type that the
-type requires. The entity and number gates compare with pools, so on evidence
+our runs were under way, is the closest in setting: four gates check that a
+narration's evidence identifiers exist, that each entity belongs to the set that
+the backend emitted, that each number string matches some number string of the
+evidence exactly, and that each claim type cites the evidence type that the type
+requires. The entity and number gates compare with pools, so on evidence
 like ours, whose pool contains the metric's name and every column's values, a
 metric name in a column field and a neighbouring column's value would both
 pass; the claim-type gate is a coarse form of field indexing. None of these works keys a number to the
@@ -378,7 +379,10 @@ no interval. Deletion cannot repair a missing anchor, since any repair would add
 a reference that the model did not produce; Tier~B therefore only flags a
 persistent omission, which is suppression without
 insertion~\cite{ligatti2005edit}, after stripping, because deleting a claim can
-orphan the anchor.
+orphan the anchor. Three claims are therefore kept apart: the \emph{guarantee},
+which holds by construction for (C1) and (C2) in the structured fields;
+\emph{empirical reliability}, the rates that the arms measured; and end-to-end
+\emph{correctness}, which we do not claim (Section~\ref{sec:limits}).
 
 \subsection{Implementation}
 
@@ -513,7 +517,8 @@ and carries no conclusion.
 \caption{Registered tests on which the results rest, strongest comparisons
 first. Differences in percentage points (pp) with Newcombe 95\,\% intervals; X1,
 X3, and X4 belong to the Holm-corrected family. X1 is a control: the stock loop
-cannot reject \texttt{r2} by construction.}
+cannot reject \texttt{r2} by construction. Void, stopped, and unrun items are
+listed in the text.}
 \label{tab:registered}
 \centering
 \footnotesize
@@ -554,8 +559,7 @@ so the registered prediction held. Across all sixteen tasks, 1{,}807 of the
 1{,}829 flagged answers misfiled, and 13 used an invented name, some in an answer
 that also misfiled; 11 of the 13 wrote \texttt{target} for the frame's own
 target column. The answers come from cells that differ in arm, task, and date,
-so the composition describes the flagged answers, not an error rate over
-independent tasks. The failure is narrow in form. In the floor run of
+so the composition describes the flagged answers, not an error rate. The failure is narrow in form. In the floor run of
 2026-09-19, whose narrations were recorded, 81 of 200 answers listed \texttt{r2}
 among the cited columns, 73 of them beside all ten evidence columns, and no
 narration called \texttt{r2} a column: the narrator appears to read the
@@ -564,9 +568,9 @@ of the interface as much as of the model.
 
 \begin{table*}[!tp]
 \caption{Kinds of violation; every answer is in exactly one row
-(\texttt{deepseek-chat} unless named). \emph{Contract}: violates (C1), (C2), or
-(C3), split by kind in the next four columns. \emph{Invented}: answers with a name
-in neither $E$ nor the frame, a subset of the extrinsic ones. The four-task row
+(\texttt{deepseek-chat} unless named). \emph{Contract}: violates (C1)--(C3),
+split by kind in the next four columns. \emph{Invented}: extrinsic answers with a
+name in neither $E$ nor the frame. The four-task row
 exceeds the 1{,}012 flagged answers by one omission and one wrong number; the
 profile rows include the 93 and 91 answers of a stopped registered run (A3 R1);
 the three \texttt{gpt-5.4-mini} violations are class-balance claims in 50 profile
@@ -730,15 +734,13 @@ them.
 
 \begin{table*}[!tp]
 \caption{What each kind of check does with each kind of error. Cells follow from
-the definition of the check; a dagger marks a cell that our records also show
-(Sections~\ref{sec:rq1}--\ref{sec:rq3}). Counts come from the leakage task,
-except the pooled row's neighbour's values, the uncarried pairs, and the
-call-time enumeration's invented columns, which come from the profiling task.
-The pooled check follows the entity
-and number gates of VERITYGATE~\cite{gupta2026veritygate}, whose claim-type gate,
-a coarse field index, is not modelled; the pooled and data-frame checks did not
-run as arms, so their cells are read off their definitions and the recorded
-answers.}
+each check's definition; a dagger marks a cell that the records also show, with
+counts from the leakage task except the pooled row's neighbour's values, the
+uncarried pairs, and the call-time enumeration's invented columns (profiling
+task). The pooled row models the entity and number gates of
+VERITYGATE~\cite{gupta2026veritygate}, not its claim-type gate; the pooled and
+data-frame rows did not run as arms and form a logical, not an experimental,
+comparison.}
 \label{tab:coverage}
 \centering
 \footnotesize
@@ -820,8 +822,7 @@ The unverified arm delivered a violation in 10 of 600 answers (1.7\,\% [0.9,
 3.0]) and the verified arm in none (Fisher $p=0.002$; difference 1.7 points,
 Newcombe interval 0.7 to 3.0). Two readings limit this result. The point
 difference lies below the plan's 5-point bar, and so does the whole interval, so
-the difference is significant but not material: the check removes a residue at
-negligible cost rather than producing a large improvement. And A11 does not
+the difference is significant but not material. And A11 does not
 exercise the tolerance of the value channel: the ten violations are slips (two
 statistic names cited as columns, four pairs that $E$ does not carry, such as the
 misspelled \texttt{missding\_count}, and four columns that the frame lacks), and
@@ -984,26 +985,20 @@ Stripping without a retry would be cheaper, but would have deleted content from
 6--16\,\% of \texttt{A-STRESS} answers and 41.5--59\,\% of the Guardrails arms'
 answers, all of which one named retry repaired.
 
-A simpler design asks why the model should write numbers at all: the model could
-choose evidence identifiers and the host could fill in every number. Where the
-host renders the answer, that design is preferable for the value channel,
-because the design removes the channel by construction, and the verdict, too,
-could be derived from $E$, closing the channel through which Huang and Deng show
-a verified verdict being inverted~\cite{huang2026narration}. We ran neither
-design. Two situations still require a check on what the model wrote. First,
-the entity fields and the anchor remain the model's choice, and where the
-provider does not enforce the schema, as in every arm here, an enumeration is a
-request: 5 of 200 natural-name answers of \texttt{P-TIER-A-ONLY} put an
-inadmissible name into a column field. Second, when the narration crosses a
-tool-server boundary, the narrator is a client model that the tool does not run.
-The tool can then check, and send back, an answer that the client submits
-through a tool call, but can neither fill in nor delete what the client tells
-the user, so only the retry transfers, not the guarantee; our tool-server path
-runs without the contract. Host filling and the check are therefore
-complements: the first removes the value channel where the host controls
-rendering, and the second binds what a model writes wherever the host can still
-reject the answer. Numbers inside free sentences escape both designs, and our
-contract leaves that channel unverified.
+A simpler design lets the model choose evidence identifiers and the host fill in
+every number. Where the host renders the answer, that design is preferable for
+the value channel, which the design removes by construction, and the verdict,
+too, could be derived from $E$, closing the channel through which Huang and Deng
+show a verified verdict being inverted~\cite{huang2026narration}. We ran neither
+design. A check on what the model wrote is still needed for the entity fields and
+the anchor, which remain the model's choice: where the provider does not enforce
+the schema, as in every arm here, an enumeration is a request, and 5 of 200
+natural-name answers of \texttt{P-TIER-A-ONLY} put an inadmissible name into a
+column field. Across a tool-server boundary, the tool can check and send back an
+answer that a client model submits through a tool call, but can neither fill in
+nor delete what the client tells the user, so only the retry transfers; our
+tool-server path runs without the contract. Host filling and the check are
+therefore complements, and numbers inside free sentences escape both.
 
 \paragraph{Beyond leakage}
 The design needs a deterministic producer, a finite set of observed entities and
