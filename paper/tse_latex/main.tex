@@ -108,7 +108,7 @@ or ships the model~\cite{react,toolformer,mcp}. LLMs, however, produce
 content that their input does not support~\cite{ji,huang}, and assistants
 built on LLMs still fail real software tasks~\cite{codex,swebench}.
 
-A concrete case shows what is at stake. Suppose that an engineer's regression
+A concrete case shows what is at stake. Suppose that a user's regression
 model scores $R^2=1.0$ on held-out data. \textbf{mlcompass}, the open-source
 assistant for machine-learning pipelines that this paper studies, treats a
 score that high as a sign of data leakage. The tool raises the alarm, for
@@ -119,7 +119,7 @@ problem that Kaufman \emph{et al.} describe~\cite{leakage}. A deterministic
 detector then measures how strongly each feature correlates with the target
 and ranks the columns that may be carrying the target into the features. The
 detector's output is the \emph{evidence}, a dictionary that we write as $E$.
-An LLM, the \emph{narrator}, explains $E$ to the engineer by filling in a
+An LLM, the \emph{narrator}, explains $E$ to the user by filling in a
 structured answer: a verdict chosen from four labels (leakage likely, leakage
 uncertain, score legitimate, cannot determine), a list of cited columns, and
 claims of the form (column, statistic, value). On the reference task of this
@@ -556,9 +556,9 @@ the contract's Tier~A arms ran without the provider's strict decoding flag,
 whereas the typed-schema arms, \texttt{A-STRICT-ENUM}, and the lists of A14 sent
 the flag. The harness sent the flag to the provider's standard endpoint, whose
 documentation does not describe strict mode, and the records show that the flag
-was not enforced: on the crowded instance, 13 of the 145 responses of the
-author-time list that cited invented names also cited the anchor, which the list
-does not contain. No arm therefore measured decoding enforced by the provider.
+was not enforced: on the crowded instance, 18 of the 200 responses of the
+author-time list named the anchor, which the list does not contain, 5 of them
+beside invented names from the list. No arm therefore measured decoding enforced by the provider.
 Tier~B re-checks the returned tool input in plain code for (C1), for (C2)
 within $\tau=0.005$, and for (C3).
 
@@ -702,10 +702,12 @@ counting X5 as $p=1$ would move X3's adjusted $p$ from 0.015 to 0.022). X- and H
 2026-09-14 at 19:34~UTC, and the first record that they govern started on
 2026-09-15 at 18:23~UTC. A3 was committed on 2026-09-30 at 15:50~UTC, and its
 first call started at 15:51~UTC. Every record pins the harness commit under
-which the record ran. The plan registered a 2-point equivalence band and a
-5-point bar below which a significant difference is reported as not material:
-X3's difference is significant but not material, and X4's interval lies inside
-the band. \emph{Status}: as planned, deviated (run
+which the record ran. The plan registered a 2-point equivalence band, and
+claims superiority only where the interval excludes 0 and the point difference
+reaches 5 points; a significant difference below 5 points is reported as
+significant and not material. X3's difference is significant and, on its point
+difference, not material, although its interval reaches 7.7 points; X4's arms
+both verify, so their tie holds by construction. \emph{Status}: as planned, deviated (run
 with the change that the row describes), exploratory, not tested, or not run.
 The five rows after the first rule record where the study departed from the
 plan; the rows after the second rule are the amendments, registered for this
@@ -722,13 +724,13 @@ Item & Prediction & Outcome & Status \\
 \midrule
 X1 & Contract below the stock Guardrails loop & Stock loop higher by 35.5\,pp [28.9, 42.3], $p_{\mathrm{Holm}}<10^{-23}$; registered on a real-data task, where only the floor, shipped, and strong arms were later run; reported on the synthetic task & deviated \\
 X2 & Contract below the strict call-time enum on a channel other than entity & Void: no such channel activated on leakage & not tested \\
-X3 & Contract below a typed schema without column list & Schema higher by 4.0\,pp [1.3, 7.7], $p_{\mathrm{Holm}}=0.015$, not material; that arm sent the strict flag, which was not enforced & deviated \\
-X3b & Contract against the author-time list (exploratory) & Equal on the reference task; 76.0 against 0\,\% on the crowded instance (invented names 72.5\,\%) & exploratory \\
-X4 & Our checks inside the Guardrails loop tie the contract & 0.0\,pp [$-1.9$, 1.9], $p=1$ & as planned \\
+X3 & Contract below a typed schema without column list & Schema higher by 4.0\,pp [1.3, 7.7], $p_{\mathrm{Holm}}=0.015$, not material on the point difference (interval to 7.7); that arm sent the strict flag, which was not enforced & deviated \\
+X3b & Contract against the author-time list (exploratory) & Equal on the reference task; 76.0 against 0\,\% on the crowded instance (invented names 72.5\,\%); A1's prediction, between no list (27.5\,\%) and the call-time list, rejected & exploratory \\
+X4 & Our checks inside the Guardrails loop tie the contract & 0.0\,pp [$-1.9$, 1.9], $p=1$; both arms verify, so the tie holds by construction & as planned \\
 X5 & Contract against NeMo Guardrails & Not run: the adapter was not built & not tested \\
 H7 & Stock Guardrails loop within 2\,pp of the floor & Not met: 35.5 against 42.0\,\%, but not the 10\,pp drop that rejects the prediction & as planned \\
 H8 & Typed schema without column list within 2\,pp of the floor & Neither held nor rejected: the registered rule rejects only at 0/200, so the rule cannot register the large drop observed (4.0 against 42.0\,\%) & as planned \\
-H9 & Strict call-time enum ties the contract on entity & Held (2026-09-24); the run without the flag is \texttt{A-TIER-A-ONLY}; the flag went to the provider's standard endpoint and may not have applied & as planned \\
+H9 & Strict call-time enum ties the contract on entity & Held (2026-09-24); the run without the flag is \texttt{A-TIER-A-ONLY}; the flag went to the provider's standard endpoint and was not enforced & as planned \\
 H10 & Strict enum fails on an activated non-entity channel & Void with X2 & not tested \\
 H11 & Our checks inside Guardrails match the contract on every channel & Held & as planned \\
 H12 & Wording effects differ between providers & Not run: the sweep ran on one provider & not tested \\
@@ -783,8 +785,8 @@ directly. The prompts, schemas, and contract were written against the
 reference task; the crowded instance and the two datasets played no part in
 their design.
 
-Twelve more instances were frozen in the plan on 2026-07-07, before any live
-run, and were first run for this revision. Each instance plants one of six
+Twelve more instances were frozen in the plan on 2026-07-07, before any run
+of the registered campaign, and were first run for this revision. Each instance plants one of six
 registered target-derived leaks (monotone transform, noisy proxy, exact copy,
 inverse, binned copy, duplicated rows) in one of four public tables, so that
 each leak appears in two tables. The tables are insurance
@@ -1001,14 +1003,14 @@ the study.}
 \centering
 \footnotesize
 \setlength{\tabcolsep}{3pt}
-\begin{tabular}{@{}p{3.5cm}p{2.7cm}p{2.0cm}@{}}
+\begin{tabular}{@{}p{3.45cm}p{2.7cm}p{2.0cm}@{}}
 \toprule
 Question & Answered by & Status \\
 \midrule
 Does the response break the contract? & (C1)--(C3), by program & every response \\
 Does each name or number appear in $E$ or in the frame? & the kinds, by program & every response \\
 Does the response state a false or unsupported relation? & human audit (A7) or model judges (A10, A12, A13) & A13 valid: misfiled names read as false; no human reading \\
-Would the response mislead an engineer? & --- & not studied \\
+Would the response mislead a reader? & --- & not studied \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1089,9 +1091,17 @@ tasks, all providers), 99{,}008 reproduce the measured value exactly, and
 1{,}608 round the value by less than $5\times10^{-4}$. Only a tolerance below
 that bound would begin to flag rounding. One claim drops a correlation's sign
 ($|\Delta| = 0.039$), and the remaining 25 miss by more than 0.05. The number
-of responses with a wrong number is 22 at every $\tau$ from $5\times10^{-4}$
-to $0.01$, and 21 at $0.05$ (\texttt{scripts/tau\_sensitivity.py}). The
-narrators copy numbers, so the choice of $\tau$ matters little here. An
+of responses with a wrong number is 25 at $\tau=5\times10^{-4}$ and
+$10^{-3}$, 24 at $0.005$ and $0.01$, and 23 at $0.05$
+(\texttt{scripts/tau\_sensitivity.py}). The narrators copy numbers, so the
+choice of $\tau$ moves few counts, but $\tau$ bounds what (C2) can see: (C2)
+checks closeness, not provenance, so a neighbour's value within $\tau$ of the
+pair's own value passes. On the reference task the anchor and the distractor
+differ by 0.00026, and on the crowded instance adjacent columns lie 0.003 apart.
+Two crowded responses of \texttt{A-GR-CHOICES} carry nine values copied from the
+adjacent column that pass at $\tau=0.005$; one of the two still violates through
+other values. A tolerance of $5\times10^{-4}$ catches the crowded shifts, which
+is the one response that the count gains there, but not the reference pair. An
 absolute $\tau$ suits bounded quantities such as correlations, whereas
 unbounded quantities call for a relative tolerance and counts call for an exact
 match; each specification can set its own tolerance. Both of our
@@ -1332,7 +1342,7 @@ leaking into a field whose admissible set nobody stated. Such a response still
 violates the contract: a consumer that drops, correlates, or flags \texttt{r2}
 as a leak candidate acts on something that is not a column. The shipped panel
 prints the cited list under the heading ``Evidence cited (verified against the
-evidence)'', so an unverified \texttt{r2} would reach the engineer labeled as
+evidence)'', so an unverified \texttt{r2} would reach the user labeled as
 a verified evidence column. Every arm faced the same instruction, so the
 comparisons between arms stand.
 
@@ -1352,7 +1362,7 @@ The failing model writes the evidence's own vocabulary, above all
 responses, 1{,}807 misfile and 13 use an invented name, and most contract
 violations introduce nothing that $E$ lacks. The one model judge that passed its
 validity check classified every audited \texttt{r2} in a column field as a
-false relation. A field description, the
+false relation. On the reference task, a field description, the
 shipped prompt, or temperature 0 lowers the rate from 42--49\,\% to
 0--2\,\%.
 
@@ -1428,7 +1438,9 @@ check.}
 \subsection{Comparing the mechanisms}
 
 Table~\ref{tab:arms} gives the rates. On the reference task, every arm that
-states the admissible column set reaches zero or one violation in 200. The arm
+tells the model the admissible column set reaches zero or one violation in 200;
+on the profiling task, the enumeration let column names through
+(Section~\ref{sec:rq6}). The arm
 may state the set in the shipped prompt, in a description on the field, in an
 enum in the schema, in a choice list inside a guardrail loop, or through our
 verifier. The one exception is the shipped prompt's first three rules on their
@@ -1508,12 +1520,15 @@ unverified records (5 violating of 358) is recorded in the plan; no decision
 depended on the look, and the run was neither stopped nor extended. The unverified arm delivered a violation in 10 of 600
 responses (1.7\,\% [0.9, 3.0]) and the verified arm in none (0\,\% [0, 0.6]).
 The registered two-sided Fisher test rejects ($p=0.002$), and the difference
-of 1.7 points has a Newcombe 95\,\% interval of 0.7 to 3.0. The whole interval
-lies below the plan's 5-point materiality bar, so the difference is significant
-but not material; A11 registered its own consequence, to report a benefit of the
+of 1.7 points has a Newcombe 95\,\% interval of 0.7 to 3.0. The point
+difference lies below the plan's 5-point materiality bar, and so does the whole
+interval, so the difference is significant but not material; A11 registered its own consequence, to report a benefit of the
 observed size. The ten violations are slips rather than the misfiling of the
 bare instruction, and nine of them fall outside the enumerations that Tier~A
-writes, so A11 does not exercise the value channel. Two cite a
+writes, so a provider that enforced the schema would also have excluded them.
+None is a wrong number for a carried pair, so A11 does not exercise the
+tolerance of the value channel, and the case for the check over an enforced
+schema rests on the values and the anchor. Two cite a
 statistic name (\texttt{cardinality}, \texttt{zero\_ratio}) as a column. Four
 claim a pair that $E$ does not carry, three of them under a statistic name that
 the profiler does not use, such as the misspelled \texttt{missding\_count}.
@@ -1740,7 +1755,7 @@ particular dates, not LLMs in general.
 
 \paragraph{Answer to RQ2 and RQ3}
 In every configuration that we ran, no (C1) or (C2) violation reached the user
-under the contract, and a named retry repaired each violation, at the first
+under the contract, and named retries repaired each violation, at the first
 attempt in all but three responses. The local check costs microseconds, and
 retries add calls. Every rejection that the records keep, 24 on the profile
 task and 17 in a registered leakage re-run, was confirmed by a reading that
@@ -1791,8 +1806,8 @@ instruction. Over identical evidence and schema, the variants move the blended
 entity rate from 9.0\,\% to 72.0\,\%. Wording is already known to move
 behavior this much~\cite{sclar2024formatspread}. The variants also differ in
 how much of the answer they specify, and the count of claims on pairs that
-$E$ does not carry follows that ordering across the six variants. The count is
-0 and 1 per hundred where the instruction names the statistic, 8 and 10 where
+$E$ does not carry follows that ordering across the six variants. The count of
+responses with such a claim is 0 and 1 in 100 where the instruction names the statistic, 8 and 10 where
 the instruction mentions correlations, 26 where the instruction names the
 field without saying what goes in the field, and 45 where the instruction says
 nothing. On the entity channel, the baseline instruction's ``list every column
@@ -2109,7 +2124,7 @@ advance; binding at call time removes that dependence at no cost.
 Four design lessons follow from the measurements and do not depend on
 mlcompass. First, admissibility should be indexed by field. A membership test
 over every name in the evidence passes the dominant failure: 98.7\,\% of the
-1{,}831 flagged responses on the bare leakage arms use a name that the evidence
+1{,}831 violating responses on the bare leakage arms use a name that the evidence
 contains, in a field that does not admit that name. Second, the admissible
 sets should be derived from the producer's output at call time: a list written
 for other data turned misfiling into invention, whereas the list built at call
@@ -2142,12 +2157,16 @@ A further design lets the model choose evidence identifiers and has the host
 fill in every number. That design removes the value channel by construction,
 and the contract then reduces to Tier~A with host rendering: the admissible
 sets are the same, bound at call time from the producer's output. Two of our
-results bear on the choice. The entity fields still need a check, because an
-enum is a request: without the strict flag, 5 of 200 natural-name
+results bear on the choice. The entity fields still need a check, because
+where the provider does not enforce the schema, as in every arm here, an enum is
+a request: 5 of 200 natural-name
 \texttt{P-TIER-A-ONLY} responses put a name outside the column domain into a
 column field. And a narrator whose output crosses the tool-server boundary, as
 the client model's does in the user's editor, cannot have its numbers filled
-in by our host, so only a check can bind that output. Where the host renders
+in by our host; the tool can check and send back an answer that the client
+submits through a tool call, but cannot delete what the client tells the user,
+so only the retry transfers, not the guarantee, and our tool-server path runs
+without the contract. Where the host renders
 the answer, filling numbers by identifier is preferable for the value channel,
 and the verifier remains for the entity fields and the anchor.
 
@@ -2167,13 +2186,13 @@ the guarantee would be consistency with the tool's output, not correctness.
 The guaranteed property is referential and value soundness on the structured
 channels. The verdict, the prose, and the correctness of $E$ lie outside the
 property (Section~\ref{sec:contract}). We measure faithfulness to $E$, not the
-effect of the narration on an engineer's decisions. The outcome is contract
+effect of the narration on a reader's decisions. The outcome is contract
 compliance, which is not always a false statement. The two tasks treated
 dataset-level quantities differently: the leakage measurement accepts one
 under any listed column, whereas the profile contract offers no slot for one.
 Table~\ref{tab:policy} therefore re-scores every response under one policy
 for both tasks, strict or lenient. The leakage findings do not move: 98.7\,\%
-of the flagged bare responses misfile under all three policies. The profile
+of the violating bare responses misfile under all three policies. The profile
 counts depend on the policy: the lenient one lowers the unverified natural-name
 count from 36 to 19 and the suffixed one from 29 to 22, and the wrong numbers
 remain.

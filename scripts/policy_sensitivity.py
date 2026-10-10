@@ -110,7 +110,7 @@ def main() -> int:
         flagged = [r for r in bare if r[p]]
         share = sum(r["c1_misfiled"] for r in flagged) / len(flagged) if flagged else 0
         out[f"bare_leakage_misfile_share_{p}"] = share
-        print(f"bare leakage, {p}: {len(flagged)} flagged, {100 * share:.1f}% misfile")
+        print(f"bare leakage, {p}: {len(flagged)} violating, {100 * share:.1f}% misfile")
     if args.json:
         pathlib.Path(args.json).write_text(json.dumps(out, indent=1), encoding="utf-8")
         print(f"wrote {args.json}")
