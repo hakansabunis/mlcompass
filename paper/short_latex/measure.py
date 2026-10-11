@@ -18,13 +18,15 @@ tex = (HERE / "main.tex").read_text(encoding="utf-8")
 
 # where on its page the reference list starts, as a fraction of the page
 frac = None
+col = ""
 if ref:
     page = pdf[ref - 1]
     for b in page.get_text("blocks"):
         if HEAD.fullmatch(b[4].strip()):
             frac = b[1] / page.rect.height
+            col = "left" if b[0] < page.rect.width / 2 else "right"
 print(f"pages {len(pages)}; references start on p{ref}"
-      + (f" at {frac:.0%} of the page height" if frac is not None else ""))
+      + (f", {col} column, at {frac:.0%} of the page height" if frac is not None else ""))
 print("text fonts:", [f for f in fonts if not re.match(r"CM|MSBM|MSAM", f)])
 print("overfull:", len(re.findall(r"Overfull \\[hv]box", log)),
       "| undefined refs/cites:", sum(1 for line in log.splitlines()
