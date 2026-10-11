@@ -241,8 +241,9 @@ paper~\cite{extended} holds the full audit trail.
 
 The study is a set of controlled experiments within one testbed. The failure
 occurred on one of three models and centered on one string, so we claim no rate
-for LLMs in general. We did not measure provider-enforced strict decoding or a
-host that fills in numbers, and claim no superiority over either, nor over a
+for LLMs in general. We did not measure provider-enforced strict decoding on the
+failing model or a host that fills in numbers, and claim no superiority over
+either, nor over a
 call-time enumeration on leakage column names, where the two tied;
 Section~\ref{sec:threats} collects the remaining limits. The sections that follow
 cover related work, the contract, the study design, the results, their
@@ -551,8 +552,9 @@ typed-schema arms, the lists written in advance (those of the coverage test
 included), and the strict-flag enumeration sent the strict flag to the
 provider's standard endpoint; the provider documents strict mode only for its
 beta endpoint~\cite{deepseek2026toolcalls}, which we did not use, and the flag
-was not enforced (Section~\ref{sec:rq2}), so every enumeration in this study
-acted as a request.
+was not enforced (Section~\ref{sec:rq2}), so every enumeration sent to
+\texttt{deepseek-chat} acted as a request; on \texttt{gpt-5.4-mini}, the two
+typed-schema arms ran under the provider's enforced strict mode.
 
 \subsection{Measures}
 
@@ -575,7 +577,7 @@ differences Newcombe 95\,\% intervals, always with raw counts. The harness score
 and a second scorer, written from the same definitions without shared code, agree
 on every entity flag across the 16{,}698 leakage records of the main corpus and
 differ on 17 derived value or omission flags~\cite{extended}; the scorer behind
-the tables was not part of that comparison and has no independent
+the tables was not part of that comparison, and its kinds have no independent
 re-implementation. Faults found in our own scripts
 changed derived numbers, never records; the extended version lists them.
 
@@ -1076,8 +1078,10 @@ mode~\cite{deepseek2026toolcalls}, could express (C2) as one branch per pair, an
 the check could be written as an Instructor validator that reads $E$ from the
 validation context~\cite{liu2023instructor}. We built none of these.
 Grammar-constrained decoding run by the caller needs an open model, and the one
-open model that we ran did not fail on the floor (0 of 20); the grammars and
-strict modes that providers run were not tested. The entity fields and the anchor would still be the model's choice, and an
+open model that we ran did not fail on the floor (0 of 20). Provider-run grammars
+were not tested, and provider-enforced strict modes not on the failing model: the
+two \texttt{gpt-5.4-mini} arms that ran under the provider's strict mode had
+nothing to catch, since that model showed no violation in any arm. The entity fields and the anchor would still be the model's choice, and an
 enumeration that the provider does not enforce is a request: 5 of 200
 natural-name answers of the call-time enumeration on the profiling task put an
 inadmissible name into a column field. Across a tool-server boundary, the tool
