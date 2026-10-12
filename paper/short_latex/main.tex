@@ -14,6 +14,7 @@
 \usepackage{amsmath,amssymb,amsthm}
 \usepackage{booktabs}
 \usepackage{array}
+\usepackage{xcolor}
 \usepackage{graphicx}
 \usepackage[hidelinks]{hyperref}
 \usepackage{url}
@@ -53,28 +54,26 @@ Istanbul Medipol University, Istanbul, T\"urkiye.
 E-mail: hakansabunis@gmail.com (H.~Sabuni\c{s}), ysffms@gmail.com
 (Y.~\"Unl\"u), mkozdemir@medipol.edu.tr (M.~K.~\"Ozdemir).}}
 
-\markboth{Sabuni\c{s} \MakeLowercase{\textit{et al.}}}%
-{Catching Misfiling in LLM Tool Narrators}
+\markboth{}{}
 
 \IEEEtitleabstractindextext{%
 \begin{abstract}
-Large language models (LLMs) that narrate deterministic tool output can invent
-an item absent from that output or misfile a real item into an inadmissible
-field. Defenses constrain decoding, which hosted interfaces leave to the
-provider, or check answers: validators leave admissibility to their authors, and
-some narration checkers match entities and numbers against pooled evidence,
-which passes real items in wrong fields. We propose a contract
-that binds entity and number fields to tool output at call time, keys numbers to
-entity and statistic, and checks answers in host code. In
-mlcompass, one of three LLMs failed often; under the bare instruction, 1,772 of
-1,831 violating answers only misplaced evidence items, mostly the metric name in
-a column field. A field description removed nearly all such errors; a list
-written for other data turned them into invention. By construction, no
-inadmissible column or number, up to tolerance, reached structured fields. The
-check removed a residue of 10 in 600 from the strong configuration, and on
-leakage column names an evidence bound enumeration did as well. We contribute a
-field level instrument, an account of narrator failure, and a map of which check
-covers which error.
+Large language models (LLMs) that explain deterministic tool output can invent
+items absent from the output or misfile real items into fields that do not admit
+them. Prevailing defenses constrain decoding, which hosted interfaces leave to
+the provider, or check answers, leaving admissible values to validator authors or
+pooling entities and numbers, which accepts real items in wrong fields. We
+propose a runtime contract that binds entity and number fields to the tool output
+at call time, keys numbers to entity and statistic, and checks answers in host
+code. In a leakage diagnosis tool, one of three LLMs failed often; under a plain
+instruction, 1,772 of its 1,831 violating answers only misplaced output items,
+mostly a metric listed as a column. A field description removed nearly all such
+errors; a list written for other data turned them into invented names. By
+construction, no inadmissible column or number, within tolerance, reached
+structured fields. The check removed 10 residual violations in 600 from the best
+configuration, and a list built at call time matched the check on leakage column
+names. We contribute a field level instrument, an account of narrator failure,
+and a map of which check covers which error.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -116,30 +115,39 @@ receive a column that does not exist.
 
 \begin{figure}[!t]
 \centering
-\fbox{\parbox{\dimexpr\columnwidth-2\fboxsep-2\fboxrule\relax}{\footnotesize
-\textbf{Evidence $E$} (reference task, excerpt)\\
-\scriptsize\ttfamily suspicious\_metric: r2 = 1.0\\
-log\_target\_v2: 0.998993 (Spearman)\\
-near\_target\_proxy: 0.998736 (Pearson)\\
-feature\_12 and seven more columns near 0\\
-candidate\_leak\_columns: log\_target\_v2, near\_target\_proxy\\[3pt]
-\footnotesize\rmfamily\textbf{Answer} (no safeguards, run of 2026-09-19, answer 32; prose omitted)\\
-\scriptsize\ttfamily columns\_referenced: [r2, log\_target\_v2, near\_target\_proxy]\\
+\footnotesize
+\setlength{\fboxsep}{3pt}
+\raggedright\textbf{(a) Evidence $E$} (reference task, excerpt)\par\smallskip
+\colorbox{black!6}{\parbox{\dimexpr\columnwidth-2\fboxsep\relax}{\scriptsize\ttfamily
+suspicious\_metric: r2 = 1.0\\
+log\_target\_v2 \hfill correlation 0.998993\\
+near\_target\_proxy \hfill correlation 0.998736\\
+feature\_12 and seven more columns \hfill correlations near 0\\
+candidate\_leak\_columns: log\_target\_v2, near\_target\_proxy}}\par\smallskip
+\textbf{(b) Narrator's answer} (no safeguards, 2026-09-19, answer 32)\par\smallskip
+\colorbox{black!6}{\parbox{\dimexpr\columnwidth-2\fboxsep\relax}{\scriptsize\ttfamily
+columns\_referenced: [\textbf{r2}, log\_target\_v2, near\_target\_proxy]\\
 claims: (log\_target\_v2, correlation, 0.998993)\\
 \phantom{claims: }(near\_target\_proxy, correlation, 0.998736)\\
-verdict: leakage\_confirmed\\[3pt]
-\footnotesize\rmfamily\textbf{Checks}\\
-Pooled names and numbers: passes, since \texttt{r2} is a name of $E$.\\
-Columns of the data frame: rejects \texttt{r2}; checks no number.\\
-Contract: rejects \texttt{r2} as a cited column and rejects the free-text
-verdict, which is not one of the four admissible verdicts. A retry first asks
-only for an admissible verdict and names \texttt{r2} once the verdict is
-admissible; whatever persists after two retries is deleted (\texttt{r2}) or ends
-the answer (the verdict). Both claims match the measured values, and the top
-candidate leak is cited.}}
-\caption{A misfiled answer recorded without safeguards, and what three checks
-return. The narrator's prose treats \texttt{r2} as the metric; the structured
-field, which programs consume, lists \texttt{r2} as a column.}
+verdict: \textbf{leakage\_confirmed}}}\par\smallskip
+\textbf{(c) What three checks return}\par\smallskip
+\centering
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}llll@{}}
+\toprule
+Check & Cited \texttt{r2} & Verdict & Claims \\
+\midrule
+Pooled names and numbers & passes & not checked & pass \\
+Columns of the data frame & rejects & not checked & names only \\
+Contract (Tier~B) & rejects (C1) & rejects & pass (C2) \\
+\bottomrule
+\end{tabular}
+\caption{A misfiled answer recorded without safeguards (prose omitted) on the
+reference task, a synthetic frame whose target leaked through a log-transformed
+copy (Section~\ref{sec:subjects}). The narrator's prose treats \texttt{r2} as the metric; the structured field, which
+programs consume, lists \texttt{r2} as a column. The pooled check passes
+\texttt{r2} because \texttt{r2} is a name of $E$; Section~\ref{sec:contract}
+defines the contract's conditions (C1) to (C3).}
 \label{fig:example}
 \end{figure}
 
@@ -206,7 +214,8 @@ statistic names into the JavaScript Object Notation (JSON) Schema of the
 narrator's answer tool, as enumerations built from $E$ at call time.
 \emph{Tier~B} checks the returned answer in host code, sends the answer back with
 the violation named, deletes whatever still violates the contract, and flags an
-omitted anchor, which deletion cannot repair. The loop is ordinary
+answer that omits the top candidate (the \emph{anchor}), since deletion cannot
+repair an omission. The loop is ordinary
 validate-and-reask; we study the granularity of the check, per field and pair
 rather than per pool, and what measuring at that granularity reveals, through
 three research questions.
@@ -247,9 +256,8 @@ for LLMs in general. We did not measure provider-enforced strict decoding on the
 failing model or a host that fills in numbers, and claim no superiority over
 either, nor over a
 call-time enumeration on leakage column names, where the two tied;
-Section~\ref{sec:threats} collects the remaining limits. The sections that follow
-cover related work, the contract, the study design, the results, their
-implications, the threats to validity, and our conclusions.
+Section~\ref{sec:threats} collects the remaining limits, after related work, the
+contract, the study design, the results, and their implications.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Related Work}\label{sec:related}
@@ -302,17 +310,16 @@ the wrong source, misfiling at the granularity of sources.
 LedgerMind~\cite{du2026ledgermind} grounds entities and numbers in cited ledger
 entries and repairs only by typed operators that add no ledger entry without tool
 provenance, over a ledger that grows during a trajectory, whereas ours is
-complete before the call. EviBound~\cite{chen2025evibound} checks a research
-agent's claims against its run tracker. VERITYGATE~\cite{gupta2026veritygate},
+complete before the call. VERITYGATE~\cite{gupta2026veritygate},
 posted while our runs were under way, is the closest: a narrated deterministic
 backend, an allowlist built per instance from the backend's output, one repair
 pass that names the errors, emission of only the claims that pass, and gates for
 evidence identifiers, entities, number strings matched exactly against the
-evidence, and the evidence type that each claim type requires. Its own counts
-show misrouting rather than invention: after one repair, 97 to 100\,\% of its
-three narrators' failing claims fail the claim-type gate, nearly always by citing
-real evidence of the wrong type; its prompt does not state the required mapping,
-although a repair that quotes the rule does not reliably fix the routing. We
+evidence, and the evidence type that each claim type requires. VERITYGATE's own
+counts show misrouting rather than invention: after one repair, 97 to 100\,\% of
+the failing claims of its three narrators fail the claim-type gate, nearly always
+by citing real evidence of the wrong type; the VERITYGATE prompt does not state
+the required mapping, although a repair that quotes the rule does not reliably fix the routing. We
 measure the analogous failure one level finer, a real item of $E$ in a field that
 does not admit the item, and test which interface changes remove the failure;
 VERITYGATE's entity and number gates compare with pools, so on evidence like ours a metric
@@ -430,7 +437,7 @@ $A_{E,\mathrm{col}}$, the claim's pair lies in $\mathrm{dom}(V_E)$, and the
 claim's value is finite and within $\tau$ of the measured value; these are the
 predicates of (C1) and (C2). The filter fails closed: the one exception that the
 value check catches, an overflow on a huge integer, rejects the claim, and any
-other failure propagates instead of releasing unchecked content. This is the
+other failure propagates instead of releasing unchecked content. The property is the
 standard soundness of a suppression monitor for a safety
 property~\cite{schneider2000enforceable,ligatti2005edit}.
 \end{IEEEproof}
@@ -460,11 +467,12 @@ recorded claim carries either value.
 
 The guarantee is consistency with $E$, not correctness, and (C2) checks
 closeness, not provenance: a neighbour's value within $\tau$ of the pair's own
-value passes. Our tasks hold such neighbours. On the reference task the two
-candidates differ by 0.00026, and on the crowded task adjacent columns lie 0.003
-apart; in two crowded answers of the choice-list arm, nine values copied from the
-adjacent column pass the check at $\tau=0.005$, although one of the two answers
-still violates through other values. A tolerance of $5\times10^{-4}$ would catch
+value passes. Our tasks (Section~\ref{sec:subjects}) hold such neighbours: on
+the reference task the two leak candidates of Fig.~\ref{fig:example} differ by
+0.00026, and on the crowded task adjacent columns lie 0.003 apart. In two
+crowded answers that only a choice list checked (Section~\ref{sec:configs}),
+nine values copied from the adjacent column pass our check at $\tau=0.005$,
+although one of the two answers still violates through other values. A tolerance of $5\times10^{-4}$ would catch
 the crowded shifts but not the reference pair. The verdict is checked for
 admissibility but not for agreement with $E$, and the free-text narration reaches
 the user marked unverified. The detector is trusted, so a mis-ranked candidate is
@@ -497,7 +505,7 @@ check is worth adding only where simpler mechanisms leave errors that the check
 removes at an acceptable cost; \emph{RQ3}, because a layer that names no task
 should hold where numbers outnumber names.
 
-\subsection{Subjects}
+\subsection{Subjects}\label{sec:subjects}
 
 \paragraph{Tasks}
 The \emph{reference} task is a frame of 1,000 rows and fourteen columns whose
@@ -516,7 +524,8 @@ tables~\cite{lantz2013mlr,janosi1988heart,ibm2019telco,decock2011ames}. We wrote
 the prompts, schemas, and contract against the reference task alone. The
 \emph{profiling} task, used in RQ2 and RQ3, narrates the dataset profiler that
 ships in the same tool, bound to the same layer without task-specific
-verification. Its evidence has a different shape: every column of the frame is
+verification. The profiling evidence has a different shape: every column of the
+frame is
 admissible (24 against 10), each column carries up to 12 of 13 statistics,
 depending on its type (against 1), and $E$ carries 196 measured values (against
 10). The frame has ordinary data-quality problems and names its columns
@@ -535,7 +544,7 @@ below 1.9\,\% (Wilson, 95\,\%). The provider serves a rolling model name, so
 every rate carries its run date; we compare configurations within a date where
 the records allow and mark comparisons across dates.
 
-\subsection{Configurations}
+\subsection{Configurations}\label{sec:configs}
 
 An \emph{arm} fixes the system prompt, the answer tool (schema and description),
 and the check. The \emph{bare} prompt states the task with no faithfulness rule;
@@ -842,8 +851,8 @@ configuration without the check in 6 of its 10 residual violations. Both arms of
 the comparison of our checks inside Guardrails verify, so their tie holds by
 construction and shows only that the check transfers to another toolkit's loop.
 The enumerations acted as requests: the list written for the reference task was
-sent with the strict flag on the crowded task, and 18 of its 200 answers named
-the anchor, which the list does not contain, 5 of them beside columns from the
+sent with the strict flag on the crowded task, and 18 of the 200 answers of that
+arm named the anchor, which the list does not contain, 5 of them beside columns from the
 list, which decoding enforced by the provider could not have produced.
 
 \paragraph{Diagnostic controls}
@@ -878,7 +887,7 @@ residual could not be distinguished from the call-time list (3 against 0, Fisher
 $p=0.25$), and the test does not separate the anchor from the other columns.
 Whether a list written in advance is safe thus depends on a coverage that the
 list's author cannot check before the data arrive; binding at call time removes
-that dependence. This agrees with PhantomFill~\cite{usman2026phantomfill}, where
+that dependence. The finding agrees with PhantomFill~\cite{usman2026phantomfill}, where
 required fields drove fabrication to 100\,\% in ten of thirteen models, hidden in
 required enumerations; our addition is that fabrication from a list written in
 advance appeared when the list covered none of the evidence and almost vanished
@@ -899,7 +908,7 @@ comparison.}
 \centering
 \footnotesize
 \setlength{\tabcolsep}{3pt}
-\renewcommand{\arraystretch}{1.2}
+\renewcommand{\arraystretch}{1.05}
 \begin{tabular}{@{}>{\raggedright\arraybackslash}p{3.15cm}*{6}{>{\raggedright\arraybackslash}p{2.2cm}}@{}}
 \toprule
 Check & Metric name in a column field & Real column not in $E$ & Invented column & Neighbour's value for a carried pair & Number under an uncarried pair & Anchor omitted \\
@@ -1105,9 +1114,8 @@ The design needs a deterministic producer, a finite set of observed entities and
 values, a domain bound to that set at call time, and a tolerance for each kind of
 quantity narrower than the gap between neighbours (Section~\ref{sec:limits}).
 Narrators of static-analysis findings, continuous-integration failures, or
-dependency-scanner reports meet these conditions, although their evidence may be
-nested or larger; we have not measured them, and there, too, the guarantee would
-be consistency with the tool's output.
+dependency-scanner reports meet these conditions; we have not measured them, and
+there, too, the guarantee would be consistency with the tool's output.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Threats to Validity}\label{sec:threats}
@@ -1196,13 +1204,11 @@ The replication package~\cite{replication}, archived at
 \url{https://github.com/hakansabunis/mlcompass}, contains the artifact, every
 harness, the frozen analysis plan with its amendments, one record per live
 response with its parsed answer (16{,}766 of the 22{,}332 records also keep the
-narration), and the scripts that recompute every table offline
-(\texttt{scripts/unified\_scoring.py} for the corpus tables,
-\texttt{scripts/analyze\_a3.py}, \texttt{analyze\_a9.py},
-\texttt{analyze\_a11.py}, and \texttt{analyze\_a14.py} for the registered tests,
-\texttt{scripts/make\_tables.py} for the registered contrasts, and
-\texttt{scripts/tau\_sensitivity.py} and \texttt{scripts/time\_verifier.py} for
-the tolerance and timing figures).
+narration), and the scripts in \texttt{scripts/} that recompute every table
+offline (\texttt{unified\_scoring.py} for the corpus, the \texttt{analyze\_a*.py}
+scripts and \texttt{make\_tables.py} for the registered tests, and
+\texttt{tau\_sensitivity.py} and \texttt{time\_verifier.py} for tolerance and
+timing).
 Every leakage record pins the commits of its harness and adapter, and every
 profile record pins the repository commit and whether the working tree had
 changes; a record's \texttt{strict} or \texttt{baseline.strict\_applied} field

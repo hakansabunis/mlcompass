@@ -43,7 +43,7 @@ print("prose words (floats excluded):", len(prose.split()))
 
 abstract = tex[tex.index(r"\begin{abstract}") + 16:tex.index(r"\end{abstract}")]
 plain = re.sub(r"\s+", " ", abstract).strip()
-problems = [c for c in ("--", "—", "–", "'", "’", "-") if c in plain]
+problems = [c for c in ("--", "—", "–", "'", "’", "-", ":") if c in plain]
 print("abstract words:", len(plain.split()), "| forbidden characters:", problems or "none")
 
 its = [m.start() for m in re.finditer(r"\b[Ii]t\b", re.sub(r"(?<!\\)%.*", "", body))]
