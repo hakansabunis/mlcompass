@@ -159,8 +159,10 @@ evidence does not support and checks no number.
 \begin{table}[!t]
 \caption{Where a constraint on LLM output acts. \emph{Bound}: when the allowed
 set is fixed, either when the tool is written (author), per request (call), or as
-the run accumulates entries (accumulating). \emph{Decode}: whether the method
-needs control over decoding. \emph{Guarantees}: what holds for every output.}
+the run accumulates entries (accumulating). \emph{Decode}: whether the caller
+must control decoding; provider strict modes need no control by the caller,
+although the provider enforces them during decoding. \emph{Guarantees}: what
+holds for every output.}
 \label{tab:taxonomy}
 \centering
 \footnotesize
@@ -341,8 +343,11 @@ The answer has two entity fields, the cited columns
 (\texttt{columns\_referenced}) and the column of each claim
 (\texttt{claims[].column}). From $E$ alone we derive the set $A_{E,\mathrm{col}}$
 of admissible columns and a table $V_E$ of measured values keyed by (column,
-statistic). The \emph{anchor} $a^*$ is the top-ranked candidate leak, and an
-answer \emph{commits} when its verdict is neither empty nor ``cannot determine''.
+statistic). The \emph{anchor} $a^*$ is the top-ranked candidate leak. In
+measurement, an answer \emph{commits} when its verdict is neither empty nor
+``cannot determine'', whether or not the verdict is admissible; at run time,
+(C3) applies only to answers with an admissible verdict, since the others are
+sent back and, if they persist, aborted.
 
 \begin{definitionx}[Output conditions]\label{def:contract}
 A structured response $r$ \emph{satisfies} $\mathcal{C}_E$, with tolerance
@@ -353,9 +358,11 @@ $(e,s,v)$ in $r$ with $e \in A_{E,\mathrm{col}}$ has $(e,s) \in
 \end{definitionx}
 
 \begin{definitionx}[Anchor coverage]\label{def:anchor}
-When $E$ has an anchor, a committed response that does not reference $a^*$
-raises the warning \textbf{(C3)}. When $E$ has no anchor, as on a negative
-control, (C3) does not apply.
+Let $R(r)$ be the set of names in the entity fields of the delivered response
+$r$, \texttt{columns\_referenced} and \texttt{claims[].column}; names in the
+free-text narration do not count. When $E$ has an anchor, a committed response
+with $a^* \notin R(r)$ raises the warning \textbf{(C3)}. When $E$ has no anchor,
+as on a negative control, (C3) does not apply.
 \end{definitionx}
 
 Soundness here is a property of the delivered answer relative to $E$, not of the
@@ -564,7 +571,10 @@ at least one inadmissible name. Each violating answer also receives one
 \emph{kind}, the first that applies: \emph{extrinsic} (a name or number that $E$
 lacks), \emph{contradicts $E$} (for a pair that $E$ carries, the value of another
 item), \emph{misplaced} (only items of $E$, in an inadmissible place), or
-\emph{omission}. The middle two kinds are misfiling. The kinds are exclusive,
+\emph{omission}. The middle two kinds are misfiling. The measured violations
+cover (C1) to (C3); verdict admissibility is a separate runtime check, not a
+fourth measured category, although an inadmissible verdict such as ``unknown''
+can raise (C3) under the measurement rule for commitment. The kinds are exclusive,
 whereas the indicator ``contains a misfiled name'' is not: an answer that
 misfiles one name and invents another counts as extrinsic. A pooled check accepts
 every answer whose every name and number lies in $E$, so misplaced and
@@ -860,7 +870,8 @@ task, the typed schema without a list read 27.5\,\% and the call-time list
 0\,\%, which rejects the prediction registered with the stale-list arm, that a
 stale list would fall between the two. A registered, interleaved test then varied
 the list's coverage: lists covering 0, 3, 5, 8, or 10 of the ten evidence
-columns, each covering list including the anchor, produced invented names in
+columns, every list with nonzero coverage including the anchor, produced
+invented names in
 143, 2, 0, 3, and 0 of 200 answers (Cochran--Armitage trend, $p<10^{-76}$). The
 trend is carried by the list that covers nothing; at 8 of 10 columns, the
 residual could not be distinguished from the call-time list (3 against 0, Fisher
