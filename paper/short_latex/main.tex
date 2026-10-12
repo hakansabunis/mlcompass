@@ -1098,45 +1098,54 @@ is exploratory.}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \paragraph{Design principles for tool narrators}
-Four principles follow, stated for narrators like the one we studied, whose
-failure was structural. \emph{Check at the granularity of fields and pairs}, since
-pooled checks pass misfiling (Table~\ref{tab:coverage}). \emph{Bind the admissible sets at call time}, since a list written
-in advance is safe only to the extent of a coverage that the list's author cannot
-check. \emph{Describe every field, and still check}: a short field description
-was the cheapest fix, but its effect is known only where measured, whereas the
-check's effect follows from code in the caller's process. \emph{Report violations
-apart from what they introduce}, as data-to-text evaluation already
-does~\cite{pagnoni2021frank,thomson2020gold}; a model judge does not replace that
-report, since four of our five judges failed a 90\,\% bar on items of known
-truth, and the fifth costs about two cents per item.
+Four principles follow for narrators like the one we studied, whose failure was
+structural.
+\begin{itemize}
+\item \emph{Check at the granularity of fields and pairs.} Pooled checks pass
+misfiling (Table~\ref{tab:coverage}).
+\item \emph{Bind the admissible sets at call time.} A list written in advance is
+safe only to the extent of a coverage that the list's author cannot check.
+\item \emph{Describe every field, and still check.} A short field description was
+the cheapest fix, but the effect of a description is known only where measured.
+The effect of the check follows from code in the caller's process.
+\item \emph{Report violations apart from what they introduce}, as data-to-text
+evaluation already does~\cite{pagnoni2021frank,thomson2020gold}. A model judge
+does not replace that report: four of our five judges failed a 90\,\% bar on
+items of known truth, and the fifth costs about two cents per item.
+\end{itemize}
 
 \paragraph{Design alternatives}
-Stripping without a retry would be cheaper, but would have deleted content from
-6--16\,\% of the answers of the arm that runs Tier~B alone and 41.5--59\,\% of the
-answers of the two Guardrails arms that check content, all of which one named
-retry repaired. If the host filled in every number from evidence identifiers that
-the model chose, the value channel would vanish wherever the host renders the
-answer, and a verdict derived from $E$ would take the structured verdict out of the model's hands. A strict
-mode with alternatives and numeric bounds, such as the provider's beta
-mode~\cite{deepseek2026toolcalls}, could express (C2) as one branch per pair, and
-the check could be written as an Instructor validator that reads $E$ from the
-validation context~\cite{liu2023instructor}. We built none of these.
-Grammar-constrained decoding run by the caller needs an open model, and the one
-open model that we ran did not fail on the floor (0 of 20). Provider-run grammars
-were not tested, and provider-enforced strict modes had nothing to catch on
-\texttt{gpt-5.4-mini}, which showed no violation in any arm. Even under host filling, the entity fields and the anchor would remain the model's choice, and an
-enumeration that the provider does not enforce is a request: 5 of 200
-natural-name answers of the call-time enumeration on the profiling task put an
-inadmissible name into a column field. Host filling and the check are complements, and numbers
-inside free sentences escape both.
+Stripping without a retry would be cheaper but would have deleted content: from
+6--16\,\% of the answers of the arm that runs Tier~B alone, and from 41.5--59\,\%
+of the answers of the two Guardrails arms that check content. One named retry
+repaired all of these answers. Three other designs could replace parts of the
+check. The host could fill in every number from evidence identifiers that the
+model chose; the value channel would then vanish wherever the host renders the
+answer, and a verdict derived from $E$ would take the structured verdict out of
+the model's hands. A strict mode with alternatives and numeric bounds, such as
+the provider's beta mode~\cite{deepseek2026toolcalls}, could express (C2) as one
+branch per pair. The check itself could be written as an Instructor validator
+that reads $E$ from the validation context~\cite{liu2023instructor}. We built
+none of these. Grammar-constrained decoding run by the caller needs an open
+model, and the one open model that we ran did not fail on the floor (0 of 20).
+Provider-run grammars were not tested, and provider-enforced strict modes had
+nothing to catch on \texttt{gpt-5.4-mini}, which showed no violation in any arm.
+
+Host filling and the check are complements. Under host filling, the entity
+fields and the anchor would remain the model's choice. An enumeration that the
+provider does not enforce stays a request: 5 of 200 natural-name answers of the
+call-time enumeration on the profiling task put an inadmissible name into a
+column field. Numbers inside free sentences escape both host filling and the
+check.
 
 \paragraph{Beyond leakage}
-The design needs a deterministic producer, a finite set of observed entities and
-values, a domain bound to that set at call time, and a tolerance for each kind of
-quantity narrower than the gap between neighbours (Section~\ref{sec:limits}).
-Narrators of static-analysis findings, continuous-integration failures, or
-dependency-scanner reports meet these conditions; we have not measured them, and
-there, too, the guarantee would be consistency with the tool's output.
+The design needs four conditions: a deterministic producer, a finite set of
+observed entities and values, a domain bound to that set at call time, and a
+tolerance for each kind of quantity narrower than the gap between neighbours
+(Section~\ref{sec:limits}). Narrators of static-analysis findings,
+continuous-integration failures, or dependency-scanner reports meet these
+conditions. We have not measured such narrators, and there, too, the guarantee
+would be consistency with the tool's output.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Threats to Validity}\label{sec:threats}
