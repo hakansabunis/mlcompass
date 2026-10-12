@@ -96,9 +96,8 @@ tool, reads the structured output, and narrates what the output
 means~\cite{react,toolformer,mcp}, and developers who build such narrators into
 analysis tools must decide which checks to place between the model and the user.
 The narration borrows the authority of the tool, yet LLMs produce content that
-their input does not support~\cite{ji,huang}. This paper studies faithful
-narration where the tool's output is fully known at the moment of narration, and
-asks what that knowledge allows a system to guarantee.
+their input does not support~\cite{ji,huang}. This paper asks what a system
+can guarantee when the tool's output is fully known at the moment of narration.
 
 In \textbf{mlcompass}, an open-source assistant for machine-learning pipelines
 that we develop and use as our testbed, a deterministic detector diagnoses target
@@ -1074,8 +1073,7 @@ exploratory.}
 \paragraph{Design principles for tool narrators}
 Four principles follow, stated for narrators like the one we studied, whose
 failure was structural. \emph{Check at the granularity of fields and pairs}, since
-pooled checks pass misfiling (Table~\ref{tab:coverage}), as ProvenanceGuard argues
-for sources. \emph{Bind the admissible sets at call time}, since a list written
+pooled checks pass misfiling (Table~\ref{tab:coverage}). \emph{Bind the admissible sets at call time}, since a list written
 in advance is safe only to the extent of a coverage that the list's author cannot
 check. \emph{Describe every field, and still check}: a short field description
 was the cheapest fix, but its effect is known only where measured, whereas the
