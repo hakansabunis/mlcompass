@@ -58,22 +58,23 @@ E-mail: hakansabunis@gmail.com (H.~Sabuni\c{s}), ysffms@gmail.com
 
 \IEEEtitleabstractindextext{%
 \begin{abstract}
-Large language models (LLMs) that explain deterministic tool output can invent
-items absent from the output or misfile real items into fields that do not admit
-them. Prevailing defenses constrain decoding, which hosted interfaces leave to
-the provider, or check answers, leaving admissible values to validator authors or
-pooling entities and numbers, which accepts real items in wrong fields. We
-propose a runtime contract that binds entity and number fields to the tool output
-at call time, keys numbers to entity and statistic, and checks answers in host
-code. In a leakage diagnosis tool, one of three LLMs failed often; under a plain
-instruction, 1,772 of its 1,831 violating answers only misplaced output items,
-mostly a metric listed as a column. A field description removed nearly all such
-errors; a list written for other data turned them into invented names. By
-construction, no inadmissible column or number, within tolerance, reached
-structured fields. The check removed 10 residual violations in 600 from the best
-configuration, and a list built at call time matched the check on leakage column
-names. We contribute a field level instrument, an account of narrator failure,
-and a map of which check covers which error.
+Large language models (LLMs) that narrate deterministic tool outputs may invent
+entities absent from the output or place real entities and values in fields that
+cannot admit them. Existing defenses constrain decoding, which hosted interfaces
+leave to the provider, or validate answers against admissible values enumerated
+by hand or pooled checks that miss misplaced items. We introduce a runtime
+contract that binds entity and number fields to the tool output at call time,
+ties numbers to entity and statistic, and checks answers in host code. On a
+leakage diagnosis tool with three LLMs, one model failed often; under a plain
+instruction, 1,772 of its 1,831 violating answers (96.8\,\%) only misplaced
+output items, mostly a metric listed as a column. A field description removed
+nearly all such errors, whereas a value list built for other data induced
+invented names. By construction, no inadmissible name or number, within
+tolerance, entered structured fields. In the best configuration, host validation
+cut delivered violations from 10 in 600 to none, and a list built at call time
+matched the contract on leakage column names. These findings separate failure
+modes of tool narration and show which errors field descriptions, grounded
+lists, and host checks each address.
 \end{abstract}
 
 \begin{IEEEkeywords}
