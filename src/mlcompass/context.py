@@ -11,6 +11,7 @@ import os
 import tempfile
 import threading
 import time
+from collections import Counter
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -184,6 +185,36 @@ def _atomic_write_text(path: Path, text: str) -> None:
     except BaseException:
         tmp_path.unlink(missing_ok=True)
         raise
+
+
+def read_command_counts(project_path: Path) -> Counter[str]:
+    """Tally per-command invocations from ``advice.log``.
+
+    ``advise`` wrote its lines without a ``command`` field until 0.10, so
+    ``status`` reported "nothing logged yet" under a ledger that already
+    held advise decisions. The ``recommendation`` key appears only on
+    those lines, which lets logs written before the fix still count.
+    """
+    counts: Counter[str] = Counter()
+    log_path = project_path / "advice.log"
+    if not log_path.is_file():
+        return counts
+    for raw in log_path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        try:
+            entry = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(entry, dict):
+            continue
+        command = entry.get("command")
+        if command is None and "recommendation" in entry:
+            command = "advise"
+        if isinstance(command, str):
+            counts[command] += 1
+    return counts
 
 
 class ProjectExistsError(FileExistsError):

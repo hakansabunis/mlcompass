@@ -217,6 +217,7 @@ def test_advise_persists_to_project_context(
     lines = log_path.read_text(encoding="utf-8").strip().splitlines()
     assert len(lines) == 1
     log_entry = json.loads(lines[0])
+    assert log_entry["command"] == "advise"
     assert log_entry["dataset"] == str(sample_csv)
     assert log_entry["task_type"] == "binary_classification"
     assert log_entry["recommendation"]["models"][0]["name"] == "XGBoost"

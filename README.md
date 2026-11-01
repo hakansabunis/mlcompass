@@ -586,6 +586,12 @@ What gets caught:
   at ~0.94 but Spearman = 1.0; the detector reports
   `max(|Pearson|, |Spearman|)` so the leak doesn't slip past the
   threshold.
+- **Class separators** (binary targets) — a feature that splits the
+  two classes at one threshold but not linearly (a status code, a
+  skewed amount) reaches only ~0.87 on Pearson or Spearman. For a
+  two-valued target the detector also reports the rank-biserial
+  correlation, `2·AUC − 1` of the feature on its own, which is ±1
+  exactly for such a separator.
 - **Perfect-match predictions** — when `y_pred == y_true` ≥ 95% on a
   non-trivial task, that's a smoking gun for train/test contamination.
 

@@ -12,7 +12,7 @@ After the tool returns:
 
 2. If `leakage_investigation` is **present**:
    - Lead with the suspicious metric value.
-   - List `candidate_leak_columns` by name. For each, name the correlation method that flagged it (Pearson or Spearman) and the value.
+   - List `candidate_leak_columns` by name. For each, name the correlation method that flagged it (Pearson, Spearman, or rank-biserial) and the value.
    - Report `perfect_match_rate`. If ≥ 0.95, that's a smoking gun.
    - State the verdict: leakage_likely / leakage_uncertain / score_legitimate / cannot_determine.
 

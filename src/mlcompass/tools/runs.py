@@ -32,6 +32,7 @@ A run record on disk follows the layout described in
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Iterable
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -42,8 +43,25 @@ import yaml
 from ..context import ProjectContext
 
 # Metric direction heuristics. We only assign a verdict for metrics whose
-# direction we know.
-_LOWER_IS_BETTER = ("loss", "error", "mae", "mse", "rmse", "nll", "perplexity")
+# direction we know. Lower-is-better is checked first, so it has to name
+# every error metric whose name also carries a higher-is-better token:
+# without "brier", ``val_brier_score`` matched "score" and the run with
+# the worse calibration was declared the winner.
+_LOWER_IS_BETTER = (
+    "loss",
+    "error",
+    "mae",
+    "mse",
+    "rmse",
+    "nll",
+    "perplexity",
+    "brier",
+    "mape",
+    "msle",
+)
+# Abbreviations too short to match as substrings ("cer" is inside
+# "cancer", "ece" could be inside anything); matched as whole name parts.
+_LOWER_IS_BETTER_PARTS = frozenset({"wer", "cer", "ece", "eer", "fpr", "fnr"})
 _HIGHER_IS_BETTER = ("acc", "auc", "f1", "precision", "recall", "iou", "score", "r2")
 
 
@@ -247,7 +265,8 @@ def _compare_metrics(
 def _which_is_better(name: str, a_value: float, b_value: float) -> str | None:
     """Return ``"a"`` / ``"b"`` / ``None`` based on metric direction heuristics."""
     lower = name.lower()
-    if any(token in lower for token in _LOWER_IS_BETTER):
+    parts = set(re.split(r"[^a-z0-9]+", lower))
+    if any(token in lower for token in _LOWER_IS_BETTER) or parts & _LOWER_IS_BETTER_PARTS:
         if a_value < b_value:
             return "a"
         if b_value < a_value:

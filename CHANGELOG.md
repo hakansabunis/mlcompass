@@ -5,6 +5,36 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **`evaluate` scored string labels against the wrong class.** The positive
+  class was the minority class whatever `y_prob` referred to, so a perfect
+  `yes`/`no` model with P(yes) scores showed accuracy 1 and AUC 0. The
+  positive class is now the one the score refers to (read off `y_pred` where
+  `y_prob ≥ 0.5`), then a conventional pair (`yes`/`no`, `true`/`false`, …),
+  then the minority class. An AUC below 0.5 now carries a warning, and the
+  confusion matrix and hard examples show both real label names instead of
+  `not` / `not_<label>`.
+- **The leakage investigation missed perfect separators on binary targets.**
+  Pearson and Spearman stay near 0.87 for a feature that splits the classes
+  at one threshold but not linearly, so it never became a candidate. For a
+  two-valued target the evidence now also carries the rank-biserial
+  correlation (`2·AUC − 1`), which is ±1 for such a feature. Regression
+  evidence, and so every measurement in the manuscript, is unchanged.
+- **`monitor` printed "stable" and "major drift, retrain" for the same
+  feature.** Per-feature severity used the PSI in excess of sampling noise;
+  the band counts and the verdict used the raw PSI. All three now use the
+  excess, which is reported alongside the raw value.
+- **`compare` read `brier_score` as higher-is-better** because of "score".
+  Brier, MAPE, MSLE and the abbreviations WER, CER, ECE, EER, FPR and FNR
+  are now lower-is-better.
+- **The `agent` missing-extra message told users to run
+  `pip install 'mlcompass'`**: Rich swallowed `[agent]` as markup. Exception
+  text printed by the CLI is now escaped for the same reason.
+- **`status` never counted `advise`**: its log lines had no `command` field.
+  They do now, and lines written before the fix are still counted, in
+  `status` and in the MCP `mlcompass_status` tool alike.
+
 ## [0.10.0] — 2026-09-28
 
 The release archived with the TSE manuscript. The evidence-bound contract

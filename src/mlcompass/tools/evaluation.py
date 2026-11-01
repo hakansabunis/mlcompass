@@ -277,13 +277,18 @@ def _evaluate_binary(
         raise EvaluationError("All prediction rows were null after dropna.")
 
     y_true_raw = rows[y_true_col]
-    positive_label = _binary_positive_label(y_true_raw)
-    y_true = (y_true_raw == positive_label).astype(int).to_numpy()
 
     if y_prob_col is not None:
         y_prob = pd.to_numeric(rows[y_prob_col], errors="coerce").to_numpy()
     else:
         y_prob = None
+
+    positive_label, negative_label = _binary_labels(
+        y_true_raw,
+        y_pred=rows[y_pred_col] if y_pred_col is not None else None,
+        y_prob=y_prob,
+    )
+    y_true = (y_true_raw == positive_label).astype(int).to_numpy()
 
     if y_pred_col is not None:
         y_pred = (rows[y_pred_col] == positive_label).astype(int).to_numpy()
@@ -304,7 +309,9 @@ def _evaluate_binary(
         sweep = _threshold_sweep(y_true, y_prob, threshold_grid)
         best_threshold = max(sweep, key=lambda r: r["f1"])
 
-    warnings = _binary_warnings(metrics, y_true)
+    warnings = _binary_warnings(
+        metrics, y_true, positive_label=positive_label, negative_label=negative_label
+    )
 
     hard = _binary_hard_examples(
         df=df.loc[rows.index],
@@ -312,6 +319,7 @@ def _evaluate_binary(
         y_pred=y_pred,
         y_prob=y_prob,
         positive_label=positive_label,
+        negative_label=negative_label,
         k=hard_examples_k,
     )
 
@@ -319,6 +327,7 @@ def _evaluate_binary(
         "metrics": metrics,
         "confusion_matrix": confusion,
         "positive_label": _serialize_label(positive_label),
+        "negative_label": _serialize_label(negative_label),
         "threshold_sweep": sweep,
         "best_threshold": best_threshold,
         "hard_examples": hard,
@@ -326,23 +335,64 @@ def _evaluate_binary(
     }
 
 
-def _binary_positive_label(series: pd.Series) -> Any:
-    """Pick the positive class label.
+# Label spellings whose polarity is unambiguous. Used only when the two
+# labels pair up exactly (one from each set), so ``{1, 2}`` or
+# ``{"churn", "stay"}`` never match on a lone positive-looking name.
+_POSITIVE_NAMES = frozenset({"1", "yes", "y", "true", "t", "positive", "pos"})
+_NEGATIVE_NAMES = frozenset({"0", "-1", "no", "n", "false", "f", "negative", "neg"})
+
+
+def _binary_labels(
+    series: pd.Series,
+    *,
+    y_pred: pd.Series | None = None,
+    y_prob: np.ndarray | None = None,
+) -> tuple[Any, Any]:
+    """Return ``(positive, negative)`` class labels.
 
     Order of preference:
     1. ``1`` if labels are ``{0, 1}`` — the universal convention.
     2. ``True`` if labels are ``{True, False}``.
-    3. Otherwise the minority class.
+    3. The class ``y_prob`` scores, read off the model's own outputs:
+       the label ``y_pred`` assigns where ``y_prob >= 0.5``. ``y_prob``
+       is the probability of the positive class, so the positive class
+       must be the one it refers to. Choosing by any other rule computes
+       the AUC against the wrong class: a perfect ``yes``/``no`` model
+       whose score is P(yes) scored AUC 0.0 when the minority class
+       happened to be ``no``.
+    4. A conventional pair (``yes``/``no``, ``true``/``false``, …).
+    5. Otherwise the minority class.
     """
     counts = series.value_counts()
     if len(counts) != 2:
         raise EvaluationError(f"Binary task expected 2 distinct labels, got {len(counts)}.")
-    unique = set(counts.index)
+    labels = list(counts.index)
+    unique = set(labels)
     if unique <= {0, 1}:
-        return 1
+        return 1, 0
     if unique <= {True, False}:
-        return True
-    return counts.idxmin()
+        return True, False
+
+    def other(label: Any) -> Any:
+        return labels[1] if label == labels[0] else labels[0]
+
+    if y_pred is not None and y_prob is not None:
+        finite = np.isfinite(y_prob)
+        if finite.any():
+            high = y_prob[finite] >= 0.5
+            pred = y_pred.to_numpy()[finite]
+            agreement = {label: float(((pred == label) == high).mean()) for label in labels}
+            best = max(labels, key=lambda label: agreement[label])
+            if agreement[best] > 0.5:
+                return best, other(best)
+
+    names = {label: str(label).strip().lower() for label in labels}
+    for label in labels:
+        if names[label] in _POSITIVE_NAMES and names[other(label)] in _NEGATIVE_NAMES:
+            return label, other(label)
+
+    minority = counts.idxmin()
+    return minority, other(minority)
 
 
 def _binary_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> dict[str, float]:
@@ -408,11 +458,30 @@ def _threshold_sweep(
     return rows
 
 
-def _binary_warnings(metrics: dict[str, float], y_true: np.ndarray) -> list[str]:
+def _binary_warnings(
+    metrics: dict[str, float],
+    y_true: np.ndarray,
+    *,
+    positive_label: Any,
+    negative_label: Any,
+) -> list[str]:
     warnings: list[str] = []
 
     positive_rate = float(y_true.mean()) if len(y_true) else 0.0
     n_rows = int(len(y_true))
+
+    # An AUC below 0.5 is a ranking worse than chance. Far more often
+    # than a genuinely inverted model, the score column is the
+    # probability of the other class, and every AUC-derived number on
+    # the page is then wrong. Say so rather than print it plainly.
+    auc = metrics.get("auc")
+    if auc is not None and not math.isnan(auc) and auc < 0.5:
+        warnings.append(
+            f"AUC {auc:.4f} is below 0.5: the scores rank the classes worse "
+            "than chance. The usual cause is a probability column that holds "
+            f"P({negative_label}) rather than P({positive_label}); check which "
+            "class it refers to before reading the AUC or the threshold sweep."
+        )
 
     if positive_rate < 0.1 and metrics["accuracy"] > 0.9 and metrics["recall"] < 0.5:
         warnings.append(
@@ -475,6 +544,7 @@ def _binary_hard_examples(
     y_pred: np.ndarray,
     y_prob: np.ndarray | None,
     positive_label: Any,
+    negative_label: Any,
     k: int,
 ) -> list[dict[str, Any]]:
     if y_prob is not None:
@@ -491,25 +561,17 @@ def _binary_hard_examples(
         rows.append(
             {
                 "row_index": int(df.index[int(idx)]),
-                "true_label": _serialize_label(_invert_binary(y_true[idx], positive_label)),
-                "predicted_label": _serialize_label(_invert_binary(y_pred[idx], positive_label)),
+                "true_label": _serialize_label(
+                    positive_label if y_true[idx] == 1 else negative_label
+                ),
+                "predicted_label": _serialize_label(
+                    positive_label if y_pred[idx] == 1 else negative_label
+                ),
                 "probability": (float(y_prob[idx]) if y_prob is not None else None),
                 "row": _serialize_row(row_record),
             }
         )
     return rows
-
-
-def _invert_binary(value: int, positive_label: Any) -> Any:
-    return positive_label if value == 1 else _negation_of(positive_label)
-
-
-def _negation_of(positive_label: Any) -> Any:
-    if positive_label in (0, 1):
-        return 0 if positive_label == 1 else 1
-    if isinstance(positive_label, bool):
-        return not positive_label
-    return f"not_{positive_label}"
 
 
 # --------------------------------------------------------------------------- #

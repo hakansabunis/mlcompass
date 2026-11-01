@@ -128,14 +128,24 @@ def detect_drift(
         if result.get("warning"):
             warnings.append(result["warning"])
 
-    # Aggregate: mean PSI, max PSI, count of features in each band.
-    psi_values = [r["psi"] for r in feature_results if r.get("psi") is not None]
+    # Aggregate: mean / max PSI as measured, and the band counts and
+    # verdict inputs from the PSI in excess of what sampling noise alone
+    # produces. Severity per feature already used the excess; the counts
+    # and the verdict used the raw value, so 20 rows against 20 rows of
+    # the same distribution printed "stable" on the feature and "major
+    # drift, retrain" underneath it.
+    scored = [r for r in feature_results if r.get("psi") is not None]
+    psi_values = [r["psi"] for r in scored]
+    excess_values = [r.get("psi_excess", r["psi"]) for r in scored]
+    severities = [r["severity"] for r in scored]
     aggregate = {
         "mean_psi": float(np.mean(psi_values)) if psi_values else None,
         "max_psi": float(np.max(psi_values)) if psi_values else None,
-        "n_stable": sum(1 for v in psi_values if v < PSI_STABLE),
-        "n_moderate": sum(1 for v in psi_values if PSI_STABLE <= v < PSI_MODERATE),
-        "n_major": sum(1 for v in psi_values if v >= PSI_MODERATE),
+        "mean_psi_excess": float(np.mean(excess_values)) if excess_values else None,
+        "max_psi_excess": float(np.max(excess_values)) if excess_values else None,
+        "n_stable": severities.count("stable"),
+        "n_moderate": severities.count("moderate"),
+        "n_major": severities.count("major"),
     }
 
     # Top-N most drifted by PSI.
@@ -618,37 +628,43 @@ def _verdict(
     """Roll the per-feature signals up into a retrain recommendation."""
     mean_psi = aggregate.get("mean_psi")
     max_psi = aggregate.get("max_psi")
+    mean_excess = aggregate.get("mean_psi_excess", mean_psi)
+    max_excess = aggregate.get("max_psi_excess", max_psi)
     n_major = aggregate.get("n_major", 0)
 
-    if mean_psi is None or max_psi is None:
+    if mean_psi is None or max_psi is None or mean_excess is None or max_excess is None:
         return {
             "status": "unknown",
             "message": "No PSI-eligible features; cannot decide.",
             "retrain_recommended": False,
         }
 
-    if max_psi >= PSI_MODERATE or n_major >= 1:
+    if max_excess >= PSI_MODERATE or n_major >= 1:
         return {
             "status": "major_drift",
             "message": (
                 f"At least one feature shows major drift "
-                f"(max PSI {max_psi:.3f}, {n_major} feature(s) ≥ "
-                f"{PSI_MODERATE}). Retraining is recommended."
+                f"(max PSI {max_psi:.3f}, {max_excess:.3f} above sampling "
+                f"noise; {n_major} feature(s) ≥ {PSI_MODERATE}). "
+                "Retraining is recommended."
             ),
             "retrain_recommended": True,
         }
-    if mean_psi >= PSI_STABLE:
+    if mean_excess >= PSI_STABLE:
         return {
             "status": "moderate_drift",
             "message": (
                 f"Aggregate drift is moderate "
-                f"(mean PSI {mean_psi:.3f}). Investigate the top-drifted "
-                "features before retraining."
+                f"(mean PSI {mean_psi:.3f}, {mean_excess:.3f} above sampling "
+                "noise). Investigate the top-drifted features before retraining."
             ),
             "retrain_recommended": False,
         }
     return {
         "status": "stable",
-        "message": (f"No meaningful drift detected (mean PSI {mean_psi:.3f}, max {max_psi:.3f})."),
+        "message": (
+            f"No meaningful drift detected (mean PSI {mean_psi:.3f}, max {max_psi:.3f}; "
+            f"at most {max_excess:.3f} above sampling noise)."
+        ),
         "retrain_recommended": False,
     }

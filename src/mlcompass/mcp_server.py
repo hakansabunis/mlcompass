@@ -55,7 +55,12 @@ except ImportError as e:  # pragma: no cover — exercised only at import time
     ) from e
 
 from . import __version__
-from .context import ProjectContext, ProjectExistsError, ProjectNotFoundError
+from .context import (
+    ProjectContext,
+    ProjectExistsError,
+    ProjectNotFoundError,
+    read_command_counts,
+)
 from .tools.anomaly import run_all_detectors
 from .tools.dataset import analyze_dataset
 from .tools.deploy import (
@@ -399,20 +404,7 @@ def mlcompass_status(
     state = project.read_context()
     decisions = state.get("decisions") or []
 
-    counts: Counter[str] = Counter()
-    log_path = project.path / "advice.log"
-    if log_path.is_file():
-        for raw in log_path.read_text(encoding="utf-8").splitlines():
-            line = raw.strip()
-            if not line:
-                continue
-            try:
-                entry = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            command = entry.get("command")
-            if isinstance(command, str):
-                counts[command] += 1
+    counts = read_command_counts(project.path)
 
     # v0.7.3: fresh-project hint. When the only thing the ledger
     # remembers is the init itself, surface a soft note so users who

@@ -235,3 +235,30 @@ def test_status_help_lists_recent_flag() -> None:
     result = runner.invoke(cli, ["status", "--help"])
     assert result.exit_code == 0
     assert "--recent" in result.output
+
+
+def test_status_counts_advise_lines_written_without_a_command_field(
+    project: ProjectContext, tmp_path: Path
+) -> None:
+    # advise wrote exactly this shape before 0.10; status read only
+    # ``command`` and so reported "nothing logged yet" under it.
+    legacy = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "dataset": "data.csv",
+        "task_type": "binary_classification",
+        "target": "churn",
+        "recommendation": None,
+    }
+    (project.path / "advice.log").write_text(json.dumps(legacy) + "\n", encoding="utf-8")
+
+    runner = CliRunner()
+    cwd = os.getcwd()
+    os.chdir(tmp_path)
+    try:
+        result = runner.invoke(cli, ["status"])
+    finally:
+        os.chdir(cwd)
+
+    assert result.exit_code == 0
+    assert "nothing logged yet" not in result.output
+    assert "advise" in result.output

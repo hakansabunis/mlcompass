@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import json
-from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -11,7 +9,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from ..context import ProjectContext
+from ..context import ProjectContext, read_command_counts
 
 # --------------------------------------------------------------------------- #
 # Public API                                                                  #
@@ -109,20 +107,7 @@ def _decisions_table(decisions: list[dict[str, Any]]) -> Table:
 
 def _command_counts_table(project_path: Path) -> Table:
     """Tally per-command invocations from advice.log."""
-    counts: Counter[str] = Counter()
-    log_path = project_path / "advice.log"
-    if log_path.is_file():
-        for raw in log_path.read_text(encoding="utf-8").splitlines():
-            line = raw.strip()
-            if not line:
-                continue
-            try:
-                entry = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            command = entry.get("command")
-            if isinstance(command, str):
-                counts[command] += 1
+    counts = read_command_counts(project_path)
 
     table = Table(
         title="Command activity",

@@ -152,7 +152,11 @@ def _render_binary_extras(console: Console, result: dict[str, Any]) -> None:
     cm = result.get("confusion_matrix")
     if cm:
         console.print()
-        console.print(_binary_confusion_panel(cm, result.get("positive_label")))
+        console.print(
+            _binary_confusion_panel(
+                cm, result.get("positive_label"), result.get("negative_label", "not")
+            )
+        )
 
     sweep = result.get("threshold_sweep") or []
     if sweep:
@@ -160,12 +164,16 @@ def _render_binary_extras(console: Console, result: dict[str, Any]) -> None:
         console.print(_threshold_sweep_table(sweep, result.get("best_threshold")))
 
 
-def _binary_confusion_panel(cm: dict[str, int], positive_label: Any) -> Panel:
-    body = (
-        "                  Predicted\n"
-        f"                 {positive_label!s:>6}    not\n"
-        f" Actual {positive_label!s:>6}  {cm['tp']:>6}  {cm['fn']:>6}\n"
-        f"        not     {cm['fp']:>6}  {cm['tn']:>6}"
+def _binary_confusion_panel(
+    cm: dict[str, int], positive_label: Any, negative_label: Any = "not"
+) -> Panel:
+    pos, neg = str(positive_label), str(negative_label)
+    w = max(6, len(pos), len(neg))
+    body = escape(
+        f"{'':>{w + 10}}Predicted\n"
+        f"{'':>{w + 10}}{pos:>{w}}  {neg:>{w}}\n"
+        f" Actual {pos:>{w}}  {cm['tp']:>{w}}  {cm['fn']:>{w}}\n"
+        f"        {neg:>{w}}  {cm['fp']:>{w}}  {cm['tn']:>{w}}"
     )
     return Panel.fit(
         f"[white]{body}[/white]",

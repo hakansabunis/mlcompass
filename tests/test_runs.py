@@ -253,3 +253,29 @@ def test_run_summary_has_epoch_count(tmp_path: Path) -> None:
     result = compare_runs(a, b)
     assert result["run_a"]["epochs"] == 5
     assert result["run_b"]["epochs"] == 1
+
+
+def test_brier_score_is_lower_is_better(tmp_path: Path) -> None:
+    # "score" alone reads as higher-is-better; Brier is an error.
+    a = _record(tmp_path, "a", {}, [{"epoch": 0, "val_brier_score": 0.10, "val_acc": 0.90}])
+    b = _record(tmp_path, "b", {}, [{"epoch": 0, "val_brier_score": 0.25, "val_acc": 0.85}])
+    result = compare_runs(a, b)
+    rows = {r["name"]: r for r in result["metric_comparison"]}
+    assert rows["val_brier_score"]["better"] == "a"
+    assert result["verdict"] == "a_better"
+
+
+@pytest.mark.parametrize("name", ["val_wer", "test_cer", "ece", "val_mape", "fpr"])
+def test_short_error_metrics_are_lower_is_better(tmp_path: Path, name: str) -> None:
+    a = _record(tmp_path, "a", {}, [{"epoch": 0, name: 0.1}])
+    b = _record(tmp_path, "b", {}, [{"epoch": 0, name: 0.2}])
+    rows = {r["name"]: r for r in compare_runs(a, b)["metric_comparison"]}
+    assert rows[name]["better"] == "a"
+
+
+def test_short_error_abbreviation_inside_a_word_does_not_flip_direction(tmp_path: Path) -> None:
+    # "cer" sits inside "cancer"; recall stays higher-is-better.
+    a = _record(tmp_path, "a", {}, [{"epoch": 0, "cancer_recall": 0.9}])
+    b = _record(tmp_path, "b", {}, [{"epoch": 0, "cancer_recall": 0.8}])
+    rows = {r["name"]: r for r in compare_runs(a, b)["metric_comparison"]}
+    assert rows["cancer_recall"]["better"] == "a"

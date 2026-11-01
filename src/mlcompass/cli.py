@@ -28,6 +28,7 @@ from typing import Any
 
 import click
 from rich.console import Console
+from rich.markup import escape
 from rich.panel import Panel
 
 from . import __version__
@@ -125,6 +126,17 @@ def _force_utf8_stdio() -> None:
 
 _force_utf8_stdio()
 console = Console()
+
+# Square brackets in printed text are Rich markup: an unescaped
+# ``mlcompass[agent]`` rendered as ``mlcompass`` and told the user to
+# install a package they already had. Exception text printed below goes
+# through ``escape`` for the same reason.
+_AGENT_EXTRA_HINT = "[red]✗[/red] " + escape(
+    "The agent command needs an extra. "
+    "Install with: pip install 'mlcompass[agent]' "
+    "(or pip install 'mlcompass[agent-claude-code]' for the "
+    "claude-code backend)."
+)
 
 
 # --------------------------------------------------------------------------- #
@@ -297,7 +309,7 @@ def init(name: str, parent_dir: Path, default_model: str) -> None:
             default_model=default_model,
         )
     except ProjectExistsError as e:
-        console.print(f"[red]✗[/red] {e}")
+        console.print(f"[red]✗[/red] {escape(str(e))}")
         raise SystemExit(1) from e
 
     console.print(
@@ -450,7 +462,7 @@ def _run_advisor(
                 base_url=base_url,
             )
     except AdvisorParseError as exc:
-        console.print(f"\n[red]✗ Advisor returned an invalid response:[/red] {exc}")
+        console.print(f"\n[red]✗ Advisor returned an invalid response:[/red] {escape(str(exc))}")
         return None
 
 
@@ -503,6 +515,7 @@ def _append_advice_log(
     """Append a single advice entry to ``.mlcompass/advice.log``."""
     entry = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
+        "command": "advise",
         "dataset": str(dataset_path),
         "task_type": analysis["task_hint"].get("type"),
         "target": analysis["target_hint"].get("column"),
@@ -600,7 +613,7 @@ def _maybe_prioritize(
                 base_url=base_url,
             )
     except AuditAgentError as exc:
-        console.print(f"\n[red]✗ Prioritizer returned bad response:[/red] {exc}")
+        console.print(f"\n[red]✗ Prioritizer returned bad response:[/red] {escape(str(exc))}")
         return None
 
 
@@ -816,7 +829,7 @@ def _maybe_diagnose(
                 base_url=base_url,
             )
     except WatchAgentError as exc:
-        console.print(f"\n[red]✗ Diagnostician returned bad response:[/red] {exc}")
+        console.print(f"\n[red]✗ Diagnostician returned bad response:[/red] {escape(str(exc))}")
         return None
 
 
@@ -852,7 +865,7 @@ def _maybe_apply_edits(
             confirm_fn=confirm_fn,
         )
     except ConfigEditError as exc:
-        console.print(f"\n[red]✗ Config edit failed:[/red] {exc}")
+        console.print(f"\n[red]✗ Config edit failed:[/red] {escape(str(exc))}")
         return None
 
     render_apply_summary(console, result)
@@ -1001,7 +1014,7 @@ def compare(
         record_a = load_run(run_a, project=project)
         record_b = load_run(run_b, project=project)
     except RunNotFoundError as exc:
-        console.print(f"[red]✗[/red] {exc}")
+        console.print(f"[red]✗[/red] {escape(str(exc))}")
         raise SystemExit(1) from exc
 
     comparison = compare_runs(record_a, record_b)
@@ -1046,7 +1059,7 @@ def _maybe_hypothesize(
                 base_url=base_url,
             )
     except CompareAgentError as exc:
-        console.print(f"\n[red]✗ Hypothesizer returned bad response:[/red] {exc}")
+        console.print(f"\n[red]✗ Hypothesizer returned bad response:[/red] {escape(str(exc))}")
         return None
 
 
@@ -1156,7 +1169,7 @@ def evaluate(
                 hard_examples_k=hard_examples_k,
             )
     except EvaluationError as exc:
-        console.print(f"[red]✗ Evaluation failed:[/red] {exc}")
+        console.print(f"[red]✗ Evaluation failed:[/red] {escape(str(exc))}")
         raise SystemExit(2) from exc
 
     render_evaluation(console, result)
@@ -1219,7 +1232,9 @@ def _maybe_investigate_leakage(
                 base_url=base_url,
             )
     except LeakageAgentError as exc:
-        console.print(f"\n[red]✗ Leakage investigator returned malformed response:[/red] {exc}")
+        console.print(
+            "\n[red]✗ Leakage investigator returned malformed response:[/red] " + escape(str(exc))
+        )
         return None
 
 
@@ -1284,7 +1299,7 @@ def _maybe_interpret_evaluation(
                 base_url=base_url,
             )
     except EvaluateAgentError as exc:
-        console.print(f"\n[red]✗ Interpreter returned bad response:[/red] {exc}")
+        console.print(f"\n[red]✗ Interpreter returned bad response:[/red] {escape(str(exc))}")
         return None
 
 
@@ -1382,7 +1397,7 @@ def deploy(
                 target=target,
             )
     except DeployAnalysisError as exc:
-        console.print(f"[red]✗ Deploy check failed:[/red] {exc}")
+        console.print(f"[red]✗ Deploy check failed:[/red] {escape(str(exc))}")
         raise SystemExit(2) from exc
 
     render_deployment(console, report)
@@ -1427,7 +1442,7 @@ def _maybe_advise_deployment(
                 base_url=base_url,
             )
     except DeployAgentError as exc:
-        console.print(f"\n[red]✗ Advisor returned bad response:[/red] {exc}")
+        console.print(f"\n[red]✗ Advisor returned bad response:[/red] {escape(str(exc))}")
         return None
 
 
@@ -1579,7 +1594,7 @@ def monitor(
                 top_n=top_n,
             )
     except DriftAnalysisError as exc:
-        console.print(f"[red]✗ Drift check failed:[/red] {exc}")
+        console.print(f"[red]✗ Drift check failed:[/red] {escape(str(exc))}")
         raise SystemExit(2) from exc
 
     render_drift(console, result)
@@ -1627,7 +1642,7 @@ def _maybe_interpret_drift(
                 base_url=base_url,
             )
     except MonitorAgentError as exc:
-        console.print(f"\n[red]✗ Interpreter returned bad response:[/red] {exc}")
+        console.print(f"\n[red]✗ Interpreter returned bad response:[/red] {escape(str(exc))}")
         return None
 
 
@@ -1777,7 +1792,7 @@ def optimize(
     try:
         constraint_map = parse_constraints(constraints or "")
     except OptimizeAnalysisError as exc:
-        console.print(f"[red]✗ Bad --constraints:[/red] {exc}")
+        console.print(f"[red]✗ Bad --constraints:[/red] {escape(str(exc))}")
         raise SystemExit(2) from exc
 
     with console.status(f"[cyan]Loading runs from {runs_dir}...[/cyan]", spinner="dots"):
@@ -1798,7 +1813,7 @@ def optimize(
                 constraints=constraint_map,
             )
     except OptimizeAnalysisError as exc:
-        console.print(f"[red]✗ Optimize failed:[/red] {exc}")
+        console.print(f"[red]✗ Optimize failed:[/red] {escape(str(exc))}")
         raise SystemExit(2) from exc
 
     render_optimize(console, result)
@@ -1841,7 +1856,7 @@ def _maybe_strategize_optimize(
                 base_url=base_url,
             )
     except OptimizeAgentError as exc:
-        console.print(f"\n[red]✗ Strategist returned bad response:[/red] {exc}")
+        console.print(f"\n[red]✗ Strategist returned bad response:[/red] {escape(str(exc))}")
         return None
 
 
@@ -1986,12 +2001,7 @@ def agent(
             DEFAULT_MODEL,
         )
     except ImportError as exc:  # pragma: no cover
-        console.print(
-            "[red]✗[/red] The agent command needs an extra. "
-            "Install with: pip install 'mlcompass[agent]' "
-            "(or pip install 'mlcompass[agent-claude-code]' for the "
-            "claude-code backend)."
-        )
+        console.print(_AGENT_EXTRA_HINT)
         raise SystemExit(2) from exc
 
     # The "api" backend talks directly to the Anthropic API and needs

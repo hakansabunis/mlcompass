@@ -225,3 +225,15 @@ def test_agent_help_lists_all_options() -> None:
         "--model",
     ):
         assert needle in result.output
+
+
+def test_missing_extra_hint_keeps_the_extra_names() -> None:
+    # Rich read ``[agent]`` as a markup tag and printed
+    # "pip install 'mlcompass'", which installs nothing new.
+    from rich.console import Console
+
+    console = Console(record=True, width=200)
+    console.print(cli_module._AGENT_EXTRA_HINT)
+    text = console.export_text()
+    assert "pip install 'mlcompass[agent]'" in text
+    assert "pip install 'mlcompass[agent-claude-code]'" in text

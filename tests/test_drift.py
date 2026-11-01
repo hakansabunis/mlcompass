@@ -181,3 +181,40 @@ def test_detect_drift_constant_reference_does_not_crash() -> None:
     result = detect_drift(ref, cur)
     # No crash + reasonable status (stable since both sides are identical).
     assert result["verdict"]["status"] in {"stable", "unknown"}
+
+
+# --------------------------------------------------------------------------- #
+# Verdict agrees with the per-feature severities                              #
+# --------------------------------------------------------------------------- #
+
+
+def _same_distribution(seed: int, n: int = 20) -> tuple[pd.DataFrame, pd.DataFrame]:
+    rng = np.random.default_rng(seed)
+    return (pd.DataFrame({"a": rng.normal(size=n)}), pd.DataFrame({"a": rng.normal(size=n)}))
+
+
+def test_small_same_distribution_samples_do_not_call_major_drift() -> None:
+    # Ten bins over 20 rows give a raw PSI above 0.2 from noise alone.
+    # The severity column already discounted that; the verdict did not,
+    # and printed "stable" next to "major drift, retrain".
+    raw_above_major = 0
+    for seed in range(20):
+        ref, cur = _same_distribution(seed)
+        result = detect_drift(ref, cur)
+        severities = [r["severity"] for r in result["feature_results"]]
+        agg = result["aggregate"]
+        assert agg["n_major"] == severities.count("major")
+        assert agg["n_stable"] == severities.count("stable")
+        is_major = result["verdict"]["status"] == "major_drift"
+        assert is_major == ("major" in severities or agg["max_psi_excess"] >= 0.2)
+        raw_above_major += agg["max_psi"] >= 0.2
+    assert raw_above_major > 0  # the loop exercised the case that used to fail
+
+
+def test_real_shift_is_still_major_drift() -> None:
+    rng = np.random.default_rng(0)
+    ref = pd.DataFrame({"a": rng.normal(size=300)})
+    cur = pd.DataFrame({"a": rng.normal(loc=0.8, size=300)})
+    result = detect_drift(ref, cur)
+    assert result["verdict"]["status"] == "major_drift"
+    assert result["aggregate"]["n_major"] == 1

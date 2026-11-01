@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from mlcompass.tools.leakage import detect_leakage
 
@@ -99,7 +100,11 @@ def test_detect_string_label_leak_via_string_feature() -> None:
 
 
 def test_correlations_use_spearman_for_string_target() -> None:
-    """Non-numeric target ⇒ method is 'spearman' (factorise then Pearson)."""
+    """Non-numeric target ⇒ a rank-based method, never Pearson on codes.
+
+    A two-valued target also gets rank-biserial, which is rank-based too
+    and may be the larger of the two.
+    """
     df = pd.DataFrame(
         {
             "y_true": ["yes", "no"] * 100,
@@ -113,11 +118,11 @@ def test_correlations_use_spearman_for_string_target() -> None:
         y_pred_col="y_pred",
         task="binary_classification",
     )
-    assert ev["target_feature_correlations"][0]["method"] == "spearman"
+    assert ev["target_feature_correlations"][0]["method"] in {"spearman", "rank_biserial"}
 
 
 # --------------------------------------------------------------------------- #
-# Regression target — Ames House Prices shape                                 #
+# Regression target — Ames House Prices shape                               #
 # --------------------------------------------------------------------------- #
 
 
@@ -240,3 +245,63 @@ def test_correlations_capped_at_ten_entries() -> None:
         task="binary_classification",
     )
     assert len(ev["target_feature_correlations"]) <= 10
+
+
+# --------------------------------------------------------------------------- #
+# Binary targets: separators that are not linear in the label                 #
+# --------------------------------------------------------------------------- #
+
+
+def _separator_df(seed: int = 1) -> pd.DataFrame:
+    rng = np.random.default_rng(seed)
+    n = 2000
+    y = rng.integers(0, 2, n)
+    # Splits the classes at zero, but the magnitudes are lognormal, so
+    # Pearson and Spearman both stay near 0.87.
+    status = np.where(y == 1, rng.lognormal(0, 2, n), -rng.lognormal(0, 2, n))
+    return pd.DataFrame(
+        {"y_true": y, "y_pred": y, "status_code": status, "noise": rng.normal(size=n)}
+    )
+
+
+def test_binary_target_perfect_separator_is_a_candidate() -> None:
+    evidence = detect_leakage(
+        _separator_df(), y_true_col="y_true", y_pred_col="y_pred", task="binary_classification"
+    )
+    assert evidence["candidate_leak_columns"] == ["status_code"]
+    top = evidence["target_feature_correlations"][0]
+    assert top["feature"] == "status_code"
+    assert top["method"] == "rank_biserial"
+    assert top["correlation"] == pytest.approx(1.0)
+
+
+def test_binary_string_target_perfect_separator_is_a_candidate() -> None:
+    df = _separator_df()
+    df["y_true"] = df["y_true"].map({0: "no", 1: "yes"})
+    df["y_pred"] = df["y_true"]
+    evidence = detect_leakage(
+        df, y_true_col="y_true", y_pred_col="y_pred", task="binary_classification"
+    )
+    assert "status_code" in evidence["candidate_leak_columns"]
+
+
+def test_rank_biserial_sign_follows_the_feature_direction() -> None:
+    df = _separator_df()
+    df["status_code"] = -df["status_code"]
+    evidence = detect_leakage(
+        df, y_true_col="y_true", y_pred_col="y_pred", task="binary_classification"
+    )
+    top = evidence["target_feature_correlations"][0]
+    assert top["correlation"] == pytest.approx(-1.0)
+
+
+def test_regression_evidence_never_uses_rank_biserial() -> None:
+    # The manuscript's evidence is all regression; it must not change.
+    rng = np.random.default_rng(0)
+    y = rng.lognormal(10, 0.5, 300)
+    df = pd.DataFrame({"y_true": y, "y_pred": y, "log_y": np.log(y), "x": rng.normal(size=300)})
+    evidence = detect_leakage(df, y_true_col="y_true", y_pred_col="y_pred", task="regression")
+    assert {e["method"] for e in evidence["target_feature_correlations"]} <= {
+        "pearson",
+        "spearman",
+    }

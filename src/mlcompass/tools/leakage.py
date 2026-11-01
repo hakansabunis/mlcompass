@@ -178,6 +178,16 @@ def _target_feature_correlations(
     - **Non-numeric target** (string class labels): factorize then
       Pearson, which is the rank-based variant we need for arbitrary
       ordering.
+    - **Binary target, either kind**: also the rank-biserial
+      correlation, ``2 * AUC - 1`` of the feature as a lone score for
+      the class. Pearson reaches ±1 only for a feature that is itself
+      two-valued, and Spearman cannot pass ~0.866, so a feature that
+      separates the classes perfectly but not linearly (a status code,
+      a skewed amount) scored 0.87 and never became a candidate.
+      Rank-biserial is ±1 exactly when one threshold on the feature
+      splits the classes, which is the leak we are looking for. It is
+      computed only for two-valued targets, so regression evidence is
+      unchanged.
 
     Non-numeric *feature* columns are factorized with ``sort=True`` so
     we still catch a string column that perfectly maps to the label.
@@ -198,6 +208,7 @@ def _target_feature_correlations(
         # in one file and the opposite in another, flipping the sign.
         y_codes, _ = pd.factorize(y_raw, use_na_sentinel=True, sort=True)
         y_series = pd.Series(y_codes, index=y_raw.index, dtype=float).replace(-1, np.nan)
+    binary_target = int(y_series.nunique(dropna=True)) == 2
 
     for col in candidate_features:
         series = df[col]
@@ -215,6 +226,7 @@ def _target_feature_correlations(
 
             corr: float | None
             used_method: str
+            candidates: list[tuple[float | None, str]]
             if target_is_numeric:
                 # Compute BOTH plain Pearson and rank-based Pearson
                 # (Spearman). Monotone but non-linear leaks (e.g. a
@@ -223,19 +235,21 @@ def _target_feature_correlations(
                 # log-of-target leak doesn't slip below the threshold.
                 p_linear = _safe_correlation(feature_series, y_series, use_rank=False)
                 p_rank = _safe_correlation(feature_series, y_series, use_rank=True)
-                pairs: list[tuple[float, str]] = [
-                    (c, m)
-                    for c, m in ((p_linear, "pearson"), (p_rank, "spearman"))
-                    if c is not None and not np.isnan(c)
-                ]
-                if not pairs:
-                    continue
-                corr, used_method = max(pairs, key=lambda t: abs(t[0]))
+                candidates = [(p_linear, "pearson"), (p_rank, "spearman")]
             else:
                 # Non-numeric target ⇒ factorized labels, rank-based
                 # is the right choice; reporting it directly.
-                corr = _safe_correlation(feature_series, y_series, use_rank=True)
-                used_method = "spearman"
+                candidates = [
+                    (_safe_correlation(feature_series, y_series, use_rank=True), "spearman")
+                ]
+            if binary_target:
+                candidates.append((_rank_biserial(feature_series, y_series), "rank_biserial"))
+            pairs: list[tuple[float, str]] = [
+                (c, m) for c, m in candidates if c is not None and not np.isnan(c)
+            ]
+            if not pairs:
+                continue
+            corr, used_method = max(pairs, key=lambda t: abs(t[0]))
         except (TypeError, ValueError, ZeroDivisionError):
             continue
         if corr is None or np.isnan(corr):
@@ -268,6 +282,30 @@ def _safe_correlation(
         a = _rankdata(a)
         b = _rankdata(b)
     return _pearson(a, b)
+
+
+def _rank_biserial(feature: pd.Series, target: pd.Series) -> float | None:
+    """Rank-biserial correlation, ``2 * AUC - 1``, for a two-valued target.
+
+    AUC is the Mann-Whitney probability that a row of the higher target
+    value has the higher feature value, ties counted half. The sign
+    follows Pearson's: positive when the feature rises with the target.
+    ``None`` when either class is empty after dropping NaN.
+    """
+    paired = pd.concat([feature, target], axis=1).dropna()
+    a = paired.iloc[:, 0].to_numpy(dtype=float)
+    b = paired.iloc[:, 1].to_numpy(dtype=float)
+    levels = np.unique(b)
+    if len(levels) != 2:
+        return None
+    high = b == levels[1]
+    n_high = int(high.sum())
+    n_low = int(len(b) - n_high)
+    if n_high == 0 or n_low == 0:
+        return None
+    ranks = _rankdata(a)
+    auc = (float(ranks[high].sum()) - n_high * (n_high + 1) / 2) / (n_high * n_low)
+    return float(2 * auc - 1)
 
 
 def _rankdata(values: np.ndarray) -> np.ndarray:

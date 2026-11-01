@@ -394,3 +394,58 @@ def test_field_ft4_multiclass_string_labels_with_y_prob() -> None:
     )
     result = evaluate(df)
     assert result["task"] == "multiclass_classification"
+
+
+# --------------------------------------------------------------------------- #
+# Positive-class orientation for non-0/1 labels                               #
+# --------------------------------------------------------------------------- #
+
+
+def _string_label_df(neg_share: float, seed: int = 0) -> pd.DataFrame:
+    """A perfect yes/no classifier whose score column is P(yes)."""
+    rng = np.random.default_rng(seed)
+    n = 400
+    is_yes = rng.random(n) >= neg_share
+    p_yes = np.where(is_yes, rng.uniform(0.6, 0.99, n), rng.uniform(0.01, 0.4, n))
+    labels = np.where(is_yes, "yes", "no")
+    return pd.DataFrame({"y_true": labels, "y_pred": labels, "y_prob": p_yes})
+
+
+def test_string_labels_take_the_class_the_score_refers_to() -> None:
+    # "yes" is the majority, so the old minority rule picked "no" as the
+    # positive class and scored this perfect model AUC 0.0.
+    result = evaluate(_string_label_df(neg_share=0.4))
+    assert result["positive_label"] == "yes"
+    assert result["negative_label"] == "no"
+    assert result["metrics"]["auc"] == pytest.approx(1.0)
+    assert not any("below 0.5" in w for w in result["warnings"])
+
+
+def test_string_label_hard_examples_use_the_real_label_names() -> None:
+    result = evaluate(_string_label_df(neg_share=0.4))
+    for row in result["hard_examples"]:
+        assert row["true_label"] in {"yes", "no"}
+        assert row["predicted_label"] in {"yes", "no"}
+
+
+def test_conventional_pair_sets_polarity_without_a_score() -> None:
+    df = _string_label_df(neg_share=0.4).drop(columns=["y_prob"])
+    result = evaluate(df)
+    assert result["positive_label"] == "yes"
+
+
+def test_unconventional_labels_follow_the_score_orientation() -> None:
+    df = _string_label_df(neg_share=0.7)
+    df["y_true"] = df["y_true"].map({"yes": "stay", "no": "churn"})
+    df["y_pred"] = df["y_true"]
+    result = evaluate(df)
+    assert result["positive_label"] == "stay"
+    assert result["metrics"]["auc"] == pytest.approx(1.0)
+
+
+def test_inverted_score_on_zero_one_labels_is_flagged() -> None:
+    df = _binary_df()
+    df["y_prob"] = 1.0 - df["y_prob"]  # P(0) where P(1) is expected
+    result = evaluate(df)
+    assert result["metrics"]["auc"] < 0.5
+    assert any("below 0.5" in w for w in result["warnings"])
