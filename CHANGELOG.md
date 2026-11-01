@@ -5,6 +5,20 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.10.1] — 2026-11-01
+
+The first release on PyPI since 0.9.0. The `v0.10.0` tag stays as the code
+archived with the TSE manuscript and was never uploaded, so this release
+carries everything listed under 0.10.0 below as well as the fixes here.
+
+### Changed
+
+- The leakage investigator keeps every attempt (cited columns, claims,
+  verdict, violations) in its result instead of only the delivered one, so a
+  rejection can be re-judged later. It also takes `verify_response=False`,
+  which the measurement harness uses to vary only the verifier; the default
+  and every CLI and MCP path keep verification on.
+
 ### Fixed
 
 - **`evaluate` scored string labels against the wrong class.** The positive
